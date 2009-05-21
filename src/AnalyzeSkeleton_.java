@@ -160,6 +160,8 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	ImageStack stack = tagImage(this.inputImage);		
 
 	//remove end branches
+	IJ.log("Hello World....");
+	IJ.log("I can do this, Dave.");
 	this.taggedImage = pruneEndBranches(stack);
 
 	// Show tags image.
@@ -976,7 +978,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 		    //remove the end voxel
 		    setPixel(stack, x, y, z, (byte) 0);
 		    IJ.log("Set ("+x+", "+y+", "+z+") to 0");
-		    //get the values of the neighbors
+		    //get the values of the neighbors 
 		    byte[] nHood = getNeighborhood(stack, x, y, z);
 		    //get the coordinates of the single neighbor
 		    for (int p = 0; p < 27; p++){
@@ -1016,6 +1018,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 			    endPoint[1] = y;
 			    endPoint[2] = z;
 			    this.listOfEndPoints.set(i, endPoint);
+			    IJ.log("Moved endpoint ("+i+") to ("+x+", "+y+", "+z+")");
 			    break;
 			}
 		    }
