@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/IJ"/>
+	<classpathentry kind="lib" path="/home/mdoube/ImageJ/plugins/Jama-1.0.2.jar"/>
+	<classpathentry kind="lib" path="/home/mdoube/ImageJ/plugins/ImageJ_3D_Viewer.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
