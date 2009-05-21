@@ -241,7 +241,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	    this.endPointsTree[getPixel(treeIS, p) - 1].add(p);
 	}
 
-	// Add junction voxels to the corresonding tree
+	// Add junction voxels to the corresponding tree
 	for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
 	{
 	    final int[] p = this.listOfJunctionVoxels.get(i);
