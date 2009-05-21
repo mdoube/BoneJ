@@ -157,10 +157,10 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	this.visited = new boolean[this.width][this.height][this.depth];
 
 	// Prepare data: classify voxels and tag them.
-	this.taggedImage = tagImage(this.inputImage);		
+	ImageStack stack = tagImage(this.inputImage);		
 
 	//remove end branches
-	pruneEndBranches(this.taggedImage);
+	this.taggedImage = pruneEndBranches(stack);
 
 	// Show tags image.
 	ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
@@ -206,7 +206,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	else
 	{
 	    //TODO fix this: java.lang.ArrayIndexOutOfBoundsException: 0
-//		at AnalyzeSkeleton_.run(AnalyzeSkeleton_.java:208)
+	    //at AnalyzeSkeleton_.run(AnalyzeSkeleton_.java:208)
 	    this.endPointsTree[0] = this.listOfEndPoints;
 	    this.junctionVoxelTree[0] = this.listOfJunctionVoxels;
 	}
@@ -387,7 +387,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
     private void visitSkeleton(ImageStack taggedImage, ImageStack treeImage, int currentTree) 
     {
 
-	//System.out.println(" Analizing tree number " + currentTree);
+	//System.out.println(" Analyzing tree number " + currentTree);
 	// length of branches
 	double branchLength = 0;
 
@@ -966,7 +966,8 @@ public class AnalyzeSkeleton_ implements PlugInFilter
      * @param stack ImageStack skeleton image
      * 
      */
-    private void pruneEndBranches(ImageStack stack){
+    private ImageStack pruneEndBranches(ImageStack stack){
+	IJ.log("Started pruneEndBranches, "+this.listOfEndPoints.size()+" end points");
 	while (!this.listOfEndPoints.isEmpty()){
 	    for (int i = 0; i < this.listOfEndPoints.size(); i++){
 		int[] endPoint = this.listOfEndPoints.get(i);
@@ -974,6 +975,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 		if (getNumberOfNeighbors(stack, x, y, z) == 1){
 		    //remove the end voxel
 		    setPixel(stack, x, y, z, (byte) 0);
+		    IJ.log("Set ("+x+", "+y+", "+z+") to 0");
 		    //get the values of the neighbors
 		    byte[] nHood = getNeighborhood(stack, x, y, z);
 		    //get the coordinates of the single neighbor
@@ -1020,10 +1022,12 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 		} else {
 		    this.listOfEndPoints.remove(i);
 		    this.totalNumberOfEndPoints--;
+		    IJ.log("Removed endpoint ("+i+") at ("+x+", "+y+", "+z+")");
+		    IJ.log(this.listOfEndPoints.size()+" end points remain");
 		}
 	    }
 	}
-	return;
+	return stack;
     }
 
     /* -----------------------------------------------------------------------*/
