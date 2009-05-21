@@ -98,8 +98,13 @@ public class Moments_3D implements PlugInFilter {
     		showDialog(valueUnit);
     		IJ.log("Image is uncalibrated: using user-determined threshold "+minT+" to "+maxT);
 	    } else {
-	    	IJ.error("Unrecognised file type");
-	    	return;
+		new WaitForUserDialog("This image is not density calibrated.\nSet the threshold, then click OK.").show();
+    		minT = (int)ip.getMinThreshold();
+    		maxT = (int)ip.getMaxThreshold();
+    		showDialog(valueUnit);
+    		IJ.log("Image is uncalibrated: using user-determined threshold "+minT+" to "+maxT);
+//	    	IJ.error("Unrecognised file type");
+//	    	return;
 	    }
 	    
 	    double[] centroid = findCentroid3D(stack, startSlice, endSlice, rt);
@@ -387,8 +392,8 @@ public class Moments_3D implements PlugInFilter {
         gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / "+valueUnit);
         gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
         gd.addMessage("Only use pixels between clip values:");
-        gd.addNumericField("Clip min.", minT, 0, 6, valueUnit);
-        gd.addNumericField("Clip max.", maxT, 0, 6, valueUnit);
+        gd.addNumericField("Minimum", minT, 0, 6, valueUnit);
+        gd.addNumericField("Maximum", maxT, 0, 6, valueUnit);
         gd.addCheckbox("Align result", true);
         gd.showDialog();
         if (gd.wasCanceled()) {
