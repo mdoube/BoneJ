@@ -1,6 +1,5 @@
 package org.doube.bonej;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
 import ij.measure.ResultsTable;
@@ -17,7 +16,7 @@ import ij.plugin.filter.PlugInFilter;
  * @author Michael Doube
  *
  */
-public class insertResults implements PlugInFilter{
+public class ResultInserter implements PlugInFilter{
     private ImagePlus imp;
     
     public int setup(String arg, ImagePlus imp){
@@ -27,6 +26,15 @@ public class insertResults implements PlugInFilter{
     public void run(ImageProcessor ip){
 	setResultInRow(imp, "Col 1", 78);
     }
+    /**
+     * Finds the first available space for a result,
+     * avoiding lots of empty space when measurements of different types
+     * are made on the same image
+     * 
+     * @param imp ImagePlus
+     * @param colHeading column heading
+     * @param value value to insert
+     */
     public void setResultInRow(ImagePlus imp, String colHeading, double value){
 	ResultsTable rt = ResultsTable.getResultsTable();
 	String title = imp.getTitle();
@@ -34,8 +42,7 @@ public class insertResults implements PlugInFilter{
 	//search for the first row that contains the image title
 	//and contains no value for the heading
 	for (int row = 0; row < rt.getCounter(); row++){
-	    //TODO how to do a proper string comparison?
-	    if (rt.getLabel(row) == title){
+	    if (rt.getLabel(row).equals(title)){
 		double currentValue =  rt.getValue(colHeading, row);
 		if(currentValue == 0){
 		    rt.setValue(colHeading, row, value);

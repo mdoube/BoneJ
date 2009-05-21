@@ -26,6 +26,7 @@ import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.measure.ResultsTable;
 import ij.measure.Calibration;
+import org.doube.bonej.ResultInserter;
 
 
 /**
@@ -130,6 +131,8 @@ public class Connectivity_ implements PlugInFilter {
 		rt.addValue("Connectivity", connectivity);
 		rt.addValue("Tb.N ("+cal.getUnit()+"^-3)", connDensity);
 		rt.show("Results");
+		ResultInserter ri;
+//		ri.setResultInRow(this.imRef, "poo", 23);
 	}
 
 	/* -----------------------------------------------------------------------*/
