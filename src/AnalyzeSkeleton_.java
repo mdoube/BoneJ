@@ -157,12 +157,15 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	this.visited = new boolean[this.width][this.height][this.depth];
 
 	// Prepare data: classify voxels and tag them.
+	IJ.log("Classifying voxels");
 	ImageStack stack1 = tagImage(this.inputImage);
 
 	//remove end branches
+	IJ.log("Pruning...");
 	ImageStack stack2 = pruneEndBranches(stack1);
 	
 	//reclassify
+	IJ.log("Relassifying voxels");
 	this.taggedImage = tagImage(stack2);
 
 	// Show tags image.
@@ -180,6 +183,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	tagIP.updateAndDraw();
 
 	// Mark trees
+	IJ.log("Marking trees");
 	ImageStack treeIS = markTrees(taggedImage);
 
 	// Ask memory for every tree
@@ -204,6 +208,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	}
 
 	// Divide groups of end-points and junction voxels
+	IJ.log("Measuring trees");
 	if(this.numOfTrees > 1)
 	    divideVoxelsByTrees(treeIS);
 	else
