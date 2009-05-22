@@ -157,12 +157,13 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	this.visited = new boolean[this.width][this.height][this.depth];
 
 	// Prepare data: classify voxels and tag them.
-	ImageStack stack = tagImage(this.inputImage);		
+	ImageStack stack1 = tagImage(this.inputImage);
 
 	//remove end branches
-	IJ.log("Hello World....");
-	IJ.log("I can do this, Dave.");
-	this.taggedImage = pruneEndBranches(stack);
+	ImageStack stack2 = pruneEndBranches(stack1);
+	
+	//reclassify
+	this.taggedImage = tagImage(stack2);
 
 	// Show tags image.
 	ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
@@ -207,8 +208,6 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	    divideVoxelsByTrees(treeIS);
 	else
 	{
-	    //TODO fix this: java.lang.ArrayIndexOutOfBoundsException: 0
-	    //at AnalyzeSkeleton_.run(AnalyzeSkeleton_.java:208)
 	    this.endPointsTree[0] = this.listOfEndPoints;
 	    this.junctionVoxelTree[0] = this.listOfJunctionVoxels;
 	}
