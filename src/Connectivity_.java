@@ -131,6 +131,12 @@ public class Connectivity_ implements PlugInFilter {
 		rt.addValue("Connectivity", connectivity);
 		rt.addValue("Tb.N ("+cal.getUnit()+"^-3)", connDensity);
 		rt.show("Results");
+		if (connectivity < 0){
+		    IJ.showMessage("Caution", "Connectivity is negative.\n\n" +
+		    		"This usually happens if there are multiple\n" +
+		    		"particles or enclosed cavities.\n\n" +
+		    		"Try running Purify prior to Connectivity.");
+		}
 		ResultInserter ri;
 //		ri.setResultInRow(this.imRef, "poo", 23);
 	}

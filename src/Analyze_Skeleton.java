@@ -41,7 +41,7 @@ import ij.process.ImageProcessor;
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
  */
-public class AnalyzeSkeleton_ implements PlugInFilter
+public class Analyze_Skeleton implements PlugInFilter
 {
     /** end point flag */
     public static byte END_POINT = 30;
@@ -59,6 +59,13 @@ public class AnalyzeSkeleton_ implements PlugInFilter
     private int height = 0;
     /** working image depth */
     private int depth = 0;
+    /**working voxel width */
+    private double vW = 1;
+    /**working voxel height */
+    private double vH = 1;
+    /**working voxel depth */
+    private double vD = 1;
+
     /** working image stack*/
     private ImageStack inputImage = null;
 
@@ -130,6 +137,9 @@ public class AnalyzeSkeleton_ implements PlugInFilter
     public int setup(String arg, ImagePlus imp) 
     {
 	this.imRef = imp;
+	this.vW = this.imRef.getCalibration().pixelWidth;
+	this.vH = this.imRef.getCalibration().pixelHeight;
+	this.vD = this.imRef.getCalibration().pixelDepth;
 
 	if (arg.equals("about")) 
 	{
@@ -157,16 +167,12 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	this.visited = new boolean[this.width][this.height][this.depth];
 
 	// Prepare data: classify voxels and tag them.
-	IJ.log("Classifying voxels");
 	ImageStack stack1 = tagImage(this.inputImage);
 
 	//remove end branches
 	IJ.log("Pruning...");
-	ImageStack stack2 = pruneEndBranches(stack1);
-	
-	//reclassify
-	IJ.log("Relassifying voxels");
-	this.taggedImage = tagImage(stack2);
+	this.taggedImage = pruneEndBranches(stack1);
+	this.totalNumberOfEndPoints = this.listOfEndPoints.size();
 
 	// Show tags image.
 	ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
@@ -181,7 +187,8 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	//IJ.resetMinAndMax();
 	tagIP.resetDisplayRange();
 	tagIP.updateAndDraw();
-
+	
+	//now we hit trouble...
 	// Mark trees
 	IJ.log("Marking trees");
 	ImageStack treeIS = markTrees(taggedImage);
@@ -211,8 +218,9 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	IJ.log("Measuring trees");
 	if(this.numOfTrees > 1)
 	    divideVoxelsByTrees(treeIS);
-	else
+	else if (this.endPointsTree.length > 0)
 	{
+	    //TODO bug here... 0 out of bounds (null?)
 	    this.endPointsTree[0] = this.listOfEndPoints;
 	    this.junctionVoxelTree[0] = this.listOfJunctionVoxels;
 	}
@@ -507,6 +515,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 	byte color = 0;
 
 	// Visit trees starting at end points
+	//TODO what if trees don't have an end point!?
 	for(int i = 0; i < this.totalNumberOfEndPoints; i++)
 	{			
 	    int[] endPointCoord = this.listOfEndPoints.get(i);
@@ -732,9 +741,15 @@ public class AnalyzeSkeleton_ implements PlugInFilter
      */
     private double calculateDistance(int[] point1, int[] point2) 
     {		
-	return Math.sqrt(  Math.pow( (point1[0] - point2[0]) * this.imRef.getCalibration().pixelWidth, 2) 
-		+ Math.pow( (point1[1] - point2[1]) * this.imRef.getCalibration().pixelHeight, 2)
-		+ Math.pow( (point1[2] - point2[2]) * this.imRef.getCalibration().pixelDepth, 2));
+	int x1 = point1[0];
+	int y1 = point1[1];
+	int z1 = point1[2];
+	int x2 = point2[0];
+	int y2 = point2[1];
+	int z2 = point2[2];
+	return Math.sqrt((x1 - x2) * (x1 - x2) * vW * vW 
+		+ (y1 - y2) * (y1 - y2) * vH * vH
+		+ (z1 - z2) * (z1 - z2) * vD * vD);
     }
 
     /* -----------------------------------------------------------------------*/
@@ -974,7 +989,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
      */
     private ImageStack pruneEndBranches(ImageStack stack){
 	IJ.log("Started pruneEndBranches, "+this.listOfEndPoints.size()+" end points");
-	while (!this.listOfEndPoints.isEmpty()){
+	while (this.listOfEndPoints.size()>1){
 	    for (int i = 0; i < this.listOfEndPoints.size(); i++){
 		int[] endPoint = this.listOfEndPoints.get(i);
 		int x = endPoint[0], y = endPoint[1], z = endPoint[2];
@@ -1028,7 +1043,6 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 		    }
 		} else {
 		    this.listOfEndPoints.remove(i);
-		    this.totalNumberOfEndPoints--;
 		    IJ.log("Removed endpoint ("+i+") at ("+x+", "+y+", "+z+")");
 		    IJ.log(this.listOfEndPoints.size()+" end points remain");
 		}
