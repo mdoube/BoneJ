@@ -819,7 +819,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 		    // Get neighbors and check the slabs
 		    byte[] neighborhood = this.getNeighborhood(this.taggedImage, pj[0], pj[1], pj[2]);
 		    for(int k = 0; k < 27; k++)
-			if (neighborhood[k] == AnalyzeSkeleton_.SLAB)
+			if (neighborhood[k] == Analyze_Skeleton.SLAB)
 			    nSlab++;
 		}
 		// If the junction has only 3 slab neighbors, then it is a triple point
@@ -857,7 +857,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
      */
     private boolean isSlab(int[] point) 
     {		
-	return getPixel(this.taggedImage, point[0], point[1], point[2]) == AnalyzeSkeleton_.SLAB;
+	return getPixel(this.taggedImage, point[0], point[1], point[2]) == Analyze_Skeleton.SLAB;
     }
 
     /* -----------------------------------------------------------------------*/
@@ -869,7 +869,7 @@ public class AnalyzeSkeleton_ implements PlugInFilter
      */
     private boolean isJunction(int[] point) 
     {		
-	return getPixel(this.taggedImage, point[0], point[1], point[2]) == AnalyzeSkeleton_.JUNCTION;
+	return getPixel(this.taggedImage, point[0], point[1], point[2]) == Analyze_Skeleton.JUNCTION;
     }	
 
     /* -----------------------------------------------------------------------*/
@@ -1061,21 +1061,21 @@ public class AnalyzeSkeleton_ implements PlugInFilter
 			int numOfNeighbors = getNumberOfNeighbors(inputImage2, x, y, z);
 			if(numOfNeighbors < 2)
 			{
-			    setPixel(outputImage, x, y, z, AnalyzeSkeleton_.END_POINT);
+			    setPixel(outputImage, x, y, z, Analyze_Skeleton.END_POINT);
 			    this.totalNumberOfEndPoints++;
 			    int[] endPoint = new int[]{x, y, z};
 			    this.listOfEndPoints.add(endPoint);							
 			}
 			else if(numOfNeighbors > 2)
 			{
-			    setPixel(outputImage, x, y, z, AnalyzeSkeleton_.JUNCTION);
+			    setPixel(outputImage, x, y, z, Analyze_Skeleton.JUNCTION);
 			    int[] junction = new int[]{x, y, z};
 			    this.listOfJunctionVoxels.add(junction);	
 			    this.totalNumberOfJunctionVoxels++;
 			}
 			else
 			{
-			    setPixel(outputImage, x, y, z, AnalyzeSkeleton_.SLAB);
+			    setPixel(outputImage, x, y, z, Analyze_Skeleton.SLAB);
 			    this.totalNumberOfSlabs++;
 			}
 		    }					
