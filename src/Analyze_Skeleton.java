@@ -741,12 +741,12 @@ public class Analyze_Skeleton implements PlugInFilter
      */
     private double calculateDistance(int[] point1, int[] point2) 
     {		
-	int x1 = point1[0];
-	int y1 = point1[1];
-	int z1 = point1[2];
-	int x2 = point2[0];
-	int y2 = point2[1];
-	int z2 = point2[2];
+	double x1 = (double) point1[0];
+	double y1 = (double) point1[1];
+	double z1 = (double) point1[2];
+	double x2 = (double) point2[0];
+	double y2 = (double) point2[1];
+	double z2 = (double) point2[2];
 	return Math.sqrt((x1 - x2) * (x1 - x2) * vW * vW 
 		+ (y1 - y2) * (y1 - y2) * vH * vH
 		+ (z1 - z2) * (z1 - z2) * vD * vD);
