@@ -1,3 +1,4 @@
+package org.doube.bonej;
 
 
 /**
@@ -464,7 +465,7 @@ public class Skeletonize3D_ implements PlugInFilter
 	 * 
 	 * @param LUT Euler LUT
 	 */
-	private void fillEulerLUT(int[] LUT) 
+	public void fillEulerLUT(int[] LUT) 
 	{
 		LUT[1]  =  1;
 		LUT[3]  = -1;
@@ -607,7 +608,7 @@ public class Skeletonize3D_ implements PlugInFilter
 	 * @param LUT Euler LUT
 	 * @return true or false if the point is Euler invariant or not
 	 */
-	boolean isEulerInvariant(byte[] neighbors, int [] LUT)
+	public boolean isEulerInvariant(byte[] neighbors, int [] LUT)
 	{
 		// Calculate Euler characteristic for each octant and sum up
 		int eulerChar = 0;
@@ -764,7 +765,7 @@ public class Skeletonize3D_ implements PlugInFilter
 	 * @param neighbors neighbor pixels of the point
 	 * @return true or false if the point is simple or not
 	 */
-	private boolean isSimplePoint(byte[] neighbors) 
+	public boolean isSimplePoint(byte[] neighbors) 
 	{
 		// copy neighbors for labeling
 		int cube[] = new int[26];
