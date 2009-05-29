@@ -441,7 +441,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		// Increase number of branches
 		if(length != 0)
 		{
-		    this.numberOfBranches[iTree]++;
+		    this.numberOfBranches[iTree]++;//does this count branches within a junction?
 		    IJ.log("Added a branch ("+this.numberOfBranches[iTree]+") to tree "+iTree);
 		    double[] lA = {length, 0}; //2nd element is the bin. 
 		    this.listOfBranchLengths.add(lA);
