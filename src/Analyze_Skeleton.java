@@ -438,21 +438,21 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	}
 	for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i++)
-	{   
-	    final int[] junctionCoord = this.junctionVoxelTree[iTree].get(i);
-	    if (isVisited(junctionCoord))
-		continue;
+	{
+	    final int[] junctionCoord = this.junctionVoxelTree[iTree].get(i);					
 	    IJ.log("Checking branch at junctionCoord "+pointToString(junctionCoord));
 	    // Mark junction as visited
 	    setVisited(junctionCoord, true);
-
-	    int[] nextPoint = getNextUnvisitedVoxel(junctionCoord);
+	    
+	    boolean isJunction = false;
+	    if (getPixel(this.taggedImage, junctionCoord) == Analyze_Skeleton.JUNCTION)
+		isJunction = true;		
+	    
+	    int[] nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
 	    
 	    //TODO prevent traversing across a junction between adjacent junction voxels
-	    //e.g. prevent the first nextPoint from being JUNCTION
-
-	    while(nextPoint != null && 
-		    getPixel(this.taggedImage, nextPoint) != Analyze_Skeleton.JUNCTION )
+	   
+	    while(nextPoint != null)
 	    {
 		IJ.log("...heading towards "+pointToString(nextPoint));
 		this.branchLength[iTree] += calculateDistance(junctionCoord, nextPoint);								
@@ -476,7 +476,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			this.finalPoint[iTree] = this.auxPoint;
 		    }
 		}
-		nextPoint = getNextUnvisitedVoxel(junctionCoord);
+		nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
 	    }					
 	}
 
@@ -1018,6 +1018,7 @@ public class Analyze_Skeleton implements PlugInFilter
     private int[] getNextUnvisitedVoxel(int[] point) 
     {
 	int[] unvisitedNeighbor = null;
+	
 	int xp = point[0], yp = point[1], zp = point[2];
 	// Check neighbors status
 	for(int x = -1; x < 2; x++)
@@ -1026,7 +1027,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		{
 		    if(x == 0 && y == 0 && z == 0)
 			continue;
-
+		       
 		    if(getPixel(this.taggedImage, xp + x, yp + y, zp + z) != 0
 			    && isVisited(xp + x, yp + y, zp + z) == false)						
 		    {					
@@ -1039,6 +1040,42 @@ public class Analyze_Skeleton implements PlugInFilter
 	return unvisitedNeighbor;
     }/* end getNextUnvisitedVoxel */
 
+    /**
+     * Get next unvisited neighbor voxel 
+     * Modified to prevent traversing from one junction voxel to another
+     *  
+     * @param point starting point
+     * @param isJunction true if the starting point is a junction voxel
+     * @return unvisited neighbor or null if all neighbors are visited
+     */
+    private int[] getNextUnvisitedVoxel(int[] point, boolean isJunction) 
+    {
+	int[] unvisitedNeighbor = null;
+	int xp = point[0], yp = point[1], zp = point[2];
+	// Check neighbors status
+	for(int x = -1; x < 2; x++)
+	    for(int y = -1; y < 2; y++)
+		for(int z = -1; z < 2; z++)
+		{
+		    if(x == 0 && y == 0 && z == 0)
+			continue;
+		    byte pixel = getPixel(this.taggedImage, xp + x, yp + y, zp + z);
+		    
+		    if (pixel == Analyze_Skeleton.JUNCTION && isJunction)
+			continue;
+		    
+		    if(pixel != 0 && isVisited(xp + x, yp + y, zp + z) == false)						
+		    {					
+			unvisitedNeighbor = new int[]{xp + x, yp + y, zp + z};
+			break;
+		    }
+
+		}
+
+	return unvisitedNeighbor;
+    }/* end getNextUnvisitedVoxel */
+
+    
     /* -----------------------------------------------------------------------*/
     /**
      * Check if a voxel is visited taking into account the borders. 
