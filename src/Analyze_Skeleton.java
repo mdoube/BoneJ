@@ -31,8 +31,9 @@ import ij.process.ShortProcessor;
  * 
  */
 //TODO use List Iterators rather than for-each when modifying List elements
-//TODO branch count too high sometimes
-//TODO extra trees found sometimes
+//TODO extra trees found sometimes in single structures, after pruning.
+//TODO draw summary histogram of branch lengths (from listOfBranchLengths)
+
 /**
  * Main class.
  * This class is a plugin for the ImageJ interface for analyzing
@@ -114,6 +115,10 @@ public class Analyze_Skeleton implements PlugInFilter
     private ArrayList <int[]> listOfEndPoints = new ArrayList<int[]>();
     /** list of junction coordinates in the entire image */
     private ArrayList <int[]> listOfJunctionVoxels = new ArrayList<int[]>();
+
+    /** list of junction centroid coordinates in the entire image */
+    private ArrayList <int[]> listOfJunctionCentroids = new ArrayList<int[]>();
+
     /** list of slab coordinates in the entire image */
     private ArrayList <int[]> listOfSlabVoxels = new ArrayList<int[]>();
     /** list of slab coordinates in the entire image */
@@ -293,8 +298,8 @@ public class Analyze_Skeleton implements PlugInFilter
 	ResultsTable rt = new ResultsTable();
 
 	String[] head = {"Skeleton", "# Branches","# Junctions", "# End-point voxels",
-		"# Junction voxels","# Slab voxels","Average Branch Length ("+unit+")", 
-		"# Triple points", "Maximum Branch Length ("+unit+")", "Sum Branch Length ("+unit+")"};
+		"# Junction voxels","# Slab voxels", "# Triple points", "Average Branch Length ("+unit+")", 
+		"Maximum Branch Length ("+unit+")", "Sum Branch Length ("+unit+")"};
 
 	for (int i = 0; i < head.length; i++)
 	    rt.setHeading(i,head[i]);	
@@ -308,8 +313,8 @@ public class Analyze_Skeleton implements PlugInFilter
 	    rt.addValue(3, this.numberOfEndPoints[i]);
 	    rt.addValue(4, this.junctionVoxelTree[i].size());
 	    rt.addValue(5, this.numberOfSlabs[i]);
-	    rt.addValue(6, this.averageBranchLength[i]);
-	    rt.addValue(7, this.numberOfTriplePoints[i]);
+	    rt.addValue(6, this.numberOfTriplePoints[i]);
+	    rt.addValue(7, this.averageBranchLength[i]);
 	    rt.addValue(8, this.maximumBranchLength[i]);
 	    rt.addValue(9, this.branchLength[i]);
 
@@ -338,15 +343,13 @@ public class Analyze_Skeleton implements PlugInFilter
     private void visitSkeleton(ImageStack taggedImage, ImageStack treeImage, int currentTree) 
     {
 
-	// IJ.log(" Analyzing tree number " + currentTree);
-
 	// tree index
 	final int iTree = currentTree - 1;
 	// length of branches
 	this.branchLength[iTree] = 0;
 
 	this.maximumBranchLength[iTree] = 0;
-	//	this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
+	this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
 	//	this.numberOfJunctionVoxels[iTree] = this.junctionVoxelTree[iTree].size();
 	this.numberOfSlabs[iTree] = 0;
 	this.listOfBranchLengths = new ArrayList<double[]>();
@@ -355,40 +358,25 @@ public class Analyze_Skeleton implements PlugInFilter
 	for(int i = 0; i < this.endPointsTree[iTree].size(); i++)
 	{			
 	    final int[] endPointCoord = this.endPointsTree[iTree].get(i);
-	    IJ.log("Checking branch at endPoint "+pointToString(endPointCoord));
 	    // Skip when visited
 	    if(isVisited(endPointCoord))
-	    {
-		//if(this.initialPoint[iTree] == null)
-		//	IJ.error("WEIRD:" + " (" + endPointCoord[0] + ", " + endPointCoord[1] + ", " + endPointCoord[2] + ")");
-		//IJ.log("visited = (" + endPointCoord[0] + ", " + endPointCoord[1] + ", " + endPointCoord[2] + ")");
-		IJ.log("...but endPoint has been visited, skipping");
 		continue;
-	    }
 
 	    // Otherwise, visit branch until next junction or end point.
 	    final double length = visitBranch(endPointCoord, iTree);
-	    IJ.log("...visited branch of length "+length);
+
 	    // If length is 0, it means the tree is formed by only one voxel.
 	    if(length == 0)
 	    {
 		this.initialPoint[iTree] = this.finalPoint[iTree] = endPointCoord;
-		//		IJ.log("Found tree:branch ("+iTree+":"+this.numberOfBranches[iTree]+") " +
-		//			"using end point at ("+endPointCoord[0]+", "+endPointCoord[1]+", "+endPointCoord[2]+")" +
-		//			" of length "+length);
 		continue;
 	    }
 
 	    // increase number of branches
 	    this.numberOfBranches[iTree]++;
-	    IJ.log("Added a branch ("+this.numberOfBranches[iTree]+") to tree "+iTree);
 	    this.branchLength[iTree] += length;
 	    double[] lA = {length, 0}; //2nd element is the bin. 
 	    this.listOfBranchLengths.add(lA);
-
-	    //	    IJ.log("Found tree:branch ("+iTree+":"+this.numberOfBranches[iTree]+") " +
-	    //		    "using end point at ("+endPointCoord[0]+", "+endPointCoord[1]+", "+endPointCoord[2]+")" +
-	    //		    " of length "+length);
 
 	    // update maximum branch length
 	    if(length > this.maximumBranchLength[iTree])
@@ -399,73 +387,59 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	}
 
-
 	// Now visit branches starting at junctions
-	//current model works from junction voxels,
-	//less problematic to work from junctions
-	
-	//filter out non-branching junction voxels by marking them visited
 	Skeletonize3D_ sk = new Skeletonize3D_();
 	int[] LUT = new int[256];
 	sk.fillEulerLUT(LUT);
-	double[] sumJunc = {0,0,0}; // sum of junction coordinates
-	double[] centroidJunc = {0,0,0}; // centroid of junction coordinates (real units)
-	for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i++){
-	    final int[] junctionCoord = this.junctionVoxelTree[iTree].get(i);
-	    int x = junctionCoord[0], y = junctionCoord[1], z = junctionCoord[2];
-	    byte[] neighbors = getNeighborhood(this.taggedImage, x,y,z);
-	    int nSlabs = 0, nEnds= 0;
-	    for (int j = 0; j < 27; j++){
-		switch(neighbors[j]){
-		case SLAB: nSlabs++;
-		case END_POINT: nEnds++;
-		}		
+
+
+	for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
+
+	    ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
+
+	    //	    work out the junction's centroid 
+	    int[] sumJunc = {0,0,0}; // sum of junction coordinates
+	    double[] centroidJunc = {0,0,0}; // centroid of junction coordinates (pixel units)
+	    for(int i = 0; i < groupOfJunctions.size(); i++){
+		final int[] junctionCoord = groupOfJunctions.get(i);
+		sumJunc[0] += junctionCoord[0];
+		sumJunc[1] += junctionCoord[1];
+		sumJunc[2] += junctionCoord[2];
 	    }
-	    //if there are no slabs or ends in neighborhood
-	    //go to the next level of filtering
-	    if (nSlabs == 0 && nEnds == 0){
-		//Junction voxel is surrounded by 0's or junction voxels
-		//so see if it is really a branch stub and not in the middle of a junction
-		for (int j = 0; j < 27; j++){
-		    if (neighbors[j] > 0) neighbors[j] = 1;
-		}
-		if (!sk.isEulerInvariant(neighbors, LUT)){
-		    //junction voxels in the middle of a junction shouldn't contribute to 
-		    //branches
-		    setVisited(x,y,z, true);
-		    IJ.log("Set junction voxel "+pointToString(junctionCoord)+" visited");
-		}
-	    }
-	}
-	for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i++)
-	{
-	    final int[] junctionCoord = this.junctionVoxelTree[iTree].get(i);					
-	    IJ.log("Checking branch at junctionCoord "+pointToString(junctionCoord));
-	    // Mark junction as visited
-	    setVisited(junctionCoord, true);
-	    
-	    boolean isJunction = false;
-	    if (getPixel(this.taggedImage, junctionCoord) == Analyze_Skeleton.JUNCTION)
-		isJunction = true;		
-	    
-	    int[] nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
-	    
-	    //TODO prevent traversing across a junction between adjacent junction voxels
-	   
-	    while(nextPoint != null)
+	    centroidJunc[0] = sumJunc[0] / groupOfJunctions.size();
+	    centroidJunc[1] = sumJunc[1] / groupOfJunctions.size();
+	    centroidJunc[2] = sumJunc[2] / groupOfJunctions.size();
+
+	    for(int i = 0; i < groupOfJunctions.size(); i++)
 	    {
-		IJ.log("...heading towards "+pointToString(nextPoint));
-		this.branchLength[iTree] += calculateDistance(junctionCoord, nextPoint);								
+		final int[] junctionCoord = groupOfJunctions.get(i);
 
-		double length = visitBranch(nextPoint, iTree);
+		if (isJunctionMiddle(this.taggedImage, junctionCoord, LUT, sk))
+		    continue;
 
-		this.branchLength[iTree] += length;
+		// Mark junction as visited
+		setVisited(junctionCoord, true);
 
-		// Increase number of branches
-		if(length != 0)
+		boolean isJunction = true;		
+
+		int[] nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
+
+		while(nextPoint != null)
 		{
-		    this.numberOfBranches[iTree]++;//does this count branches within a junction?
-		    IJ.log("Added a branch ("+this.numberOfBranches[iTree]+") to tree "+iTree);
+		    double length = calculateDistance(junctionCoord, centroidJunc);
+		    length += calculateDistance(junctionCoord, nextPoint);
+		    length += visitBranch(nextPoint, iTree);
+		    this.branchLength[iTree] += length;
+		    if(length == 0)
+		    {
+			this.initialPoint[iTree] = this.finalPoint[iTree] = junctionCoord;
+			continue;
+		    }
+
+		    // Increase number of branches
+		    //		    if(length != 0)
+		    //		    {
+		    this.numberOfBranches[iTree]++;
 		    double[] lA = {length, 0}; //2nd element is the bin. 
 		    this.listOfBranchLengths.add(lA);
 		    // update maximum branch length
@@ -475,9 +449,10 @@ public class Analyze_Skeleton implements PlugInFilter
 			this.initialPoint[iTree] = junctionCoord;
 			this.finalPoint[iTree] = this.auxPoint;
 		    }
-		}
-		nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
-	    }					
+		    //		    }
+		    nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
+		}					
+	    }
 	}
 
 	// Finally visit branches starting at slabs (special case for circular trees)
@@ -497,10 +472,6 @@ public class Analyze_Skeleton implements PlugInFilter
 		double[] lA = {length, 0}; //2nd element is the bin. 
 		this.listOfBranchLengths.add(lA);
 
-		//		IJ.log("Found tree:branch ("+iTree+":"+this.numberOfBranches[iTree]+") " +
-		//			"using slab at ("+startCoord[0]+", "+startCoord[1]+", "+startCoord[2]+")" +
-		//			" of length "+length);
-		// update maximum branch length
 		if(length > this.maximumBranchLength[iTree])
 		{
 		    this.maximumBranchLength[iTree] = length;
@@ -539,7 +510,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	short color = 0;
 
 	// Visit trees starting at end points
-	//	IJ.log("Number of endPoints: "+this.listOfEndPoints.size());
 	for(int i = 0; i < this.listOfEndPoints.size(); i++)
 	{			
 	    int[] endPointCoord = this.listOfEndPoints.get(i);
@@ -565,7 +535,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Visit trees starting at junction points 
 	// (some circular trees do not have end points)
-	IJ.log("Number of junctionVoxels: "+this.listOfJunctionVoxels.size());
 	for(int i = 0; i < this.listOfJunctionVoxels.size(); i++)
 	{			
 	    int[] junctionCoord = this.listOfJunctionVoxels.get(i);
@@ -573,7 +542,6 @@ public class Analyze_Skeleton implements PlugInFilter
 		continue;
 
 	    color++;
-	    IJ.log("Found a new tree ("+color+") starting at "+pointToString(junctionCoord));
 
 	    if(color == Short.MAX_VALUE)
 	    {
@@ -596,7 +564,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Check for unvisited slab voxels
 	// (just in case there are circular trees without junctions)
-	//	IJ.log("Number of slabVoxels: "+this.listOfSlabVoxels.size());
+
 	for(int i = 0; i < this.listOfSlabVoxels.size(); i++)
 	{
 	    int[] p = (int[]) this.listOfSlabVoxels.get(i);
@@ -627,13 +595,9 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	}
 
-
-
-	//	IJ.log("Number of trees = " + this.numOfTrees);
-
 	// Show tree image.
 
-	ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
+/*	ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
 	treesIP.show();
 
 	// Set same calibration as the input image
@@ -645,14 +609,11 @@ public class Analyze_Skeleton implements PlugInFilter
 	//IJ.resetMinAndMax();
 	treesIP.resetDisplayRange();
 	treesIP.updateAndDraw();
-
+*/
 
 	// Reset visited variable
 	this.visited = null;
 	this.visited = new boolean[this.width][this.height][this.depth];
-
-
-	//IJ.log("Number of trees: " + this.numOfTrees + ", # colors = " + color);
 
 	return outputImage;
 
@@ -673,8 +634,6 @@ public class Analyze_Skeleton implements PlugInFilter
     {
 	int numOfVoxels = 0;
 
-	IJ.log("visiting " + pointToString(startingPoint) + " color = " + color);
-
 	//	if(isVisited(startingPoint))	
 	//	    return 0;
 	// Set pixel color
@@ -693,8 +652,6 @@ public class Analyze_Skeleton implements PlugInFilter
 		{
 		    numOfVoxels++;
 
-		    //IJ.log("visiting " + pointToString(nextPoint)+ " color = " + color);
-
 		    // Set color and visit flat
 		    this.setPixel(outputImage, nextPoint[0], nextPoint[1], nextPoint[2], color);
 		    setVisited(nextPoint, true);
@@ -710,7 +667,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	    else // revisit list
 	    {				
 		nextPoint = toRevisit.get(0);
-		//IJ.log("visiting " + pointToString(nextPoint)+ " color = " + color);
 
 		// Calculate next point to visit
 		nextPoint = getNextUnvisitedVoxel(nextPoint);
@@ -786,7 +742,6 @@ public class Analyze_Skeleton implements PlugInFilter
      */
     private double visitBranch(int[] startingPoint, int iTree) 
     {
-	//IJ.log("startingPoint = (" + startingPoint[0] + ", " + startingPoint[1] + ", " + startingPoint[2] + ")");
 	double length = 0;
 
 	// mark starting point as visited
@@ -808,7 +763,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    // Add length
 	    length += calculateDistance(previousPoint, nextPoint);
 
-	    // Mark as visited
+	    // Mark slab as visited
 	    setVisited(nextPoint, true);
 
 	    // Move in the graph
@@ -821,14 +776,43 @@ public class Analyze_Skeleton implements PlugInFilter
 	    // Add distance to last point
 	    length += calculateDistance(previousPoint, nextPoint);
 
-	    // Mark last point as visited
-	    setVisited(nextPoint, true);
-	    
-	    IJ.log("...and ending at "+pointToString(nextPoint));
+	    //when nextPoint (last voxel of branch) is a junction point
+	    if (getPixel(this.taggedImage, nextPoint) == Analyze_Skeleton.JUNCTION){
+		
+		ArrayList <int[]> groupOfJunctions = null;
+		//get the junction group containing nextPoint
+		for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
+		    groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
+		    //visit all the voxels k in a junction
+		    for(int k = 0; k < groupOfJunctions.size(); k++){
+			int[] ka = groupOfJunctions.get(k);
+			if (ka[0] == nextPoint[0] && 
+				ka[1] == nextPoint[1] && 
+				ka[2] == nextPoint[2]){
+			    //we found our junction, so
+			    //get the centroid of the junction
+			    int nJVox = groupOfJunctions.size();
+			    int sumX = 0, sumY = 0, sumZ = 0;
+			    for(int v = 0; v < nJVox; v++){
+				int[] jVox = groupOfJunctions.get(v); 
+				sumX += jVox[0];
+				sumY += jVox[1];
+				sumZ += jVox[2];
+			    }
+
+			    double[] junctionCentroid = {sumX / nJVox, sumY / nJVox, sumZ / nJVox};
+			    length += calculateDistance(nextPoint, junctionCentroid);
+			    this.auxPoint = previousPoint;
+			    return length;
+			}
+		    }
+		}		
+	    } else {
+		// Mark last point as visited if not a junction
+		setVisited(nextPoint, true);
+	    }
 	}
-
 	this.auxPoint = previousPoint;
-
 	return length;
     } /* end visitBranch*/	
 
@@ -841,6 +825,22 @@ public class Analyze_Skeleton implements PlugInFilter
      * @return distance (in the corresponding units)
      */
     private double calculateDistance(int[] point1, int[] point2) 
+    {	
+	double dx = (point1[0] - point2[0]) * this.VOXEL_WIDTH;
+	double dy = (point1[1] - point2[1]) * this.VOXEL_HEIGHT;
+	double dz = (point1[2] - point2[2]) * this.VOXEL_DEPTH;
+	return Math.sqrt(  dx * dx + dy * dy + dz * dz );
+    }
+
+    /* -----------------------------------------------------------------------*/
+    /**
+     * Calculate distance between two points in 3D
+     * 
+     * @param point1 first point coordinates
+     * @param point2 second point coordinates
+     * @return distance (in the corresponding units)
+     */
+    private double calculateDistance(int[] point1, double[] point2) 
     {	
 	double dx = (point1[0] - point2[0]) * this.VOXEL_WIDTH;
 	double dy = (point1[1] - point2[1]) * this.VOXEL_HEIGHT;
@@ -1018,7 +1018,7 @@ public class Analyze_Skeleton implements PlugInFilter
     private int[] getNextUnvisitedVoxel(int[] point) 
     {
 	int[] unvisitedNeighbor = null;
-	
+
 	int xp = point[0], yp = point[1], zp = point[2];
 	// Check neighbors status
 	for(int x = -1; x < 2; x++)
@@ -1027,7 +1027,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		{
 		    if(x == 0 && y == 0 && z == 0)
 			continue;
-		       
+
 		    if(getPixel(this.taggedImage, xp + x, yp + y, zp + z) != 0
 			    && isVisited(xp + x, yp + y, zp + z) == false)						
 		    {					
@@ -1060,10 +1060,10 @@ public class Analyze_Skeleton implements PlugInFilter
 		    if(x == 0 && y == 0 && z == 0)
 			continue;
 		    byte pixel = getPixel(this.taggedImage, xp + x, yp + y, zp + z);
-		    
+
 		    if (pixel == Analyze_Skeleton.JUNCTION && isJunction)
 			continue;
-		    
+
 		    if(pixel != 0 && isVisited(xp + x, yp + y, zp + z) == false)						
 		    {					
 			unvisitedNeighbor = new int[]{xp + x, yp + y, zp + z};
@@ -1075,7 +1075,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	return unvisitedNeighbor;
     }/* end getNextUnvisitedVoxel */
 
-    
+
     /* -----------------------------------------------------------------------*/
     /**
      * Check if a voxel is visited taking into account the borders. 
@@ -1200,6 +1200,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	Skeletonize3D_ sk = new Skeletonize3D_();
 	int eulerLUT[] = new int[256]; 
 	sk.fillEulerLUT(eulerLUT);
+	IJ.log("Number of endPoints before pruning: "+this.listOfEndPoints.size());
 	int endPoints = this.listOfEndPoints.size();
 	while (!this.listOfEndPoints.isEmpty()){
 	    IJ.showStatus("Pruning end branches...");
@@ -1481,11 +1482,47 @@ public class Analyze_Skeleton implements PlugInFilter
 	    ((short[]) image.getPixels(z + 1))[x + y * this.width] = value;
     } /* end getPixel */	
 
+    private boolean isJunctionMiddle(ImageStack image, int[] junctionCoord, int[] LUT, Skeletonize3D_ sk){
+	//filter out non-branching junction voxels by marking them visited
 
+	int x = junctionCoord[0], y = junctionCoord[1], z = junctionCoord[2];
+
+	byte[] neighbors = getNeighborhood(this.taggedImage, x,y,z);
+
+	for (int j = 0; j < 27; j++){
+	    switch(neighbors[j]){
+	    case SLAB: return false;
+	    case END_POINT: return false;
+	    }		
+	}
+
+	//if there are no slabs or ends in neighborhood
+	//go to the next level of filtering
+	//Junction voxel is surrounded by 0's or junction voxels
+	//so see if it is really a branch stub and not in the middle of a junction
+	for (int j = 0; j < 27; j++){
+	    if (neighbors[j] > 0) neighbors[j] = 1;
+	}
+	if (!sk.isEulerInvariant(neighbors, LUT)){
+	    //junction voxels in the middle of a junction shouldn't contribute to 
+	    //branches
+	    return true;
+	} else {
+	    return false;
+	}
+    }
     /**
      * 
      */
     String pointToString(int[] p)
+    {
+	return new String("(" + p[0] + ", " + p[1] + ", " + p[2] + ")");
+    }
+
+    /**
+     * 
+     */
+    String pointToString(double[] p)
     {
 	return new String("(" + p[0] + ", " + p[1] + ", " + p[2] + ")");
     }
