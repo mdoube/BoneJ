@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 
 import org.doube.bonej.Skeletonize3D_;
+import org.doube.bonej.ResultInserter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -32,18 +33,21 @@ import ij.process.ShortProcessor;
  */
 //TODO use List Iterators rather than for-each when modifying List elements
 //TODO extra trees found sometimes in single structures, after pruning.
+//TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
+//TODO incorporate ResultInserter
 
 /**
  * Main class.
  * This class is a plugin for the ImageJ interface for analyzing
  * 2D/3D skeleton images.
- * <p>
- * For more information, visit the Analyze_Skeleton homepage:
- * http://imagejdocu.tudor.lu/doku.php?id=plugin:analysis:analyzeskeleton:start
+ * 
+ * @see
+ * <p>For more information, visit the <a href="http://imagejdocu.tudor.lu/doku.php?id=plugin:analysis:analyzeskeleton:start">AnalyzeSkeleton_ homepage</a>.</p>
+ * 
  *
  *
- * @version 1.0 05/27/2009
+ * @version 1.0 03/06/2009
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
  */
@@ -78,6 +82,9 @@ public class Analyze_Skeleton implements PlugInFilter
 
     /** visit flags */
     private boolean [][][] visited = null;
+    
+    /** pruning boolean */
+    private boolean doPrune = false;
 
     // Tree fields
     /** number of branches for every specific tree */
@@ -180,13 +187,12 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// initialize visit flags
 	this.visited = new boolean[this.width][this.height][this.depth];
+	
+	if (!showDialog()){
+	    return;
+	}
 
 	// Prepare data: classify voxels and tag them.
-	GenericDialog gd = new GenericDialog("Prune?");
-	gd.addCheckbox("Prune Ends", true);
-	gd.showDialog();
-	boolean doPrune = gd.getNextBoolean();
-
 	if (doPrune){
 	    ImageStack stack1 = tagImage(this.inputImage);
 	    this.taggedImage = pruneEndBranches(stack1);
@@ -597,7 +603,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Show tree image.
 
-/*	ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
+	/*	ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
 	treesIP.show();
 
 	// Set same calibration as the input image
@@ -609,7 +615,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	//IJ.resetMinAndMax();
 	treesIP.resetDisplayRange();
 	treesIP.updateAndDraw();
-*/
+	 */
 
 	// Reset visited variable
 	this.visited = null;
@@ -778,7 +784,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	    //when nextPoint (last voxel of branch) is a junction point
 	    if (getPixel(this.taggedImage, nextPoint) == Analyze_Skeleton.JUNCTION){
-		
+
 		ArrayList <int[]> groupOfJunctions = null;
 		//get the junction group containing nextPoint
 		for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
@@ -1526,7 +1532,18 @@ public class Analyze_Skeleton implements PlugInFilter
     {
 	return new String("(" + p[0] + ", " + p[1] + ", " + p[2] + ")");
     }
-
+    /*------------------------------------------------------------------------*/
+    private boolean showDialog(){
+	GenericDialog gd = new GenericDialog("Prune?");
+	gd.addCheckbox("Prune Ends", true);
+	gd.showDialog();
+	if (gd.wasCanceled()){
+	    return false;
+	} else {
+	    doPrune = gd.getNextBoolean();
+	    return true;
+	}
+    }
     /* -----------------------------------------------------------------------*/
     /**
      * Show plug-in information.
