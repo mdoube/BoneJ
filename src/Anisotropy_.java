@@ -37,6 +37,8 @@ import java.util.ArrayList;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
+import org.doube.bonej.ResultInserter;
+
 /**
  * <p>
  * Calculate degree of anisotropy using the mean intercept length method
@@ -97,6 +99,7 @@ public class Anisotropy_ implements PlugInFilter {
 
     public void run(ImageProcessor ip) {
 	ResultsTable rt = ResultsTable.getResultsTable();
+	ResultInserter ri = new ResultInserter(); 
 	if (!showDialog()) {
 	    return;
 	}
@@ -147,10 +150,11 @@ public class Anisotropy_ implements PlugInFilter {
 	// double[][] eVec = eigenVectors.getArrayCopy();
 
 	double anisotropy = 1 - eVal[0][0] / eVal[2][2];
-	rt.incrementCounter();
+/*	rt.incrementCounter();
 	rt.addLabel("Label", imp.getTitle());
 	rt.addValue("Anisotropy", anisotropy);
-	rt.show("Results");
+	rt.show("Results");*/
+	ri.setResultInRow(imp, "Anisotropy", anisotropy);
 	if (do3DResult) {
 	    plotPoints3D(coOrdinates, "Intercept Lengths");
 	}

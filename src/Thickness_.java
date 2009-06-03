@@ -4,6 +4,7 @@ import ij.measure.ResultsTable;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import java.util.Arrays;
+import org.doube.bonej.ResultInserter;
 
 /* Bob Dougherty 8/10/2007
 Perform all of the steps for the local thickness calculaton
@@ -1099,8 +1100,8 @@ public class Thickness_ implements  PlugInFilter {
 	}
 	double stDev = Math.sqrt(sumSquares / pixCount);
 	double stDevF = Math.sqrt(sumSquaresFiltered / pixCountFiltered);
-
-	ResultsTable rt = ResultsTable.getResultsTable();
+	
+/*	ResultsTable rt = ResultsTable.getResultsTable();
 	if (!inverse){ 
 	    rt.incrementCounter();
 	    //trab thickness
@@ -1119,6 +1120,23 @@ public class Thickness_ implements  PlugInFilter {
 	    rt.addValue("Tb.Sp Max ("+units+")", maxThick);
 	}
 	rt.show("Results");
+*/	
+	ResultInserter ri = new ResultInserter();
+	if (!inverse){ 
+	    //trab thickness
+	    ri.setResultInRow(baseImp, "Tb.Th Mean ("+units+")", meanThick);
+	    ri.setResultInRow(baseImp, "Tb.Th Mean F ("+units+")", meanThickFiltered);
+	    ri.setResultInRow(baseImp, "Tb.Th Std Dev ("+units+")", stDev);
+	    ri.setResultInRow(baseImp, "Tb.Th Std Dev F ("+units+")", stDevF);
+	    ri.setResultInRow(baseImp, "Tb.Th Max ("+units+")", maxThick);
+	} else {
+	    //trab separation
+	    ri.setResultInRow(baseImp, "Tb.Sp Mean ("+units+")", meanThick);
+	    ri.setResultInRow(baseImp, "Tb.Sp Mean F ("+units+")", meanThickFiltered);
+	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev ("+units+")", stDev);
+	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev F ("+units+")", stDevF);
+	    ri.setResultInRow(baseImp, "Tb.Sp Max ("+units+")", maxThick);
+	}	
 	return;
     }
     
