@@ -25,10 +25,12 @@ import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 
 import java.awt.Rectangle;
 import java.awt.List;
+
+import org.doube.bonej.ResultInserter;
 
 /**
  *<p>Takes point selections from ROI manager and returns the
@@ -118,10 +120,6 @@ public class Fit_Sphere implements PlugInFilter {
      * @return double[4] containing calibrated (x,y,z,r) coordinates of the centre and radius, r.
      */
     public double[] fitSphere(ImagePlus imp, RoiManager roiMan){
-	ResultsTable rt = ResultsTable.getResultsTable();
-	int row = rt.getCounter();
-	rt.incrementCounter();
-	rt.setLabel(imp.getTitle(), row);
 	double[] voxDim = getVoxDim(imp);
 	double[] sphereDim = new double[4];
 	int no_p = roiMan.getCount();
@@ -194,11 +192,20 @@ public class Fit_Sphere implements PlugInFilter {
 		g_new += Gp[i][0];
 	}
 	Calibration cal = imp.getCalibration();
-	rt.setValue("X centroid ("+cal.getUnits()+")", row, sphereDim[0]);
+	/*
+	ResultsTable rt = ResultsTable.getResultsTable();
+	int row = rt.getCounter();
+	rt.incrementCounter();
+	rt.setLabel(imp.getTitle(), row);rt.setValue("X centroid ("+cal.getUnits()+")", row, sphereDim[0]);
 	rt.setValue("Y centroid ("+cal.getUnits()+")", row, sphereDim[1]);
 	rt.setValue("Z centroid ("+cal.getUnits()+")", row, sphereDim[2]);
 	rt.setValue("Radius ("+cal.getUnits()+")", row, sphereDim[3]);
-	rt.show("Results");
+	rt.show("Results");*/
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(imp, "X centroid ("+cal.getUnits()+")", sphereDim[0]);
+	ri.setResultInRow(imp, "Y centroid ("+cal.getUnits()+")", sphereDim[1]);
+	ri.setResultInRow(imp, "Z centroid ("+cal.getUnits()+")", sphereDim[2]);
+	ri.setResultInRow(imp, "Radius ("+cal.getUnits()+")", sphereDim[3]);
 	return sphereDim;
     }
     //TODO make this go faster by getting slice pixels and iterating through
