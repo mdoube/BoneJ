@@ -11,6 +11,8 @@ import ij.measure.ResultsTable;
 
 import java.util.ArrayList;
 
+import org.doube.bonej.ResultInserter;
+
 /**
  * <p>FractalCount_.java,v 1.42 2005/05/30 07:52:59</p>
  * <p>Estimates the fractal dimension of 2D and 3D binary images.
@@ -223,12 +225,14 @@ public class Fractal_Count implements PlugInFilter {
 			+ ":" + numOffsets);
 	    }
 
-	    ResultsTable rt = ResultsTable.getResultsTable();
+/*	    ResultsTable rt = ResultsTable.getResultsTable();
 	    rt.incrementCounter();
 	    rt.addLabel(imRef.getTitle());
 	    rt.addValue("Fractal Dimension", p[1]);
 	    rt.show("Results");
-
+*/
+	    ResultInserter ri = new ResultInserter();
+	    ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
 	    if (plotGraph) {
 		doPlotGraph(p, boxSizes, boxCountSums);
 	    }
