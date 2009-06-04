@@ -26,7 +26,7 @@ import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 
 // for 3D plotting of coordinates
 import javax.vecmath.Point3f;
@@ -98,7 +98,7 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	ResultsTable rt = ResultsTable.getResultsTable();
+//	ResultsTable rt = ResultsTable.getResultsTable();
 	ResultInserter ri = new ResultInserter(); 
 	if (!showDialog()) {
 	    return;
