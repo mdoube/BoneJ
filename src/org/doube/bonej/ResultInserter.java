@@ -55,8 +55,8 @@ public class ResultInserter implements PlugInFilter{
 		    return;
 		} else {
 		    //but if there is, it might or might not have data in it
-		    double currentValue =  rt.getValue(colHeading, row);
-		    if(currentValue == 0){
+		    Double currentValue =  rt.getValue(colHeading, row);
+		    if(currentValue.equals(Double.NaN)){
 			rt.setValue(colHeading, row, value);
 			rt.show(table);
 			return;
@@ -69,9 +69,19 @@ public class ResultInserter implements PlugInFilter{
 	}
 	//we got to the end of the table without finding a space to insert
 	//the value, so make a new row for it
+	String label = "Image";
 	rt.incrementCounter();
-	rt.addLabel("Image", title);
+	rt.addLabel(label, title);
 	rt.addValue(colHeading, value);
+	//set all the other values in the row to Double.NaN
+	//(IJ has set them to 0, which is unhelpful, and we can't use null)
+	int row = rt.getCounter() - 1;
+	for (int c = 0; c <= rt.getLastColumn(); c++){
+	    if (!rt.getColumnHeading(c).equals(colHeading)
+		    && !rt.getColumnHeading(c).equals(label)){
+		rt.setValue(c, row, Double.NaN);
+	    }
+	}
 	rt.show(table);
 	return;
     }
