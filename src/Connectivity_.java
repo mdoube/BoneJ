@@ -24,7 +24,7 @@ import ij.ImageStack;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij.measure.Calibration;
 import org.doube.bonej.ResultInserter;
 
@@ -53,15 +53,6 @@ import org.doube.bonej.ResultInserter;
  * <p>Several of the methods are based on Ignacio Arganda-Carreras's Skeletonize3D_ plugin: <a href="http://imagejdocu.tudor.lu/doku.php?id=plugin:morphology:skeletonize3d:start">Skeletonize3D homepage</a></p>
  * 
  */
-
-/*TODO
- * Test more cases...
- * Fix bugs:
- * 
- * Unusual result when running on large stacks
- * 
- */
-
 public class Connectivity_ implements PlugInFilter {
 	/** working image plus */
 	private ImagePlus imRef;
@@ -123,22 +114,25 @@ public class Connectivity_ implements PlugInFilter {
 								cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
 		double connDensity = connectivity / stackVolume;
 
-		ResultsTable rt = ResultsTable.getResultsTable();
+		/*ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
 		rt.addLabel("Label", this.imRef.getShortTitle());
 		rt.addValue("Euler ch.", (double)sumEuler / 8);
 		rt.addValue("Δ(χ)", deltaChi);
 		rt.addValue("Connectivity", connectivity);
 		rt.addValue("Tb.N ("+cal.getUnit()+"^-3)", connDensity);
-		rt.show("Results");
+		rt.show("Results");*/
 		if (connectivity < 0){
 		    IJ.showMessage("Caution", "Connectivity is negative.\n\n" +
 		    		"This usually happens if there are multiple\n" +
 		    		"particles or enclosed cavities.\n\n" +
 		    		"Try running Purify prior to Connectivity.");
 		}
-		ResultInserter ri;
-//		ri.setResultInRow(this.imRef, "poo", 23);
+		ResultInserter ri = new ResultInserter();
+		ri.setResultInRow(this.imRef, "Euler ch.", (double)sumEuler / 8);
+		ri.setResultInRow(this.imRef, "Δ(χ)", deltaChi);
+		ri.setResultInRow(this.imRef, "Connectivity", connectivity);
+		ri.setResultInRow(this.imRef, "Tb.N ("+cal.getUnit()+"^-3)", connDensity);
 	}
 
 	/* -----------------------------------------------------------------------*/
