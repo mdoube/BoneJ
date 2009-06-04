@@ -1,4 +1,6 @@
 
+import org.doube.bonej.ResultInserter;
+
 import Jama.*;
 import ij.IJ;
 import ij.ImagePlus;
@@ -8,7 +10,7 @@ import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.GenericDialog;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 
 /**
  * <p>
@@ -53,9 +55,9 @@ public class Plate_Rod implements PlugInFilter {
 	vH = cal.pixelHeight;
 	vD = cal.pixelDepth;
 	units = cal.getUnits();
-	if (imp != null
-		&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
-	    ImageStatistics stats = imp.getStatistics();
+	if (this.imp != null
+		&& (this.imp.getType() == ImagePlus.GRAY8 || this.imp.getType() == ImagePlus.COLOR_256)) {
+	    ImageStatistics stats = this.imp.getStatistics();
 	    if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
 		IJ.error("8-bit binary (black and white only) image required.");
 		return DONE;
@@ -70,11 +72,11 @@ public class Plate_Rod implements PlugInFilter {
                                                                 // dialog
 	showDialog();
 	double[][] randomVectors = randomVectors(nVectors);
-	double[][] skeletonPoints = skeletonPoints(imp);
+	double[][] skeletonPoints = skeletonPoints(this.imp);
 	double[][] localEigenValues = localEigenValues(stack, randomVectors,
 		skeletonPoints, samplingIncrement);
 
-	ResultsTable rt = ResultsTable.getResultsTable();
+//	ResultsTable rt = ResultsTable.getResultsTable();
 	double sumEv1 = 0, sumEv2 = 0, sumEv3 = 0;
 	int NaNs = 0;
 	for (int l = 0; l < localEigenValues.length; l++) {
@@ -88,14 +90,21 @@ public class Plate_Rod implements PlugInFilter {
 	    }
 	}
 	IJ.log(NaNs + " tests hit the sides");
-	rt.incrementCounter();
-	rt.addLabel("Label", imp.getTitle());
+	/*rt.incrementCounter();
+	rt.addLabel("Label", this.imp.getTitle());
 	rt.addValue("ΣeV1", sumEv1);
 	rt.addValue("ΣeV2", sumEv2);
 	rt.addValue("ΣeV3", sumEv3);
 	rt.addValue("eV2/eV1", sumEv2 / sumEv1);
 	rt.addValue("eV3/eV1", sumEv3 / sumEv1);
-	rt.show("Results");
+	rt.show("Results");*/
+	
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(this.imp, "ΣeV1", sumEv1);
+	ri.setResultInRow(this.imp, "ΣeV2", sumEv2);
+	ri.setResultInRow(this.imp, "ΣeV3", sumEv3);
+	ri.setResultInRow(this.imp, "eV2/eV1", sumEv2 / sumEv1);
+	ri.setResultInRow(this.imp, "eV3/eV1", sumEv3 / sumEv1);
     }
 
     /* ----------------------------------------------------------------------- */
@@ -120,8 +129,8 @@ public class Plate_Rod implements PlugInFilter {
     } /* end randomVectors */
 
     public double[][] skeletonPoints(ImagePlus imp) {
-	ImageStack skeletonStack = new ImageStack(imp.getWidth(), imp
-		.getHeight(), imp.getNSlices());
+	ImageStack skeletonStack = new ImageStack(this.imp.getWidth(), this.imp
+		.getHeight(), this.imp.getNSlices());
 	for (int s = 1; s <= stack.getSize(); s++) {
 	    byte[] pixels = (byte[]) stack.getPixels(s);
 	    byte[] pixelsCopy = pixels.clone();
@@ -129,7 +138,7 @@ public class Plate_Rod implements PlugInFilter {
 	}
 
 	ImagePlus skeletonImp = new ImagePlus("Skeleton", skeletonStack);
-	skeletonImp.setCalibration(imp.getCalibration());
+	skeletonImp.setCalibration(this.imp.getCalibration());
 	skeletonImp.show();
 	IJ.run("Invert LUT");
 	IJ.run("Skeletonise 3D");
@@ -137,9 +146,9 @@ public class Plate_Rod implements PlugInFilter {
 	int d = skeletonImp.getStackSize();
 	int h = skeletonImp.getHeight();
 	int w = skeletonImp.getWidth();
-	double vW = imp.getCalibration().pixelWidth;
-	double vH = imp.getCalibration().pixelHeight;
-	double vD = imp.getCalibration().pixelDepth;
+	double vW = this.imp.getCalibration().pixelWidth;
+	double vH = this.imp.getCalibration().pixelHeight;
+	double vD = this.imp.getCalibration().pixelDepth;
 	int count = 0;
 	for (int z = 1; z <= d; z++) {
 	    byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
