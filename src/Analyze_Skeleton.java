@@ -123,9 +123,6 @@ public class Analyze_Skeleton implements PlugInFilter
     /** list of junction coordinates in the entire image */
     private ArrayList <int[]> listOfJunctionVoxels = new ArrayList<int[]>();
 
-    /** list of junction centroid coordinates in the entire image */
-    private ArrayList <int[]> listOfJunctionCentroids = new ArrayList<int[]>();
-
     /** list of slab coordinates in the entire image */
     private ArrayList <int[]> listOfSlabVoxels = new ArrayList<int[]>();
     /** list of slab coordinates in the entire image */
