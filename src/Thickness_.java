@@ -1,6 +1,6 @@
 
 import ij.*;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import java.util.Arrays;
