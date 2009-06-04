@@ -35,7 +35,7 @@ import ij.process.ShortProcessor;
 //TODO extra trees found sometimes in single structures, after pruning.
 //TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
-//TODO incorporate ResultInserter
+//TODO use ResultInserter() once it handles 0 values properly
 
 /**
  * Main class.
@@ -82,7 +82,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
     /** visit flags */
     private boolean [][][] visited = null;
-    
+
     /** pruning boolean */
     private boolean doPrune = false;
 
@@ -187,7 +187,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// initialize visit flags
 	this.visited = new boolean[this.width][this.height][this.depth];
-	
+
 	if (!showDialog()){
 	    return;
 	}
@@ -302,6 +302,7 @@ public class Analyze_Skeleton implements PlugInFilter
     {
 	String unit = this.imRef.getCalibration().getUnit();
 	ResultsTable rt = new ResultsTable();
+	ResultInserter ri = new ResultInserter();
 
 	String[] head = {"Skeleton", "# Branches","# Junctions", "# End-point voxels",
 		"# Junction voxels","# Slab voxels", "# Triple points", "Average Branch Length ("+unit+")", 
@@ -312,7 +313,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	for(int i = 0 ; i < this.numOfTrees; i++)
 	{
-	    rt.incrementCounter();
+	    /*	    rt.incrementCounter();
 
 	    rt.addValue(1, this.numberOfBranches[i]);        
 	    rt.addValue(2, this.listOfSingleJunctions[i].size());
@@ -326,15 +327,26 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	    rt.show("Results");
 
-	    IJ.log("--- Skeleton #" + (i+1) + " ---");
-	    IJ.log("Coordinates of the largest branch:");
-	    IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " //TODO fix NPE here 
-		    + (this.initialPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
-		    + (this.initialPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
-	    IJ.log("Final point: (" + (this.finalPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " 
-		    + (this.finalPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
-		    + (this.finalPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
-	    IJ.log("Euclidean distance: " + this.calculateDistance(this.initialPoint[i], this.finalPoint[i]));
+	     */	    ri.setResultInRow(this.imRef, "Tree", i);
+	     ri.setResultInRow(this.imRef, "Branches", this.numberOfBranches[i]);
+	     ri.setResultInRow(this.imRef, "Junctions", this.listOfSingleJunctions[i].size());
+	     ri.setResultInRow(this.imRef, "End Points", this.numberOfEndPoints[i]);
+	     ri.setResultInRow(this.imRef, "Junction Voxels", this.junctionVoxelTree[i].size());
+	     ri.setResultInRow(this.imRef, "Triple Points", this.numberOfTriplePoints[i]);
+	     ri.setResultInRow(this.imRef, "Slab Voxels", this.numberOfSlabs[i]);
+	     ri.setResultInRow(this.imRef, "Mean Branch Length ("+unit+")", this.averageBranchLength[i]);
+	     ri.setResultInRow(this.imRef, "Max Branch Length ("+unit+")", this.maximumBranchLength[i]);
+	     ri.setResultInRow(this.imRef, "Total Branch Length ("+unit+")", this.branchLength[i]);
+
+	     IJ.log("--- Skeleton #" + (i+1) + " ---");
+	     IJ.log("Coordinates of the largest branch:");
+	     IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " //TODO fix NPE here 
+		     + (this.initialPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
+		     + (this.initialPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
+	     IJ.log("Final point: (" + (this.finalPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " 
+		     + (this.finalPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
+		     + (this.finalPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
+	     IJ.log("Euclidean distance: " + this.calculateDistance(this.initialPoint[i], this.finalPoint[i]));
 	}
     }
 
@@ -976,8 +988,8 @@ public class Analyze_Skeleton implements PlugInFilter
 
     /* -----------------------------------------------------------------------*/
     /**
-     * Calculate if two points are neighbors
      * 
+     * Calculate if two points are neighbors
      * @param point1 first point
      * @param point2 second point
      * @return true if the points are neighbors (26-pixel neighborhood)
