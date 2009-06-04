@@ -7,7 +7,7 @@ import ij.measure.CurveFitter;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ImageProcessor;
 import ij.util.Tools;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 
 import java.util.ArrayList;
 
@@ -233,6 +233,7 @@ public class Fractal_Count implements PlugInFilter {
 */
 	    ResultInserter ri = new ResultInserter();
 	    ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
+	    
 	    if (plotGraph) {
 		doPlotGraph(p, boxSizes, boxCountSums);
 	    }
