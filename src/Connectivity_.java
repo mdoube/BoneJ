@@ -133,6 +133,7 @@ public class Connectivity_ implements PlugInFilter {
 		ri.setResultInRow(this.imRef, "Δ(χ)", deltaChi);
 		ri.setResultInRow(this.imRef, "Connectivity", connectivity);
 		ri.setResultInRow(this.imRef, "Tb.N ("+cal.getUnit()+"^-3)", connDensity);
+		return;
 	}
 
 	/* -----------------------------------------------------------------------*/
