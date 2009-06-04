@@ -1,11 +1,14 @@
 import java.awt.Rectangle;
+
+import org.doube.bonej.ResultInserter;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij.gui.*;
 
 public class Volume_Fraction implements PlugInFilter {
@@ -29,9 +32,6 @@ public class Volume_Fraction implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	ResultsTable rt = ResultsTable.getResultsTable();
-	rt.reset();
-	String title = imp.getTitle();
 	int startSlice = 1;
 	int endSlice = stack.getSize();
 	GenericDialog gd = new GenericDialog("Limit Slices");
@@ -73,10 +73,15 @@ public class Volume_Fraction implements PlugInFilter {
 	    }
 	}
 	double p = (double)volBone / (double)volTotal;
+	/*
+	String title = imp.getTitle();
+	ResultsTable rt = ResultsTable.getResultsTable();
 	rt.incrementCounter();
 	rt.addLabel("Label", title);
 	rt.addValue("BV/TV", p);
-	rt.show("Results");	
+	rt.show("Results");*/	
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(imp, "BV/TV", p);
     }
     private void setThreshold(ImagePlus imp){
 	if (imp != null	&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
