@@ -35,7 +35,7 @@ import ij.process.ShortProcessor;
 //TODO extra trees found sometimes in single structures, after pruning.
 //TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
-//TODO use ResultInserter() once it handles 0 values properly
+//TODO incorporate Strahler branch order classification
 
 /**
  * Main class.
