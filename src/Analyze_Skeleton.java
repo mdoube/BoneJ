@@ -36,7 +36,6 @@ import ij.process.ShortProcessor;
 //TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
 //TODO incorporate Strahler branch order classification
-//TODO starts on slab voxel not junction voxel in ant.tif
 
 /**
  * Main class.
@@ -336,7 +335,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	     ri.setResultInRow(this.imRef, "Max Branch Length ("+unit+")", this.maximumBranchLength[i]);
 	     ri.setResultInRow(this.imRef, "Total Branch Length ("+unit+")", this.branchLength[i]);
 
-	     IJ.log("--- Skeleton #" + (i+1) + " ---");
+	     /*	     IJ.log("--- Skeleton #" + (i+1) + " ---");
 	     IJ.log("Coordinates of the largest branch:");
 	     IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " //TODO fix NPE here 
 		     + (this.initialPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
@@ -344,7 +343,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	     IJ.log("Final point: (" + (this.finalPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " 
 		     + (this.finalPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
 		     + (this.finalPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
-	     IJ.log("Euclidean distance: " + this.calculateDistance(this.initialPoint[i], this.finalPoint[i]));
+	     IJ.log("Euclidean distance: " + this.calculateDistance(this.initialPoint[i], this.finalPoint[i])); */
 	}
     }
 
@@ -372,7 +371,8 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Visit branches starting at end points
 	for(int i = 0; i < this.endPointsTree[iTree].size(); i++)
-	{			
+	{
+	    IJ.log("Visiting endPoint "+i+" in tree "+iTree);
 	    final int[] endPointCoord = this.endPointsTree[iTree].get(i);
 	    // Skip when visited
 	    if(isVisited(endPointCoord))
@@ -410,7 +410,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 
 	for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
-
+	    IJ.log("Visiting junction "+j+" in tree "+iTree);
 	    ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
 
 	    //	    work out the junction's centroid 
@@ -429,7 +429,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    for(int i = 0; i < groupOfJunctions.size(); i++)
 	    {
 		final int[] junctionCoord = groupOfJunctions.get(i);
-
+		IJ.log("...junction point "+pointToString(junctionCoord));
 		if (isJunctionMiddle(this.taggedImage, junctionCoord, LUT, sk))
 		    continue;
 
@@ -769,6 +769,32 @@ public class Analyze_Skeleton implements PlugInFilter
 	if (nextPoint == null)
 	    return 0;
 
+	//if starting point and next point are slabs,
+	//find a neighbor that is a slab and add its distance
+	if (isSlab(startingPoint) && isSlab(nextPoint)){
+	    int x = startingPoint[0];
+	    int y = startingPoint[1];
+	    int z = startingPoint[2];
+	    search:
+	    for (int zn = z-1; zn <= z+1; zn++){
+		for (int yn = y - 1; yn <= y+1; yn++){
+		    for (int xn = x-1; xn <= x+1; xn++){
+			if (xn == x && yn == y && zn == z)
+			    continue;
+			else if (xn == nextPoint[0] &&
+				yn == nextPoint[1] && 
+				zn == nextPoint[2])
+			    continue;
+			int[] p = {xn, yn, zn};
+			if (isSlab(p)){
+			    length += calculateDistance(startingPoint, p);
+			    break search;
+			}
+		    }
+		}
+	    }
+	}
+
 	int[] previousPoint = startingPoint;
 	IJ.log("Starting point is "+pointToString(startingPoint));
 	if (isSlab(startingPoint)){
@@ -827,7 +853,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			    return length;
 			}
 		    }
-		}		
+		}
 	    } else {
 		// Mark last point as visited if not a junction
 		setVisited(nextPoint, true);
@@ -1200,7 +1226,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			    setPixel(outputImage, x, y, z, Analyze_Skeleton.SLAB);
 			    int[] slab = new int[]{x, y, z};
 			    this.listOfSlabVoxels.add(slab);
-//			    			    this.totalNumberOfSlabs++;
+			    //			    			    this.totalNumberOfSlabs++;
 			}
 		    }					
 		}
