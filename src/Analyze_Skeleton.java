@@ -527,7 +527,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	for(int i = 0; i < this.listOfEndPoints.size(); i++)
 	{			
 	    int[] endPointCoord = this.listOfEndPoints.get(i);
-	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
+//	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
 
 	    if(isVisited(endPointCoord))
 		continue;
