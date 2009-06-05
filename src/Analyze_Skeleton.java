@@ -36,6 +36,7 @@ import ij.process.ShortProcessor;
 //TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
 //TODO incorporate Strahler branch order classification
+//TODO starts on slab voxel not junction voxel in ant.tif
 
 /**
  * Main class.
@@ -769,11 +770,16 @@ public class Analyze_Skeleton implements PlugInFilter
 	    return 0;
 
 	int[] previousPoint = startingPoint;
-
+	IJ.log("Starting point is "+pointToString(startingPoint));
+	if (isSlab(startingPoint)){
+	    this.numberOfSlabs[iTree]++;
+	    IJ.log("Added slab "+pointToString(startingPoint));
+	}
 	// We visit the branch until we find an end point or a junction
 	while(nextPoint != null && isSlab(nextPoint))
 	{
 	    this.numberOfSlabs[iTree]++;
+	    IJ.log("Added slab "+pointToString(nextPoint));
 
 	    // Add length
 	    length += calculateDistance(previousPoint, nextPoint);
@@ -1194,7 +1200,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			    setPixel(outputImage, x, y, z, Analyze_Skeleton.SLAB);
 			    int[] slab = new int[]{x, y, z};
 			    this.listOfSlabVoxels.add(slab);
-			    //			    this.totalNumberOfSlabs++;
+//			    			    this.totalNumberOfSlabs++;
 			}
 		    }					
 		}
