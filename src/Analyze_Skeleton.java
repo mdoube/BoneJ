@@ -32,8 +32,6 @@ import ij.process.ShortProcessor;
  * 
  */
 //TODO use List Iterators rather than for-each when modifying List elements
-//TODO extra trees found sometimes in single structures, after pruning.
-//TODO reported counts are wrong after pruning
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
 //TODO incorporate Strahler branch order classification
 
@@ -297,7 +295,7 @@ public class Analyze_Skeleton implements PlugInFilter
      */
     private void showResults() 
     {
-	String unit = this.imRef.getCalibration().getUnit();
+	String unit = this.imRef.getCalibration().getUnits();
 	ResultsTable rt = new ResultsTable();
 	ResultInserter ri = new ResultInserter();
 
@@ -372,7 +370,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	// Visit branches starting at end points
 	for(int i = 0; i < this.endPointsTree[iTree].size(); i++)
 	{
-	    IJ.log("Visiting endPoint "+i+" in tree "+iTree);
+//	    IJ.log("Visiting endPoint "+i+" in tree "+iTree);
 	    final int[] endPointCoord = this.endPointsTree[iTree].get(i);
 	    // Skip when visited
 	    if(isVisited(endPointCoord))
@@ -410,7 +408,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 
 	for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
-	    IJ.log("Visiting junction "+j+" in tree "+iTree);
+//	    IJ.log("Visiting junction "+j+" in tree "+iTree);
 	    ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
 
 	    //	    work out the junction's centroid 
@@ -429,7 +427,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    for(int i = 0; i < groupOfJunctions.size(); i++)
 	    {
 		final int[] junctionCoord = groupOfJunctions.get(i);
-		IJ.log("...junction point "+pointToString(junctionCoord));
+//		IJ.log("...junction point "+pointToString(junctionCoord));
 		if (isJunctionMiddle(this.taggedImage, junctionCoord, LUT, sk))
 		    continue;
 
@@ -529,6 +527,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	for(int i = 0; i < this.listOfEndPoints.size(); i++)
 	{			
 	    int[] endPointCoord = this.listOfEndPoints.get(i);
+	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
 
 	    if(isVisited(endPointCoord))
 		continue;
@@ -649,14 +648,16 @@ public class Analyze_Skeleton implements PlugInFilter
 	    short color) 
     {
 	int numOfVoxels = 0;
+	ArrayList <int[]> toRevisit = new ArrayList <int []>();
 
 	//	if(isVisited(startingPoint))	
 	//	    return 0;
 	// Set pixel color
 	this.setPixel(outputImage, startingPoint[0], startingPoint[1], startingPoint[2], color);
 	setVisited(startingPoint, true);
-
-	ArrayList <int[]> toRevisit = new ArrayList <int []>();
+	
+	if (isJunction(startingPoint))
+	    toRevisit.add(startingPoint);
 
 	int[] nextPoint = getNextUnvisitedVoxel(startingPoint);
 
@@ -673,9 +674,9 @@ public class Analyze_Skeleton implements PlugInFilter
 		    setVisited(nextPoint, true);
 
 		    // If it is a junction, add it to the revisit list
-		    if(isJunction(nextPoint))
+		    if(isJunction(nextPoint)){
 			toRevisit.add(nextPoint);
-
+		    }
 		    // Calculate next point to visit
 		    nextPoint = getNextUnvisitedVoxel(nextPoint);
 		}				
@@ -796,16 +797,16 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	int[] previousPoint = startingPoint;
-	IJ.log("Starting point is "+pointToString(startingPoint));
+//	IJ.log("Starting point is "+pointToString(startingPoint));
 	if (isSlab(startingPoint)){
 	    this.numberOfSlabs[iTree]++;
-	    IJ.log("Added slab "+pointToString(startingPoint));
+//	    IJ.log("Added slab "+pointToString(startingPoint));
 	}
 	// We visit the branch until we find an end point or a junction
 	while(nextPoint != null && isSlab(nextPoint))
 	{
 	    this.numberOfSlabs[iTree]++;
-	    IJ.log("Added slab "+pointToString(nextPoint));
+//	    IJ.log("Added slab "+pointToString(nextPoint));
 
 	    // Add length
 	    length += calculateDistance(previousPoint, nextPoint);
