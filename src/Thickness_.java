@@ -1,6 +1,7 @@
 
 import ij.*;
 //import ij.measure.ResultsTable;
+import ij.gui.GenericDialog;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import java.util.Arrays;
@@ -54,7 +55,7 @@ Perform all of the steps for the local thickness calculaton
 public class Thickness_ implements  PlugInFilter {
     private ImagePlus baseImp;
     public int thresh = 128;
-    public boolean inverse;
+    public boolean inverse, doThickness, doSpacing;
     public byte[][] data;
     public float[][] sNew;//, s;
     public int w,h,d;
@@ -81,6 +82,10 @@ public class Thickness_ implements  PlugInFilter {
 	return DOES_8G;
     }
     public void run(ImageProcessor ip) {
+	if (!showDialog()){
+	    return;
+	}
+	
 	String title = stripExtension(baseImp.getTitle());
 	baseImp.unlock();
 	IJ.freeMemory();
@@ -91,7 +96,9 @@ public class Thickness_ implements  PlugInFilter {
 	vH = baseImp.getCalibration().pixelHeight;
 	vD = baseImp.getCalibration().pixelDepth;
 	//calculate trabecular thickness (Tb.Th)
+	
 	float[][] s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
+	if(doThickness){
 	DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
 	DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
 	ImagePlus impLTC = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
@@ -103,7 +110,8 @@ public class Thickness_ implements  PlugInFilter {
 
 	impLTC.show();
 	IJ.run("Fire");
-
+	}
+	if(doSpacing){
 	// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 	inverse = true;
 	s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
@@ -120,6 +128,7 @@ public class Thickness_ implements  PlugInFilter {
 	IJ.run("Fire");
 
 	meanStdDev(impLTCi);
+	}
 	IJ.showProgress(1.0);
 	IJ.showStatus("Done");
     }
@@ -1145,6 +1154,20 @@ public class Thickness_ implements  PlugInFilter {
 		imp.getCalibration().pixelDepth != imp.getCalibration().pixelHeight ||
 		imp.getCalibration().pixelHeight != imp.getCalibration().pixelWidth){
 	    IJ.showMessage("Voxels are anisotropic, please take care with results.");
+	}
+    }
+    
+    private boolean showDialog(){
+	GenericDialog gd = new GenericDialog("Options");
+	gd.addCheckbox("Thickness", true);
+	gd.addCheckbox("Spacing", false);
+	gd.showDialog();
+	if (gd.wasCanceled()){
+	    return false;
+	} else {
+	    doThickness = gd.getNextBoolean();
+	    doSpacing = gd.getNextBoolean();
+	    return true;
 	}
     }
 }
