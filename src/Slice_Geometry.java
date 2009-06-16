@@ -23,6 +23,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
+import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -46,8 +47,8 @@ public class Slice_Geometry implements PlugInFilter {
     public static final double PI = 3.141592653589793;
     private int boneID;
     private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
-    private String units, analyse;
-    private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack;
+    private String units, analyse, calString;
+    private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
     Calibration cal;
 
     public int setup(String arg, ImagePlus imp) {
@@ -67,6 +68,7 @@ public class Slice_Geometry implements PlugInFilter {
 
 	//show a setup dialog and set calibration
 	setHUCalibration();
+	
 	if (!showDialog()){
 	    return;
 	}
@@ -346,7 +348,13 @@ public class Slice_Geometry implements PlugInFilter {
 	rt.addValue("RCmax ("+units+")", dmax*pWidth);
 	rt.addValue("RCmin ("+units+")", dmin*pWidth);
     }
-    
+
+    //This method needs tidying up...
+    /**
+     * Set up threshold based on HU if image is calibrated or
+     * user-based threshold if it is uncalibrated
+     * 
+     */
     private void setHUCalibration(){
 	this.minBoneHU = 0;		//minimum bone value in HU 
 	this.maxBoneHU = 4000;		//maximum bone value in HU
@@ -355,6 +363,28 @@ public class Slice_Geometry implements PlugInFilter {
 	this.vD = this.cal.pixelDepth;
 	this.units = this.cal.getUnits();
 	double[] coeff = this.cal.getCoefficients();
+	if (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1){
+	    this.isCalibrated = false;
+	    this.calString = "Image is uncalibrated\nEnter air and bone pixel values";
+	    ImageStatistics stats = imp.getStatistics();
+	    if (stats.min < 50 && stats.min >= 0){
+		this.airHU = 0;
+	    }
+	    else if (stats.min > 31000){
+		this.airHU = 31768;
+	    }
+	    else if (stats.min < -800){
+		this.airHU = -1000;
+	    } else {
+		this.airHU = 0;
+	    }
+	} else {
+	    this.isCalibrated = true;
+	    this.calString = "Image is calibrated\nEnter HU below:";
+	    this.airHU = -1000;
+	}
+	this.minBoneHU = this.airHU + 1000;
+	this.maxBoneHU = this.airHU + 5000;
 	if (this.cal.calibrated()) {
 	    //convert HU limits to pixel values
 	    IJ.log("Image is calibrated, using "+this.minBoneHU+" and "+this.maxBoneHU+" HU as bone cutoffs");
@@ -373,7 +403,7 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	return;
     }
-    
+
     private boolean showDialog(){
 	GenericDialog gd = new GenericDialog("Options");
 
@@ -401,29 +431,7 @@ public class Slice_Geometry implements PlugInFilter {
 	gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
 	gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
 	gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
-	//	Dialog.addChoice("Units: ", units);
-	//	gd.addChoice("Units", units, units);
-	//	if (calibrate(0) == 0 && calslope == 1){
-	//		var isCalibrated = false;
-	//		Dialog.addMessage("Image is uncalibrated\nEnter air and bone pixel values");
-	//		getRawStatistics(nPixels, mean, min, max, std, histogram);
-	//		if (min < 50 && min >=0) {
-	//			airhu = 0;
-	//		}
-	//		else if (min > 31000) {
-	//			airhu = 31768;
-	//		}
-	//		else if (min < -800){
-	//			airhu = -1000;
-	//		} else {airhu = 0;}
-	//	} else {0.156
-	//		var isCalibrated = true;
-	//		Dialog.addMessage("Image is calibrated\nEnter HU below:");
-	//		airhu = -1000;
-	//	}
-	this.airHU = -1000;
-	this.minBoneHU = this.airHU + 1000;
-	this.maxBoneHU = this.airHU + 5000;
+	gd.addMessage(this.calString);
 	gd.addNumericField("Air:", this.airHU, 0);
 	gd.addNumericField("Bone Min:", this.minBoneHU, 0);
 	gd.addNumericField("Bone Max:", this.maxBoneHU, 0);
@@ -445,11 +453,9 @@ public class Slice_Geometry implements PlugInFilter {
 	this.vW = gd.getNextNumber();
 	this.vH = gd.getNextNumber();
 	this.vD = gd.getNextNumber();
-	//	unit = Dialog.getChoice();
 	this.airHU = gd.getNextNumber();
 	this.minBoneHU = gd.getNextNumber();
 	this.maxBoneHU = gd.getNextNumber();
-	//	range = maxhu - airhu;
 	if(gd.wasCanceled()){
 	    return false;
 	} else {
