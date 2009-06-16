@@ -45,10 +45,14 @@ public class Slice_Geometry implements PlugInFilter {
     ImagePlus imp;
     protected ImageStack stack;
     public static final double PI = 3.141592653589793;
-    private int boneID;
+    private int boneID, al;
     private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
     private String units, analyse, calString;
     private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
+    private double[] cslice, Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
+    Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast;
+    private boolean[] emptySlices;
+    private double[][] sliceCentroids;
     Calibration cal;
 
     public int setup(String arg, ImagePlus imp) {
@@ -59,98 +63,96 @@ public class Slice_Geometry implements PlugInFilter {
 	this.imp = imp;
 	this.cal = imp.getCalibration();
 	this.stack = imp.getStack();
+	this.al = this.stack.getSize()+1;
 	//TODO properly support 8bit images
 	return DOES_8G + DOES_16 + SUPPORTS_MASKING;
     }
 
     public void run(ImageProcessor ip) {
-	//TODO split different measurements / calculations into their own methods.
-
 	//show a setup dialog and set calibration
 	setHUCalibration();
-	
+
 	if (!showDialog()){
 	    return;
 	}
+		
+	calculateCentroids();
+	calculateMoments();
+	
+	showSliceResults();
+	
+    }
 
-
-	ResultsTable rt = ResultsTable.getResultsTable();
-	rt.reset();
-
-	int startSlice = 1;
-	int endSlice = stack.getSize();
-	int al = stack.getSize()+1;
+    private void calculateCentroids(){
 	//2D centroids
-	double[] xc; double[] yc;
-	xc = new double[al]; yc = new double[al];
+	this.sliceCentroids = new double[2][this.al]; 
 	//pixel counters
 	double cstack = 0;
-	Rectangle r = ip.getRoi();
-	int offset, i;
-	int w = stack.getWidth();
-	boolean[] emptySlices;
-	emptySlices = new boolean[al];
-	short[] pixels;
-	double[] cslice;
-	cslice = new double[al];
+	Rectangle r = this.stack.getRoi();
+	int w = this.stack.getWidth();
+	this.emptySlices = new boolean[this.al];
+	this.cslice = new double[this.al];
 	double[] cortArea;
-	cortArea = new double[al];
-	for (int s = startSlice; s <= endSlice; s++) {
+	cortArea = new double[this.al];
+	for (int s = 1; s <= this.stack.getSize(); s++) {
 	    double sumx = 0; double sumy = 0;
-	    cslice[s] = 0;
-	    pixels = (short[])stack.getPixels(s);
+	    this.cslice[s] = 0;
+	    short[] pixels = (short[])this.stack.getPixels(s);
 	    for (int y=r.y; y<(r.y+r.height); y++) {
-		offset = y*w;
+		int offset = y*w;
 		for (int x=r.x; x<(r.x+r.width); x++) {
-		    i = offset + x;
+		    int i = offset + x;
 		    if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
-			cslice[s]++;
-			cortArea[s] += vW*vH;
-			sumx += x*vW;
-			sumy += y*vH;
+			this.cslice[s]++;
+			cortArea[s] += this.vW * this.vH;
+			sumx += x * this.vW;
+			sumy += y * this.vH;
 		    }
 		}
 	    }
-	    if (cslice[s] > 0){
-		xc[s] = sumx/cslice[s];
-		yc[s] = sumy/cslice[s];
-		cstack += cslice[s];
-		emptySlices[s] = false;
+	    if (this.cslice[s] > 0){
+		this.sliceCentroids[0][s] = sumx / this.cslice[s];
+		this.sliceCentroids[1][s] = sumy / this.cslice[s];
+		cstack += this.cslice[s];
+		this.emptySlices[s] = false;
 	    } else {
-		emptySlices[s] = true;
+		this.emptySlices[s] = true;
 	    }
 	}
 	if (cstack == 0){
 	    IJ.error("Empty Stack","No pixels are available for calculation.\nCheck your ROI and threshold.");
 	    return;
 	}
-	//END OF CENTROID CALCULATION
-	//START OF Ix AND Iy CALCULATION
-	//slice centroids are now in the arrays xc[] and yc[] and bone area is held in cslice[]
-	double[] Sx; double[] Sy; double[] Sxx; double[] Syy; double[] Sxy; double[] Myy; double[] Mxx; double[] Mxy; double[] theta; 
-	Sx = new double[al]; Sy = new double[al]; Sxx = new double[al]; Syy = new double[al]; Sxy = new double[al]; Myy = new double[al]; Mxx = new double[al]; Mxy = new double[al]; theta = new double[al];
-	for (int s=startSlice;s<=endSlice;s++) {
-	    if (!emptySlices[s]){
-		pixels = (short[])stack.getPixels(s);
-		for (int y=r.y; y<(r.y+r.height); y++) {
-		    offset = y*w;
-		    for (int x=r.x; x<(r.x+r.width); x++) {
-			i = offset + x;
+    }
+
+    private void calculateMoments(){
+	Rectangle r = this.stack.getRoi();
+	int w = this.stack.getWidth();
+	//START OF Ix AND Iy CALCULATION 
+	this.Sx = new double[this.al]; this.Sy = new double[this.al]; this.Sxx = new double[this.al]; this.Syy = new double[this.al]; this.Sxy = new double[this.al];
+	this.Myy = new double[this.al]; this.Mxx = new double[this.al]; this.Mxy = new double[this.al]; this.theta = new double[this.al];
+	for (int s = 1; s <= this.stack.getSize(); s++) {
+	    if (!this.emptySlices[s]){
+		short[] pixels = (short[])this.stack.getPixels(s);
+		for (int y = r.y; y < (r.y + r.height); y++) {
+		    int offset = y * w;
+		    for (int x = r.x; x < (r.x+r.width); x++) {
+			int i = offset + x;
 			if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
-			    Sx[s] += x;			
-			    Sy[s] += y;			
-			    Sxx[s] += x*x;
-			    Syy[s] += y*y;
-			    Sxy[s] += y*x;
+			    this.Sx[s] += x;			
+			    this.Sy[s] += y;			
+			    this.Sxx[s] += x*x;
+			    this.Syy[s] += y*y;
+			    this.Sxy[s] += y*x;
 			}
 		    }
 		}
-		Myy[s] = Sxx[s] - (Sx[s]*Sx[s] / cslice[s]) + cslice[s]/12; //cslice[]/12 is for each pixel's moment around its own centroid
-		Mxx[s] = Syy[s] - (Sy[s]*Sy[s] / cslice[s]) + cslice[s]/12;
-		Mxy[s] = Sxy[s] - (Sx[s]*Sy[s] / cslice[s]) + cslice[s]/12;
-		if (Mxy[s] == 0){theta[s] = 0;}
+		this.Myy[s] = this.Sxx[s] - (this.Sx[s] * this.Sx[s] / this.cslice[s]) + this.cslice[s]/12; //this.cslice[]/12 is for each pixel's moment around its own centroid
+		this.Mxx[s] = this.Syy[s] - (this.Sy[s] * this.Sy[s] / this.cslice[s]) + this.cslice[s]/12;
+		this.Mxy[s] = this.Sxy[s] - (this.Sx[s] * this.Sy[s] / this.cslice[s]) + this.cslice[s]/12;
+		if (this.Mxy[s] == 0) this.theta[s] = 0;
 		else {
-		    theta[s] = Math.atan((Mxx[s]-Myy[s]+Math.sqrt(Math.pow(Mxx[s]-Myy[s],2)+4*Math.pow(Mxy[s],2)))/(2*Mxy[s]));
+		    this.theta[s] = Math.atan((this.Mxx[s]-this.Myy[s]+Math.sqrt(Math.pow(this.Mxx[s]-this.Myy[s],2) + 4*this.Mxy[s]*this.Mxy[s]))/(2*this.Mxy[s]));
 		    //thetaFast gives same result except jumps when hits PI/4 and -PI/4
 		    //thetaFast[s] = Math.atan(2*Mxy[s]/(Myy[s]-Mxx[s])) / 2;
 		}
@@ -158,64 +160,47 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	//END OF Ix and Iy CALCULATION
 	//START OF Imax AND Imin CALCULATION
-	double[] Imax; double[] Imin; double[] Ipm; double[] R1; double[] R2; double[] maxRadMin;
-	double[] maxRadMax; double[] Zmax; double[] Zmin; double[] ImaxFast; double[] IminFast;
-	Imax = new double[al]; Imin = new double[al]; Ipm = new double[al]; R1 = new double[al]; R2 = new double[al]; maxRadMin = new double[al];
-	maxRadMax = new double[al]; Zmax = new double[al]; Zmin = new double[al]; ImaxFast = new double[al]; IminFast = new double[al]; 
-	for (int s=startSlice;s<=endSlice;s++) {
-	    if (!emptySlices[s]){
-		pixels = (short[])stack.getPixels(s);
-		Sx[s]=0;Sy[s]=0;Sxx[s]=0;Syy[s]=0; Sxy[s]=0;
+	this.Imax = new double[this.al]; this.Imin = new double[this.al]; this.Ipm = new double[this.al]; 
+	this.R1 = new double[this.al]; this.R2 = new double[this.al]; this.maxRadMin = new double[this.al]; this.maxRadMax = new double[this.al];
+	this.Zmax = new double[this.al]; this.Zmin = new double[this.al]; this.ImaxFast = new double[this.al]; this.IminFast = new double[this.al]; 
+	for (int s=1;s<=this.stack.getSize();s++) {
+	    if (!this.emptySlices[s]){
+		short[] pixels = (short[])this.stack.getPixels(s);
+		this.Sx[s]=0; this.Sy[s]=0; this.Sxx[s]=0; this.Syy[s]=0; this.Sxy[s]=0;
 		for (int y=r.y; y<(r.y+r.height); y++) {
-		    offset = y*w;
+		    int offset = y*w;
 		    for (int x=r.x; x<(r.x+r.width); x++) {
-			i = offset + x;
+			int i = offset + x;
 			if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
-			    Sx[s] += x*Math.cos(theta[s]) + y*Math.sin(theta[s]);				//normal distance from parallel axis summed over pixels
-			    Sy[s] += y*Math.cos(theta[s]) - x*Math.sin(theta[s]);
-			    Sxx[s] += Math.pow(x*Math.cos(theta[s]) + y*Math.sin(theta[s]),2);				//squared normal distances from parallel axis (Iz)
-			    Syy[s] += Math.pow(y*Math.cos(theta[s]) - x*Math.sin(theta[s]),2);
-			    Sxy[s] += (y*Math.cos(theta[s]) - x*Math.sin(theta[s]))*(x*Math.cos(theta[s])+y*Math.sin(theta[s]));          				
+			    this.Sx[s] += x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]);				//normal distance from parallel axis summed over pixels
+			    this.Sy[s] += y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]);
+			    this.Sxx[s] += (x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]))
+			    	* (x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]));				//squared normal distances from parallel axis (Iz)
+			    this.Syy[s] += (y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]))
+			    	* (y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]));
+			    this.Sxy[s] += (y*Math.cos(theta[s]) - x*Math.sin(theta[s]))
+			    	*(x*Math.cos(theta[s])+y*Math.sin(theta[s]));          				
 			    //maximum distance from minimum principal axis (longer)
-			    maxRadMin[s] = Math.max(maxRadMin[s],Math.abs((x-xc[s])*Math.cos(theta[s]) + (y-yc[s])*Math.sin(theta[s])));
+			    this.maxRadMin[s] = Math.max(this.maxRadMin[s],Math.abs((x-this.sliceCentroids[0][s])*Math.cos(this.theta[s])
+				    + (y-this.sliceCentroids[1][s])*Math.sin(theta[s])));
 			    //maximum distance from maximum principal axis (shorter)
-			    maxRadMax[s] = Math.max(maxRadMax[s],Math.abs((y-yc[s])*Math.cos(theta[s]) - (x-xc[s])*Math.sin(theta[s])));
+			    this.maxRadMax[s] = Math.max(this.maxRadMax[s],Math.abs((y-this.sliceCentroids[1][s])*Math.cos(this.theta[s]) - (x-sliceCentroids[0][s])*Math.sin(theta[s])));
 			}
 		    }
 		}
-		Imax[s] = Sxx[s] - (Sx[s] * Sx[s] / cslice[s]) + cslice[s]*(Math.pow(Math.cos(theta[s]),2)+Math.pow(Math.sin(theta[s]),2)) / 12;			//2nd moment of area around minimum principal axis (shorter axis, bigger I) 
-		Imin[s] = Syy[s] - (Sy[s] * Sy[s] / cslice[s]) + cslice[s]*(Math.pow(Math.cos(theta[s]),2)+Math.pow(Math.sin(theta[s]),2)) / 12;			//2nd moment of area around maximum principal axis (longer axis, smaller I)
-		Ipm[s] = Sxy[s] - (Sy[s] * Sx[s] / cslice[s]) + cslice[s]*(Math.pow(Math.cos(theta[s]),2)+Math.pow(Math.sin(theta[s]),2)) / 12;			//product moment of area, should be 0 if theta calculated perfectly
-		R1[s] = Math.sqrt(Imin[s] / cslice[s]);    				//length of major axis
-		R2[s] = Math.sqrt(Imax[s] / cslice[s]);					//length of minor axis
-		Zmax[s] = Imax[s]/maxRadMin[s];							//Section modulus around maximum principal axis
-		Zmin[s] = Imin[s]/maxRadMax[s];							//Section modulus around minimum principal axis
-		ImaxFast[s] = (Mxx[s]+Myy[s])/2 + Math.sqrt(Math.pow(((Mxx[s]-Myy[s])/2),2)+Mxy[s]*Mxy[s]);
-		IminFast[s] = (Mxx[s]+Myy[s])/2 - Math.sqrt(Math.pow(((Mxx[s]-Myy[s])/2),2)+Mxy[s]*Mxy[s]);
+		this.Imax[s] = this.Sxx[s] - (this.Sx[s] * this.Sx[s] / this.cslice[s]) + this.cslice[s]*(Math.pow(Math.cos(this.theta[s]),2)+Math.pow(Math.sin(this.theta[s]),2)) / 12;			//2nd moment of area around minimum principal axis (shorter axis, bigger I) 
+		this.Imin[s] = this.Syy[s] - (this.Sy[s] * this.Sy[s] / this.cslice[s]) + this.cslice[s]*(Math.pow(Math.cos(this.theta[s]),2)+Math.pow(Math.sin(this.theta[s]),2)) / 12;			//2nd moment of area around maximum principal axis (longer axis, smaller I)
+		this.Ipm[s] = this.Sxy[s] - (this.Sy[s] * this.Sx[s] / this.cslice[s]) + this.cslice[s]*(Math.pow(Math.cos(this.theta[s]),2)+Math.pow(Math.sin(this.theta[s]),2)) / 12;			//product moment of area, should be 0 if theta calculated perfectly
+		this.R1[s] = Math.sqrt(this.Imin[s] / this.cslice[s]);    				//length of major axis
+		this.R2[s] = Math.sqrt(this.Imax[s] / this.cslice[s]);					//length of minor axis
+		this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];							//Section modulus around maximum principal axis
+		this.Zmin[s] = this.Imin[s] / this.maxRadMax[s];							//Section modulus around minimum principal axis
+		this.ImaxFast[s] = (this.Mxx[s]+this.Myy[s])/2 + Math.sqrt(Math.pow(((this.Mxx[s]-this.Myy[s])/2),2)+this.Mxy[s]*this.Mxy[s]);
+		this.IminFast[s] = (this.Mxx[s]+this.Myy[s])/2 - Math.sqrt(Math.pow(((this.Mxx[s]-this.Myy[s])/2),2)+this.Mxy[s]*this.Mxy[s]);
 	    }
 	}
-	//TODO fix spatial calibration: this assumes isotropic pixels
-	double unit4 = Math.pow(vW, 4);
-	double unit3 = Math.pow(vW, 3);
-	for (int s=startSlice; s<=endSlice; s++) {
-	    rt.incrementCounter();
-	    rt.addValue("Slice", s);
-	    rt.addValue("X cent. ("+units+")", xc[s]);
-	    rt.addValue("Y cent. ("+units+")", yc[s]);
-	    rt.addValue("Theta (rad)", theta[s]);
-	    rt.addValue("CA ("+units+"^2)", cortArea[s]);
-	    rt.addValue("Imin ("+units+"^4)", Imin[s]*unit4);
-	    rt.addValue("IminFast ("+units+"^4)", IminFast[s]*unit4);
-	    rt.addValue("Imax ("+units+"^4)", Imax[s]*unit4);
-	    rt.addValue("ImaxFast ("+units+"^4)", ImaxFast[s]*unit4);
-	    rt.addValue("Ipm ("+units+"^4)", Ipm[s]*unit4);
-	    rt.addValue("R1 ("+units+")", R1[s]);
-	    rt.addValue("R2 ("+units+")", R2[s]);
-	    rt.addValue("Zmax ("+units+"^3)", Zmax[s]*unit3);
-	    rt.addValue("Zmin ("+units+"^3)", Zmin[s]*unit3);
-	}
-	rt.show("Results");
     }
+
 
     /**
      * Calculate the caliper diameter of an Roi
@@ -348,8 +333,7 @@ public class Slice_Geometry implements PlugInFilter {
 	rt.addValue("RCmax ("+units+")", dmax*pWidth);
 	rt.addValue("RCmin ("+units+")", dmin*pWidth);
     }
-
-    //This method needs tidying up...
+//TODO fix this, it's a mess.
     /**
      * Set up threshold based on HU if image is calibrated or
      * user-based threshold if it is uncalibrated
@@ -363,7 +347,7 @@ public class Slice_Geometry implements PlugInFilter {
 	this.vD = this.cal.pixelDepth;
 	this.units = this.cal.getUnits();
 	double[] coeff = this.cal.getCoefficients();
-	if (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1){
+	if (!this.cal.calibrated() || this.cal == null || (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1)){
 	    this.isCalibrated = false;
 	    this.calString = "Image is uncalibrated\nEnter air and bone pixel values";
 	    ImageStatistics stats = imp.getStatistics();
@@ -398,8 +382,8 @@ public class Slice_Geometry implements PlugInFilter {
 	    IJ.log("Image is not calibrated, using user-determined threshold");
 	    IJ.run("Threshold...");
 	    new WaitForUserDialog("This image is not density calibrated.\nSet the threshold, then click OK.").show();
-	    this.minBoneHU = (short)this.imp.getImageStack().getProcessor(1).getMinThreshold();
-	    this.maxBoneHU = (short)this.imp.getImageStack().getProcessor(1).getMaxThreshold();
+	    this.minBoneHU = (short)this.stack.getProcessor(this.imp.getCurrentSlice()).getMinThreshold();
+	    this.maxBoneHU = (short)this.stack.getProcessor(this.imp.getCurrentSlice()).getMaxThreshold();
 	}
 	return;
     }
@@ -461,5 +445,32 @@ public class Slice_Geometry implements PlugInFilter {
 	} else {
 	    return true;
 	}
+    }
+    
+    private void showSliceResults(){
+	ResultsTable rt = ResultsTable.getResultsTable();
+	rt.reset();
+
+	//TODO fix spatial calibration: this assumes isotropic pixels
+	double unit4 = Math.pow(vW, 4);
+	double unit3 = Math.pow(vW, 3);
+	for (int s = 1; s <= this.stack.getSize(); s++) {
+	    rt.incrementCounter();
+	    rt.addValue("Slice", s);
+	    rt.addValue("X cent. ("+units+")", this.sliceCentroids[0][s]);
+	    rt.addValue("Y cent. ("+units+")", this.sliceCentroids[1][s]);
+	    rt.addValue("Theta (rad)", theta[s]);
+//	    rt.addValue("CA ("+units+"^2)", cortArea[s]);
+	    rt.addValue("Imin ("+units+"^4)", Imin[s]*unit4);
+	    rt.addValue("IminFast ("+units+"^4)", IminFast[s]*unit4);
+	    rt.addValue("Imax ("+units+"^4)", Imax[s]*unit4);
+	    rt.addValue("ImaxFast ("+units+"^4)", ImaxFast[s]*unit4);
+	    rt.addValue("Ipm ("+units+"^4)", Ipm[s]*unit4);
+	    rt.addValue("R1 ("+units+")", R1[s]);
+	    rt.addValue("R2 ("+units+")", R2[s]);
+	    rt.addValue("Zmax ("+units+"^3)", Zmax[s]*unit3);
+	    rt.addValue("Zmin ("+units+"^3)", Zmin[s]*unit3);
+	}
+	rt.show("Results");
     }
 }
