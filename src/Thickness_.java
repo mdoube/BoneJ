@@ -97,8 +97,9 @@ public class Thickness_ implements  PlugInFilter {
 	vD = baseImp.getCalibration().pixelDepth;
 	//calculate trabecular thickness (Tb.Th)
 	
-	float[][] s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
+	float[][] s; 
 	if(doThickness){
+	s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
 	DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
 	DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
 	ImagePlus impLTC = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
