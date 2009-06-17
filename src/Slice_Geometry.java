@@ -30,9 +30,10 @@ import ij.measure.ResultsTable;
 import ij.gui.*;
 
 import java.awt.Rectangle;
-import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.doube.bonej.Thickness_;
 
 /**
  * <p>Calculate 2D geometrical parameters</p>
@@ -91,7 +92,7 @@ public class Slice_Geometry implements PlugInFilter {
 		
 	calculateMoments();
 	
-	//TODO locate centroids of multiple sections
+	//TODO locate centroids of multiple sections in a single plane
 	//TODO feret diameter 
 	//TODO cortical thickness - local thickness methods?
 	//TODO annotate results

@@ -53,7 +53,7 @@ Perform all of the steps for the local thickness calculaton
  * 
  */
 public class Thickness_ implements  PlugInFilter {
-    private ImagePlus baseImp;
+    public ImagePlus baseImp;
     public int thresh = 128;
     public boolean inverse, doThickness, doSpacing;
     public byte[][] data;
