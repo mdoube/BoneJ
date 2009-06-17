@@ -1,3 +1,4 @@
+package org.doube.bonej;
 
 import ij.*;
 //import ij.measure.ResultsTable;
@@ -5,7 +6,6 @@ import ij.gui.GenericDialog;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import java.util.Arrays;
-import org.doube.bonej.ResultInserter;
 
 /* Bob Dougherty 8/10/2007
 Perform all of the steps for the local thickness calculaton
