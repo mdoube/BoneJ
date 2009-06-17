@@ -45,11 +45,11 @@ public class Slice_Geometry implements PlugInFilter {
     ImagePlus imp;
     protected ImageStack stack;
     public static final double PI = 3.141592653589793;
-    private int boneID, al;
+    private int boneID, al, startSlice, endSlice;
     private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
     private String units, analyse, calString;
     private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
-    private double[] cslice, Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
+    private double[] cslice, cortArea, Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
     Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast;
     private boolean[] emptySlices;
     private double[][] sliceCentroids;
@@ -62,6 +62,9 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	this.imp = imp;
 	this.cal = imp.getCalibration();
+	this.vW = this.cal.pixelWidth;
+	this.vH = this.cal.pixelHeight;
+	this.vD = this.cal.pixelDepth;
 	this.stack = imp.getStack();
 	this.al = this.stack.getSize()+1;
 	//TODO properly support 8bit images
@@ -70,20 +73,34 @@ public class Slice_Geometry implements PlugInFilter {
 
     public void run(ImageProcessor ip) {
 	//show a setup dialog and set calibration
-	setHUCalibration();
+	//	setHUCalibration();
+	IJ.run("Threshold...");
+	new WaitForUserDialog("Adjust the threshold, then click OK.").show();
+	this.minBoneHU = (short)this.imp.getProcessor().getMinThreshold();
+	this.maxBoneHU = (short)this.imp.getProcessor().getMaxThreshold();
 
 	if (!showDialog()){
 	    return;
 	}
+
+	if (calculateCentroids() == 0){
+	    IJ.error("No pixels available to calculate.\n" +
+	    		"Please check the threshold and ROI.");
+	    return;
+	}
 		
-	calculateCentroids();
 	calculateMoments();
 	
+	//TODO locate centroids of multiple sections
+	//TODO feret diameter 
+	//TODO cortical thickness - local thickness methods?
+	//TODO annotate results
+
 	showSliceResults();
-	
+
     }
 
-    private void calculateCentroids(){
+    private double calculateCentroids(){
 	//2D centroids
 	this.sliceCentroids = new double[2][this.al]; 
 	//pixel counters
@@ -92,9 +109,8 @@ public class Slice_Geometry implements PlugInFilter {
 	int w = this.stack.getWidth();
 	this.emptySlices = new boolean[this.al];
 	this.cslice = new double[this.al];
-	double[] cortArea;
-	cortArea = new double[this.al];
-	for (int s = 1; s <= this.stack.getSize(); s++) {
+	this.cortArea = new double[this.al];
+	for (int s = this.startSlice; s <= this.endSlice; s++) {
 	    double sumx = 0; double sumy = 0;
 	    this.cslice[s] = 0;
 	    short[] pixels = (short[])this.stack.getPixels(s);
@@ -119,10 +135,7 @@ public class Slice_Geometry implements PlugInFilter {
 		this.emptySlices[s] = true;
 	    }
 	}
-	if (cstack == 0){
-	    IJ.error("Empty Stack","No pixels are available for calculation.\nCheck your ROI and threshold.");
-	    return;
-	}
+	return cstack;
     }
 
     private void calculateMoments(){
@@ -175,11 +188,11 @@ public class Slice_Geometry implements PlugInFilter {
 			    this.Sx[s] += x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]);				//normal distance from parallel axis summed over pixels
 			    this.Sy[s] += y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]);
 			    this.Sxx[s] += (x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]))
-			    	* (x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]));				//squared normal distances from parallel axis (Iz)
+			    * (x*Math.cos(this.theta[s]) + y*Math.sin(this.theta[s]));				//squared normal distances from parallel axis (Iz)
 			    this.Syy[s] += (y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]))
-			    	* (y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]));
+			    * (y*Math.cos(this.theta[s]) - x*Math.sin(this.theta[s]));
 			    this.Sxy[s] += (y*Math.cos(theta[s]) - x*Math.sin(theta[s]))
-			    	*(x*Math.cos(theta[s])+y*Math.sin(theta[s]));          				
+			    *(x*Math.cos(theta[s])+y*Math.sin(theta[s]));          				
 			    //maximum distance from minimum principal axis (longer)
 			    this.maxRadMin[s] = Math.max(this.maxRadMin[s],Math.abs((x-this.sliceCentroids[0][s])*Math.cos(this.theta[s])
 				    + (y-this.sliceCentroids[1][s])*Math.sin(theta[s])));
@@ -333,7 +346,7 @@ public class Slice_Geometry implements PlugInFilter {
 	rt.addValue("RCmax ("+units+")", dmax*pWidth);
 	rt.addValue("RCmin ("+units+")", dmin*pWidth);
     }
-//TODO fix this, it's a mess.
+    //TODO fix this, it's a mess.
     /**
      * Set up threshold based on HU if image is calibrated or
      * user-based threshold if it is uncalibrated
@@ -412,10 +425,11 @@ public class Slice_Geometry implements PlugInFilter {
 	gd.addChoice("Bone: ", bones, bones[this.boneID]);
 	String[] analyses = {"Weighted", "Unweighted", "Both"};
 	gd.addChoice("Calculate: ", analyses, analyses[1]);
-	gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
-	gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
-	gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
-	gd.addMessage(this.calString);
+//	gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
+//	gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
+//	gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
+//	gd.addMessage(this.calString);
+	gd.addMessage("Set the threshold");
 	gd.addNumericField("Air:", this.airHU, 0);
 	gd.addNumericField("Bone Min:", this.minBoneHU, 0);
 	gd.addNumericField("Bone Max:", this.maxBoneHU, 0);
@@ -434,9 +448,9 @@ public class Slice_Geometry implements PlugInFilter {
 	    }
 	}
 	this.analyse = gd.getNextChoice();
-	this.vW = gd.getNextNumber();
-	this.vH = gd.getNextNumber();
-	this.vD = gd.getNextNumber();
+//	this.vW = gd.getNextNumber();
+//	this.vH = gd.getNextNumber();
+//	this.vD = gd.getNextNumber();
 	this.airHU = gd.getNextNumber();
 	this.minBoneHU = gd.getNextNumber();
 	this.maxBoneHU = gd.getNextNumber();
@@ -446,7 +460,7 @@ public class Slice_Geometry implements PlugInFilter {
 	    return true;
 	}
     }
-    
+
     private void showSliceResults(){
 	ResultsTable rt = ResultsTable.getResultsTable();
 	rt.reset();
@@ -460,7 +474,7 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.addValue("X cent. ("+units+")", this.sliceCentroids[0][s]);
 	    rt.addValue("Y cent. ("+units+")", this.sliceCentroids[1][s]);
 	    rt.addValue("Theta (rad)", theta[s]);
-//	    rt.addValue("CA ("+units+"^2)", cortArea[s]);
+	    //	    rt.addValue("CA ("+units+"^2)", cortArea[s]);
 	    rt.addValue("Imin ("+units+"^4)", Imin[s]*unit4);
 	    rt.addValue("IminFast ("+units+"^4)", IminFast[s]*unit4);
 	    rt.addValue("Imax ("+units+"^4)", Imax[s]*unit4);
