@@ -165,7 +165,7 @@ public class Thickness_ implements  PlugInFilter {
      * @param imp 8-bit (binary) ImagePlus
      * 
      */
-    private float[][] GeometrytoDistanceMap(ImagePlus imp){
+    public float[][] GeometrytoDistanceMap(ImagePlus imp){
 	int nThreads = Runtime.getRuntime().availableProcessors();
 
 	//Create references to input data
@@ -432,7 +432,7 @@ public class Thickness_ implements  PlugInFilter {
      *
      * @param imp 3D Distance map (32-bit stack)
      */
-    private void DistanceMaptoDistanceRidge(float[][] s){
+    public void DistanceMaptoDistanceRidge(float[][] s){
 	sNew = new float[d][];
 	for(int k = 0; k < d; k++){
 	    ImageProcessor ipk = new FloatProcessor(w,h);
@@ -622,7 +622,7 @@ public class Thickness_ implements  PlugInFilter {
      * </ul>
      * @param imp
      */
-    private void DistanceRidgetoLocalThickness(float[][] s){
+    public void DistanceRidgetoLocalThickness(float[][] s){
 	float[] sk;
 	//Count the distance ridge points on each slice
 	int[] nRidge = new int[d];
@@ -809,7 +809,7 @@ public class Thickness_ implements  PlugInFilter {
      * </ul>
      * 
      */
-    private ImagePlus LocalThicknesstoCleanedUpLocalThickness(float[][] s){
+    public ImagePlus LocalThicknesstoCleanedUpLocalThickness(float[][] s){
 	IJ.showStatus("Cleaning up local thickness...");
 	//Create 32 bit floating point stack for output, sNew.
 	ImageStack newStack = new ImageStack(w,h);
