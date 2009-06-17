@@ -28,6 +28,8 @@ import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.gui.*;
 
+import org.doube.bonej.ResultInserter;
+
 public class Rotating_Calipers implements PlugInFilter {
     ImagePlus imp;
     protected ImageStack stack;
@@ -39,8 +41,14 @@ public class Rotating_Calipers implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	double dmax = 0;
-	double dmin = 0;
+	double dMin = rotatingCalipers(this.imp);
+	if (dMin > 0){
+	    showResults(this.imp, dMin);
+	} else {return;}
+    }
+    public double rotatingCalipers(ImagePlus imp){
+//	double dmax = 0;
+	double dMin = 0;
 	IJ.run("Convex Hull");
 	Roi roi = imp.getRoi();
 	int perimx[] = ((PolygonRoi)roi).getXCoordinates();
@@ -48,7 +56,7 @@ public class Rotating_Calipers implements PlugInFilter {
 	int podal = 0;
 	int antipodal = 0;
 	//	Compute the polygon's extreme points in the y direction
-	int ymin = 999999;
+	int ymin = Integer.MAX_VALUE;
 	int ymax = 0;
 	int nPoints = perimx.length;
 	for (int n = 0; n < nPoints; n++){
@@ -78,8 +86,7 @@ public class Rotating_Calipers implements PlugInFilter {
 
 	//	Construct two horizontal lines of support through ymin and ymax.
 	//	Since this is already an anti-podal pair, compute the distance, and keep as maximum.
-	dmax = ymax - ymin;
-	dmin = dmax;
+	dMin = ymax - ymin;
 	int end = antipodal;
 	double startTheta = 0; double endTheta = 0; double testAngle = 0; 
 	while (antipodal < nPoints  && podal <= end){
@@ -134,35 +141,31 @@ public class Rotating_Calipers implements PlugInFilter {
 	    //	compare to old maximum, and update if necessary.
 	    double thetaH = Math.atan2(perimy[antipodal] - perimy[podal] , perimx[antipodal] - perimx[podal]);
 	    double dp = Math.sqrt(Math.pow(perimx[antipodal]-perimx[podal],2) + Math.pow(perimy[antipodal]-perimy[podal],2));
-	    if (dp > dmax) dmax = dp;
 	    if (startTheta >= endTheta){
 		double ds = dp*Math.abs(Math.cos(-thetaH + startTheta - PI/2));
 		double de = dp*Math.abs(Math.cos(-thetaH + endTheta - PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
+		if (ds < dMin) dMin = ds;
+		else if (de < dMin) dMin = de;
 	    }	
 	    else if (startTheta < endTheta && startTheta * endTheta < 0){
 		double ds = dp*Math.abs(Math.cos(-thetaH + startTheta - PI/2));
 		double de = dp*Math.abs(Math.cos(-thetaH + - 3*PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
+		if (ds < dMin) dMin = ds;
+		else if (de < dMin) dMin = de;
 		ds = dp*Math.abs(Math.cos(-thetaH + PI/2));
 		de = dp*Math.abs(Math.cos(-thetaH + endTheta - PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
+		if (ds < dMin) dMin = ds;
+		else if (de < dMin) dMin = de;
 	    }
 	    //	increment either or both podal or antipodal
 	    podal = podal + podincr;
 	    antipodal = antipodal + antipodincr;
 	}
-	Calibration cal = imp.getCalibration();
-	double pWidth = cal.pixelWidth;
-	String units = cal.getUnits();
-	ResultsTable rt = ResultsTable.getResultsTable();
-	rt.incrementCounter();
-	rt.addLabel("Label", imp.getShortTitle());
-	rt.addValue("RCmax ("+units+")", dmax*pWidth);
-	rt.addValue("RCmin ("+units+")", dmin*pWidth);
-	rt.show("Results");
+	return dMin;
+    }
+    
+    public void showResults(ImagePlus imp, double dMin){
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(imp, "RC", dMin);
     }
 }

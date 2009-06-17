@@ -34,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.doube.bonej.Thickness_;
+import org.doube.bonej.Rotating_Calipers;
 
 /**
  * <p>Calculate 2D geometrical parameters</p>
@@ -86,14 +87,13 @@ public class Slice_Geometry implements PlugInFilter {
 
 	if (calculateCentroids() == 0){
 	    IJ.error("No pixels available to calculate.\n" +
-	    		"Please check the threshold and ROI.");
+	    "Please check the threshold and ROI.");
 	    return;
 	}
-		
+
 	calculateMoments();
 	
 	//TODO locate centroids of multiple sections in a single plane
-	//TODO feret diameter 
 	//TODO cortical thickness - local thickness methods?
 	//TODO annotate results
 
@@ -215,138 +215,6 @@ public class Slice_Geometry implements PlugInFilter {
 	}
     }
 
-
-    /**
-     * Calculate the caliper diameter of an Roi
-     * 
-     * @param roi Roi to get the caliper diameter of
-     * @param rt ResultsTable
-     * 
-     * @see <p><a href="http://cgm.cs.mcgill.ca/~orm/rotcal.html">Rotating Calipers homepage</a></p>
-     * 
-     */
-    public void rotatingCalipers(Roi roi, ResultsTable rt){
-	double dmax = 0;
-	double dmin = 0;
-	IJ.run("Convex Hull");
-	int perimx[] = ((PolygonRoi)roi).getXCoordinates();
-	int perimy[] = ((PolygonRoi)roi).getYCoordinates();
-	int podal = 0;
-	int antipodal = 0;
-	//		Compute the polygon's extreme points in the y direction
-	int ymin = 999999;
-	int ymax = 0;
-	int nPoints = perimx.length;
-	for (int n = 0; n < nPoints; n++){
-	    if (perimy[n] < ymin){
-		ymin = perimy[n];
-		podal = n;    		//n is always 0 in ImageJ, start point of convex hull-ed selection is minimum x value within set with minimum y
-	    }
-	    if (perimy[n] > ymax){
-		ymax = perimy[n];
-		antipodal = n;
-	    }
-	}
-
-	//		create list of angles beween points
-	double angles[]; angles = new double[nPoints];
-	for (int n = 0; n < nPoints - 1; n++){
-	    angles[n] = Math.atan2(perimy[n]-perimy[n+1], perimx[n]-perimx[n+1]);
-	}
-
-	//		angle between last point and first point of selection
-	angles[nPoints-1] = Math.atan2(perimy[nPoints-1]-perimy[0], perimx[nPoints-1]-perimx[0]);
-
-	//		correct any angles < -pi
-	for (int n=0; n < nPoints; n++) {
-	    if (angles[n] < -PI) angles[n] = angles[n] + 2*PI;
-	}
-
-	//		Construct two horizontal lines of support through ymin and ymax.
-	//		Since this is already an anti-podal pair, compute the distance, and keep as maximum.
-	dmax = ymax - ymin;
-	dmin = dmax;
-	int end = antipodal;
-	double startTheta = 0; double endTheta = 0; double testAngle = 0; 
-	while (antipodal < nPoints  && podal <= end){
-	    int podincr = 0;
-	    int antipodincr = 0;
-	    //			find the start condition for theta
-	    if (podal > 0) {
-		startTheta = endTheta;
-	    } else {
-		if (angles[antipodal - 1] > 0) { 
-		    testAngle = angles[antipodal - 1] - PI;
-		} else {
-		    testAngle = angles[antipodal - 1] + PI;
-		}
-		if (angles[nPoints -1] <= testAngle){
-		    startTheta = angles[nPoints - 1];
-		} else {
-		    startTheta = testAngle;
-		}
-	    }
-
-	    //			Rotate the lines until one is flush with an edge of the polygon.
-	    //			find the end condition for theta
-	    //			increment the podal or antipodal point depending on
-	    //			which caliper blade touches the next point first
-
-	    if (angles[antipodal] > 0) { 
-		testAngle = angles[antipodal] - PI;
-	    } else {
-		testAngle = angles[antipodal] + PI;
-	    }
-	    if (antipodal <= nPoints - 1) {
-		if (angles[podal] > testAngle && angles[podal] * testAngle > 0) {
-		    endTheta = angles[podal];
-		    podincr = 1;
-		} else if (angles[podal] < testAngle) {
-		    endTheta = testAngle;
-		    antipodincr = 1;
-		} else if (angles[podal] > testAngle && angles[podal] * testAngle < 0) {
-		    endTheta = testAngle;
-		    antipodincr = 1;
-		} else {
-		    endTheta = angles[podal];
-		    podincr = 1;
-		    antipodincr = 1;
-		}
-	    } else {
-		endTheta = 0;
-	    }
-
-	    //			A new anti-podal pair is determined. Compute the new distance,
-	    //			compare to old maximum, and update if necessary.
-	    double thetaH = Math.atan2(perimy[antipodal] - perimy[podal] , perimx[antipodal] - perimx[podal]);
-	    double dp = Math.sqrt(Math.pow(perimx[antipodal]-perimx[podal],2) + Math.pow(perimy[antipodal]-perimy[podal],2));
-	    if (dp > dmax) dmax = dp;
-	    if (startTheta >= endTheta){
-		double ds = dp*Math.abs(Math.cos(-thetaH + startTheta - PI/2));
-		double de = dp*Math.abs(Math.cos(-thetaH + endTheta - PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
-	    }	
-	    else if (startTheta < endTheta && startTheta * endTheta < 0){
-		double ds = dp*Math.abs(Math.cos(-thetaH + startTheta - PI/2));
-		double de = dp*Math.abs(Math.cos(-thetaH + - 3*PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
-		ds = dp*Math.abs(Math.cos(-thetaH + PI/2));
-		de = dp*Math.abs(Math.cos(-thetaH + endTheta - PI/2));
-		if (ds < dmin) dmin = ds;
-		else if (de < dmin) dmin = de;
-	    }
-	    //			increment either or both podal or antipodal
-	    podal = podal + podincr;
-	    antipodal = antipodal + antipodincr;
-	}
-	double pWidth = cal.pixelWidth;
-	String units = cal.getUnits();
-	rt.addLabel("Label", imp.getShortTitle());
-	rt.addValue("RCmax ("+units+")", dmax*pWidth);
-	rt.addValue("RCmin ("+units+")", dmin*pWidth);
-    }
     //TODO fix this, it's a mess.
     /**
      * Set up threshold based on HU if image is calibrated or
@@ -426,10 +294,10 @@ public class Slice_Geometry implements PlugInFilter {
 	gd.addChoice("Bone: ", bones, bones[this.boneID]);
 	String[] analyses = {"Weighted", "Unweighted", "Both"};
 	gd.addChoice("Calculate: ", analyses, analyses[1]);
-//	gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
-//	gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
-//	gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
-//	gd.addMessage(this.calString);
+	//	gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
+	//	gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
+	//	gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
+	//	gd.addMessage(this.calString);
 	gd.addMessage("Set the threshold");
 	gd.addNumericField("Air:", this.airHU, 0);
 	gd.addNumericField("Bone Min:", this.minBoneHU, 0);
@@ -449,9 +317,9 @@ public class Slice_Geometry implements PlugInFilter {
 	    }
 	}
 	this.analyse = gd.getNextChoice();
-//	this.vW = gd.getNextNumber();
-//	this.vH = gd.getNextNumber();
-//	this.vD = gd.getNextNumber();
+	//	this.vW = gd.getNextNumber();
+	//	this.vH = gd.getNextNumber();
+	//	this.vD = gd.getNextNumber();
 	this.airHU = gd.getNextNumber();
 	this.minBoneHU = gd.getNextNumber();
 	this.maxBoneHU = gd.getNextNumber();
@@ -487,5 +355,17 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.addValue("Zmin ("+units+"^3)", Zmin[s]*unit3);
 	}
 	rt.show("Results");
+    }
+    
+    private void roiMeasurements(){
+	//for the required slices...
+	
+	//generate an ROI, e.g. with the wand
+	
+	Rotating_Calipers rc = new Rotating_Calipers();
+	double dMin = rc.rotatingCalipers(this.imp);
+	
+	//get the Feret diameter
+	//TODO feret diameter 
     }
 }
