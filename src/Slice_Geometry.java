@@ -51,7 +51,8 @@ public class Slice_Geometry implements PlugInFilter {
     private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
     private String units, analyse, calString;
     private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
-    private double[] cslice, cortArea, Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
+    private double[] cslice, cortArea, meanCortThick, maxCortThick, stdevCortThick,
+    Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
     Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast;
     private boolean[] emptySlices;
     private double[][] sliceCentroids;
@@ -92,9 +93,9 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 
 	calculateMoments();
-	
+	calculateThickness();
+
 	//TODO locate centroids of multiple sections in a single plane
-	//TODO cortical thickness - local thickness methods?
 	//TODO annotate results
 
 	showSliceResults();
@@ -212,6 +213,53 @@ public class Slice_Geometry implements PlugInFilter {
 		this.ImaxFast[s] = (this.Mxx[s]+this.Myy[s])/2 + Math.sqrt(Math.pow(((this.Mxx[s]-this.Myy[s])/2),2)+this.Mxy[s]*this.Mxy[s]);
 		this.IminFast[s] = (this.Mxx[s]+this.Myy[s])/2 - Math.sqrt(Math.pow(((this.Mxx[s]-this.Myy[s])/2),2)+this.Mxy[s]*this.Mxy[s]);
 	    }
+	}
+    }
+
+    /**
+     * Work out the slice's contribution to 3D Local Thickness
+     *  
+     */
+    private void calculateThickness(){
+	this.maxCortThick = new double[this.al];
+	this.meanCortThick = new double[this.al];
+	this.stdevCortThick = new double[this.al];
+	Thickness_ th = new Thickness_();
+	th.vD = this.vD;
+	th.vW = this.vW;
+	th.vH = this.vH;
+	th.w = this.imp.getWidth();
+	th.h = this.imp.getHeight();
+	th.d = this.imp.getStackSize();
+	
+	ImageProcessor binaryIp = this.imp.getProcessor();
+	binaryIp.threshold((int)this.minBoneHU);//TODO need top and bottom limits to threshold
+	ImagePlus binaryImp = new ImagePlus ("binaryImp", binaryIp);
+	float[][] s = th.GeometrytoDistanceMap(binaryImp);
+	th.DistanceMaptoDistanceRidge(s);
+	th.DistanceRidgetoLocalThickness(s);
+	ImagePlus thickImp = th.LocalThicknesstoCleanedUpLocalThickness(s);
+	for (int n = 0; n < th.d; n++){
+	    double[] pixels = (double[])thickImp.getStack().getPixels(n+1);
+	    double sumPix = 0;
+	    double sliceMax = 0;
+	    for (int p=0; p<pixels.length; p++){
+		sumPix += pixels[p];
+		sliceMax = Math.max(sliceMax, pixels[p]);
+	    } 
+	    double sliceMean = sumPix / pixels.length;
+	    this.maxCortThick[n] = sliceMax;
+	    this.meanCortThick[n] = sliceMean;
+	    
+	    double sumSquares = 0;
+	    for (int p=0; p<pixels.length; p++){
+		double pixVal = pixels[p];
+		if (pixVal > 0){
+		    double d = sliceMean - pixVal;
+		    sumSquares += d * d;
+		}
+	    }
+	    this.stdevCortThick[n] = Math.sqrt(sumSquares / pixels.length);
 	}
     }
 
@@ -356,15 +404,15 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	rt.show("Results");
     }
-    
+
     private void roiMeasurements(){
 	//for the required slices...
-	
+
 	//generate an ROI, e.g. with the wand
-	
+
 	Rotating_Calipers rc = new Rotating_Calipers();
 	double dMin = rc.rotatingCalipers(this.imp);
-	
+
 	//get the Feret diameter
 	//TODO feret diameter 
     }
