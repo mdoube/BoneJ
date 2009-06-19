@@ -34,7 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.doube.bonej.Thickness_;
-import org.doube.bonej.Rotating_Calipers;
+import org.doube.bonej.RotatingCalipers;
 
 /**
  * <p>Calculate 2D geometrical parameters</p>
@@ -410,7 +410,7 @@ public class Slice_Geometry implements PlugInFilter {
 
 	//generate an ROI, e.g. with the wand
 
-	Rotating_Calipers rc = new Rotating_Calipers();
+	RotatingCalipers rc = new RotatingCalipers();
 	double dMin = rc.rotatingCalipers(this.imp);
 
 	//get the Feret diameter

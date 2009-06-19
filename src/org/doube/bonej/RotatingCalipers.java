@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- * Rotating_Calipers plugin for ImageJ
+ * RotatingCalipers plugin for ImageJ
  * Copyright 2009 Michael Doube 
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ import ij.gui.*;
 
 import org.doube.bonej.ResultInserter;
 
-public class Rotating_Calipers implements PlugInFilter {
+public class RotatingCalipers implements PlugInFilter {
     ImagePlus imp;
     protected ImageStack stack;
     public static final double PI = 3.141592653589793;
