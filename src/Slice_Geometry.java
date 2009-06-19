@@ -23,6 +23,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
+import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
@@ -226,6 +227,7 @@ public class Slice_Geometry implements PlugInFilter {
 	this.meanCortThick = new double[this.al];
 	this.stdevCortThick = new double[this.al];
 	Thickness_ th = new Thickness_();
+	th.baseImp = this.imp;
 	th.vD = this.vD;
 	th.vW = this.vW;
 	th.vH = this.vH;
@@ -234,39 +236,43 @@ public class Slice_Geometry implements PlugInFilter {
 	th.d = this.imp.getStackSize();
 
 	//convert to binary
-	ImageStack binaryStack = this.imp.getStack();
-	for (int n = 0; n < th.d; n++){
-	    ImageProcessor sliceIp = binaryStack.getProcessor(n+1);
-	    for (int y = 0; y< th.h; y++){
+	ImageStack sourceStack = this.imp.getImageStack();
+	ImageStack binaryStack = new ImageStack(th.w, th.h);
+	for (int s = 0; s < th.d; s++){
+	    ImageProcessor sliceIp = sourceStack.getProcessor(s+1);
+	    ByteProcessor binaryIp = new ByteProcessor(th.w, th.h);
+	    for (int y = 0; y < th.h; y++){
 		for (int x = 0; x < th.w; x++){
-		    if (sliceIp.getPixelValue(x, y) >= this.minBoneHU && 
-			    sliceIp.getPixelValue(x, y) <= this.maxBoneHU){
-			sliceIp.set(x, y, 255);
+		    if (sliceIp.get(x, y) >= this.minBoneHU &&
+			    sliceIp.get(x, y) <= this.maxBoneHU){
+			binaryIp.set(x, y, 255);
 		    } else {
-			sliceIp.set(x,y, 0);
+			binaryIp.set(x, y, 0);
 		    }
 		}
 	    }
+	    binaryStack.addSlice(""+s, binaryIp);
 	}
-	ImagePlus binaryImp = new ImagePlus("binaryStack", binaryStack);
-	binaryImp.show();
-	
+	ImagePlus binaryImp = new ImagePlus("binaryImp", binaryStack);
+
 	float[][] s = th.GeometrytoDistanceMap(binaryImp);
 	th.DistanceMaptoDistanceRidge(s);
 	th.DistanceRidgetoLocalThickness(s);
 	ImagePlus thickImp = th.LocalThicknesstoCleanedUpLocalThickness(s);
 	for (int n = 0; n < th.d; n++){
-	    double[] pixels = (double[])thickImp.getStack().getPixels(n+1);
+	    float[] pixels = (float[])thickImp.getStack().getPixels(n+1);
 	    double sumPix = 0;
 	    double sliceMax = 0;
+	    double pixCount = 0;
 	    for (int p=0; p<pixels.length; p++){
+		if (pixels[p] > 0) pixCount ++;
 		sumPix += pixels[p];
 		sliceMax = Math.max(sliceMax, pixels[p]);
 	    } 
-	    double sliceMean = sumPix / pixels.length;
-	    this.maxCortThick[n] = sliceMax;
+	    double sliceMean = sumPix / pixCount;
 	    this.meanCortThick[n] = sliceMean;
-
+	    this.maxCortThick[n] = sliceMax;
+	    	    
 	    double sumSquares = 0;
 	    for (int p=0; p<pixels.length; p++){
 		double pixVal = pixels[p];
@@ -275,7 +281,8 @@ public class Slice_Geometry implements PlugInFilter {
 		    sumSquares += d * d;
 		}
 	    }
-	    this.stdevCortThick[n] = Math.sqrt(sumSquares / pixels.length);
+	    this.stdevCortThick[n] = Math.sqrt(sumSquares / pixCount);
+	    IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
 	}
     }
 
