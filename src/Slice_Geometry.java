@@ -22,6 +22,7 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
@@ -231,10 +232,25 @@ public class Slice_Geometry implements PlugInFilter {
 	th.w = this.imp.getWidth();
 	th.h = this.imp.getHeight();
 	th.d = this.imp.getStackSize();
+
+	//convert to binary
+	ImageStack binaryStack = this.imp.getStack();
+	for (int n = 0; n < th.d; n++){
+	    ImageProcessor sliceIp = binaryStack.getProcessor(n+1);
+	    for (int y = 0; y< th.h; y++){
+		for (int x = 0; x < th.w; x++){
+		    if (sliceIp.getPixelValue(x, y) >= this.minBoneHU && 
+			    sliceIp.getPixelValue(x, y) <= this.maxBoneHU){
+			sliceIp.set(x, y, 255);
+		    } else {
+			sliceIp.set(x,y, 0);
+		    }
+		}
+	    }
+	}
+	ImagePlus binaryImp = new ImagePlus("binaryStack", binaryStack);
+	binaryImp.show();
 	
-	ImageProcessor binaryIp = this.imp.getProcessor();
-	binaryIp.threshold((int)this.minBoneHU);//TODO need top and bottom limits to threshold
-	ImagePlus binaryImp = new ImagePlus ("binaryImp", binaryIp);
 	float[][] s = th.GeometrytoDistanceMap(binaryImp);
 	th.DistanceMaptoDistanceRidge(s);
 	th.DistanceRidgetoLocalThickness(s);
@@ -250,7 +266,7 @@ public class Slice_Geometry implements PlugInFilter {
 	    double sliceMean = sumPix / pixels.length;
 	    this.maxCortThick[n] = sliceMax;
 	    this.meanCortThick[n] = sliceMean;
-	    
+
 	    double sumSquares = 0;
 	    for (int p=0; p<pixels.length; p++){
 		double pixVal = pixels[p];
@@ -357,6 +373,14 @@ public class Slice_Geometry implements PlugInFilter {
 	this.doOutline = gd.getNextBoolean();
 	this.doCopy = gd.getNextBoolean();
 	this.doStack = gd.getNextBoolean();
+	if (this.doStack){
+	    this.startSlice = 1;
+	    this.endSlice = this.imp.getImageStackSize();
+	} else {
+	    this.startSlice = this.imp.getCurrentSlice();
+	    this.endSlice = this.imp.getCurrentSlice();
+	}
+
 	String bone = gd.getNextChoice();
 	for (int n = 0; n < bones.length; n++){
 	    if(bone.equals(bones[n])) {
