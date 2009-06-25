@@ -76,7 +76,6 @@ public class Thickness_ implements  PlugInFilter {
 	    IJ.error("8-bit binary (black and white only) image required.");
 	    return DONE;
 	}
-	checkVoxelSize(imp);
 	
 	this.baseImp = imp;
 	return DOES_8G;
@@ -1149,15 +1148,7 @@ public class Thickness_ implements  PlugInFilter {
 	}	
 	return;
     }
-    
-    private void checkVoxelSize(ImagePlus imp){
-	if(imp.getCalibration().pixelDepth != imp.getCalibration().pixelWidth || 
-		imp.getCalibration().pixelDepth != imp.getCalibration().pixelHeight ||
-		imp.getCalibration().pixelHeight != imp.getCalibration().pixelWidth){
-	    IJ.showMessage("Voxels are anisotropic, please take care with results.");
-	}
-    }
-    
+        
     private boolean showDialog(){
 	GenericDialog gd = new GenericDialog("Options");
 	gd.addCheckbox("Thickness", true);
