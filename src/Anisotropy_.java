@@ -25,6 +25,7 @@ import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
+import ij.macro.Interpreter;
 import ij.measure.Calibration;
 //import ij.measure.ResultsTable;
 
@@ -173,7 +174,7 @@ public class Anisotropy_ implements PlugInFilter {
 	gd.addNumericField("Sampling", vectorSampling, 3, 6, units);
 	//	 number of randomly-positioned vector fields
 	gd.addNumericField("Spheres", nSpheres, 0, 5, "");
-	gd.addCheckbox("Batch", false);
+//	gd.addCheckbox("Batch", false);
 	gd.addCheckbox("3D_Result", do3DResult);
 	gd.showDialog();
 	if (gd.wasCanceled()) {
@@ -183,7 +184,8 @@ public class Anisotropy_ implements PlugInFilter {
 	    double stackWidth = vW * stackDimensions[0];
 	    double stackHeight = vH * stackDimensions[1];
 	    double stackDepth = vD * stackDimensions[3];
-	    if (!gd.getNextBoolean()){
+	    if (!Interpreter.isBatchMode()){
+		//get the values from the dialog
 		radius = gd.getNextNumber();
 		if (radius > stackWidth / 2 || radius > stackHeight / 2
 			|| radius > stackDepth / 2) {
@@ -197,6 +199,7 @@ public class Anisotropy_ implements PlugInFilter {
 		do3DResult = gd.getNextBoolean();
 		return true;
 	    } else {
+		//use the default values regardless of dialog settings
 		return true;
 	    }
 	}

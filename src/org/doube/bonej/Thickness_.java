@@ -3,6 +3,7 @@ package org.doube.bonej;
 import ij.*;
 //import ij.measure.ResultsTable;
 import ij.gui.GenericDialog;
+import ij.macro.Interpreter;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import java.util.Arrays;
@@ -75,6 +76,9 @@ public class Thickness_ implements  PlugInFilter {
 	} else {
 	    IJ.error("8-bit binary (black and white only) image required.");
 	    return DONE;
+	}
+	if (Interpreter.isBatchMode()){
+	    //show helpful message about voxel size
 	}
 	
 	this.baseImp = imp;
