@@ -49,7 +49,7 @@ public class Moments_3D implements PlugInFilter {
     public double vW, vH, vD, m, c;
     public int minT = 0, maxT = 4000; //min and maximum bone value in HU
     public int startSlice = 1, endSlice;
-    public boolean doAlign;
+    public boolean doAlign, doAxes;
     public String title, units, valueUnit;
 
     public int setup(String arg, ImagePlus imp) {
@@ -294,8 +294,8 @@ public class Moments_3D implements PlugInFilter {
 	rt.addValue("I1 (kg.m^2)", E.getD().get(2, 2));
 	rt.addValue("I2 (kg.m^2)", E.getD().get(1, 1));
 	rt.addValue("I3 (kg.m^2)", E.getD().get(0, 0));*/
-	
-	
+
+
 	//do the Eigenvalue decomposition
 	EigenvalueDecomposition E = new EigenvalueDecomposition(inertiaTensorMatrix);
 
@@ -311,7 +311,7 @@ public class Moments_3D implements PlugInFilter {
 	ri.setResultInRow(this.imp, "I1 (kg.m^2)", E.getD().get(2, 2));
 	ri.setResultInRow(this.imp, "I2 (kg.m^2)", E.getD().get(1, 1));
 	ri.setResultInRow(this.imp, "I3 (kg.m^2)", E.getD().get(0, 0));
-	
+
 	return E;
     }
     public void alignToPrincipalAxes(ImageStack stack, EigenvalueDecomposition E, double[] centroid){
@@ -373,21 +373,22 @@ public class Moments_3D implements PlugInFilter {
 		}
 	    }
 	}
-	//draw axes on stack
-	//TODO find out why this sometimes breaks
-	int xCent = (int)Math.round(centroid[0] / vW);
-	int yCent = (int)Math.round(centroid[1] / vH);
-	int zCent = (int)Math.round(centroid[2] / vD);
-	int centPos = (int)Math.round(yCent * w  + xCent);
-	short axisColour = (short)maxT;
-	for (int z = 0; z < al; z++){
-	    int zOffset = z * sliceSize; 
-	    targetWorkArray[zOffset+centPos] = axisColour;
-	    if (z == zCent){
-		//y axis
-		for (int y = 0; y < h; y++) targetWorkArray[zOffset + y*w + xCent] = axisColour;
-		//x axis
-		for (int x = 0; x < w; x++)	targetWorkArray[zOffset + yCent*w + x] = axisColour;
+	if (doAxes){
+	    //draw axes on stack
+	    int xCent = (int)Math.round(centroid[0] / vW);
+	    int yCent = (int)Math.round(centroid[1] / vH);
+	    int zCent = (int)Math.round(centroid[2] / vD);
+	    int centPos = (int)Math.round(yCent * w  + xCent);
+	    short axisColour = Short.MAX_VALUE;
+	    for (int z = 0; z < al; z++){
+		int zOffset = z * sliceSize; 
+		targetWorkArray[zOffset+centPos] = axisColour;
+		if (z == zCent){
+		    //y axis
+		    for (int y = 0; y < h; y++) targetWorkArray[zOffset + y*w + xCent] = axisColour;
+		    //x axis
+		    for (int x = 0; x < w; x++)	targetWorkArray[zOffset + yCent*w + x] = axisColour;
+		}
 	    }
 	}
 	ImageStack target = new ImageStack(w,h);
@@ -415,6 +416,7 @@ public class Moments_3D implements PlugInFilter {
 	gd.addNumericField("Minimum", minT, 0, 6, valueUnit);
 	gd.addNumericField("Maximum", maxT, 0, 6, valueUnit);
 	gd.addCheckbox("Align result", true);
+	gd.addCheckbox("Show axes", true);
 	gd.showDialog();
 	if (gd.wasCanceled()) {
 	    return;
@@ -426,6 +428,7 @@ public class Moments_3D implements PlugInFilter {
 	minT = (int)gd.getNextNumber();
 	maxT = (int)gd.getNextNumber();
 	doAlign = gd.getNextBoolean();
+	doAxes = gd.getNextBoolean();
     }
 }
 
