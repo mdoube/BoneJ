@@ -1262,11 +1262,12 @@ public class Analyze_Skeleton implements PlugInFilter
 	sk.fillEulerLUT(eulerLUT);
 	IJ.log("Number of endPoints before pruning: "+this.listOfEndPoints.size());
 	int endPoints = this.listOfEndPoints.size();
-	ListIterator<int[]> iter = this.listOfEndPoints.listIterator(); 
+	prune:
 	while (!this.listOfEndPoints.isEmpty()){
 	    IJ.showStatus("Pruning end branches...");
 	    IJ.showProgress(endPoints - this.listOfEndPoints.size(), endPoints);
-	    prune:
+	    
+		ListIterator<int[]> iter = this.listOfEndPoints.listIterator();
 //		for (int i = 0; i < this.listOfEndPoints.size(); i++){
 		while (iter.hasNext()){
 //		    int[] endPoint = this.listOfEndPoints.get(i);
