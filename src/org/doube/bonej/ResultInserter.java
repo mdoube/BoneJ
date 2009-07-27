@@ -38,6 +38,7 @@ import ij.plugin.filter.PlugInFilter;
 public class ResultInserter implements PlugInFilter{
     @SuppressWarnings("unused")
     private ImagePlus imp;
+    private ResultsTable rt;
 
     public int setup(String arg, ImagePlus imp){
 	this.imp = imp;
@@ -57,7 +58,7 @@ public class ResultInserter implements PlugInFilter{
      */
     //TODO use a table other than the system Results table
     public void setResultInRow(ImagePlus imp, String colHeading, double value){
-	ResultsTable rt = ResultsTable.getResultsTable();
+	rt = ResultsTable.getResultsTable();
 	String title = imp.getTitle();
 	String table = "Results";
 	rt.show(table);
@@ -70,14 +71,14 @@ public class ResultInserter implements PlugInFilter{
 		if (!rt.columnExists(rt.getColumnIndex(colHeading))){
 		    //in which case, just insert the value
 		    rt.setValue(colHeading, row, value);
-		    rt.show(table);
+		    //rt.show(table);  //really slows it down 
 		    return;
 		} else {
 		    //but if there is, it might or might not have data in it
 		    Double currentValue =  rt.getValue(colHeading, row);
 		    if(currentValue.equals(Double.NaN)){
 			rt.setValue(colHeading, row, value);
-			rt.show(table);
+			//rt.show(table);  //really slows it down
 			return;
 		    } else {
 			//look for another row with the right title
@@ -101,7 +102,11 @@ public class ResultInserter implements PlugInFilter{
 		rt.setValue(c, row, Double.NaN);
 	    }
 	}
-	rt.show(table);
+	//rt.show(table); //really slows it down
 	return;
+    }
+    public void updateTable(){
+	String table = "Results";
+	rt.show(table);
     }
 }
