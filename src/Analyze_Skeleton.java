@@ -35,9 +35,6 @@ import ij.process.ShortProcessor;
  * 
  */
 
-//TODO fix error on blobs skeleton - problem with lines and dots.
-//TODO draw summary histogram of branch lengths (from listOfBranchLengths)
-
 /**
  * Main class.
  * This class is a plugin for the ImageJ interface for analyzing
@@ -1256,8 +1253,6 @@ public class Analyze_Skeleton implements PlugInFilter
      * 
      */
     private ImageStack pruneEndBranches(ImageStack stack){
-	//log points to remove from tree ArrayLists
-	//e.g. with 3 lists of coordinates
 	// Prepare Euler LUT [Lee94]
 	Skeletonize3D_ sk = new Skeletonize3D_();
 	int eulerLUT[] = new int[256]; 
@@ -1268,23 +1263,17 @@ public class Analyze_Skeleton implements PlugInFilter
 	    while (!this.listOfEndPoints.isEmpty()){
 		IJ.showStatus("Pruning end branches...");
 		IJ.showProgress(endPoints - this.listOfEndPoints.size(), endPoints);
-
-		ListIterator<int[]> iteri = this.listOfEndPoints.listIterator();
-		//		for (int i = 0; i < this.listOfEndPoints.size(); i++){
+		ListIterator<int[]> iteri = this.listOfEndPoints.listIterator(0);
 		while (iteri.hasNext()){
-		    //		    int[] endPoint = this.listOfEndPoints.get(i);
 		    int[] endPoint = iteri.next();
 		    int x = endPoint[0], y = endPoint[1], z = endPoint[2];
 		    //if the endpoint is now in a junctionVoxel's position
 		    //remove it from the endpoint list
 		    Iterator<int[]> iterk = this.listOfJunctionVoxels.iterator();
-		    //		    for (int k = 0; k < this.listOfJunctionVoxels.size(); k++){
 		    while (iterk.hasNext()){
-			//			int[] junctionVoxel = this.listOfJunctionVoxels.get(k);
 			int[] junctionVoxel = iterk.next();
 			if (junctionVoxel[0] == x && junctionVoxel[1] == y && junctionVoxel[2] == z){
-			    //			    this.listOfEndPoints.remove(i);
-			    iteri.remove(); //note this is iter not iterk
+			    iteri.remove(); //note this is iteri not iterk
 			    // Check if point is Euler invariant, simple and not an endpoint
 			    byte[] neighbors = this.getNeighborhood(stack, x, y, z);
 			    byte nNeighbors = 0;
@@ -1298,7 +1287,6 @@ public class Analyze_Skeleton implements PlugInFilter
 				    sk.isSimplePoint(neighbors) &&
 				    nNeighbors > 2){
 				//delete the junction point
-				//				this.listOfJunctionVoxels.remove(k);
 				iterk.remove();
 				setPixel(stack, x, y, z, (byte) 0);
 			    }
@@ -1310,12 +1298,9 @@ public class Analyze_Skeleton implements PlugInFilter
 			setPixel(stack, x, y, z, (byte) 0);
 			//remove end voxel from list of slabs
 			ListIterator<int[]> iterj = this.listOfSlabVoxels.listIterator();
-			//			for (int j = 0; j < this.listOfSlabVoxels.size(); j++){
 			while (iterj.hasNext()){
-			    //			    int[] slabVoxel = this.listOfSlabVoxels.get(j);
 			    int[] slabVoxel = iterj.next();
 			    if (slabVoxel[0] == x && slabVoxel[1] == y && slabVoxel[2] == z){
-				//				this.listOfSlabVoxels.remove(j);
 				iterj.remove();
 				break;
 			    }
@@ -1359,19 +1344,16 @@ public class Analyze_Skeleton implements PlugInFilter
 				endPoint[0] = x;
 				endPoint[1] = y;
 				endPoint[2] = z;
-				//				this.listOfEndPoints.set(i, endPoint);
 				iteri.set(endPoint);
 				break;
 			    }
 			}
 		    } else if (getNumberOfNeighbors(stack, x, y, z) > 1){
-			//			this.listOfEndPoints.remove(i);
 			iteri.remove();
 		    } else {
 			//number of neighbours = 0
 			//set a remaining endPoint to a slab
 			//isolated slabs are turned back into endPoints later
-			//			this.listOfEndPoints.remove(i);
 			iteri.remove();
 			this.listOfSlabVoxels.add(endPoint);
 		    }
@@ -1379,6 +1361,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	//clean up isolated slab points
 	IJ.log("this.listOfSlabVoxels.size() = "+this.listOfSlabVoxels.size());
+	
 	Iterator<int[]> it = this.listOfSlabVoxels.iterator();
 	while (it.hasNext()){
 	    int[] slab = it.next();
