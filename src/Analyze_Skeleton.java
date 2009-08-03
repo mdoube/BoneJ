@@ -1276,7 +1276,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			if (junctionVoxel[0] == x && junctionVoxel[1] == y && junctionVoxel[2] == z){
 //			    if (iterk.next() == iteri.next()){
 			    iteri.remove(); //note this is iteri not iterk
-//			    IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
+			    IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 			    // Check if point is Euler invariant, simple and not an endpoint
 			    byte[] neighbors = this.getNeighborhood(stack, x, y, z);
 			    byte nNeighbors = 0;
@@ -1310,7 +1310,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			    if (slabVoxel[0] == x && slabVoxel[1] == y && slabVoxel[2] == z){
 //			    if (iterj.next() == iteri.next()){
 				iterj.remove();
-//				IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");		
+				IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");		
 				break;
 			    }
 			}
@@ -1362,7 +1362,7 @@ public class Analyze_Skeleton implements PlugInFilter
 			}
 		    } else if (getNumberOfNeighbors(stack, x, y, z) > 1){
 			iteri.remove();
-//			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
+			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 		    } else {
 			//number of neighbours = 0
 			//set a remaining endPoint to a slab
@@ -1380,14 +1380,14 @@ public class Analyze_Skeleton implements PlugInFilter
 				isolatedSlabExists = true;
 			    }
 			}
-			if (!isolatedSlabExists){ 
+			if (!isolatedSlabExists)//{ 
 			    this.listOfSlabVoxels.add(endPoint);
 //			IJ.log("Added "+pointToString(endPoint)+" to listOfSlabVoxels");}
 		    }
 		}
 	    }
 	//clean up isolated slab points
-	IJ.log("this.listOfSlabVoxels.size() = "+this.listOfSlabVoxels.size());
+//	IJ.log("this.listOfSlabVoxels.size() = "+this.listOfSlabVoxels.size());
 	
 	Iterator<int[]> it = this.listOfSlabVoxels.iterator();
 	while (it.hasNext()){
@@ -1395,14 +1395,14 @@ public class Analyze_Skeleton implements PlugInFilter
 	    int x = slab[0], y = slab[1], z = slab[2];
 	    if (getNumberOfNeighbors(stack, x, y, z) == 0){
 		it.remove();
-		IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");
+//		IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");
 		this.listOfEndPoints.add(slab);
 		setPixel(stack, x, y, z, END_POINT);
-		IJ.log("Converted temporary isolated slab to endPoint at "+pointToString(slab));
+//		IJ.log("Converted temporary isolated slab to endPoint at "+pointToString(slab));
 	    }
 	}
 	//	this.listOfSlabVoxels.clear();
-	IJ.log("Number of endPoints after pruning: "+this.listOfEndPoints.size());
+//	IJ.log("Number of endPoints after pruning: "+this.listOfEndPoints.size());
 	return stack;
     }	
 
