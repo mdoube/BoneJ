@@ -282,7 +282,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	// Add junction voxels to the corresponding tree
-//	for(int i = 0; i < this.listOfJunctionVoxels.size(); i++){
 	iteri = this.listOfJunctionVoxels.listIterator();
 	while (iteri.hasNext()){
 	    final int[] p = iteri.next();			
@@ -290,15 +289,9 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	// Add special slab voxels to the corresponding tree
-	//	IJ.log("this.listOfStartingSlabVoxels.size() = "+this.listOfStartingSlabVoxels.size());
-	//	IJ.log("this.startingSlabTree.length = "+this.startingSlabTree.length);
-//	for(int i = 0; i < this.listOfStartingSlabVoxels.size(); i++){
 	iteri = this.listOfStartingSlabVoxels.listIterator();
 	while (iteri.hasNext()){    
 	    final int[] p = iteri.next();	
-	    //	    IJ.log("i = "+i);
-	    //	    IJ.log("p = "+pointToString(p));
-	    //	    IJ.log("getShortPixel(treeIS, p) = "+getShortPixel(treeIS, p));
 	    this.startingSlabTree[getShortPixel(treeIS, p) - 1].add(p);
 	}
 
@@ -323,21 +316,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	for(int i = 0 ; i < this.numOfTrees; i++)
 	{
-	    /*	    rt.incrementCounter();
-
-	    rt.addValue(1, this.numberOfBranches[i]);        
-	    rt.addValue(2, this.listOfSingleJunctions[i].size());
-	    rt.addValue(3, this.numberOfEndPoints[i]);
-	    rt.addValue(4, this.junctionVoxelTree[i].size());
-	    rt.addValue(5, this.numberOfSlabs[i]);
-	    rt.addValue(6, this.numberOfTriplePoints[i]);
-	    rt.addValue(7, this.averageBranchLength[i]);
-	    rt.addValue(8, this.maximumBranchLength[i]);
-	    rt.addValue(9, this.branchLength[i]);
-
-	    rt.show("Results");
-
-	     */	    
 	    ri.setResultInRow(this.imRef, "Tree", i);
 	    ri.setResultInRow(this.imRef, "Branches", this.numberOfBranches[i]);
 	    ri.setResultInRow(this.imRef, "Junctions", this.listOfSingleJunctions[i].size());
@@ -348,16 +326,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	    ri.setResultInRow(this.imRef, "Mean Branch Length ("+unit+")", this.averageBranchLength[i]);
 	    ri.setResultInRow(this.imRef, "Max Branch Length ("+unit+")", this.maximumBranchLength[i]);
 	    ri.setResultInRow(this.imRef, "Total Branch Length ("+unit+")", this.branchLength[i]);
-
-	    /*	     IJ.log("--- Skeleton #" + (i+1) + " ---");
-	     IJ.log("Coordinates of the largest branch:");
-	     IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", "
-		     + (this.initialPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
-		     + (this.initialPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
-	     IJ.log("Final point: (" + (this.finalPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " 
-		     + (this.finalPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
-		     + (this.finalPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
-	     IJ.log("Euclidean distance: " + this.calculateDistance(this.initialPoint[i], this.finalPoint[i])); */
 	}
 	ri.updateTable();
     }
@@ -379,15 +347,12 @@ public class Analyze_Skeleton implements PlugInFilter
 	this.branchLength[iTree] = 0;
 
 	this.maximumBranchLength[iTree] = 0;
-//	this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
-	//	this.numberOfJunctionVoxels[iTree] = this.junctionVoxelTree[iTree].size();
 	this.numberOfSlabs[iTree] = 0;
 	this.listOfBranchLengths = new ArrayList<double[]>();
 
 	// Visit branches starting at end points
 	for(int i = 0; i < this.endPointsTree[iTree].size(); i++)
 	{
-	    //	    IJ.log("Visiting endPoint "+i+" in tree "+iTree);
 	    final int[] endPointCoord = this.endPointsTree[iTree].get(i);
 	    // Skip when visited
 	    if(isVisited(endPointCoord))
@@ -425,7 +390,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 
 	for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++){
-	    //	    IJ.log("Visiting junction "+j+" in tree "+iTree);
 	    ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
 
 	    //	    work out the junction's centroid 
@@ -444,7 +408,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	    for(int i = 0; i < groupOfJunctions.size(); i++)
 	    {
 		final int[] junctionCoord = groupOfJunctions.get(i);
-		//		IJ.log("...junction point "+pointToString(junctionCoord));
 		if (isJunctionMiddle(this.taggedImage, junctionCoord, LUT, sk))
 		    continue;
 
@@ -468,8 +431,6 @@ public class Analyze_Skeleton implements PlugInFilter
 		    }
 
 		    // Increase number of branches
-		    //		    if(length != 0)
-		    //		    {
 		    this.numberOfBranches[iTree]++;
 		    double[] lA = {length, 0}; //2nd element is the bin. 
 		    this.listOfBranchLengths.add(lA);
@@ -480,7 +441,6 @@ public class Analyze_Skeleton implements PlugInFilter
 			this.initialPoint[iTree] = junctionCoord;
 			this.finalPoint[iTree] = this.auxPoint;
 		    }
-		    //		    }
 		    nextPoint = getNextUnvisitedVoxel(junctionCoord, isJunction);
 		}					
 	    }
@@ -540,12 +500,10 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	short color = 0;
 
-	// Visit trees starting at end points
-	//	for(int i = 0; i < this.listOfEndPoints.size(); i++){			
+	// Visit trees starting at end points			
 	ListIterator<int[]> iteri = this.listOfEndPoints.listIterator();
 	while (iteri.hasNext()){
 	    int[] endPointCoord = iteri.next();
-//	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
 
 	    if(isVisited(endPointCoord))
 		continue;
@@ -568,7 +526,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Visit trees starting at junction points 
 	// (some circular trees do not have end points)
-	//	for(int i = 0; i < this.listOfJunctionVoxels.size(); i++){
 	iteri = this.listOfJunctionVoxels.listIterator();
 	while (iteri.hasNext()){
 
@@ -599,8 +556,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Check for unvisited slab voxels
 	// (just in case there are circular trees without junctions)
-
-	//	for(int i = 0; i < this.listOfSlabVoxels.size(); i++){
 	iteri = this.listOfSlabVoxels.listIterator();
 	while (iteri.hasNext()){
 	    int[] p = iteri.next();
@@ -630,7 +585,6 @@ public class Analyze_Skeleton implements PlugInFilter
 		this.numOfTrees++;
 	    }
 	}
-//	IJ.log("markTrees found "+this.numOfTrees+" trees");
 	//Optionally show the trees, colour-coded
 	if (doTrees){
 	    ImagePlus treeIP = new ImagePlus("Trees", outputImage);
@@ -662,8 +616,6 @@ public class Analyze_Skeleton implements PlugInFilter
 	int numOfVoxels = 0;
 	ArrayList <int[]> toRevisit = new ArrayList <int []>();
 
-	//	if(isVisited(startingPoint))	
-	//	    return 0;
 	// Set pixel color
 	this.setPixel(outputImage, startingPoint[0], startingPoint[1], startingPoint[2], color);
 	setVisited(startingPoint, true);
@@ -809,16 +761,14 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	int[] previousPoint = startingPoint;
-	//	IJ.log("Starting point is "+pointToString(startingPoint));
+
 	if (isSlab(startingPoint)){
 	    this.numberOfSlabs[iTree]++;
-	    //	    IJ.log("Added slab "+pointToString(startingPoint));
 	}
 	// We visit the branch until we find an end point or a junction
 	while(nextPoint != null && isSlab(nextPoint))
 	{
 	    this.numberOfSlabs[iTree]++;
-	    //	    IJ.log("Added slab "+pointToString(nextPoint));
 
 	    // Add length
 	    length += calculateDistance(previousPoint, nextPoint);
@@ -1257,13 +1207,12 @@ public class Analyze_Skeleton implements PlugInFilter
 	Skeletonize3D_ sk = new Skeletonize3D_();
 	int eulerLUT[] = new int[256]; 
 	sk.fillEulerLUT(eulerLUT);
-	IJ.log("Number of endPoints before pruning: "+this.listOfEndPoints.size());
 	int endPoints = this.listOfEndPoints.size();
 	prune:
 	    while (!this.listOfEndPoints.isEmpty()){
 		IJ.showStatus("Pruning end branches...");
 		IJ.showProgress(endPoints - this.listOfEndPoints.size(), endPoints);
-				
+
 		ListIterator<int[]> iteri = this.listOfEndPoints.listIterator(0);
 		while (iteri.hasNext()){
 		    int[] endPoint = iteri.next();
@@ -1274,9 +1223,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		    while (iterk.hasNext()){
 			int[] junctionVoxel = iterk.next();
 			if (junctionVoxel[0] == x && junctionVoxel[1] == y && junctionVoxel[2] == z){
-//			    if (iterk.next() == iteri.next()){
 			    iteri.remove(); //note this is iteri not iterk
-			    IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 			    // Check if point is Euler invariant, simple and not an endpoint
 			    byte[] neighbors = this.getNeighborhood(stack, x, y, z);
 			    byte nNeighbors = 0;
@@ -1296,21 +1243,19 @@ public class Analyze_Skeleton implements PlugInFilter
 			    continue prune;
 			}
 		    }
-		    
+
 		    //if the endPoint has only one neighbour, move the endpoint to the 
 		    //neighbours position
 		    if (getNumberOfNeighbors(stack, x, y, z) == 1){
 			//remove the end voxel from the tagged image
 			setPixel(stack, x, y, z, (byte) 0);
-			
+
 			//remove end voxel from list of slabs
 			ListIterator<int[]> iterj = this.listOfSlabVoxels.listIterator();
 			while (iterj.hasNext()){
 			    int[] slabVoxel = iterj.next();
 			    if (slabVoxel[0] == x && slabVoxel[1] == y && slabVoxel[2] == z){
-//			    if (iterj.next() == iteri.next()){
-				iterj.remove();
-				IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");		
+				iterj.remove();		
 				break;
 			    }
 			}
@@ -1362,14 +1307,12 @@ public class Analyze_Skeleton implements PlugInFilter
 			}
 		    } else if (getNumberOfNeighbors(stack, x, y, z) > 1){
 			iteri.remove();
-			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 		    } else {
 			//number of neighbours = 0
 			//set a remaining endPoint to a slab
 			//isolated slabs are turned back into endPoints later
-//			IJ.log("endPoint "+pointToString(endPoint)+" has 0 neighbours, removing");
 			iteri.remove();
-//			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
+
 			//if endPoint is not already in list of slab voxels
 			//add it - this is a hack, logic is wrong somewhere upstream
 			ListIterator<int[]> iterj = this.listOfSlabVoxels.listIterator();
@@ -1380,29 +1323,22 @@ public class Analyze_Skeleton implements PlugInFilter
 				isolatedSlabExists = true;
 			    }
 			}
-			if (!isolatedSlabExists)//{ 
+			if (!isolatedSlabExists)
 			    this.listOfSlabVoxels.add(endPoint);
-//			IJ.log("Added "+pointToString(endPoint)+" to listOfSlabVoxels");}
 		    }
 		}
 	    }
 	//clean up isolated slab points
-//	IJ.log("this.listOfSlabVoxels.size() = "+this.listOfSlabVoxels.size());
-	
 	Iterator<int[]> it = this.listOfSlabVoxels.iterator();
 	while (it.hasNext()){
 	    int[] slab = it.next();
 	    int x = slab[0], y = slab[1], z = slab[2];
 	    if (getNumberOfNeighbors(stack, x, y, z) == 0){
 		it.remove();
-//		IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");
 		this.listOfEndPoints.add(slab);
 		setPixel(stack, x, y, z, END_POINT);
-//		IJ.log("Converted temporary isolated slab to endPoint at "+pointToString(slab));
 	    }
 	}
-	//	this.listOfSlabVoxels.clear();
-//	IJ.log("Number of endPoints after pruning: "+this.listOfEndPoints.size());
 	return stack;
     }	
 
