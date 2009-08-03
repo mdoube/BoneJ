@@ -90,14 +90,8 @@ public class Analyze_Skeleton implements PlugInFilter
     // Tree fields
     /** number of branches for every specific tree */
     private int[] numberOfBranches = null;
-    /** number of end points voxels of every tree */
-    private int[] numberOfEndPoints = null;
-    /** number of junctions voxels of every tree*/
-    //    private int[] numberOfJunctionVoxels = null;
     /** number of slab voxels of every specific tree */
     private int[] numberOfSlabs = null;	
-    /** number of junctions of every specific tree*/
-    //    private int[] numberOfJunctions = null;
     /** number of triple points in every tree */
     private int[] numberOfTriplePoints = null;
     /** list of end points in every tree */
