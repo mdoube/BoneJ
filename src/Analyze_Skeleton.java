@@ -1263,6 +1263,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    while (!this.listOfEndPoints.isEmpty()){
 		IJ.showStatus("Pruning end branches...");
 		IJ.showProgress(endPoints - this.listOfEndPoints.size(), endPoints);
+				
 		ListIterator<int[]> iteri = this.listOfEndPoints.listIterator(0);
 		while (iteri.hasNext()){
 		    int[] endPoint = iteri.next();
@@ -1273,7 +1274,9 @@ public class Analyze_Skeleton implements PlugInFilter
 		    while (iterk.hasNext()){
 			int[] junctionVoxel = iterk.next();
 			if (junctionVoxel[0] == x && junctionVoxel[1] == y && junctionVoxel[2] == z){
+//			    if (iterk.next() == iteri.next()){
 			    iteri.remove(); //note this is iteri not iterk
+//			    IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 			    // Check if point is Euler invariant, simple and not an endpoint
 			    byte[] neighbors = this.getNeighborhood(stack, x, y, z);
 			    byte nNeighbors = 0;
@@ -1293,15 +1296,21 @@ public class Analyze_Skeleton implements PlugInFilter
 			    continue prune;
 			}
 		    }
+		    
+		    //if the endPoint has only one neighbour, move the endpoint to the 
+		    //neighbours position
 		    if (getNumberOfNeighbors(stack, x, y, z) == 1){
 			//remove the end voxel from the tagged image
 			setPixel(stack, x, y, z, (byte) 0);
+			
 			//remove end voxel from list of slabs
 			ListIterator<int[]> iterj = this.listOfSlabVoxels.listIterator();
 			while (iterj.hasNext()){
 			    int[] slabVoxel = iterj.next();
 			    if (slabVoxel[0] == x && slabVoxel[1] == y && slabVoxel[2] == z){
+//			    if (iterj.next() == iteri.next()){
 				iterj.remove();
+//				IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");		
 				break;
 			    }
 			}
@@ -1344,18 +1353,36 @@ public class Analyze_Skeleton implements PlugInFilter
 				endPoint[0] = x;
 				endPoint[1] = y;
 				endPoint[2] = z;
-				iteri.set(endPoint);
+				//if the one neighbour is not an endPoint already
+				//move the endPoint to the neighbour
+				if (getPixel(stack, x, y, z) != END_POINT)
+				    iteri.set(endPoint);
 				break;
 			    }
 			}
 		    } else if (getNumberOfNeighbors(stack, x, y, z) > 1){
 			iteri.remove();
+//			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
 		    } else {
 			//number of neighbours = 0
 			//set a remaining endPoint to a slab
 			//isolated slabs are turned back into endPoints later
+//			IJ.log("endPoint "+pointToString(endPoint)+" has 0 neighbours, removing");
 			iteri.remove();
-			this.listOfSlabVoxels.add(endPoint);
+//			IJ.log(this.listOfEndPoints.size()+" endPoints remaining");
+			//if endPoint is not already in list of slab voxels
+			//add it - this is a hack, logic is wrong somewhere upstream
+			ListIterator<int[]> iterj = this.listOfSlabVoxels.listIterator();
+			boolean isolatedSlabExists = false;
+			while (iterj.hasNext()){
+			    int[] slab = iterj.next();
+			    if (slab[0] == endPoint[0] && slab[1] == endPoint[1] && slab[2] == endPoint[2]){
+				isolatedSlabExists = true;
+			    }
+			}
+			if (!isolatedSlabExists){ 
+			    this.listOfSlabVoxels.add(endPoint);
+//			IJ.log("Added "+pointToString(endPoint)+" to listOfSlabVoxels");}
 		    }
 		}
 	    }
@@ -1368,8 +1395,10 @@ public class Analyze_Skeleton implements PlugInFilter
 	    int x = slab[0], y = slab[1], z = slab[2];
 	    if (getNumberOfNeighbors(stack, x, y, z) == 0){
 		it.remove();
+		IJ.log(this.listOfSlabVoxels.size()+" slab voxels remaining");
 		this.listOfEndPoints.add(slab);
 		setPixel(stack, x, y, z, END_POINT);
+		IJ.log("Converted temporary isolated slab to endPoint at "+pointToString(slab));
 	    }
 	}
 	//	this.listOfSlabVoxels.clear();
