@@ -36,7 +36,6 @@ import ij.process.ShortProcessor;
  */
 
 //TODO fix error on blobs skeleton - problem with lines and dots.
-//TODO use List Iterators rather than for-each when modifying List elements
 //TODO draw summary histogram of branch lengths (from listOfBranchLengths)
 
 /**
@@ -213,9 +212,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	// Ask memory for every tree
 	this.numberOfBranches = new int[this.numOfTrees];
-	this.numberOfEndPoints = new int[this.numOfTrees];
-	//	this.numberOfJunctionVoxels = new int[this.numOfTrees];
-	//	this.numberOfJunctions = new int[this.numOfTrees];
 	this.numberOfSlabs = new int[this.numOfTrees];
 	this.numberOfTriplePoints = new int[this.numOfTrees];
 	this.branchLength = new double[this.numOfTrees];
@@ -358,7 +354,7 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	    /*	     IJ.log("--- Skeleton #" + (i+1) + " ---");
 	     IJ.log("Coordinates of the largest branch:");
-	     IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " //TODO fix NPE here 
+	     IJ.log("Initial point: (" + (this.initialPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", "
 		     + (this.initialPoint[i][1] * this.imRef.getCalibration().pixelHeight) + ", "
 		     + (this.initialPoint[i][2] * this.imRef.getCalibration().pixelDepth) + ")" );
 	     IJ.log("Final point: (" + (this.finalPoint[i][0] * this.imRef.getCalibration().pixelWidth) + ", " 
@@ -386,7 +382,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	this.branchLength[iTree] = 0;
 
 	this.maximumBranchLength[iTree] = 0;
-	this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
+//	this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
 	//	this.numberOfJunctionVoxels[iTree] = this.junctionVoxelTree[iTree].size();
 	this.numberOfSlabs[iTree] = 0;
 	this.listOfBranchLengths = new ArrayList<double[]>();
@@ -552,7 +548,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	ListIterator<int[]> iteri = this.listOfEndPoints.listIterator();
 	while (iteri.hasNext()){
 	    int[] endPointCoord = iteri.next();
-	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
+//	    IJ.log("Starting tree at endPoint "+pointToString(endPointCoord));
 
 	    if(isVisited(endPointCoord))
 		continue;
@@ -637,7 +633,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		this.numOfTrees++;
 	    }
 	}
-	IJ.log("markTrees found "+this.numOfTrees+" trees");
+//	IJ.log("markTrees found "+this.numOfTrees+" trees");
 	//Optionally show the trees, colour-coded
 	if (doTrees){
 	    ImagePlus treeIP = new ImagePlus("Trees", outputImage);
