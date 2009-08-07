@@ -1045,6 +1045,21 @@ public class Analyze_Skeleton implements PlugInFilter
     {		
 	return getPixel(this.taggedImage, point[0], point[1], point[2]) == Analyze_Skeleton.JUNCTION;
     }	
+    
+    /* -----------------------------------------------------------------------*/
+	/**
+	 * Check if the point is a junction
+	 *  
+	 * @param x x- voxel coordinate
+	 * @param y y- voxel coordinate
+	 * @param z z- voxel coordinate
+	 * @return true if the point has slab status
+	 */
+	private boolean isJunction(int x, int y, int z) 
+	{		
+		return getPixel(this.taggedImage, x, y, z) == Analyze_Skeleton.JUNCTION;
+	}	
+	
 
     /* -----------------------------------------------------------------------*/
     /**
