@@ -856,110 +856,88 @@ public class Analyze_Skeleton implements PlugInFilter
 	return Math.sqrt(  dx * dx + dy * dy + dz * dz );
     }
 
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Calculate number of junction skipping neighbor junction voxels
-	 * 
-	 * @param treeIS tree stack
-	 */
-	private void groupJunctions(ImageStack treeIS) 
+    /* -----------------------------------------------------------------------*/
+    /**
+     * Calculate number of junction skipping neighbor junction voxels
+     * 
+     * @param treeIS tree stack
+     */
+    private void groupJunctions(ImageStack treeIS) 
+    {
+	for (int iTree = 0; iTree < this.numOfTrees; iTree++)
 	{
-		// Reset visited variable
-		this.visited = null;
-		this.visited = new boolean[this.width][this.height][this.depth];
-		
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
+	    // Visit all junction voxels in tree iTree
+	    for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i++)
+	    {
+		//pi is the coordinates of junction voxel i in tree iTree
+		int[] pi = this.junctionVoxelTree[iTree].get(i);
+		boolean grouped = false;
+		int lowGroup = 0;
+		//visit all the junctions j in tree iTree
+		for(int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++)
 		{
-			// Visit list of junction voxels
-			for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i ++)
+		    //groupOfJunctions is the list of voxels in a junction
+		    ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(j);
+
+		    //visit all the voxels k in a junction (so far)
+		    for(int k = 0; k < groupOfJunctions.size(); k++)
+		    {
+			int[] pk = groupOfJunctions.get(k);
+
+			// if the test voxel pi is a neighbor of 
+			//a voxel pk in junction j, add pi to j   
+			if(isNeighbor(pi, pk))
 			{
-				int[] pi = this.junctionVoxelTree[iTree].get(i);
-				
-				if(! isVisited(pi))
-					fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
+			    groupOfJunctions.add(pi);
+			    grouped = true;
+			    //can stop checking in this junction now
+			    break;
 			}
-		}		
-	}	
+		    }
 
-	// -----------------------------------------------------------------------
-	/**
-	 * 
-	 * @param startingPoint
-	 * @param singleJunctionsList
-	 */
-	private void fusionNeighborJunction(int[] startingPoint,
-			ArrayList<ArrayList<int[]>> singleJunctionsList) 
-	{
-		// Create new group of junctions
-		ArrayList <int[]> newGroup = new ArrayList<int[]>();
-		newGroup.add(startingPoint);
-		
-		// Mark the starting junction as visited
-		setVisited(startingPoint, true);
-		
-		// Look for neighbor junctions and add them to the new group
-		ArrayList <int[]> toRevisit = new ArrayList <int []>();
-		toRevisit.add(startingPoint);
-		
-		int[] nextPoint = getNextUnvisitedJunctionVoxel(startingPoint);
-		
-		while(nextPoint != null || toRevisit.size() != 0)
-		{
-			if(nextPoint != null && !isVisited(nextPoint))
-			{			
-				// Add to the group
-				newGroup.add(nextPoint);
-				// Mark as visited
-				setVisited(nextPoint, true);
-
-				// add it to the revisit list
-				toRevisit.add(nextPoint);
-
-				// Calculate next junction point to visit
-				nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);								
-			}
-			else // revisit list
-			{				
-				nextPoint = toRevisit.get(0);
-				//IJ.log("visiting " + pointToString(nextPoint)+ " color = " + color);
-												
-				// Calculate next point to visit
-				nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);
-				// Maintain junction in the list until there is no more branches
-				if (nextPoint == null)
-					toRevisit.remove(0);									
-			}				
+		    if(grouped){
+			//we added pi to junction j
+			lowGroup = j;
+			//stop checking for first junction group assignment
+			break;
+		    }
 		}
-		
-		// Add group to the single junction list
-		singleJunctionsList.add(newGroup);
-		
-	}
-
-	// -----------------------------------------------------------------------
-	/**
-	 *  Check if two groups of voxels are neighbors
-	 * @param g1 first group
-	 * @param g2 second group
-	 * 
-	 * @return true if the groups have any neighbor voxel
-	 */
-	boolean checkNeighborGroups(ArrayList <int[]> g1,  ArrayList <int[]> g2)
-	{
-		for(int i =0 ; i  < g1.size(); i++)
-		{
-			int[] pi = g1.get(i);
-			for(int j =0 ; j  < g2.size(); j++)
+		//check whether pi has neighbors in any other junctions
+		//and join j and the other junctions together
+		if (grouped){
+		    ArrayList <int[]> lowGroupList = this.listOfSingleJunctions[iTree].get(lowGroup);
+		    for (int l = lowGroup + 1; l < this.listOfSingleJunctions[iTree].size(); l++){
+			ArrayList <int[]> groupOfJunctions = this.listOfSingleJunctions[iTree].get(l);
+			//visit all the voxels k in a junction (so far)
+			for(int k = 0; k < groupOfJunctions.size(); k++)
 			{
-				int[] pj = g2.get(j);
-				if(isNeighbor(pi, pj))
-					return true;
+			    int[] lpk = groupOfJunctions.get(k);
+
+			    // if the test voxel pi is a neighbor of 
+			    //a voxel lpk in junction l, add l to j
+			    //and remove l from the list of junctions
+			    if(isNeighbor(pi, lpk))
+			    {
+				grouped = true;
+				lowGroupList.addAll(groupOfJunctions);
+				this.listOfSingleJunctions[iTree].remove(l);
+				//can stop checking junction l now
+				break;
+			    }
 			}
-		}			
-		return false;
+		    }
+		}
+
+		if(!grouped)
+		{
+		    ArrayList <int[]> newGroup = new ArrayList<int[]>();
+		    newGroup.add(pi);
+		    this.listOfSingleJunctions[iTree].add(newGroup);
+		}
+	    }
 	}
-	
-	
+    }	
+
     /* -----------------------------------------------------------------------*/
     /**
      * Calculate number of triple points in the skeleton. Triple points are
@@ -1037,21 +1015,6 @@ public class Analyze_Skeleton implements PlugInFilter
     {		
 	return getPixel(this.taggedImage, point[0], point[1], point[2]) == Analyze_Skeleton.JUNCTION;
     }	
-    
-    /* -----------------------------------------------------------------------*/
-	/**
-	 * Check if the point is a junction
-	 *  
-	 * @param x x- voxel coordinate
-	 * @param y y- voxel coordinate
-	 * @param z z- voxel coordinate
-	 * @return true if the point has slab status
-	 */
-	private boolean isJunction(int x, int y, int z) 
-	{		
-		return getPixel(this.taggedImage, x, y, z) == Analyze_Skeleton.JUNCTION;
-	}	
-	
 
     /* -----------------------------------------------------------------------*/
     /**
@@ -1119,39 +1082,6 @@ public class Analyze_Skeleton implements PlugInFilter
 
 	return unvisitedNeighbor;
     }/* end getNextUnvisitedVoxel */
-    
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Get next unvisited junction neighbor voxel 
-	 * 
-	 * @param point starting point
-	 * @return unvisited neighbor or null if all neighbors are visited
-	 */
-	private int[] getNextUnvisitedJunctionVoxel(int[] point) 
-	{
-		int[] unvisitedNeighbor = null;
-
-		// Check neighbors status
-		for(int x = -1; x < 2; x++)
-			for(int y = -1; y < 2; y++)
-				for(int z = -1; z < 2; z++)
-				{
-					if(x == 0 && y == 0 && z == 0)
-						continue;
-					
-					if(getPixel(this.inputImage, point[0] + x, point[1] + y, point[2] + z) != 0
-						&& isVisited(point[0] + x, point[1] + y, point[2] + z) == false 
-						&& isJunction(point[0] + x, point[1] + y, point[2] + z))						
-					{					
-						unvisitedNeighbor = new int[]{point[0] + x, point[1] + y, point[2] + z};
-						break;
-					}
-					
-				}
-		
-		return unvisitedNeighbor;
-	}// end getNextUnvisitedJunctionVoxel 
-
 
 
     /* -----------------------------------------------------------------------*/
