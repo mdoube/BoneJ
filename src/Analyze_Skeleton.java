@@ -237,7 +237,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	groupJunctions(treeIS);
 	double duration = ((double) System.currentTimeMillis() - (double) startTime)
 	/ (double) 1000;
-	IJ.log("Junction grouping took "+duration+" s");
+	IJ.log("Junction grouping (fast branch) took "+duration+" s");
 
 	// Visit skeleton and measure distances.
 	for(int i = 0; i < this.numOfTrees; i++)
