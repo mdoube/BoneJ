@@ -233,8 +233,12 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	// Calculate number of junctions (group neighbor junction voxels)
+	long startTime = System.currentTimeMillis();
 	groupJunctions(treeIS);
-
+	double duration = ((double) System.currentTimeMillis() - (double) startTime)
+	/ (double) 1000;
+	IJ.log("Junction grouping took "+duration+" s");
+	
 	// Visit skeleton and measure distances.
 	for(int i = 0; i < this.numOfTrees; i++)
 	    visitSkeleton(taggedImage, treeIS, i+1);
