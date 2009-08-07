@@ -871,7 +871,7 @@ public class Analyze_Skeleton implements PlugInFilter
 		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
 		{
 			// Visit list of junction voxels
-			for(int i = 0; i < this.numberOfJunctionVoxels[iTree]; i ++)
+			for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i ++)
 			{
 				int[] pi = this.junctionVoxelTree[iTree].get(i);
 				
@@ -879,14 +879,6 @@ public class Analyze_Skeleton implements PlugInFilter
 					fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
 			}
 		}		
-				
-		// Count number of single junctions for every tree in the image
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{
-			this.numberOfJunctions[iTree] = this.listOfSingleJunctions[iTree].size();
-		}
-				
-		
 	}	
 
 	// -----------------------------------------------------------------------
