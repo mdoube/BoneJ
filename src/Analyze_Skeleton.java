@@ -238,7 +238,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	double duration = ((double) System.currentTimeMillis() - (double) startTime)
 	/ (double) 1000;
 	IJ.log("Junction grouping took "+duration+" s");
-	
+
 	// Visit skeleton and measure distances.
 	for(int i = 0; i < this.numOfTrees; i++)
 	    visitSkeleton(taggedImage, treeIS, i+1);
@@ -856,30 +856,87 @@ public class Analyze_Skeleton implements PlugInFilter
 	return Math.sqrt(  dx * dx + dy * dy + dz * dz );
     }
 
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Calculate number of junction skipping neighbor junction voxels
-	 * 
-	 * @param treeIS tree stack
-	 */
-	private void groupJunctions(ImageStack treeIS) 
+    /* -----------------------------------------------------------------------*/
+    /**
+     * Calculate number of junction skipping neighbor junction voxels
+     * 
+     * @param treeIS tree stack
+     */
+    private void groupJunctions(ImageStack treeIS) 
+    {
+	// Reset visited variable
+	this.visited = null;			//TODO is this breaking things?
+	this.visited = new boolean[this.width][this.height][this.depth];
+
+	for (int iTree = 0; iTree < this.numOfTrees; iTree++)
 	{
-		// Reset visited variable
-		this.visited = null;
-		this.visited = new boolean[this.width][this.height][this.depth];
-		
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{
-			// Visit list of junction voxels
-			for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i ++)
-			{
-				int[] pi = this.junctionVoxelTree[iTree].get(i);
-				
-				if(! isVisited(pi))
-					fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
-			}
-		}
-	}	
+	    // Visit list of junction voxels
+	    for(int i = 0; i < this.junctionVoxelTree[iTree].size(); i ++)
+	    {
+		int[] pi = this.junctionVoxelTree[iTree].get(i);
+
+		if(! isVisited(pi))
+		    fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
+	    }
+	}
+    }	
+    
+    // -----------------------------------------------------------------------
+    /**
+     * 
+     * @param startingPoint
+     * @param singleJunctionsList
+     */
+    private void fusionNeighborJunction(int[] startingPoint,
+	    ArrayList<ArrayList<int[]>> singleJunctionsList) 
+    {
+	// Create new group of junctions
+	ArrayList <int[]> newGroup = new ArrayList<int[]>();
+	newGroup.add(startingPoint);
+
+	// Mark the starting junction as visited
+	setVisited(startingPoint, true);
+
+	// Look for neighbor junctions and add them to the new group
+	ArrayList <int[]> toRevisit = new ArrayList <int []>();
+	toRevisit.add(startingPoint);
+
+	int[] nextPoint = getNextUnvisitedJunctionVoxel(startingPoint);
+
+	while(nextPoint != null || toRevisit.size() != 0)
+	{
+	    if(nextPoint != null && !isVisited(nextPoint))
+	    {			
+		// Add to the group
+		newGroup.add(nextPoint);
+		// Mark as visited
+		setVisited(nextPoint, true);
+
+		// add it to the revisit list
+		toRevisit.add(nextPoint);
+
+		// Calculate next junction point to visit
+		nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);								
+	    }
+	    else // revisit list
+	    {				
+		nextPoint = toRevisit.get(0);
+		//IJ.log("visiting " + pointToString(nextPoint)+ " color = " + color);
+
+		// Calculate next point to visit
+		nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);
+		// Maintain junction in the list until there is no more branches
+		if (nextPoint == null)
+		    toRevisit.remove(0);									
+	    }				
+	}
+
+	// Add group to the single junction list
+	singleJunctionsList.add(newGroup);
+
+    }
+
+
 
     /* -----------------------------------------------------------------------*/
     /**
