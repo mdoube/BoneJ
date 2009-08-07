@@ -880,7 +880,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	}
     }	
-    
+
     // -----------------------------------------------------------------------
     /**
      * 
@@ -1018,6 +1018,20 @@ public class Analyze_Skeleton implements PlugInFilter
 
     /* -----------------------------------------------------------------------*/
     /**
+     * Check if the point is a junction
+     *  
+     * @param x x- voxel coordinate
+     * @param y y- voxel coordinate
+     * @param z z- voxel coordinate
+     * @return true if the point has slab status
+     */
+    private boolean isJunction(int x, int y, int z) 
+    {		
+	return getPixel(this.taggedImage, x, y, z) == Analyze_Skeleton.JUNCTION;
+    }	
+
+    /* -----------------------------------------------------------------------*/
+    /**
      * Get next unvisited neighbor voxel 
      * 
      * @param point starting point
@@ -1083,37 +1097,37 @@ public class Analyze_Skeleton implements PlugInFilter
 	return unvisitedNeighbor;
     }/* end getNextUnvisitedVoxel */
 
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Get next unvisited junction neighbor voxel 
-	 * 
-	 * @param point starting point
-	 * @return unvisited neighbor or null if all neighbors are visited
-	 */
-	private int[] getNextUnvisitedJunctionVoxel(int[] point) 
-	{
-		int[] unvisitedNeighbor = null;
+    /* -----------------------------------------------------------------------*/
+    /**
+     * Get next unvisited junction neighbor voxel 
+     * 
+     * @param point starting point
+     * @return unvisited neighbor or null if all neighbors are visited
+     */
+    private int[] getNextUnvisitedJunctionVoxel(int[] point) 
+    {
+	int[] unvisitedNeighbor = null;
 
-		// Check neighbors status
-		for(int x = -1; x < 2; x++)
-			for(int y = -1; y < 2; y++)
-				for(int z = -1; z < 2; z++)
-				{
-					if(x == 0 && y == 0 && z == 0)
-						continue;
-					
-					if(getPixel(this.inputImage, point[0] + x, point[1] + y, point[2] + z) != 0
-						&& isVisited(point[0] + x, point[1] + y, point[2] + z) == false 
-						&& isJunction(point[0] + x, point[1] + y, point[2] + z))						
-					{					
-						unvisitedNeighbor = new int[]{point[0] + x, point[1] + y, point[2] + z};
-						break;
-					}
-					
-				}
-		
-		return unvisitedNeighbor;
-	}// end getNextUnvisitedJunctionVoxel 
+	// Check neighbors status
+	for(int x = -1; x < 2; x++)
+	    for(int y = -1; y < 2; y++)
+		for(int z = -1; z < 2; z++)
+		{
+		    if(x == 0 && y == 0 && z == 0)
+			continue;
+
+		    if(getPixel(this.inputImage, point[0] + x, point[1] + y, point[2] + z) != 0
+			    && isVisited(point[0] + x, point[1] + y, point[2] + z) == false 
+			    && isJunction(point[0] + x, point[1] + y, point[2] + z))						
+		    {					
+			unvisitedNeighbor = new int[]{point[0] + x, point[1] + y, point[2] + z};
+			break;
+		    }
+
+		}
+
+	return unvisitedNeighbor;
+    }// end getNextUnvisitedJunctionVoxel 
 
     /* -----------------------------------------------------------------------*/
     /**
