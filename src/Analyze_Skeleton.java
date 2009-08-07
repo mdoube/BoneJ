@@ -865,7 +865,7 @@ public class Analyze_Skeleton implements PlugInFilter
     private void groupJunctions(ImageStack treeIS) 
     {
 	// Reset visited variable
-	this.visited = null;			//TODO is this breaking things?
+	this.visited = null;
 	this.visited = new boolean[this.width][this.height][this.depth];
 
 	for (int iTree = 0; iTree < this.numOfTrees; iTree++)
@@ -879,6 +879,9 @@ public class Analyze_Skeleton implements PlugInFilter
 		    fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
 	    }
 	}
+	//reset visited variable
+	this.visited = null;
+	this.visited = new boolean[this.width][this.height][this.depth];
     }	
 
     // -----------------------------------------------------------------------
