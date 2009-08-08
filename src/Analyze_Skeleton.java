@@ -57,8 +57,8 @@ public class Analyze_Skeleton implements PlugInFilter
     private static final byte JUNCTION = 70;
     /** slab flag */
     private static final byte SLAB = 127;
-    /** Square root of 3 */
-    private static final double SQRT_3 = Math.sqrt(3);
+//    /** Square root of 3 */
+//    private static final double SQRT_3 = Math.sqrt(3);
     /** voxel width in real units */
     private double VOXEL_WIDTH;
     /** voxel height in real units */
@@ -512,7 +512,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 
 	    // else, visit the entire tree.
-	    int length = visitTree(endPointCoord, outputImage, color);
+	    visitTree(endPointCoord, outputImage, color);
 
 	    // increase number of trees			
 	    this.numOfTrees++;
@@ -654,58 +654,58 @@ public class Analyze_Skeleton implements PlugInFilter
 	return numOfVoxels;
     }
 
-    /* -----------------------------------------------------------------------*/
-    /**
-     * Visit a branch and calculate length
-     * 
-     * @param startingPoint starting coordinates
-     * @return branch length
-     * 
-     * @deprecated
-     */
-    private double visitBranch(int[] startingPoint) 
-    {
-	double length = 0;
-
-	// mark starting point as visited
-	setVisited(startingPoint, true);
-
-	// Get next unvisited voxel
-	int[] nextPoint = getNextUnvisitedVoxel(startingPoint);
-
-	if (nextPoint == null)
-	    return 0;
-
-	int[] previousPoint = startingPoint;
-
-	// We visit the branch until we find an end point or a junction
-	while(nextPoint != null && isSlab(nextPoint))
-	{
-	    // Add length
-	    length += calculateDistance(previousPoint, nextPoint);
-
-	    // Mark as visited
-	    setVisited(nextPoint, true);
-
-	    // Move in the graph
-	    previousPoint = nextPoint;			
-	    nextPoint = getNextUnvisitedVoxel(previousPoint);			
-	}
-
-
-	if(nextPoint != null)
-	{
-	    // Add distance to last point
-	    length += calculateDistance(previousPoint, nextPoint);
-
-	    // Mark last point as visited
-	    setVisited(nextPoint, true);
-	}
-
-	this.auxPoint = previousPoint;
-
-	return length;
-    } /* end visitBranch*/
+//    /* -----------------------------------------------------------------------*/
+//    /**
+//     * Visit a branch and calculate length
+//     * 
+//     * @param startingPoint starting coordinates
+//     * @return branch length
+//     * 
+//     * @deprecated
+//     */
+//    private double visitBranch(int[] startingPoint) 
+//    {
+//	double length = 0;
+//
+//	// mark starting point as visited
+//	setVisited(startingPoint, true);
+//
+//	// Get next unvisited voxel
+//	int[] nextPoint = getNextUnvisitedVoxel(startingPoint);
+//
+//	if (nextPoint == null)
+//	    return 0;
+//
+//	int[] previousPoint = startingPoint;
+//
+//	// We visit the branch until we find an end point or a junction
+//	while(nextPoint != null && isSlab(nextPoint))
+//	{
+//	    // Add length
+//	    length += calculateDistance(previousPoint, nextPoint);
+//
+//	    // Mark as visited
+//	    setVisited(nextPoint, true);
+//
+//	    // Move in the graph
+//	    previousPoint = nextPoint;			
+//	    nextPoint = getNextUnvisitedVoxel(previousPoint);			
+//	}
+//
+//
+//	if(nextPoint != null)
+//	{
+//	    // Add distance to last point
+//	    length += calculateDistance(previousPoint, nextPoint);
+//
+//	    // Mark last point as visited
+//	    setVisited(nextPoint, true);
+//	}
+//
+//	this.auxPoint = previousPoint;
+//
+//	return length;
+//    } /* end visitBranch*/
 
     /* -----------------------------------------------------------------------*/
     /**
@@ -975,21 +975,21 @@ public class Analyze_Skeleton implements PlugInFilter
     }// end calculateTriplePoints
 
 
-    /* -----------------------------------------------------------------------*/
-    /**
-     * 
-     * Calculate if two points are neighbors
-     * @param point1 first point
-     * @param point2 second point
-     * @return true if the points are neighbors (26-pixel neighborhood)
-     */
-    private boolean isNeighbor(int[] point1, int[] point2) 
-    {		
-	int dx = point1[0] - point2[0];
-	int dy = point1[1] - point2[1];
-	int dz = point1[2] - point2[2];
-	return Math.sqrt(dx * dx + dy * dy + dz * dz) <= Analyze_Skeleton.SQRT_3;
-    }
+//    /* -----------------------------------------------------------------------*/
+//    /**
+//     * 
+//     * Calculate if two points are neighbors
+//     * @param point1 first point
+//     * @param point2 second point
+//     * @return true if the points are neighbors (26-pixel neighborhood)
+//     */
+//    private boolean isNeighbor(int[] point1, int[] point2) 
+//    {		
+//	int dx = point1[0] - point2[0];
+//	int dy = point1[1] - point2[1];
+//	int dz = point1[2] - point2[2];
+//	return Math.sqrt(dx * dx + dy * dy + dz * dz) <= Analyze_Skeleton.SQRT_3;
+//    }
 
     /* -----------------------------------------------------------------------*/
     /**
