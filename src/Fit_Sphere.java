@@ -206,6 +206,7 @@ public class Fit_Sphere implements PlugInFilter {
 	ri.setResultInRow(imp, "Y centroid ("+cal.getUnits()+")", sphereDim[1]);
 	ri.setResultInRow(imp, "Z centroid ("+cal.getUnits()+")", sphereDim[2]);
 	ri.setResultInRow(imp, "Radius ("+cal.getUnits()+")", sphereDim[3]);
+	ri.updateTable();
 	return sphereDim;
     }
     //TODO make this go faster by getting slice pixels and iterating through

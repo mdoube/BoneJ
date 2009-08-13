@@ -233,6 +233,7 @@ public class Fractal_Count implements PlugInFilter {
 */
 	    ResultInserter ri = new ResultInserter();
 	    ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
+	    ri.updateTable();
 	    
 	    if (plotGraph) {
 		doPlotGraph(p, boxSizes, boxCountSums);

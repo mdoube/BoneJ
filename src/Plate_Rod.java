@@ -105,6 +105,7 @@ public class Plate_Rod implements PlugInFilter {
 	ri.setResultInRow(this.imp, "ΣeV3", sumEv3);
 	ri.setResultInRow(this.imp, "eV2/eV1", sumEv2 / sumEv1);
 	ri.setResultInRow(this.imp, "eV3/eV1", sumEv3 / sumEv1);
+	ri.updateTable();
     }
 
     /* ----------------------------------------------------------------------- */

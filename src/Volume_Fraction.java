@@ -82,6 +82,7 @@ public class Volume_Fraction implements PlugInFilter {
 	rt.show("Results");*/	
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(imp, "BV/TV", p);
+	ri.updateTable();
     }
     private void setThreshold(ImagePlus imp){
 	if (imp != null	&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {

@@ -156,6 +156,7 @@ public class Anisotropy_ implements PlugInFilter {
 	rt.addValue("Anisotropy", anisotropy);
 	rt.show("Results");*/
 	ri.setResultInRow(imp, "Anisotropy", anisotropy);
+	ri.updateTable();
 	if (do3DResult) {
 	    plotPoints3D(coOrdinates, "Intercept Lengths");
 	}

@@ -24,12 +24,16 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
 import ij.plugin.filter.PlugInFilter;
-import ij.measure.Calibration;
-import ij.measure.ResultsTable;
 import ij.gui.*;
 
 import org.doube.bonej.ResultInserter;
 
+/**
+ * Rotating calipers plugin for ImageJ
+ * 
+ * @author Michael Doube
+ *
+ */
 public class RotatingCalipers implements PlugInFilter {
     ImagePlus imp;
     protected ImageStack stack;
@@ -46,11 +50,19 @@ public class RotatingCalipers implements PlugInFilter {
 	    showResults(this.imp, dMin);
 	} else {return;}
     }
+    /**
+     * 
+     * 
+     * @param imp ImagePlus
+     * @return double Caliper diameter in pixels
+     */
     public double rotatingCalipers(ImagePlus imp){
-//	double dmax = 0;
 	double dMin = 0;
 	IJ.run("Convex Hull");
 	Roi roi = imp.getRoi();
+	if (roi.equals(null)){
+	    return 0;
+	}
 	int perimx[] = ((PolygonRoi)roi).getXCoordinates();
 	int perimy[] = ((PolygonRoi)roi).getYCoordinates();
 	int podal = 0;
@@ -167,5 +179,6 @@ public class RotatingCalipers implements PlugInFilter {
     public void showResults(ImagePlus imp, double dMin){
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(imp, "RC", dMin);
+	ri.updateTable();
     }
 }

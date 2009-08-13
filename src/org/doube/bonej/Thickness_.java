@@ -1114,26 +1114,6 @@ public class Thickness_ implements  PlugInFilter {
 	double stDev = Math.sqrt(sumSquares / pixCount);
 	double stDevF = Math.sqrt(sumSquaresFiltered / pixCountFiltered);
 	
-/*	ResultsTable rt = ResultsTable.getResultsTable();
-	if (!inverse){ 
-	    rt.incrementCounter();
-	    //trab thickness
-	    rt.addLabel("Label", stripExtension(baseImp.getTitle()));
-	    rt.addValue("Tb.Th Mean ("+units+")", meanThick);
-	    rt.addValue("Tb.Th Mean F ("+units+")", meanThickFiltered);
-	    rt.addValue("Tb.Th Std Dev ("+units+")", stDev);
-	    rt.addValue("Tb.Th Std Dev F ("+units+")", stDevF);
-	    rt.addValue("Tb.Th Max ("+units+")", maxThick);
-	} else {
-	    //trab separation
-	    rt.addValue("Tb.Sp Mean ("+units+")", meanThick);
-	    rt.addValue("Tb.Sp Mean F ("+units+")", meanThickFiltered);
-	    rt.addValue("Tb.Sp Std Dev ("+units+")", stDev);
-	    rt.addValue("Tb.Sp Std Dev F ("+units+")", stDevF);
-	    rt.addValue("Tb.Sp Max ("+units+")", maxThick);
-	}
-	rt.show("Results");
-*/	
 	ResultInserter ri = new ResultInserter();
 	if (!inverse){ 
 	    //trab thickness
@@ -1149,7 +1129,8 @@ public class Thickness_ implements  PlugInFilter {
 	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev ("+units+")", stDev);
 	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev F ("+units+")", stDevF);
 	    ri.setResultInRow(baseImp, "Tb.Sp Max ("+units+")", maxThick);
-	}	
+	}
+	ri.updateTable();
 	return;
     }
         
