@@ -23,7 +23,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
-import ij.process.ImageConverter;
+//import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
@@ -70,6 +70,7 @@ public class Slice_Geometry implements PlugInFilter {
 	this.vW = this.cal.pixelWidth;
 	this.vH = this.cal.pixelHeight;
 	this.vD = this.cal.pixelDepth;
+	this.units = this.cal.getUnits();
 	this.stack = imp.getStack();
 	this.al = this.stack.getSize()+1;
 	//TODO properly support 8bit images
@@ -95,7 +96,7 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 
 	calculateMoments();
-	calculateThickness();
+	if (this.doThickness) calculateThickness();
 
 	//TODO locate centroids of multiple sections in a single plane
 	//TODO annotate results
@@ -219,7 +220,8 @@ public class Slice_Geometry implements PlugInFilter {
     }
 
     /**
-     * Work out the slice's contribution to 3D Local Thickness
+     * Calculate 3D Local Thickness and determine thickness
+     * statistics for the slice
      *  
      */
     private void calculateThickness(){
@@ -282,7 +284,7 @@ public class Slice_Geometry implements PlugInFilter {
 		}
 	    }
 	    this.stdevCortThick[n] = Math.sqrt(sumSquares / pixCount);
-	    IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
+//	    IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
 	}
     }
 
@@ -295,10 +297,6 @@ public class Slice_Geometry implements PlugInFilter {
     private void setHUCalibration(){
 	this.minBoneHU = 0;		//minimum bone value in HU 
 	this.maxBoneHU = 4000;		//maximum bone value in HU
-	this.vW = this.cal.pixelWidth;
-	this.vH = this.cal.pixelHeight;
-	this.vD = this.cal.pixelDepth;
-	this.units = this.cal.getUnits();
 	double[] coeff = this.cal.getCoefficients();
 	if (!this.cal.calibrated() || this.cal == null || (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1)){
 	    this.isCalibrated = false;
@@ -416,8 +414,10 @@ public class Slice_Geometry implements PlugInFilter {
 	//TODO fix spatial calibration: this assumes isotropic pixels
 	double unit4 = Math.pow(vW, 4);
 	double unit3 = Math.pow(vW, 3);
-	for (int s = 1; s <= this.stack.getSize(); s++) {
+	String title = this.imp.getTitle();
+	for (int s = this.startSlice; s <= this.endSlice; s++) {
 	    rt.incrementCounter();
+	    rt.addLabel(title);
 	    rt.addValue("Slice", s);
 	    rt.addValue("X cent. ("+units+")", this.sliceCentroids[0][s]);
 	    rt.addValue("Y cent. ("+units+")", this.sliceCentroids[1][s]);
@@ -432,6 +432,11 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.addValue("R2 ("+units+")", R2[s]);
 	    rt.addValue("Zmax ("+units+"^3)", Zmax[s]*unit3);
 	    rt.addValue("Zmin ("+units+"^3)", Zmin[s]*unit3);
+	    if (this.doThickness){
+		rt.addValue("Max Thick ("+units+")", this.maxCortThick[s]);
+		rt.addValue("Mean Thick ("+units+")", this.meanCortThick[s]);
+		rt.addValue("SD Thick ("+units+")", this.stdevCortThick[s]);
+	    }
 	}
 	rt.show("Results");
     }
@@ -443,6 +448,8 @@ public class Slice_Geometry implements PlugInFilter {
 
 	RotatingCalipers rc = new RotatingCalipers();
 	double dMin = rc.rotatingCalipers(this.imp);
+	
+	
 
 	//get the Feret diameter
 	//TODO feret diameter 
