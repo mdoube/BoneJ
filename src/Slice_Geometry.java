@@ -36,7 +36,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.doube.bonej.Thickness_;
-import org.doube.bonej.RotatingCalipers;
 
 /**
  * <p>Calculate 2D geometrical parameters</p>
@@ -52,11 +51,14 @@ public class Slice_Geometry implements PlugInFilter {
     private int boneID, al, startSlice, endSlice;
     private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
     private String units, analyse, calString;
-    private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
+
+    /** Do local thickness measurement */
+    private boolean doThickness;
+    private boolean doCopy, doCentroids, doOutline, doAxes, doStack, isCalibrated;
     private double[] cslice, cortArea, meanCortThick, maxCortThick, stdevCortThick,
     Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
     Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast,
-    dMin;
+    dMin, feretMax, feretAngle, feretMin;
     private boolean[] emptySlices;
     private double[][] sliceCentroids;
     Calibration cal;
@@ -98,11 +100,11 @@ public class Slice_Geometry implements PlugInFilter {
 
 	calculateMoments();
 	if (this.doThickness) calculateThickness();
-	
+
 	roiMeasurements();
 	//TODO locate centroids of multiple sections in a single plane
-	
-	
+
+
 	//TODO annotate results
 
 	showSliceResults();
@@ -437,6 +439,9 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.addValue("Ipm ("+units+"^4)", this.Ipm[s]*unit4);
 	    rt.addValue("Zmax ("+units+"^3)", this.Zmax[s]*unit3);
 	    rt.addValue("Zmin ("+units+"^3)", this.Zmin[s]*unit3);
+	    rt.addValue("Feret Min", this.feretMin[s]);
+	    rt.addValue("Feret Max", this.feretMax[s]);
+	    rt.addValue("Feret Angle", this.feretAngle[s]);
 	    if (this.doThickness){
 		rt.addValue("Max Thick ("+units+")", this.maxCortThick[s]);
 		rt.addValue("Mean Thick ("+units+")", this.meanCortThick[s]);
@@ -448,21 +453,29 @@ public class Slice_Geometry implements PlugInFilter {
 
 
     private void roiMeasurements(){
-	//	Set up an instance of RotatingCalipers
-	RotatingCalipers rc = new RotatingCalipers();
+	double[] feretValues= new double[3];
+	this.feretAngle = new double[this.al];
+	this.feretMax = new double[this.al];
+	this.feretMin = new double[this.al];
 	this.imp.setActivated();
-	this.dMin = new double[this.al];
+	IJ.setThreshold(this.minBoneHU, this.maxBoneHU);
 	//for the required slices...
 	for (int s = this.startSlice; s <= this.endSlice; s++){
 	    IJ.setSlice(s);
-	    IJ.setThreshold(this.minBoneHU, this.maxBoneHU);
 	    IJ.doWand(0, (int)Math.round(this.sliceCentroids[1][s]/this.vH));
-	    this.dMin[s] = rc.rotatingCalipers(this.imp);
-
-
-	    //get the Feret diameter
-	    //TODO feret diameter 
-
+		
+	    Roi r = this.imp.getRoi();
+	    if (!r.equals(null)){
+		feretValues = r.getFeretValues();
+		this.feretMin[s] = feretValues[2];
+		this.feretAngle[s] = feretValues[1];
+		this.feretMax[s] = feretValues[0];
+	    }
+	    else {
+		this.feretMin[s] = Double.NaN;
+		this.feretAngle[s] = Double.NaN;
+		this.feretMax[s] = Double.NaN;
+	    }
 	}
     }
 }
