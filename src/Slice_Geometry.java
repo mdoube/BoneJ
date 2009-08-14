@@ -55,7 +55,8 @@ public class Slice_Geometry implements PlugInFilter {
     private boolean doThickness, doCentroids, doCopy, doOutline, doAxes, doStack, isCalibrated;
     private double[] cslice, cortArea, meanCortThick, maxCortThick, stdevCortThick,
     Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, 
-    Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast;
+    Imax, Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast, IminFast,
+    dMin;
     private boolean[] emptySlices;
     private double[][] sliceCentroids;
     Calibration cal;
@@ -66,7 +67,7 @@ public class Slice_Geometry implements PlugInFilter {
 	    return DONE;
 	}
 	this.imp = imp;
-	this.cal = imp.getCalibration();
+	this.cal = this.imp.getCalibration();
 	this.vW = this.cal.pixelWidth;
 	this.vH = this.cal.pixelHeight;
 	this.vD = this.cal.pixelDepth;
@@ -97,8 +98,11 @@ public class Slice_Geometry implements PlugInFilter {
 
 	calculateMoments();
 	if (this.doThickness) calculateThickness();
-
+	
+	roiMeasurements();
 	//TODO locate centroids of multiple sections in a single plane
+	
+	
 	//TODO annotate results
 
 	showSliceResults();
@@ -275,7 +279,7 @@ public class Slice_Geometry implements PlugInFilter {
 	    double sliceMean = sumPix / pixCount;
 	    this.meanCortThick[n] = sliceMean;
 	    this.maxCortThick[n] = sliceMax;
-	    	    
+
 	    double sumSquares = 0;
 	    for (int p=0; p<pixels.length; p++){
 		double pixVal = pixels[p];
@@ -285,7 +289,7 @@ public class Slice_Geometry implements PlugInFilter {
 		}
 	    }
 	    this.stdevCortThick[n] = Math.sqrt(sumSquares / pixCount);
-//	    IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
+	    //	    IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
 	}
     }
 
@@ -420,17 +424,17 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.incrementCounter();
 	    rt.addLabel(title);
 	    rt.addValue("Slice", s);
+	    rt.addValue("CA ("+units+"^2)", this.cortArea[s]);
 	    rt.addValue("X cent. ("+units+")", this.sliceCentroids[0][s]);
 	    rt.addValue("Y cent. ("+units+")", this.sliceCentroids[1][s]);
 	    rt.addValue("Theta (rad)", this.theta[s]);
-    	    rt.addValue("CA ("+units+"^2)", this.cortArea[s]);
+	    rt.addValue("R1 ("+units+")", this.R1[s]);
+	    rt.addValue("R2 ("+units+")", this.R2[s]);
 	    rt.addValue("Imin ("+units+"^4)", this.Imin[s]*unit4);
 	    rt.addValue("IminFast ("+units+"^4)", this.IminFast[s]*unit4);
 	    rt.addValue("Imax ("+units+"^4)", this.Imax[s]*unit4);
 	    rt.addValue("ImaxFast ("+units+"^4)", this.ImaxFast[s]*unit4);
 	    rt.addValue("Ipm ("+units+"^4)", this.Ipm[s]*unit4);
-	    rt.addValue("R1 ("+units+")", this.R1[s]);
-	    rt.addValue("R2 ("+units+")", this.R2[s]);
 	    rt.addValue("Zmax ("+units+"^3)", this.Zmax[s]*unit3);
 	    rt.addValue("Zmin ("+units+"^3)", this.Zmin[s]*unit3);
 	    if (this.doThickness){
@@ -441,19 +445,24 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	rt.show("Results");
     }
-    
+
 
     private void roiMeasurements(){
-	//for the required slices...
-
-	//generate an ROI, e.g. with the wand
-
+	//	Set up an instance of RotatingCalipers
 	RotatingCalipers rc = new RotatingCalipers();
-	double dMin = rc.rotatingCalipers(this.imp);
-	
-	
+	this.imp.setActivated();
+	this.dMin = new double[this.al];
+	//for the required slices...
+	for (int s = this.startSlice; s <= this.endSlice; s++){
+	    IJ.setSlice(s);
+	    IJ.setThreshold(this.minBoneHU, this.maxBoneHU);
+	    IJ.doWand(0, (int)Math.round(this.sliceCentroids[1][s]/this.vH));
+	    this.dMin[s] = rc.rotatingCalipers(this.imp);
 
-	//get the Feret diameter
-	//TODO feret diameter 
+
+	    //get the Feret diameter
+	    //TODO feret diameter 
+
+	}
     }
 }
