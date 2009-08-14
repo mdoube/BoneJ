@@ -115,8 +115,9 @@ public class Slice_Geometry implements PlugInFilter {
 	this.emptySlices = new boolean[this.al];
 	this.cslice = new double[this.al];
 	this.cortArea = new double[this.al];
+	double pixelArea = this.vW * this.vH;
 	for (int s = this.startSlice; s <= this.endSlice; s++) {
-	    double sumx = 0; double sumy = 0;
+	    double sumX = 0; double sumY = 0;
 	    this.cslice[s] = 0;
 	    short[] pixels = (short[])this.stack.getPixels(s);
 	    for (int y=r.y; y<(r.y+r.height); y++) {
@@ -125,15 +126,15 @@ public class Slice_Geometry implements PlugInFilter {
 		    int i = offset + x;
 		    if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
 			this.cslice[s]++;
-			cortArea[s] += this.vW * this.vH;
-			sumx += x * this.vW;
-			sumy += y * this.vH;
+			this.cortArea[s] += pixelArea;
+			sumX += x * this.vW;
+			sumY += y * this.vH;
 		    }
 		}
 	    }
 	    if (this.cslice[s] > 0){
-		this.sliceCentroids[0][s] = sumx / this.cslice[s];
-		this.sliceCentroids[1][s] = sumy / this.cslice[s];
+		this.sliceCentroids[0][s] = sumX / this.cslice[s];
+		this.sliceCentroids[1][s] = sumY / this.cslice[s];
 		cstack += this.cslice[s];
 		this.emptySlices[s] = false;
 	    } else {
@@ -421,17 +422,17 @@ public class Slice_Geometry implements PlugInFilter {
 	    rt.addValue("Slice", s);
 	    rt.addValue("X cent. ("+units+")", this.sliceCentroids[0][s]);
 	    rt.addValue("Y cent. ("+units+")", this.sliceCentroids[1][s]);
-	    rt.addValue("Theta (rad)", theta[s]);
-	    //	    rt.addValue("CA ("+units+"^2)", cortArea[s]);
-	    rt.addValue("Imin ("+units+"^4)", Imin[s]*unit4);
-	    rt.addValue("IminFast ("+units+"^4)", IminFast[s]*unit4);
-	    rt.addValue("Imax ("+units+"^4)", Imax[s]*unit4);
-	    rt.addValue("ImaxFast ("+units+"^4)", ImaxFast[s]*unit4);
-	    rt.addValue("Ipm ("+units+"^4)", Ipm[s]*unit4);
-	    rt.addValue("R1 ("+units+")", R1[s]);
-	    rt.addValue("R2 ("+units+")", R2[s]);
-	    rt.addValue("Zmax ("+units+"^3)", Zmax[s]*unit3);
-	    rt.addValue("Zmin ("+units+"^3)", Zmin[s]*unit3);
+	    rt.addValue("Theta (rad)", this.theta[s]);
+    	    rt.addValue("CA ("+units+"^2)", this.cortArea[s]);
+	    rt.addValue("Imin ("+units+"^4)", this.Imin[s]*unit4);
+	    rt.addValue("IminFast ("+units+"^4)", this.IminFast[s]*unit4);
+	    rt.addValue("Imax ("+units+"^4)", this.Imax[s]*unit4);
+	    rt.addValue("ImaxFast ("+units+"^4)", this.ImaxFast[s]*unit4);
+	    rt.addValue("Ipm ("+units+"^4)", this.Ipm[s]*unit4);
+	    rt.addValue("R1 ("+units+")", this.R1[s]);
+	    rt.addValue("R2 ("+units+")", this.R2[s]);
+	    rt.addValue("Zmax ("+units+"^3)", this.Zmax[s]*unit3);
+	    rt.addValue("Zmin ("+units+"^3)", this.Zmin[s]*unit3);
 	    if (this.doThickness){
 		rt.addValue("Max Thick ("+units+")", this.maxCortThick[s]);
 		rt.addValue("Mean Thick ("+units+")", this.meanCortThick[s]);
@@ -440,6 +441,7 @@ public class Slice_Geometry implements PlugInFilter {
 	}
 	rt.show("Results");
     }
+    
 
     private void roiMeasurements(){
 	//for the required slices...
