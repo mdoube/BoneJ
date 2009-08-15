@@ -50,7 +50,7 @@ public class ResultInserter implements PlugInFilter{
     /**
      * Finds the first available space for a result,
      * avoiding lots of empty space when measurements of different types
-     * are made on the same image
+     * are made on the same image.
      * 
      * @param imp ImagePlus
      * @param colHeading column heading
@@ -60,8 +60,6 @@ public class ResultInserter implements PlugInFilter{
     public void setResultInRow(ImagePlus imp, String colHeading, double value){
 	rt = ResultsTable.getResultsTable();
 	String title = imp.getTitle();
-//	String table = "Results";
-//	rt.show(table);
 
 	//search for the first row that contains the image title
 	//and contains no value for the heading
@@ -70,15 +68,13 @@ public class ResultInserter implements PlugInFilter{
 		//there could be no column called colHeading
 		if (!rt.columnExists(rt.getColumnIndex(colHeading))){
 		    //in which case, just insert the value
-		    rt.setValue(colHeading, row, value);
-		    //rt.show(table);  //really slows it down 
+		    rt.setValue(colHeading, row, value); 
 		    return;
 		} else {
 		    //but if there is, it might or might not have data in it
 		    Double currentValue =  rt.getValue(colHeading, row);
 		    if(currentValue.equals(Double.NaN)){
 			rt.setValue(colHeading, row, value);
-			//rt.show(table);  //really slows it down
 			return;
 		    } else {
 			//look for another row with the right title
@@ -102,9 +98,11 @@ public class ResultInserter implements PlugInFilter{
 		rt.setValue(c, row, Double.NaN);
 	    }
 	}
-	//rt.show(table); //really slows it down
 	return;
     }
+    /**
+     * Show the table
+     */
     public void updateTable(){
 	String table = "Results";
 	rt.show(table);
