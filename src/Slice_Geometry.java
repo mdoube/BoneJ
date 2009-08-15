@@ -458,14 +458,19 @@ public class Slice_Geometry implements PlugInFilter {
 	this.feretMax = new double[this.al];
 	this.feretMin = new double[this.al];
 	this.imp.setActivated();
+	Roi r;
 	IJ.setThreshold(this.minBoneHU, this.maxBoneHU);
 	//for the required slices...
 	for (int s = this.startSlice; s <= this.endSlice; s++){
 	    IJ.setSlice(s);
 	    IJ.doWand(0, (int)Math.round(this.sliceCentroids[1][s]/this.vH));
-		
-	    Roi r = this.imp.getRoi();
-	    if (!r.equals(null)){
+	    r = this.imp.getRoi();
+	    if (this.emptySlices[s]){
+		this.feretMin[s] = Double.NaN;
+		this.feretAngle[s] = Double.NaN;
+		this.feretMax[s] = Double.NaN;
+	    }
+	    else if (r != null){
 		feretValues = r.getFeretValues();
 		this.feretMin[s] = feretValues[2];
 		this.feretAngle[s] = feretValues[1];
@@ -476,6 +481,8 @@ public class Slice_Geometry implements PlugInFilter {
 		this.feretAngle[s] = Double.NaN;
 		this.feretMax[s] = Double.NaN;
 	    }
+	    r = null;
+	    feretValues = null;
 	}
     }
 }
