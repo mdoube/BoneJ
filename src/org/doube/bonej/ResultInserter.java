@@ -60,8 +60,8 @@ public class ResultInserter implements PlugInFilter{
     public void setResultInRow(ImagePlus imp, String colHeading, double value){
 	rt = ResultsTable.getResultsTable();
 	String title = imp.getTitle();
-	String table = "Results";
-	rt.show(table);
+//	String table = "Results";
+//	rt.show(table);
 
 	//search for the first row that contains the image title
 	//and contains no value for the heading
