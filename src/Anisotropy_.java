@@ -31,8 +31,12 @@ import ij.measure.Calibration; //import ij.measure.ResultsTable;
 import javax.vecmath.Point3f;
 import javax.vecmath.Color3f;
 import customnode.CustomPointMesh;
+
+import java.util.Enumeration;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Vector;
+
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
@@ -168,7 +172,6 @@ public class Anisotropy_ implements PlugInFilter {
 	printMatrix(eigenVectors);
 	double[][] eVal = eigenValues.getArrayCopy();
 	// double[][] eVec = eigenVectors.getArrayCopy();
-
 	double anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	return anisotropy;
     }
@@ -176,15 +179,20 @@ public class Anisotropy_ implements PlugInFilter {
     private double runToStableResult() {
 	double[][] vectorList = randomVectors(nVectors);
 	double variance = Double.MAX_VALUE;
-	double tolerance = 0.01;
+	double tolerance = 0.001;
 	double anisotropy = Double.NaN;
+	double anisotropySum = 0;
+	double meanAnisotropy = Double.NaN;
 	double[][] centroidList = new double[1][3];
 	double[] centroid = new double[3];
 	double[] interceptCounts = new double[nVectors];
 	double[] sumInterceptCounts = new double[nVectors];
-
+	
+	coOrdinates = new double[nVectors][3];
+	Vector<Double> anisotropyHistory = new Vector<Double>();
+	Enumeration<Double> e = anisotropyHistory.elements();
 	int s = 0;
-	while (variance > tolerance) {
+	while (variance > tolerance || s < 10) {
 	    s++;
 	    // return a single centroid within the bounds
 	    centroidList = gridCalculator(imp, 1, radius);
@@ -211,21 +219,28 @@ public class Anisotropy_ implements PlugInFilter {
 		meanInterceptLengths[v] = radius * (double) s
 			/ sumInterceptCounts[v];
 	    }
-
 	    // work out coordinates of vector cloud
-	    coOrdinates = new double[nVectors][3];
 	    for (int v = 0; v < nVectors; v++) {
 		coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
 		coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
 		coOrdinates[v][2] = meanInterceptLengths[v] * vectorList[v][2];
 	    }
 	    // calculate principal components
-
-	    // check value against history
-	    
+	    EigenvalueDecomposition E = principalComponents(coOrdinates);
+	    Matrix eigenValues = E.getD();
+	    Matrix eigenVectors = E.getV();
+	    IJ.log("eigenValues:");
+	    printMatrix(eigenValues);
+	    IJ.log("eigenVectors");
+	    printMatrix(eigenVectors);
+	    double[][] eVal = eigenValues.getArrayCopy();
+	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
+	    anisotropyHistory.add(anisotropy);
+	    anisotropySum += anisotropy;
+	    meanAnisotropy = anisotropySum / s;
+	    variance = Math.abs(meanAnisotropy - anisotropy);
 	}
 	return anisotropy;
-
     }
 
     /** Show a dialog with options */
@@ -262,6 +277,7 @@ public class Anisotropy_ implements PlugInFilter {
 				    + "Try again with a smaller radius.");
 		    return false;
 		}
+		doAutoMode = gd.getNextBoolean();
 		nVectors = (int) gd.getNextNumber();
 		vectorSampling = gd.getNextNumber();
 		nSpheres = (int) gd.getNextNumber();
