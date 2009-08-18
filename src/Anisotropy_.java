@@ -178,18 +178,51 @@ public class Anisotropy_ implements PlugInFilter {
 	double variance = Double.MAX_VALUE;
 	double tolerance = 0.01;
 	double anisotropy = Double.NaN;
+	double[][] centroidList = new double[1][3];
+	double[] centroid = new double[3];
+	double[] interceptCounts = new double[nVectors];
+	double[] sumInterceptCounts = new double[nVectors];
+
+	int s = 0;
 	while (variance > tolerance) {
+	    s++;
 	    // return a single centroid within the bounds
-	    double[][] centroidList = gridCalculator(imp, 1, radius);
-	    //calculate intercepts
+	    centroidList = gridCalculator(imp, 1, radius);
+	    // count intercepts at centroid
+	    centroid[0] = centroidList[0][0];
+	    centroid[1] = centroidList[0][1];
+	    centroid[2] = centroidList[0][2];
+	    IJ.showStatus("Counting intercepts at site " + s);
+	    interceptCounts = countIntercepts(centroid, vectorList, radius,
+		    vectorSampling);
+
+	    // add intercepts to vectors
+	    for (int i = 0; i < nVectors; i++) {
+		sumInterceptCounts[i] += interceptCounts[i];
+	    }
+
+	    // work out the current mean intercept length
+	    double[] meanInterceptLengths = new double[nVectors];
+	    for (int v = 0; v < nVectors; v++) {
+		if (sumInterceptCounts[v] == 0) {
+		    sumInterceptCounts[v] = 1;
+		}
+		// MIL = total vector length / number of intercepts
+		meanInterceptLengths[v] = radius * (double) s
+			/ sumInterceptCounts[v];
+	    }
+
+	    // work out coordinates of vector cloud
+	    coOrdinates = new double[nVectors][3];
+	    for (int v = 0; v < nVectors; v++) {
+		coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
+		coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
+		coOrdinates[v][2] = meanInterceptLengths[v] * vectorList[v][2];
+	    }
+	    // calculate principal components
+
+	    // check value against history
 	    
-	    //add intercepts to vectors
-	    
-	    //work out coordinates of vector cloud
-	    
-	    //calculate principal components
-	    
-	    //check value against history
 	}
 	return anisotropy;
 
@@ -290,12 +323,11 @@ public class Anisotropy_ implements PlugInFilter {
 	    gridCentroids[n][2] = Math.random()
 		    * (stackDepth - 2 * radius - 2 * vD) + radius;
 	}
-	// alternative: n regularly-spaced coordinates fitting withing bounding
-	// box
+	// alternative: n regularly-spaced coordinates fitting
+	// within bounding box
 	// allegedly more efficient but could collide with periodic data
 
-	return gridCentroids; // an array containing a list of centroid
-	// coordinates
+	return gridCentroids;
     } /* end gridCalculator */
 
     /*------------------------------------------------------*/
