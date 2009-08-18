@@ -8,7 +8,6 @@ import ij.ImageStack;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
-//import ij.measure.ResultsTable;
 import ij.gui.*;
 
 public class Volume_Fraction implements PlugInFilter {
