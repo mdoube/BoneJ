@@ -101,10 +101,28 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	ResultInserter ri = new ResultInserter();
 	if (!showDialog()) {
 	    return;
 	}
+
+	double anisotropy = Double.NaN;
+	if (doAutoMode)
+	    anisotropy = runToStableResult();
+	else
+	    anisotropy = runOnce();
+
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(imp, "Anisotropy", anisotropy);
+	ri.updateTable();
+
+	if (do3DResult) {
+	    plotPoints3D(coOrdinates, "Intercept Lengths");
+	}
+
+    }
+
+    private double runOnce() {
+	// TODO Auto-generated method stub
 	double[][] centroidList = gridCalculator(imp, nSpheres, radius);
 	double[][] vectorList = randomVectors(nVectors);
 	double[] sumInterceptCounts = new double[nVectors];
@@ -116,7 +134,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    IJ.showStatus("Counting intercepts at site " + (s + 1) + "/"
 		    + nSpheres);
 	    double[] interceptCounts = countIntercepts(centroid, vectorList,
-		    nVectors, radius, vectorSampling);
+		    radius, vectorSampling);
 	    for (int i = 0; i < nVectors; i++) {
 		sumInterceptCounts[i] += interceptCounts[i];
 	    }
@@ -152,11 +170,12 @@ public class Anisotropy_ implements PlugInFilter {
 	// double[][] eVec = eigenVectors.getArrayCopy();
 
 	double anisotropy = 1 - eVal[0][0] / eVal[2][2];
-	ri.setResultInRow(imp, "Anisotropy", anisotropy);
-	ri.updateTable();
-	if (do3DResult) {
-	    plotPoints3D(coOrdinates, "Intercept Lengths");
-	}
+	return anisotropy;
+    }
+
+    private double runToStableResult() {
+	// TODO Auto-generated method stub
+
     }
 
     /** Show a dialog with options */
@@ -213,7 +232,7 @@ public class Anisotropy_ implements PlugInFilter {
      *            number of vectors to generate
      * @return 2D array (nVectors x 3) containing unit vectors
      */
-    public double[][] randomVectors(int nVectors) {
+    private double[][] randomVectors(int nVectors) {
 	double[][] randomVectors = new double[nVectors][3];
 	for (int n = 0; n < nVectors; n++) {
 	    randomVectors[n][2] = 2 * Math.random() - 1;
@@ -238,7 +257,7 @@ public class Anisotropy_ implements PlugInFilter {
      *            amount of padding between stack edges and centroid field
      * @return nCentroids x 3 array of 3D coordinates
      */
-    public double[][] gridCalculator(ImagePlus imp, int nCentroids,
+    private double[][] gridCalculator(ImagePlus imp, int nCentroids,
 	    double radius) {
 	int[] stackDimensions = imp.getDimensions();
 	double stackWidth = vW * stackDimensions[0];
@@ -287,8 +306,8 @@ public class Anisotropy_ implements PlugInFilter {
      *            distance between tests along each vector
      * @return 1D array containing a count of intercepts for each vector
      */
-    public double[] countIntercepts(double[] centroid, double[][] vectorList,
-	    int nVectors, double radius, double vectorSampling) {
+    private double[] countIntercepts(double[] centroid, double[][] vectorList,
+	    double radius, double vectorSampling) {
 	boolean lastPos, thisPos;
 	/*
 	 * IJ.log("Testing in sphere of radius " + radius + " at centroid (" +
@@ -420,7 +439,7 @@ public class Anisotropy_ implements PlugInFilter {
      * @return EigenvalueDecomposition containing eigenvectors and eigenvalues
      * 
      */
-    public EigenvalueDecomposition principalComponents(double[][] coOrdinates) {
+    private EigenvalueDecomposition principalComponents(double[][] coOrdinates) {
 	IJ.showStatus("Calculating eigenvalues");
 	double sumX = 0, sumY = 0, sumZ = 0;
 	for (int n = 0; n < coOrdinates.length; n++) {
@@ -475,7 +494,7 @@ public class Anisotropy_ implements PlugInFilter {
      *      /GMAP.2004.1290055</a>
      *      </p>
      */
-    public double[][] fitEllipsoid(double[][] coOrdinates) {
+    private double[][] fitEllipsoid(double[][] coOrdinates) {
 
 	IJ.showStatus("Fitting ellipsoid");
 	double[][] Darray = new double[coOrdinates.length][10];
@@ -538,7 +557,7 @@ public class Anisotropy_ implements PlugInFilter {
 	return ellipsoid;
     } /* end fitEllipsoid */
 
-    public void printMatrix(Matrix matrix) {
+    private void printMatrix(Matrix matrix) {
 	int nCols = matrix.getColumnDimension();
 	int nRows = matrix.getRowDimension();
 	double[][] eVal = matrix.getArrayCopy();
@@ -562,7 +581,7 @@ public class Anisotropy_ implements PlugInFilter {
      *            String name of the dataset
      * 
      */
-    public void plotPoints3D(double[][] coOrdinates, String name) {
+    private void plotPoints3D(double[][] coOrdinates, String name) {
 	// Create a CustomMesh from the coordinates
 	List<Point3f> mesh = new ArrayList<Point3f>();
 	for (int i = 0; i < coOrdinates.length; i++) {
