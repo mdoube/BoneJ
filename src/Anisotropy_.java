@@ -182,8 +182,6 @@ public class Anisotropy_ implements PlugInFilter {
 	double variance = Double.MAX_VALUE;
 	double tolerance = 0.00001;
 	double anisotropy = Double.NaN;
-//	double anisotropySum = 0;
-//	double meanAnisotropy = Double.NaN;
 	double[][] centroidList = new double[1][3];
 	double[] centroid = new double[3];
 	double[] interceptCounts = new double[nVectors];
@@ -231,22 +229,13 @@ public class Anisotropy_ implements PlugInFilter {
 	    // calculate principal components
 	    EigenvalueDecomposition E = principalComponents(coOrdinates);
 	    Matrix eigenValues = E.getD();
-//	    Matrix eigenVectors = E.getV();
-//	    IJ.log("eigenValues:");
-//	    printMatrix(eigenValues);
-////	    IJ.log("eigenVectors");
-//	    printMatrix(eigenVectors);
 	    double[][] eVal = eigenValues.getArrayCopy();
 	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	    anisotropyHistory.add(anisotropy);
-//	    anisotropySum += anisotropy;
-//	    meanAnisotropy = anisotropySum / s;
 	    variance = Math.abs(previous - anisotropy);
-//	    previousMean = meanAnisotropy;
 	    previous = anisotropy;
 	}
-	Plot plot = graphResults(anisotropyHistory);
-	plot.show();
+	graphResults(anisotropyHistory);
 	return anisotropy;
     }
 
@@ -643,7 +632,7 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
-    private Plot graphResults(Vector<Double> anisotropyHistory){
+    private void graphResults(Vector<Double> anisotropyHistory){
 	double[] yVariables = new double[anisotropyHistory.size()];
 	double[] xVariables = new double[anisotropyHistory.size()];
 	Enumeration<Double> e = anisotropyHistory.elements();
@@ -656,7 +645,8 @@ public class Anisotropy_ implements PlugInFilter {
 	Plot plot = new Plot("Anisotropy", "Number of repeats", "Anisotropy",
 		xVariables, yVariables);
 	plot.addPoints(xVariables, yVariables, Plot.X);
-	return plot;
+	plot.setLimits(0, anisotropyHistory.size(), 0, 1);
+	plot.show();
     }
     
     /*-------------------------------------------------------------*/
