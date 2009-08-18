@@ -64,7 +64,10 @@ import org.doube.bonej.ResultInserter;
 // TODO run to stable result.
 public class Anisotropy_ implements PlugInFilter {
     ImagePlus imp;
-
+    
+    /** Graph of results */
+    private ImagePlus plotImage;
+    
     ImageProcessor ip;
 
     protected ImageStack stack;
@@ -188,8 +191,16 @@ public class Anisotropy_ implements PlugInFilter {
 	double[] sumInterceptCounts = new double[nVectors];
 	double previous = 2; //Anisotropy cannot be greater than 1, so 2 gives a very high variance
 	coOrdinates = new double[nVectors][3];
-
+	
+	double[] x = {0}, y = {0};
+	Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
+	plot.setLimits(0, 1, 0, 1);
+	ImageProcessor plotIp = plot.getProcessor();
+	
 	Vector<Double> anisotropyHistory = new Vector<Double>();
+	plotImage = new ImagePlus("plotImage", plotIp);
+	plotImage.show();
+	plotImage.setProcessor(null, plotIp);
 	
 	int s = 0;
 	while (s < 10 || (s >= 10 && variance > tolerance) ) {
@@ -646,7 +657,8 @@ public class Anisotropy_ implements PlugInFilter {
 		xVariables, yVariables);
 	plot.addPoints(xVariables, yVariables, Plot.X);
 	plot.setLimits(0, anisotropyHistory.size(), 0, 1);
-	plot.show();
+	ImageProcessor plotIp = plot.getProcessor();
+	plotImage.setProcessor(null, plotIp);
     }
     
     /*-------------------------------------------------------------*/
