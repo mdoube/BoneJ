@@ -72,14 +72,7 @@ public class Volume_Fraction implements PlugInFilter {
 		}
 	    }
 	}
-	double p = (double)volBone / (double)volTotal;
-	/*
-	String title = imp.getTitle();
-	ResultsTable rt = ResultsTable.getResultsTable();
-	rt.incrementCounter();
-	rt.addLabel("Label", title);
-	rt.addValue("BV/TV", p);
-	rt.show("Results");*/	
+	double p = (double)volBone / (double)volTotal;	
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(imp, "BV/TV", p);
 	ri.updateTable();
