@@ -177,22 +177,24 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     private double runToStableResult() {
+	
 	double[][] vectorList = randomVectors(nVectors);
 	double variance = Double.MAX_VALUE;
-	double tolerance = 0.001;
+	double tolerance = 0.00001;
 	double anisotropy = Double.NaN;
-	double anisotropySum = 0;
-	double meanAnisotropy = Double.NaN;
+//	double anisotropySum = 0;
+//	double meanAnisotropy = Double.NaN;
 	double[][] centroidList = new double[1][3];
 	double[] centroid = new double[3];
 	double[] interceptCounts = new double[nVectors];
 	double[] sumInterceptCounts = new double[nVectors];
-	
+	double previous = 2; //Anisotropy cannot be greater than 1, so 2 gives a very high variance
 	coOrdinates = new double[nVectors][3];
+
 	Vector<Double> anisotropyHistory = new Vector<Double>();
-	Enumeration<Double> e = anisotropyHistory.elements();
+	
 	int s = 0;
-	while (variance > tolerance || s < 10) {
+	while (s < 10 || (s >= 10 && variance > tolerance) ) {
 	    s++;
 	    // return a single centroid within the bounds
 	    centroidList = gridCalculator(imp, 1, radius);
@@ -200,7 +202,8 @@ public class Anisotropy_ implements PlugInFilter {
 	    centroid[0] = centroidList[0][0];
 	    centroid[1] = centroidList[0][1];
 	    centroid[2] = centroidList[0][2];
-	    IJ.showStatus("Counting intercepts at site " + s);
+	    IJ.showStatus("Counting intercepts at site " + s + 
+		    ", anisotropy = "+ anisotropy);
 	    interceptCounts = countIntercepts(centroid, vectorList, radius,
 		    vectorSampling);
 
@@ -228,18 +231,22 @@ public class Anisotropy_ implements PlugInFilter {
 	    // calculate principal components
 	    EigenvalueDecomposition E = principalComponents(coOrdinates);
 	    Matrix eigenValues = E.getD();
-	    Matrix eigenVectors = E.getV();
-	    IJ.log("eigenValues:");
-	    printMatrix(eigenValues);
-	    IJ.log("eigenVectors");
-	    printMatrix(eigenVectors);
+//	    Matrix eigenVectors = E.getV();
+//	    IJ.log("eigenValues:");
+//	    printMatrix(eigenValues);
+////	    IJ.log("eigenVectors");
+//	    printMatrix(eigenVectors);
 	    double[][] eVal = eigenValues.getArrayCopy();
 	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	    anisotropyHistory.add(anisotropy);
-	    anisotropySum += anisotropy;
-	    meanAnisotropy = anisotropySum / s;
-	    variance = Math.abs(meanAnisotropy - anisotropy);
+//	    anisotropySum += anisotropy;
+//	    meanAnisotropy = anisotropySum / s;
+	    variance = Math.abs(previous - anisotropy);
+//	    previousMean = meanAnisotropy;
+	    previous = anisotropy;
 	}
+	Plot plot = graphResults(anisotropyHistory);
+	plot.show();
 	return anisotropy;
     }
 
@@ -636,6 +643,22 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
+    private Plot graphResults(Vector<Double> anisotropyHistory){
+	double[] yVariables = new double[anisotropyHistory.size()];
+	double[] xVariables = new double[anisotropyHistory.size()];
+	Enumeration<Double> e = anisotropyHistory.elements();
+	int i = 0;
+	while (e.hasMoreElements()){
+	    yVariables[i] = e.nextElement();
+	    xVariables[i] = (double)i;
+	    i++;
+	}
+	Plot plot = new Plot("Anisotropy", "Number of repeats", "Anisotropy",
+		xVariables, yVariables);
+	plot.addPoints(xVariables, yVariables, Plot.X);
+	return plot;
+    }
+    
     /*-------------------------------------------------------------*/
     /**
      * Plot a set of 3D coordinates in Benjamin Schmidt's ImageJ 3D Viewer
