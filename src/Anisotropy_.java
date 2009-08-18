@@ -65,11 +65,13 @@ public class Anisotropy_ implements PlugInFilter {
 
     protected ImageStack stack;
 
-    public double radius, vectorSampling, vW, vH, vD;
+    private double radius, vectorSampling, vW, vH, vD;
 
-    public int nVectors = 50000, nSpheres = 100;
+    private double[][] coOrdinates;
 
-    public String units;
+    private int nVectors = 50000, nSpheres = 100;
+
+    private String units;
 
     /** Show a 3D graphic of the vector cloud */
     public boolean do3DResult = false;
@@ -83,12 +85,12 @@ public class Anisotropy_ implements PlugInFilter {
 	    return DONE;
 	}
 	this.imp = imp;
-	stack = imp.getStack();
-	Calibration cal = imp.getCalibration();
-	vW = cal.pixelWidth;
-	vH = cal.pixelHeight;
-	vD = cal.pixelDepth;
-	units = cal.getUnits();
+	this.stack = this.imp.getStack();
+	Calibration cal = this.imp.getCalibration();
+	this.vW = cal.pixelWidth;
+	this.vH = cal.pixelHeight;
+	this.vD = cal.pixelDepth;
+	this.units = cal.getUnits();
 	if (imp != null
 		&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
 	    ImageStatistics stats = imp.getStatistics();
@@ -112,17 +114,15 @@ public class Anisotropy_ implements PlugInFilter {
 	    anisotropy = runOnce();
 
 	ResultInserter ri = new ResultInserter();
-	ri.setResultInRow(imp, "Anisotropy", anisotropy);
+	ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
 	ri.updateTable();
 
 	if (do3DResult) {
 	    plotPoints3D(coOrdinates, "Intercept Lengths");
 	}
-
     }
 
     private double runOnce() {
-	// TODO Auto-generated method stub
 	double[][] centroidList = gridCalculator(imp, nSpheres, radius);
 	double[][] vectorList = randomVectors(nVectors);
 	double[] sumInterceptCounts = new double[nVectors];
@@ -150,7 +150,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    meanInterceptLengths[v] = radius * (double) nSpheres
 		    / sumInterceptCounts[v];
 	}
-	double[][] coOrdinates = new double[nVectors][3];
+	coOrdinates = new double[nVectors][3];
 	for (int v = 0; v < nVectors; v++) {
 	    coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
 	    coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
@@ -174,7 +174,24 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     private double runToStableResult() {
-	// TODO Auto-generated method stub
+	double[][] vectorList = randomVectors(nVectors);
+	double variance = Double.MAX_VALUE;
+	double tolerance = 0.01;
+	double anisotropy = Double.NaN;
+	while (variance > tolerance) {
+	    // return a single centroid within the bounds
+	    double[][] centroidList = gridCalculator(imp, 1, radius);
+	    //calculate intercepts
+	    
+	    //add intercepts to vectors
+	    
+	    //work out coordinates of vector cloud
+	    
+	    //calculate principal components
+	    
+	    //check value against history
+	}
+	return anisotropy;
 
     }
 
