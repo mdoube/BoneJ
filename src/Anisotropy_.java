@@ -1,4 +1,3 @@
-
 /**
  *Anisotropy_ plugin for ImageJ
  *Copyright 2009 Michael Doube 
@@ -26,8 +25,7 @@ import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
 import ij.macro.Interpreter;
-import ij.measure.Calibration;
-//import ij.measure.ResultsTable;
+import ij.measure.Calibration; //import ij.measure.ResultsTable;
 
 // for 3D plotting of coordinates
 import javax.vecmath.Point3f;
@@ -45,12 +43,12 @@ import org.doube.bonej.ResultInserter;
  * Calculate degree of anisotropy using the mean intercept length method
  * </p>
  * 
- * @see
- * <p>
- * Odgaard A (1997) Three-dimensional methods for quantification of cancellous
- * bone architecture. Bone 20: 315-28. <a
- * href="http://dx.doi.org/10.1016/S8756-3282(97)00007-0">doi:10.1016/S8756-3282(97)00007-0</a>
- * </p>
+ * @see <p>
+ *      Odgaard A (1997) Three-dimensional methods for quantification of
+ *      cancellous bone architecture. Bone 20: 315-28. <a
+ *      href="http://dx.doi.org/10.1016/S8756-3282(97)00007-0"
+ *      >doi:10.1016/S8756-3282(97)00007-0</a>
+ *      </p>
  * @author Michael Doube
  * 
  */
@@ -59,7 +57,7 @@ import org.doube.bonej.ResultInserter;
 // TODO multithread
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
-
+// TODO run to stable result.
 public class Anisotropy_ implements PlugInFilter {
     ImagePlus imp;
 
@@ -73,7 +71,11 @@ public class Anisotropy_ implements PlugInFilter {
 
     public String units;
 
-    public boolean do3DResult;
+    /** Show a 3D graphic of the vector cloud */
+    public boolean do3DResult = false;
+
+    /** Ignore user values and run until result is stable */
+    public boolean doAutoMode = true;
 
     public int setup(String arg, ImagePlus imp) {
 	if (imp == null || imp.getNSlices() < 2) {
@@ -99,8 +101,7 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	//	ResultsTable rt = ResultsTable.getResultsTable();
-	ResultInserter ri = new ResultInserter(); 
+	ResultInserter ri = new ResultInserter();
 	if (!showDialog()) {
 	    return;
 	}
@@ -129,7 +130,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    }
 	    // MIL = total vector length / number of intercepts
 	    meanInterceptLengths[v] = radius * (double) nSpheres
-	    / sumInterceptCounts[v];
+		    / sumInterceptCounts[v];
 	}
 	double[][] coOrdinates = new double[nVectors][3];
 	for (int v = 0; v < nVectors; v++) {
@@ -140,7 +141,7 @@ public class Anisotropy_ implements PlugInFilter {
 	// the ellipsoid is cool but a bit tricky to work with, sticking with
 	// PCA for now.
 	// double[][] ellipsoid = fitEllipsoid(coOrdinates);
-	EigenvalueDecomposition E = PrincipalComponents(coOrdinates);
+	EigenvalueDecomposition E = principalComponents(coOrdinates);
 	Matrix eigenValues = E.getD();
 	Matrix eigenVectors = E.getV();
 	IJ.log("eigenValues:");
@@ -151,10 +152,6 @@ public class Anisotropy_ implements PlugInFilter {
 	// double[][] eVec = eigenVectors.getArrayCopy();
 
 	double anisotropy = 1 - eVal[0][0] / eVal[2][2];
-	/*	rt.incrementCounter();
-	rt.addLabel("Label", imp.getTitle());
-	rt.addValue("Anisotropy", anisotropy);
-	rt.show("Results");*/
 	ri.setResultInRow(imp, "Anisotropy", anisotropy);
 	ri.updateTable();
 	if (do3DResult) {
@@ -162,20 +159,21 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
-    public boolean showDialog() {
+    /** Show a dialog with options */
+    private boolean showDialog() {
 	vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
 	radius = Math.min(stack.getHeight() * vH, Math.min(
 		stack.getSize() * vD, stack.getWidth() * vW)) / 4;
 	GenericDialog gd = new GenericDialog("Setup");
-	//	radius of vector field
+	gd.addCheckbox("Auto Mode", doAutoMode);
+	// radius of vector field
 	gd.addNumericField("Radius", radius, 3, 6, units);
-	//	 number of random vectors in vector field
-	gd.addNumericField("Vectors", nVectors, 0, 6, "vectors"); 
-	//	 vector sampling increment in units
+	// number of random vectors in vector field
+	gd.addNumericField("Vectors", nVectors, 0, 6, "vectors");
+	// vector sampling increment in units
 	gd.addNumericField("Sampling", vectorSampling, 3, 6, units);
-	//	 number of randomly-positioned vector fields
+	// number of randomly-positioned vector fields
 	gd.addNumericField("Spheres", nSpheres, 0, 5, "");
-//	gd.addCheckbox("Batch", false);
 	gd.addCheckbox("3D_Result", do3DResult);
 	gd.showDialog();
 	if (gd.wasCanceled()) {
@@ -185,13 +183,14 @@ public class Anisotropy_ implements PlugInFilter {
 	    double stackWidth = vW * stackDimensions[0];
 	    double stackHeight = vH * stackDimensions[1];
 	    double stackDepth = vD * stackDimensions[3];
-	    if (!Interpreter.isBatchMode()){
-		//get the values from the dialog
+	    if (!Interpreter.isBatchMode()) {
+		// get the values from the dialog
 		radius = gd.getNextNumber();
 		if (radius > stackWidth / 2 || radius > stackHeight / 2
 			|| radius > stackDepth / 2) {
-		    IJ.error("Sphere is bigger than stack's smallest dimension.\n" +
-		    "Try again with a smaller radius.");
+		    IJ
+			    .error("Sphere is bigger than stack's smallest dimension.\n"
+				    + "Try again with a smaller radius.");
 		    return false;
 		}
 		nVectors = (int) gd.getNextNumber();
@@ -200,7 +199,7 @@ public class Anisotropy_ implements PlugInFilter {
 		do3DResult = gd.getNextBoolean();
 		return true;
 	    } else {
-		//use the default values regardless of dialog settings
+		// use the default values regardless of dialog settings
 		return true;
 	    }
 	}
@@ -211,7 +210,7 @@ public class Anisotropy_ implements PlugInFilter {
      * Generate an array of randomly-oriented 3D unit vectors
      * 
      * @param nVectors
-     *                number of vectors to generate
+     *            number of vectors to generate
      * @return 2D array (nVectors x 3) containing unit vectors
      */
     public double[][] randomVectors(int nVectors) {
@@ -219,7 +218,7 @@ public class Anisotropy_ implements PlugInFilter {
 	for (int n = 0; n < nVectors; n++) {
 	    randomVectors[n][2] = 2 * Math.random() - 1;
 	    double rho = Math.sqrt(1 - randomVectors[n][2]
-	                                                * randomVectors[n][2]);
+		    * randomVectors[n][2]);
 	    double phi = Math.PI * (2 * Math.random() - 1);
 	    randomVectors[n][0] = rho * Math.cos(phi);
 	    randomVectors[n][1] = rho * Math.sin(phi);
@@ -232,12 +231,11 @@ public class Anisotropy_ implements PlugInFilter {
      * Generate a set of centroids padded from the image edges
      * 
      * @param imp
-     *                ImagePlus
+     *            ImagePlus
      * @param nCentroids
-     *                Number of centroids to generate
+     *            Number of centroids to generate
      * @param radius
-     *                amount of padding between stack edges and centroid
-     *                field
+     *            amount of padding between stack edges and centroid field
      * @return nCentroids x 3 array of 3D coordinates
      */
     public double[][] gridCalculator(ImagePlus imp, int nCentroids,
@@ -250,11 +248,11 @@ public class Anisotropy_ implements PlugInFilter {
 	double[][] gridCentroids = new double[nCentroids][3];
 	for (int n = 0; n < nCentroids; n++) {
 	    gridCentroids[n][0] = Math.random()
-	    * (stackWidth - 2 * radius - 2 * vW) + radius;
+		    * (stackWidth - 2 * radius - 2 * vW) + radius;
 	    gridCentroids[n][1] = Math.random()
-	    * (stackHeight - 2 * radius - 2 * vH) + radius;
+		    * (stackHeight - 2 * radius - 2 * vH) + radius;
 	    gridCentroids[n][2] = Math.random()
-	    * (stackDepth - 2 * radius - 2 * vD) + radius;
+		    * (stackDepth - 2 * radius - 2 * vD) + radius;
 	}
 	// alternative: n regularly-spaced coordinates fitting withing bounding
 	// box
@@ -267,42 +265,45 @@ public class Anisotropy_ implements PlugInFilter {
     /*------------------------------------------------------*/
     /**
      * <p>
-     * Counts the number of intercepts between each vector in a set of
-     * vectors and a binary 3D image.
+     * Counts the number of intercepts between each vector in a set of vectors
+     * and a binary 3D image.
      * </p>
      * <p>
-     * Vector length and intercept count should be summed over all vectors
-     * with same direction and sum of length divided by sum of count to give
-     * mean intercept length for each vector.
+     * Vector length and intercept count should be summed over all vectors with
+     * same direction and sum of length divided by sum of count to give mean
+     * intercept length for each vector.
      * </p>
      * 
      * 
      * @param centroid
-     *                3-element array containing calibrated 3D centroid
-     *                location
+     *            3-element array containing calibrated 3D centroid location
      * @param vectorList
-     *                array containing unit vectors
+     *            array containing unit vectors
      * @param nVectors
-     *                number of vectors in each set
+     *            number of vectors in each set
      * @param radius
-     *                length of vectors
+     *            length of vectors
      * @param vectorSampling
-     *                distance between tests along each vector
+     *            distance between tests along each vector
      * @return 1D array containing a count of intercepts for each vector
      */
     public double[] countIntercepts(double[] centroid, double[][] vectorList,
 	    int nVectors, double radius, double vectorSampling) {
 	boolean lastPos, thisPos;
-	/*IJ.log("Testing in sphere of radius " + radius + " at centroid ("
-		+ centroid[0] + "," + centroid[1] + "," + centroid[2] + ")");*/
+	/*
+	 * IJ.log("Testing in sphere of radius " + radius + " at centroid (" +
+	 * centroid[0] + "," + centroid[1] + "," + centroid[2] + ")");
+	 */
 	// create a work array containing pixels +- 1 radius from centroid
 	int w = (int) Math.round(radius / vW);
 	int h = (int) Math.round(radius / vH);
 	int d = (int) Math.round(radius / vD);
 	byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
 
-	/*IJ.log("workArray has dimensions " + (2 * w + 1) + " * " + (2 * h + 1)
-		+ " * " + (2 * d + 1));*/
+	/*
+	 * IJ.log("workArray has dimensions " + (2 * w + 1) + " * " + (2 * h +
+	 * 1) + " * " + (2 * d + 1));
+	 */
 
 	int startCol = (int) Math.round(centroid[0] / vW) - w;
 	int endCol = (int) Math.round(centroid[0] / vW) + w;
@@ -327,7 +328,7 @@ public class Anisotropy_ implements PlugInFilter {
 	// fill the work array
 	int i = 0;
 	for (int s = startSlice; s <= endSlice; s++) {
-	    byte[] slicePixels = (byte[]) stack.getPixels(s+1);
+	    byte[] slicePixels = (byte[]) stack.getPixels(s + 1);
 	    for (int r = startRow; r <= endRow; r++) {
 		int index = stack.getWidth() * r;
 		for (int c = startCol; c <= endCol; c++) {
@@ -343,8 +344,10 @@ public class Anisotropy_ implements PlugInFilter {
 	int wVy = (2 * w + 1) * h;
 	int wVx = w;
 	int centroidIndex = wVz + wVy + wVx;
-	/*IJ.log("Work volume centroid is at (" + w + ", " + h + ", " + d + ")");
-	IJ.log("centroidIndex is " + centroidIndex);*/
+	/*
+	 * IJ.log("Work volume centroid is at (" + w + ", " + h + ", " + d +
+	 * ")"); IJ.log("centroidIndex is " + centroidIndex);
+	 */
 
 	// store an intercept count for each vector
 	double[] interceptCounts = new double[nVectors];
@@ -362,13 +365,13 @@ public class Anisotropy_ implements PlugInFilter {
 	    int zS = (int) Math.round(-radius * vector[2] / vD);
 
 	    int startIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * zS
-	    + (2 * w + 1) * yS + xS;
+		    + (2 * w + 1) * yS + xS;
 
 	    if (xS + w < 0 || xS + w >= (2 * w + 1) || yS + h < 0
 		    || yS + h >= (2 * h + 1) || zS + d < 0
 		    || zS + d >= (2 * d + 1)) {
-		IJ.log("!!!!!(xS, yS, zS) (" + (xS+w) + ", " + (yS+h) + ", " + (zS+d)
-			+ ")!!!!!");
+		IJ.log("!!!!!(xS, yS, zS) (" + (xS + w) + ", " + (yS + h)
+			+ ", " + (zS + d) + ")!!!!!");
 		IJ.log("!!!!!startIndex is " + startIndex + "!!!!!");
 	    }
 
@@ -385,7 +388,7 @@ public class Anisotropy_ implements PlugInFilter {
 		int y = (int) Math.round(pos * vector[1] / vH);
 		int z = (int) Math.round(pos * vector[2] / vD);
 		int testIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * z
-		+ (2 * w + 1) * y + x;
+			+ (2 * w + 1) * y + x;
 		// determine if the voxel is thresholded or not
 		if (workArray[testIndex] == 0) {
 		    thisPos = true;
@@ -413,12 +416,11 @@ public class Anisotropy_ implements PlugInFilter {
      * covariance method and eigendecomposition.
      * 
      * @param coOrdinates
-     *                n x 3 array centred on (0,0,0)
-     * @return EigenvalueDecomposition containing eigenvectors and
-     *         eigenvalues
+     *            n x 3 array centred on (0,0,0)
+     * @return EigenvalueDecomposition containing eigenvectors and eigenvalues
      * 
      */
-    public EigenvalueDecomposition PrincipalComponents(double[][] coOrdinates) {
+    public EigenvalueDecomposition principalComponents(double[][] coOrdinates) {
 	IJ.showStatus("Calculating eigenvalues");
 	double sumX = 0, sumY = 0, sumZ = 0;
 	for (int n = 0; n < coOrdinates.length; n++) {
@@ -459,19 +461,19 @@ public class Anisotropy_ implements PlugInFilter {
      * Calculate the best-fit ellipsoid by least squares
      * 
      * @param coOrdinates
-     *                n x 3 array containing 3D coordinates
+     *            n x 3 array containing 3D coordinates
      * @return 10 x 1 array containing constants for the ellipsoid equation
-     *         <i>ax</i><sup>2</sup> + <i>by</i><sup>2</sup> + <i>cz</i><sup>2</sup> +
-     *         2<i>fyz</i> + 2<i>gxz</i> + 2<i>hxy</i> + 2<i>px</i> +
-     *         2<i>qy</i> + 2<i>rz</i> + <i>d</i> = 0
+     *         <i>ax</i><sup>2</sup> + <i>by</i><sup>2</sup> +
+     *         <i>cz</i><sup>2</sup> + 2<i>fyz</i> + 2<i>gxz</i> + 2<i>hxy</i> +
+     *         2<i>px</i> + 2<i>qy</i> + 2<i>rz</i> + <i>d</i> = 0
      * 
-     * @see
-     * <p>
-     * Qingde Li, Griffiths J (2004) Least squares ellipsoid specific
-     * fitting. Geometric Modeling and Processing, 2004. Proceedings. pp.
-     * 335-340. <a
-     * href="http://dx.doi.org/10.1109/GMAP.2004.1290055">doi:10.1109/GMAP.2004.1290055</a>
-     * </p>
+     * @see <p>
+     *      Qingde Li, Griffiths J (2004) Least squares ellipsoid specific
+     *      fitting. Geometric Modeling and Processing, 2004. Proceedings. pp.
+     *      335-340. <a
+     *      href="http://dx.doi.org/10.1109/GMAP.2004.1290055">doi:10.1109
+     *      /GMAP.2004.1290055</a>
+     *      </p>
      */
     public double[][] fitEllipsoid(double[][] coOrdinates) {
 
@@ -555,9 +557,9 @@ public class Anisotropy_ implements PlugInFilter {
      * Plot a set of 3D coordinates in Benjamin Schmidt's ImageJ 3D Viewer
      * 
      * @param coOrdinates
-     *                float[][] n x 3 array of 3D (x,y,z) coordinates
+     *            float[][] n x 3 array of 3D (x,y,z) coordinates
      * @param name
-     *                String name of the dataset
+     *            String name of the dataset
      * 
      */
     public void plotPoints3D(double[][] coOrdinates, String name) {
@@ -595,17 +597,4 @@ public class Anisotropy_ implements PlugInFilter {
 	// Have a look at the source code of CustomPointMesh
 	// for changing point size and anti-aliasing
     }/* end plotPoints3D */
-
-    /*    private void showWorkArray(byte[] workArray, int w, int h, int d) {
-	// check what is inside the sample array:
-	ImageStack targetStack = new ImageStack((2 * w + 1), (2 * h + 1));
-	for (int z = 0; z < (2 * d + 1); z++) {
-	    byte[] targetSlice = new byte[(2 * w + 1) * (2 * h + 1)];
-	    System.arraycopy(workArray, z * (2 * w + 1) * (2 * h + 1),
-		    targetSlice, 0, (2 * w + 1) * (2 * h + 1));
-	    targetStack.addSlice("slice " + z, targetSlice);
-	}
-	ImagePlus target = new ImagePlus("Target", targetStack);
-	target.show();
-    }*/
 }
