@@ -191,17 +191,8 @@ public class Anisotropy_ implements PlugInFilter {
 	double[] sumInterceptCounts = new double[nVectors];
 	double previous = 2; //Anisotropy cannot be greater than 1, so 2 gives a very high variance
 	coOrdinates = new double[nVectors][3];
-	
-	double[] x = {0}, y = {0};
-	Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
-	plot.setLimits(0, 1, 0, 1);
-	ImageProcessor plotIp = plot.getProcessor();
-	
+	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
-	plotImage = new ImagePlus("plotImage", plotIp);
-	plotImage.show();
-	plotImage.setProcessor(null, plotIp);
-	
 	int s = 0;
 	while (s < 10 || (s >= 10 && variance > tolerance) ) {
 	    s++;
@@ -243,11 +234,22 @@ public class Anisotropy_ implements PlugInFilter {
 	    double[][] eVal = eigenValues.getArrayCopy();
 	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	    anisotropyHistory.add(anisotropy);
+	    updateGraph(anisotropyHistory);
 	    variance = Math.abs(previous - anisotropy);
 	    previous = anisotropy;
 	}
-	graphResults(anisotropyHistory);
 	return anisotropy;
+    }
+
+    private void createGraph() {
+	double[] x = {0}, y = {0};
+	Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
+	plot.setLimits(0, 1, 0, 1);
+	ImageProcessor plotIp = plot.getProcessor();
+	plotImage = new ImagePlus("Anisotropy", plotIp);
+	plotImage.show();
+	plotImage.setProcessor(null, plotIp);
+	return;
     }
 
     /** Show a dialog with options */
@@ -566,6 +568,7 @@ public class Anisotropy_ implements PlugInFilter {
      *      /GMAP.2004.1290055</a>
      *      </p>
      */
+    @SuppressWarnings("unused")
     private double[][] fitEllipsoid(double[][] coOrdinates) {
 
 	IJ.showStatus("Fitting ellipsoid");
@@ -643,7 +646,7 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
-    private void graphResults(Vector<Double> anisotropyHistory){
+    private void updateGraph(Vector<Double> anisotropyHistory){
 	double[] yVariables = new double[anisotropyHistory.size()];
 	double[] xVariables = new double[anisotropyHistory.size()];
 	Enumeration<Double> e = anisotropyHistory.elements();
