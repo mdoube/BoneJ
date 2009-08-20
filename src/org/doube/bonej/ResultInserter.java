@@ -50,7 +50,7 @@ public class ResultInserter implements PlugInFilter{
     /**
      * Finds the first available space for a result,
      * avoiding lots of empty space when measurements of different types
-     * are made on the same image.
+     * are made on the same image
      * 
      * @param imp ImagePlus
      * @param colHeading column heading
@@ -59,6 +59,9 @@ public class ResultInserter implements PlugInFilter{
     //TODO use a table other than the system Results table
     public void setResultInRow(ImagePlus imp, String colHeading, double value){
 	rt = ResultsTable.getResultsTable();
+	String table = "Results";
+	rt.show(table);
+	
 	String title = imp.getTitle();
 
 	//search for the first row that contains the image title
