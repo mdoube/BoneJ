@@ -124,12 +124,12 @@ public class Connectivity_ implements PlugInFilter {
 	int eulerLUT[] = new int[256];
 	fillEulerLUT(eulerLUT);
 
-	long sumEuler = 0;
-
 	int nThreads = Runtime.getRuntime().availableProcessors();
+	int[] sumEulerInt = new int[nThreads];
+	
 	SliceThread[] sliceThread = new SliceThread[nThreads];
 	for (int thread = 0; thread < nThreads; thread++) {
-	    sliceThread[thread] = new SliceThread(thread, nThreads, this.imRef, eulerLUT, sumEuler);
+	    sliceThread[thread] = new SliceThread(thread, nThreads, this.imRef, eulerLUT, sumEulerInt);
 	    sliceThread[thread].start();
 	}
 	try {
@@ -146,6 +146,11 @@ public class Connectivity_ implements PlugInFilter {
 	// sumEuler /= 8; //deltaEuler values in LUT are 8*true value for
 	// clarity
 
+	double sumEuler = 0;
+	for (int i = 0; i < sumEulerInt.length; i++){
+	    sumEuler += sumEulerInt[i];
+	}
+	
 	double deltaChi = (double) sumEuler / 8 - correctForEdges(stack);
 
 	double connectivity = 1 - deltaChi;
@@ -858,13 +863,13 @@ public class Connectivity_ implements PlugInFilter {
 
 	long sumEuler;
 	
-	int[] eulerLUT;
+	int[] eulerLUT, sumEulerInt;
 	
 	ImagePlus impT;
 
 	ImageStack stackT;
 
-	public SliceThread(int thread, int nThreads, ImagePlus imp, int[] eulerLUT, long sumEuler) {
+	public SliceThread(int thread, int nThreads, ImagePlus imp, int[] eulerLUT, int[] sumEulerInt) {
 	    this.impT = imp;
 	    this.stackT = this.impT.getStack();
 	    this.width = this.impT.getWidth();
@@ -873,7 +878,7 @@ public class Connectivity_ implements PlugInFilter {
 	    this.thread = thread;
 	    this.nThreads = nThreads;
 	    this.eulerLUT = eulerLUT;
-	    this.sumEuler = sumEuler;
+	    this.sumEulerInt = sumEulerInt;
 	}
 
 	public void run() {
@@ -884,12 +889,11 @@ public class Connectivity_ implements PlugInFilter {
 			byte[] octant = getOctant(this.stackT, x, y, z);
 			if (octant[0] > 0) { // this octant is not empty
 			    deltaEuler = getDeltaEuler(octant, this.eulerLUT);
-			    this.sumEuler += deltaEuler;
+			    this.sumEulerInt[this.thread] += deltaEuler;
 			}
 		    }
 		}
 	    }
-	    IJ.log("Thread "+this.thread+" counts sumEuler = "+sumEuler);
 	}
     }
 }
