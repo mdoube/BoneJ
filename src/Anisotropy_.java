@@ -180,10 +180,10 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     private double runToStableResult() {
-	
+	int maxIterations = 2000;
 	double[][] vectorList = randomVectors(nVectors);
 	double variance = Double.MAX_VALUE;
-	double tolerance = 0.00001;
+	double tolerance = 0.000000000001;
 	double anisotropy = Double.NaN;
 	double[][] centroidList = new double[1][3];
 	double[] centroid = new double[3];
@@ -194,7 +194,7 @@ public class Anisotropy_ implements PlugInFilter {
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
 	int s = 0;
-	while (s < 10 || (s >= 10 && variance > tolerance) ) {
+	while (s < 10 || (s >= 10 && variance > tolerance) || s < maxIterations ) {
 	    s++;
 	    // return a single centroid within the bounds
 	    centroidList = gridCalculator(imp, 1, radius);
