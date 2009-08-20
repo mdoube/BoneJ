@@ -91,14 +91,12 @@ public class Connectivity_ implements PlugInFilter {
 		fillEulerLUT(eulerLUT);
 		
 		long sumEuler = 0;
-		long deltaEuler = 0;
-		byte[] octant;
 		for (int z = 0; z <= this.depth; z++){
 			for (int y = 0; y <= this.height; y++){
 				for (int x = 0; x <= this.width; x++){
-				        octant = getOctant(this.stack, x,y,z); //return an array containing the 8 voxels around the top left upper (0,0,0) vertex of the voxel at (x,y,z)
+				        byte[] octant = getOctant(this.stack, x,y,z); //return an array containing the 8 voxels around the top left upper (0,0,0) vertex of the voxel at (x,y,z)
 					if (octant[0] > 0){ //this octant is not empty
-						deltaEuler = getDeltaEuler(octant, eulerLUT);
+						long deltaEuler = getDeltaEuler(octant, eulerLUT);
 						sumEuler += deltaEuler;
 					}
 				}
