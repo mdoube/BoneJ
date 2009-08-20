@@ -194,7 +194,7 @@ public class Anisotropy_ implements PlugInFilter {
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
 	int s = 0;
-	while (s < 10 || (s >= 10 && variance > tolerance) || s < maxIterations ) {
+	while (s < 10 || (s >= 10 && s < maxIterations && variance > tolerance)) {
 	    s++;
 	    // return a single centroid within the bounds
 	    centroidList = gridCalculator(imp, 1, radius);
