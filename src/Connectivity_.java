@@ -888,9 +888,8 @@ public class Connectivity_ implements PlugInFilter {
 			}
 		    }
 		}
-		IJ.log("Thread "+this.thread+" counts sumEuler = "+
-			    sumEuler+" in slice "+z);
 	    }
+	    IJ.log("Thread "+this.thread+" counts sumEuler = "+sumEuler);
 	}
     }
 }
