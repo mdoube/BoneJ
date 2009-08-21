@@ -286,7 +286,7 @@ public class Anisotropy_ implements PlugInFilter {
 	}
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(this.imp, "DA", anisotropy);
-	ri.setResultInRow(this.imp, "error", error);
+	ri.setResultInRow(this.imp, "error", Math.abs(Math.abs(error)-Math.abs(anisotropy)));
 	ri.updateTable();
 	return anisotropy;
     }
@@ -296,7 +296,7 @@ public class Anisotropy_ implements PlugInFilter {
      * for every vector
      * 
      * @param meanInterceptLengths
-     * @return
+     * @return array containing standard deviation of intercept length for each vector
      */
     private double[] standardDeviation(double[] mIL) {
 
