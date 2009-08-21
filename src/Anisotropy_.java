@@ -64,10 +64,10 @@ import org.doube.bonej.ResultInserter;
 // TODO run to stable result.
 public class Anisotropy_ implements PlugInFilter {
     ImagePlus imp;
-    
+
     /** Graph of results */
     private ImagePlus plotImage;
-    
+
     ImageProcessor ip;
 
     protected ImageStack stack;
@@ -180,7 +180,7 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     private double runToStableResult() {
-	int minIterations = 100;
+	int minIterations = 50;
 	int maxIterations = 2000;
 	double[][] vectorList = randomVectors(nVectors);
 	double variance = Double.MAX_VALUE;
@@ -190,12 +190,14 @@ public class Anisotropy_ implements PlugInFilter {
 	double[] centroid = new double[3];
 	double[] interceptCounts = new double[nVectors];
 	double[] sumInterceptCounts = new double[nVectors];
-	double previous = 2; //Anisotropy cannot be greater than 1, so 2 gives a very high variance
+	double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
+			     // a very high variance
 	coOrdinates = new double[nVectors][3];
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
 	int s = 0;
-	while (s < minIterations || (s >= minIterations && s < maxIterations && variance > tolerance)) {
+	while (s < minIterations
+		|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
 	    s++;
 	    // return a single centroid within the bounds
 	    centroidList = gridCalculator(imp, 1, radius);
@@ -203,8 +205,8 @@ public class Anisotropy_ implements PlugInFilter {
 	    centroid[0] = centroidList[0][0];
 	    centroid[1] = centroidList[0][1];
 	    centroid[2] = centroidList[0][2];
-	    IJ.showStatus("Counting intercepts at site " + s + 
-		    ", anisotropy = "+ anisotropy);
+	    IJ.showStatus("Counting intercepts at site " + s
+		    + ", anisotropy = " + anisotropy);
 	    interceptCounts = countIntercepts(centroid, vectorList, radius,
 		    vectorSampling);
 
@@ -243,7 +245,7 @@ public class Anisotropy_ implements PlugInFilter {
     }
 
     private void createGraph() {
-	double[] x = {0}, y = {0};
+	double[] x = { 0 }, y = { 0 };
 	Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
 	plot.setLimits(0, 1, 0, 1);
 	ImageProcessor plotIp = plot.getProcessor();
@@ -647,14 +649,14 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
-    private void updateGraph(Vector<Double> anisotropyHistory){
+    private void updateGraph(Vector<Double> anisotropyHistory) {
 	double[] yVariables = new double[anisotropyHistory.size()];
 	double[] xVariables = new double[anisotropyHistory.size()];
 	Enumeration<Double> e = anisotropyHistory.elements();
 	int i = 0;
-	while (e.hasMoreElements()){
+	while (e.hasMoreElements()) {
 	    yVariables[i] = e.nextElement();
-	    xVariables[i] = (double)i;
+	    xVariables[i] = (double) i;
 	    i++;
 	}
 	Plot plot = new Plot("Anisotropy", "Number of repeats", "Anisotropy",
@@ -664,7 +666,7 @@ public class Anisotropy_ implements PlugInFilter {
 	ImageProcessor plotIp = plot.getProcessor();
 	plotImage.setProcessor(null, plotIp);
     }
-    
+
     /*-------------------------------------------------------------*/
     /**
      * Plot a set of 3D coordinates in Benjamin Schmidt's ImageJ 3D Viewer
