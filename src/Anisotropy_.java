@@ -83,7 +83,7 @@ public class Anisotropy_ implements PlugInFilter {
 
     /** All counts stored as a history */
     private ArrayList<double[]> interceptLengths = null;
-    
+
     /** Show a 3D graphic of the vector cloud */
     public boolean do3DResult = false;
 
@@ -159,7 +159,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    }
 	    // MIL = total vector length / number of intercepts
 	    meanInterceptLengths[v] = radius * (double) nSpheres
-		    / sumInterceptCounts[v];
+	    / sumInterceptCounts[v];
 	}
 	coOrdinates = new double[nVectors][3];
 	for (int v = 0; v < nVectors; v++) {
@@ -195,10 +195,11 @@ public class Anisotropy_ implements PlugInFilter {
 	double[] interceptCounts = new double[nVectors];
 	double[] sumInterceptCounts = new double[nVectors];
 	double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
-			     // a very high variance
-	coOrdinates = new double[nVectors][3];
+	// a very high variance
+	this.interceptLengths = new ArrayList<double[]>();
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
+	Vector<Double> errorHistory = new Vector<Double>();
 	int s = 0;
 	while (s < minIterations
 		|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
@@ -218,7 +219,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    for (int i = 0; i < nVectors; i++) {
 		sumInterceptCounts[i] += interceptCounts[i];
 	    }
-	    
+
 	    // work out the current mean intercept length
 	    double[] meanInterceptLengths = new double[nVectors];
 	    for (int v = 0; v < nVectors; v++) {
@@ -227,20 +228,23 @@ public class Anisotropy_ implements PlugInFilter {
 		}
 		// MIL = total vector length / number of intercepts
 		meanInterceptLengths[v] = radius * (double) s
-			/ sumInterceptCounts[v];
+		/ sumInterceptCounts[v];
 	    }
-	    
+
 	    //divide radius by intercept counts to get intercept lengths
 	    double[] interceptLength = new double[nVectors];
 	    for (int v = 0; v < nVectors; v++){
+		if (interceptCounts[v] == 0) interceptCounts[v] = 1;
 		interceptLength[v] = radius / interceptCounts[v];
 	    }
-	    
+
 	    //work out the current standard deviation of intercept length
+	    //using n = number of repeats rather than n = absolute total intercepts
 	    this.interceptLengths.add(interceptLength);
-	    standardDeviation(meanInterceptLengths);
-	    
+	    double[] standardDeviations = standardDeviation(meanInterceptLengths);
+
 	    // work out coordinates of vector cloud
+	    coOrdinates = new double[nVectors][3];
 	    for (int v = 0; v < nVectors; v++) {
 		coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
 		coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
@@ -252,13 +256,30 @@ public class Anisotropy_ implements PlugInFilter {
 	    double[][] eVal = eigenValues.getArrayCopy();
 	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	    anisotropyHistory.add(anisotropy);
-	    updateGraph(anisotropyHistory);
+	    
+	    //calculate error
+	    double error;
+	    double[][] errorCoOrdinates = new double[nVectors][3];
+	    for (int v = 0; v < nVectors; v++) {
+		errorCoOrdinates[v][0] = (standardDeviations[v] + meanInterceptLengths[v])  * vectorList[v][0];
+		errorCoOrdinates[v][1] = (standardDeviations[v] + meanInterceptLengths[v])   * vectorList[v][1];
+		errorCoOrdinates[v][2] = (standardDeviations[v] + meanInterceptLengths[v])   * vectorList[v][2];
+	    }
+	    
+	    // calculate principal components
+	    EigenvalueDecomposition F = principalComponents(errorCoOrdinates);
+	    Matrix eigenValuesF = F.getD();
+	    double[][] fVal = eigenValuesF.getArrayCopy();
+	    error = 1 - fVal[0][0] / fVal[2][2];
+	    errorHistory.add(Math.abs(Math.abs(error)-Math.abs(anisotropy)));
+	    updateGraph(anisotropyHistory, errorHistory);
+
 	    variance = Math.abs(previous - anisotropy);
 	    previous = anisotropy;
 	}
 	return anisotropy;
     }
-    
+
     /**
      * Calculate the standard deviation of intercept length
      * for every vector
@@ -267,9 +288,9 @@ public class Anisotropy_ implements PlugInFilter {
      * @return
      */
     private double[] standardDeviation(double[] mIL) {
-	
+
 	double[] sumOfSquares = new double[nVectors];
-	
+
 	ListIterator<double[]> iter = this.interceptLengths.listIterator(); 
 	while (iter.hasNext()){
 	    double[] iL = iter.next();
@@ -278,9 +299,12 @@ public class Anisotropy_ implements PlugInFilter {
 	    }
 	}
 	double[] standardDeviations = new double[nVectors];
-	double degFree = this.interceptLengths.size() - 1;
+	double degFree = this.interceptLengths.size();
+	IJ.log("degFree = "+degFree);
+	IJ.log("sumOfSquares[50] = "+sumOfSquares[50]);
 	for (int v = 0; v < nVectors; v++){
 	    standardDeviations[v] = Math.sqrt(sumOfSquares[v]/degFree);
+//	    IJ.log("stdDev["+v+"]="+standardDeviations[v]);
 	}
 	return standardDeviations;
     }
@@ -326,8 +350,8 @@ public class Anisotropy_ implements PlugInFilter {
 		if (radius > stackWidth / 2 || radius > stackHeight / 2
 			|| radius > stackDepth / 2) {
 		    IJ
-			    .error("Sphere is bigger than stack's smallest dimension.\n"
-				    + "Try again with a smaller radius.");
+		    .error("Sphere is bigger than stack's smallest dimension.\n"
+			    + "Try again with a smaller radius.");
 		    return false;
 		}
 		doAutoMode = gd.getNextBoolean();
@@ -356,7 +380,7 @@ public class Anisotropy_ implements PlugInFilter {
 	for (int n = 0; n < nVectors; n++) {
 	    randomVectors[n][2] = 2 * Math.random() - 1;
 	    double rho = Math.sqrt(1 - randomVectors[n][2]
-		    * randomVectors[n][2]);
+	                                                * randomVectors[n][2]);
 	    double phi = Math.PI * (2 * Math.random() - 1);
 	    randomVectors[n][0] = rho * Math.cos(phi);
 	    randomVectors[n][1] = rho * Math.sin(phi);
@@ -386,11 +410,11 @@ public class Anisotropy_ implements PlugInFilter {
 	double[][] gridCentroids = new double[nCentroids][3];
 	for (int n = 0; n < nCentroids; n++) {
 	    gridCentroids[n][0] = Math.random()
-		    * (stackWidth - 2 * radius - 2 * vW) + radius;
+	    * (stackWidth - 2 * radius - 2 * vW) + radius;
 	    gridCentroids[n][1] = Math.random()
-		    * (stackHeight - 2 * radius - 2 * vH) + radius;
+	    * (stackHeight - 2 * radius - 2 * vH) + radius;
 	    gridCentroids[n][2] = Math.random()
-		    * (stackDepth - 2 * radius - 2 * vD) + radius;
+	    * (stackDepth - 2 * radius - 2 * vD) + radius;
 	}
 	// alternative: n regularly-spaced coordinates fitting
 	// within bounding box
@@ -502,7 +526,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    int zS = (int) Math.round(-radius * vector[2] / vD);
 
 	    int startIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * zS
-		    + (2 * w + 1) * yS + xS;
+	    + (2 * w + 1) * yS + xS;
 
 	    if (xS + w < 0 || xS + w >= (2 * w + 1) || yS + h < 0
 		    || yS + h >= (2 * h + 1) || zS + d < 0
@@ -525,7 +549,7 @@ public class Anisotropy_ implements PlugInFilter {
 		int y = (int) Math.round(pos * vector[1] / vH);
 		int z = (int) Math.round(pos * vector[2] / vD);
 		int testIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * z
-			+ (2 * w + 1) * y + x;
+		+ (2 * w + 1) * y + x;
 		// determine if the voxel is thresholded or not
 		if (workArray[testIndex] == 0) {
 		    thisPos = true;
@@ -690,7 +714,7 @@ public class Anisotropy_ implements PlugInFilter {
 	}
     }
 
-    private void updateGraph(Vector<Double> anisotropyHistory) {
+    private void updateGraph(Vector<Double> anisotropyHistory, Vector<Double> errorHistory) {
 	double[] yVariables = new double[anisotropyHistory.size()];
 	double[] xVariables = new double[anisotropyHistory.size()];
 	Enumeration<Double> e = anisotropyHistory.elements();
@@ -700,10 +724,18 @@ public class Anisotropy_ implements PlugInFilter {
 	    xVariables[i] = (double) i;
 	    i++;
 	}
+	Enumeration<Double> f = errorHistory.elements();
+	i = 0;
+	double[] errorBars = new double[errorHistory.size()];
+	while (f.hasMoreElements()){
+	    errorBars[i] = f.nextElement();
+	    i++;
+	}
 	Plot plot = new Plot("Anisotropy", "Number of repeats", "Anisotropy",
 		xVariables, yVariables);
-	plot.addPoints(xVariables, yVariables, Plot.X);
 	plot.setLimits(0, anisotropyHistory.size(), 0, 1);
+	plot.addPoints(xVariables, yVariables, Plot.DOT);
+	plot.addErrorBars(errorBars);
 	ImageProcessor plotIp = plot.getProcessor();
 	plotImage.setProcessor(null, plotIp);
     }
