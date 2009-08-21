@@ -35,6 +35,7 @@ import customnode.CustomPointMesh;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.ListIterator;
 import java.util.Vector;
 
 import ij3d.Image3DUniverse;
@@ -80,6 +81,9 @@ public class Anisotropy_ implements PlugInFilter {
 
     private String units;
 
+    /** All counts stored as a history */
+    private ArrayList<double[]> interceptLengths = null;
+    
     /** Show a 3D graphic of the vector cloud */
     public boolean do3DResult = false;
 
@@ -214,7 +218,7 @@ public class Anisotropy_ implements PlugInFilter {
 	    for (int i = 0; i < nVectors; i++) {
 		sumInterceptCounts[i] += interceptCounts[i];
 	    }
-
+	    
 	    // work out the current mean intercept length
 	    double[] meanInterceptLengths = new double[nVectors];
 	    for (int v = 0; v < nVectors; v++) {
@@ -225,6 +229,17 @@ public class Anisotropy_ implements PlugInFilter {
 		meanInterceptLengths[v] = radius * (double) s
 			/ sumInterceptCounts[v];
 	    }
+	    
+	    //divide radius by intercept counts to get intercept lengths
+	    double[] interceptLength = new double[nVectors];
+	    for (int v = 0; v < nVectors; v++){
+		interceptLength[v] = radius / interceptCounts[v];
+	    }
+	    
+	    //work out the current standard deviation of intercept length
+	    this.interceptLengths.add(interceptLength);
+	    standardDeviation(meanInterceptLengths);
+	    
 	    // work out coordinates of vector cloud
 	    for (int v = 0; v < nVectors; v++) {
 		coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
@@ -242,6 +257,32 @@ public class Anisotropy_ implements PlugInFilter {
 	    previous = anisotropy;
 	}
 	return anisotropy;
+    }
+    
+    /**
+     * Calculate the standard deviation of intercept length
+     * for every vector
+     * 
+     * @param meanInterceptLengths
+     * @return
+     */
+    private double[] standardDeviation(double[] mIL) {
+	
+	double[] sumOfSquares = new double[nVectors];
+	
+	ListIterator<double[]> iter = this.interceptLengths.listIterator(); 
+	while (iter.hasNext()){
+	    double[] iL = iter.next();
+	    for (int v = 0; v < nVectors; v++){
+		sumOfSquares[v] += (iL[v] - mIL[v])*(iL[v] - mIL[v]);
+	    }
+	}
+	double[] standardDeviations = new double[nVectors];
+	double degFree = this.interceptLengths.size() - 1;
+	for (int v = 0; v < nVectors; v++){
+	    standardDeviations[v] = Math.sqrt(sumOfSquares[v]/degFree);
+	}
+	return standardDeviations;
     }
 
     private void createGraph() {
