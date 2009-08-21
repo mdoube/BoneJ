@@ -137,6 +137,7 @@ public class Anisotropy_ implements PlugInFilter {
      * runUntilStable, by modifying maxIterations.
      * 
      * @return degree of anisotropy
+     * @deprecated
      */
     @Deprecated
     private double runOnce() {
