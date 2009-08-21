@@ -300,11 +300,8 @@ public class Anisotropy_ implements PlugInFilter {
 	}
 	double[] standardDeviations = new double[nVectors];
 	double degFree = this.interceptLengths.size();
-	IJ.log("degFree = "+degFree);
-	IJ.log("sumOfSquares[50] = "+sumOfSquares[50]);
 	for (int v = 0; v < nVectors; v++){
 	    standardDeviations[v] = Math.sqrt(sumOfSquares[v]/degFree);
-//	    IJ.log("stdDev["+v+"]="+standardDeviations[v]);
 	}
 	return standardDeviations;
     }
