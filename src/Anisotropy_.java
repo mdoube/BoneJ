@@ -121,18 +121,24 @@ public class Anisotropy_ implements PlugInFilter {
 	double anisotropy = Double.NaN;
 	if (doAutoMode)
 	    anisotropy = runToStableResult();
-	else
+	else {
 	    anisotropy = runOnce();
-
-	ResultInserter ri = new ResultInserter();
-	ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
-	ri.updateTable();
-
+	    ResultInserter ri = new ResultInserter();
+	    ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
+	    ri.updateTable();
+	}
 	if (do3DResult) {
 	    plotPoints3D(coOrdinates, "Intercept Lengths");
 	}
     }
-
+    
+    /**
+     * Runs once using variables from the user dialog.  To be replaced by 
+     * runUntilStable, by modifying maxIterations.
+     * 
+     * @return degree of anisotropy
+     */
+    @Deprecated
     private double runOnce() {
 	double[][] centroidList = gridCalculator(imp, nSpheres, radius);
 	double[][] vectorList = randomVectors(nVectors);
@@ -196,6 +202,7 @@ public class Anisotropy_ implements PlugInFilter {
 	double[] sumInterceptCounts = new double[nVectors];
 	double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
 	// a very high variance
+	double error = 0;
 	this.interceptLengths = new ArrayList<double[]>();
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
@@ -256,16 +263,15 @@ public class Anisotropy_ implements PlugInFilter {
 	    double[][] eVal = eigenValues.getArrayCopy();
 	    anisotropy = 1 - eVal[0][0] / eVal[2][2];
 	    anisotropyHistory.add(anisotropy);
-	    
+
 	    //calculate error
-	    double error;
 	    double[][] errorCoOrdinates = new double[nVectors][3];
 	    for (int v = 0; v < nVectors; v++) {
 		errorCoOrdinates[v][0] = (standardDeviations[v] + meanInterceptLengths[v])  * vectorList[v][0];
 		errorCoOrdinates[v][1] = (standardDeviations[v] + meanInterceptLengths[v])   * vectorList[v][1];
 		errorCoOrdinates[v][2] = (standardDeviations[v] + meanInterceptLengths[v])   * vectorList[v][2];
 	    }
-	    
+
 	    // calculate principal components
 	    EigenvalueDecomposition F = principalComponents(errorCoOrdinates);
 	    Matrix eigenValuesF = F.getD();
@@ -277,6 +283,10 @@ public class Anisotropy_ implements PlugInFilter {
 	    variance = Math.abs(previous - anisotropy);
 	    previous = anisotropy;
 	}
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(this.imp, "DA", anisotropy);
+	ri.setResultInRow(this.imp, "error", error);
+	ri.updateTable();
 	return anisotropy;
     }
 
