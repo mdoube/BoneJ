@@ -493,39 +493,39 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	//the shaftVector and the headCentre 
 	double[][] projectionPlane = projectionPlane(shaftVector, headCentre, centroid);
 
-	//get the 2D centroids
-	int al = this.endSlice - this.startSlice + 1;
-	double[][] sliceCentroids = new double[2][al];
+	//get the 2D centroids	
 	double vW = this.cal.pixelWidth;
 	double vH = this.cal.pixelHeight;
 	Rectangle r = stack.getRoi();
 	//pixel counters
 	double cstack = 0;
 	int w = stack.getWidth();
-	boolean[] emptySlices = new boolean[al];
-	double[] cslice = new double[al];
-	double[] cortArea = new double[al];
+	
+	boolean[] emptySlices = new boolean[this.stack.getSize()];
+	double[] cortArea = new double[this.stack.getSize()];
+	double[][] sliceCentroids = new double[2][this.stack.getSize()];
+	
 	double pixelArea = this.cal.pixelWidth * this.cal.pixelHeight;
 	for (int s = this.startSlice; s <= this.endSlice; s++) {
 	    double sumX = 0; double sumY = 0;
-	    cslice[s] = 0;
+	    double cslice = 0;
 	    short[] pixels = (short[])this.stack.getPixels(s);
 	    for (int y = r.y; y < (r.y+r.height); y++) {
 		int offset = y*w;
 		for (int x = r.x; x < (r.x+r.width); x++) {
 		    int i = offset + x;
 		    if (pixels[i] >= this.minT && pixels[i] <= this.maxT){
-			cslice[s]++;
+			cslice++;
 			cortArea[s] += pixelArea;
 			sumX += x * vW;
 			sumY += y * vH;
 		    }
 		}
 	    }
-	    if (cslice[s] > 0){
-		sliceCentroids[0][s] = sumX / cslice[s];
-		sliceCentroids[1][s] = sumY / cslice[s];
-		cstack += cslice[s];
+	    if (cslice > 0){
+		sliceCentroids[0][s] = sumX / cslice;
+		sliceCentroids[1][s] = sumY / cslice;
+		cstack += cslice;
 		emptySlices[s] = false;
 	    } else {
 		emptySlices[s] = true;
@@ -535,6 +535,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	//for each centroid, calculate the vector to the 3D regression line
 	//using equation 10 from 
 	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+	//with denominator = 1 because we use a unit vector for |(x1 - x2)|
 
 	double x1x = this.centroid[0];
 	double x1y = this.centroid[1];
@@ -543,29 +544,33 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	double x2y = x1y + shaftVector[1][0];
 	double x2z = x1z + shaftVector[2][0];
 
-	for (int s = 0; s < sliceCentroids[0].length; s++){
-	    double x0x = sliceCentroids[0][s];
-	    double x0y = sliceCentroids[1][s];
-	    double x0z = s * this.cal.pixelDepth;
+	for (int s = this.startSlice; s <= this.endSlice; s++){
+	    if (!emptySlices[s]){
+		double x0x = sliceCentroids[0][s];
+		double x0y = sliceCentroids[1][s];
+		double x0z = s * this.cal.pixelDepth;
 
-	    //distance is magnitude of cross product of (x0 - x1) and (x0 - x2)
-	    double x0x1x = x0x - x1x;
-	    double x0x1y = x0y - x1y;
-	    double x0x1z = x0z - x1z;
+		//distance is magnitude of cross product of (x0 - x1) and (x0 - x2)
+		double x0x1x = x0x - x1x;
+		double x0x1y = x0y - x1y;
+		double x0x1z = x0z - x1z;
 
-	    double x0x2x = x0x - x2x;
-	    double x0x2y = x0y - x2y;
-	    double x0x2z = x0z - x2z;
+		double x0x2x = x0x - x2x;
+		double x0x2y = x0y - x2y;
+		double x0x2z = x0z - x2z;
 
-	    double cpX = x0x1y * x0x2z - x0x1z * x0x2y;
-	    double cpY = x0x1z * x0x2x - x0x1x * x0x2z;
-	    double cpZ = x0x1x * x0x2y - x0x1y * x0x2x;
+		double cpX = x0x1y * x0x2z - x0x1z * x0x2y;
+		double cpY = x0x1z * x0x2x - x0x1x * x0x2z;
+		double cpZ = x0x1x * x0x2y - x0x1y * x0x2x;
 
-	    double distance = Math.sqrt(cpX * cpX + cpY * cpY + cpZ * cpZ);
-	    IJ.log("distance to regression line is "+ distance + " for slice "+s);
-
+		double distance = Math.sqrt(cpX * cpX + cpY * cpY + cpZ * cpZ);
+//		IJ.log("distance to regression line is "+ distance + " "+this.units+" for slice "+s);
+		IJ.log(distance+", "+s);
+	    }
+	    else{
+//		IJ.log("No pixels to calculate centroid in slice "+s);
+	    }
 	}
-
 	return;
     }
 
