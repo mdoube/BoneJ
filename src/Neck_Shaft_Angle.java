@@ -78,7 +78,6 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
     public boolean doCurvature;
     public String title, units, valueUnit;
     public Calibration cal;
-    //	public ResultsTable rt;
 
     public int setup(String arg, ImagePlus imp){
 	if (imp == null || imp.getNSlices() < 2){
@@ -127,7 +126,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    "placed on the boundary of the femoral head");
 	    return;
 	} else {
-	    headCentre = fitSphere(this.imp, roiMan);
+	    this.headCentre = fitSphere(this.imp, roiMan);
 	}
 	ImageWindow win = this.imp.getWindow();
 	this.canvas = win.getCanvas();
@@ -140,8 +139,10 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    return;
 	}
 
-	this.shaftVector = Regression3D(this.stack, this.centroid);
+	this.shaftVector = regression3D(this.stack, this.centroid);
 
+	if (doCurvature) calculateCurvature(this.stack, this.shaftVector, this.headCentre);
+	
 	//remove stale MouseListeners
 	MouseListener[] l = this.canvas.getMouseListeners();
 	for (int n = 0; n < l.length; n++){
@@ -376,7 +377,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
      * @see <a href="http://mathforum.org/library/drmath/view/63765.html">Description on Ask Dr Math</a>
      * 
      */
-    public double[][] Regression3D(ImageStack stack, double[] centroid){
+    public double[][] regression3D(ImageStack stack, double[] centroid){
 	IJ.showStatus("Calculating SVD");
 	Rectangle r = stack.getRoi();
 	IJ.log("Rectangle r has top left coordinates of ("+r.x+", "+r.y+") and size of "+r.width+" x "+r.height);
@@ -477,6 +478,57 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	ri.setResultInRow(this.imp, "Angle (rad)", neckShaftAngle);
 	ri.setResultInRow(this.imp, "Skew (rad)", neckShaftSkew);
 	ri.updateTable();
+    }
+    
+    /**
+     * <p>Calculate curvature of bone using shaft vector as a reference axis 
+     * and centre of femoral head to define reference plane</p> 
+     * 
+     * @param stack
+     * @param shaftVector
+     * @param headCentre
+     */
+    private void calculateCurvature(ImageStack stack, double[][] shaftVector, double[] headCentre){
+	Rectangle r = stack.getRoi();
+	//for all slices of stack
+	//2D centroids
+	int al = this.endSlice - this.startSlice + 1;
+	double[][] sliceCentroids = new double[2][al]; 
+	//pixel counters
+	double cstack = 0;
+	int w = stack.getWidth();
+	boolean[] emptySlices = new boolean[al];
+	double[] cslice = new double[al];
+	double[] cortArea = new double[al];
+	double pixelArea = this.cal.pixelWidth * this.cal.pixelHeight;
+	for (int s = this.startSlice; s <= this.endSlice; s++) {
+	    double sumX = 0; double sumY = 0;
+	    cslice[s] = 0;
+	    short[] pixels = (short[])this.stack.getPixels(s);
+	    for (int y=r.y; y<(r.y+r.height); y++) {
+		int offset = y*w;
+		for (int x=r.x; x<(r.x+r.width); x++) {
+		    int i = offset + x;
+		    if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
+			this.cslice[s]++;
+			this.cortArea[s] += pixelArea;
+			sumX += x * this.vW;
+			sumY += y * this.vH;
+		    }
+		}
+	    }
+	    if (this.cslice[s] > 0){
+		this.sliceCentroids[0][s] = sumX / this.cslice[s];
+		this.sliceCentroids[1][s] = sumY / this.cslice[s];
+		cstack += this.cslice[s];
+		this.emptySlices[s] = false;
+	    } else {
+		this.emptySlices[s] = true;
+	    }
+	}
+
+	
+	return;
     }
 
     public void mousePressed(MouseEvent e) {

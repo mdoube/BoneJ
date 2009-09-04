@@ -111,7 +111,7 @@ public class Slice_Geometry implements PlugInFilter {
 
     }
 
-    private double calculateCentroids(){
+    protected double calculateCentroids(){
 	//2D centroids
 	this.sliceCentroids = new double[2][this.al]; 
 	//pixel counters
