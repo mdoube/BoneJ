@@ -141,8 +141,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 
 	this.shaftVector = regression3D(this.stack, this.centroid);
 
-	if (doCurvature) calculateCurvature(this.stack, this.shaftVector, this.headCentre);
-	
+	if (doCurvature) calculateCurvature(this.stack, this.shaftVector, this.headCentre, this.centroid);
+
 	//remove stale MouseListeners
 	MouseListener[] l = this.canvas.getMouseListeners();
 	for (int n = 0; n < l.length; n++){
@@ -479,7 +479,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	ri.setResultInRow(this.imp, "Skew (rad)", neckShaftSkew);
 	ri.updateTable();
     }
-    
+
     /**
      * <p>Calculate curvature of bone using shaft vector as a reference axis 
      * and centre of femoral head to define reference plane</p> 
@@ -488,12 +488,17 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
      * @param shaftVector
      * @param headCentre
      */
-    private void calculateCurvature(ImageStack stack, double[][] shaftVector, double[] headCentre){
-	Rectangle r = stack.getRoi();
-	//for all slices of stack
-	//2D centroids
+    private void calculateCurvature(ImageStack stack, double[][] shaftVector, double[] headCentre, double[] centroid){
+	//calculate the eigenvector of the reference plane containing
+	//the shaftVector and the headCentre 
+	double[][] projectionPlane = projectionPlane(shaftVector, headCentre, centroid);
+
+	//get the 2D centroids
 	int al = this.endSlice - this.startSlice + 1;
-	double[][] sliceCentroids = new double[2][al]; 
+	double[][] sliceCentroids = new double[2][al];
+	double vW = this.cal.pixelWidth;
+	double vH = this.cal.pixelHeight;
+	Rectangle r = stack.getRoi();
 	//pixel counters
 	double cstack = 0;
 	int w = stack.getWidth();
@@ -512,8 +517,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 		    if (pixels[i] >= this.minT && pixels[i] <= this.maxT){
 			cslice[s]++;
 			cortArea[s] += pixelArea;
-			sumX += x * this.cal.pixelWidth;
-			sumY += y * this.cal.pixelHeight;
+			sumX += x * vW;
+			sumY += y * vH;
 		    }
 		}
 	    }
@@ -527,7 +532,40 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    }
 	}
 
-	
+	//for each centroid, calculate the vector to the 3D regression line
+	//using equation 10 from 
+	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+
+	double x1x = this.centroid[0];
+	double x1y = this.centroid[1];
+	double x1z = this.centroid[2];
+	double x2x = x1x + shaftVector[0][0];
+	double x2y = x1y + shaftVector[1][0];
+	double x2z = x1z + shaftVector[2][0];
+
+	for (int s = 0; s < sliceCentroids[0].length; s++){
+	    double x0x = sliceCentroids[0][s];
+	    double x0y = sliceCentroids[1][s];
+	    double x0z = s * this.cal.pixelDepth;
+
+	    //distance is magnitude of cross product of (x0 - x1) and (x0 - x2)
+	    double x0x1x = x0x - x1x;
+	    double x0x1y = x0y - x1y;
+	    double x0x1z = x0z - x1z;
+
+	    double x0x2x = x0x - x2x;
+	    double x0x2y = x0y - x2y;
+	    double x0x2z = x0z - x2z;
+
+	    double cpX = x0x1y * x0x2z - x0x1z * x0x2y;
+	    double cpY = x0x1z * x0x2x - x0x1x * x0x2z;
+	    double cpZ = x0x1x * x0x2y - x0x1y * x0x2x;
+
+	    double distance = Math.sqrt(cpX * cpX + cpY * cpY + cpZ * cpZ);
+	    IJ.log("distance to regression line is "+ distance + " for slice "+s);
+
+	}
+
 	return;
     }
 
