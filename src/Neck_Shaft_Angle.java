@@ -75,6 +75,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
     public double[][] shaftVector;
     public int minT = 0, maxT = 4000; //min and maximum bone value in HU
     public int startSlice = 1, endSlice;
+    public boolean doCurvature;
     public String title, units, valueUnit;
     public Calibration cal;
     //	public ResultsTable rt;
@@ -472,15 +473,10 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 
 	double neckShaftAngle = Math.acos(cosA1);
 	double neckShaftSkew = Math.acos(cosA2);
-/*	rt = ResultsTable.getResultsTable();
-	rt.incrementCounter();
-	rt.addLabel("Label", imp.getTitle());
-	rt.addValue("Angle (rad)", neckShaftAngle);  //angle between shaft and neck in plane of head and shaft
-	rt.addValue("Skew (rad)", neckShaftSkew);     //angle bewteen neck and plane of head and shaft
-	rt.show("Results");*/
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(this.imp, "Angle (rad)", neckShaftAngle);
 	ri.setResultInRow(this.imp, "Skew (rad)", neckShaftSkew);
+	ri.updateTable();
     }
 
     public void mousePressed(MouseEvent e) {
@@ -508,6 +504,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	gd.addMessage("Only use pixels between clip values:");
 	gd.addNumericField("Clip min.", minT, 0, 6, valueUnit);
 	gd.addNumericField("Clip max.", maxT, 0, 6, valueUnit);
+	gd.addCheckbox("Calculate curvature", true);
 	gd.showDialog();
 	if (gd.wasCanceled()) {
 	    return;
@@ -516,6 +513,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	endSlice = (int)gd.getNextNumber();
 	minT = (int)gd.getNextNumber();
 	maxT = (int)gd.getNextNumber();
+	doCurvature = gd.getNextBoolean();
     }
 
     public void printMatrix(Matrix matrix, String title){
