@@ -491,7 +491,6 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
     private void calculateCurvature(ImageStack stack, double[][] shaftVector, double[] headCentre, double[] centroid){
 	//calculate the eigenvector of the reference plane containing
 	//the shaftVector and the headCentre 
-	double[][] projectionPlane = projectionPlane(shaftVector, headCentre, centroid);
 
 	//get the 2D centroids	
 	double vW = this.cal.pixelWidth;
@@ -531,12 +530,12 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 		emptySlices[s] = true;
 	    }
 	}
-
-	//for each centroid, calculate the vector to the 3D regression line
-	//using equation 10 from 
-	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-	//with denominator = 1 because we use a unit vector for |(x1 - x2)|
-
+	
+	double[][] projPlane = projectionPlane(shaftVector, headCentre, centroid);
+	double pPx = projPlane[0][0];
+	double pPy = projPlane[1][0];
+	double pPz = projPlane[2][0];
+	
 	double x1x = this.centroid[0];
 	double x1y = this.centroid[1];
 	double x1z = this.centroid[2];
@@ -544,6 +543,13 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	double x2y = x1y + shaftVector[1][0];
 	double x2z = x1z + shaftVector[2][0];
 
+	
+	//for each centroid, calculate the vector to the 3D regression line
+	//using equation 10 from 
+	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+	//with denominator = 1 because we use a unit vector for |(x2 - x1)|
+
+	
 	for (int s = this.startSlice; s <= this.endSlice; s++){
 	    if (!emptySlices[s]){
 		double x0x = sliceCentroids[0][s];
@@ -565,7 +571,61 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 
 		double distance = Math.sqrt(cpX * cpX + cpY * cpY + cpZ * cpZ);
 //		IJ.log("distance to regression line is "+ distance + " "+this.units+" for slice "+s);
-		IJ.log(distance+", "+s);
+		
+		//work out t (number of unit vectors from centroid along regression) 
+		//as per equation 3
+		
+		double x1x0x = x1x - x0x;
+		double x1x0y = x1y - x0y;
+		double x1x0z = x1z - x0z;
+		
+		double x2x1x = x2x - x1x;
+		double x2x1y = x2y - x1y;
+		double x2x1z = x2z - x1z;
+		
+		double t = -1 * (x1x0x * x2x1x + x1x0y * x2x1y + x1x0z * x2x1z);
+		
+		//So now the intersection point x3 of the perpendicular is known
+		//as centroid + t * unitVector
+		//and the vector to the deflection as (x0 - x3)
+		
+		double x3x = x1x + t * shaftVector[0][0];
+		double x3y = x1y + t * shaftVector[1][0];
+		double x3z = x1z + t * shaftVector[2][0];
+		
+		double defVectX = x0x - x3x;
+		double defVectY = x0y - x3y;
+		double defVectZ = x0z - x3z;
+		
+		//project deflection vector onto projection plane vector by taking the dot product
+		//this is the craniocaudal deflection
+		
+		double cranioCaudal = (defVectX * pPx + defVectY * pPy + defVectZ * pPz); 
+		
+//		IJ.log("Craniocaudal deflection at slice "+s+" is "+cranioCaudal);
+		
+		//mediolateral deflection is distance in projectionPlane, i.e. 
+		//deflection projected onto projectionPlane // double cross product
+		//B x (A x B), provided that B is a unit vector
+		
+		double aBx = defVectY * pPz - defVectZ * pPy;
+		double aBy = defVectZ * pPx - defVectX * pPz;
+		double aBz = defVectX * pPy - defVectY * pPx;
+		
+		double mLx = pPy * aBz - pPz * aBy;
+		double mLy = pPz * aBx - pPx * aBz;
+		double mLz = pPx * aBy - pPy * aBx;
+
+		double medioLateral =  Math.sqrt(mLx * mLx + mLy * mLy + mLz * mLz);
+		
+		//give the scalar a direction
+		double sign = (mLx * mLy * mLz) / Math.abs(mLx * mLy * mLz);
+		
+		medioLateral *= sign;
+				
+//		IJ.log("Mediolateral deflection at slice "+s+" is "+medioLateral);
+		IJ.log(s+", "+distance+", "+medioLateral+", "+cranioCaudal);
+		
 	    }
 	    else{
 //		IJ.log("No pixels to calculate centroid in slice "+s);
