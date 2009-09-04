@@ -505,25 +505,25 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    double sumX = 0; double sumY = 0;
 	    cslice[s] = 0;
 	    short[] pixels = (short[])this.stack.getPixels(s);
-	    for (int y=r.y; y<(r.y+r.height); y++) {
+	    for (int y = r.y; y < (r.y+r.height); y++) {
 		int offset = y*w;
-		for (int x=r.x; x<(r.x+r.width); x++) {
+		for (int x = r.x; x < (r.x+r.width); x++) {
 		    int i = offset + x;
-		    if (pixels[i] >= this.minBoneHU && pixels[i] <= this.maxBoneHU){
-			this.cslice[s]++;
-			this.cortArea[s] += pixelArea;
-			sumX += x * this.vW;
-			sumY += y * this.vH;
+		    if (pixels[i] >= this.minT && pixels[i] <= this.maxT){
+			cslice[s]++;
+			cortArea[s] += pixelArea;
+			sumX += x * this.cal.pixelWidth;
+			sumY += y * this.cal.pixelHeight;
 		    }
 		}
 	    }
-	    if (this.cslice[s] > 0){
-		this.sliceCentroids[0][s] = sumX / this.cslice[s];
-		this.sliceCentroids[1][s] = sumY / this.cslice[s];
-		cstack += this.cslice[s];
-		this.emptySlices[s] = false;
+	    if (cslice[s] > 0){
+		sliceCentroids[0][s] = sumX / cslice[s];
+		sliceCentroids[1][s] = sumY / cslice[s];
+		cstack += cslice[s];
+		emptySlices[s] = false;
 	    } else {
-		this.emptySlices[s] = true;
+		emptySlices[s] = true;
 	    }
 	}
 
