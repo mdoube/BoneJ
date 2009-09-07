@@ -34,7 +34,7 @@ public class FitCircle {
      */
     public double[] hyperCircleStable(double[][] points) {
 	int nPoints = points.length;
-	IJ.log("nPoints = "+nPoints);
+
 	double[] centroid = getCentroid(points);
 
 	double[] x = new double[nPoints];
@@ -42,25 +42,29 @@ public class FitCircle {
 	double[] z = new double[nPoints];
 	double[] ones = new double[nPoints];
 	Arrays.fill(ones, 1);
-
+	
 	double sumZ = 0;
+	double[][] xyz1 = new double[nPoints][4];
 	// centre data and assign vector values
 	for (int n = 0; n < nPoints; n++) {
-	    x[n] = points[n][0] - centroid[0];
-	    y[n] = points[n][1] - centroid[1];
-	    z[n] = x[n] * x[n] + y[n] * y[n];
-	    sumZ += z[n];
+	    xyz1[n][0] = points[n][0] - centroid[0];
+	    xyz1[n][1] = points[n][1] - centroid[1];
+	    xyz1[n][2] = xyz1[n][0] * xyz1[n][0] + xyz1[n][1] * xyz1[n][1];
+	    xyz1[n][3] = 1;
+	    sumZ += xyz1[n][2];
 	}
-	double[][] xyz1 = { x, y, z, ones };
+	
 	Matrix XYZ1 = new Matrix(xyz1);
 	SingularValueDecomposition svd = new SingularValueDecomposition(XYZ1);
-	Matrix U = svd.getU();
-	printMatrix(U, "U");
-	Matrix S = svd.getS();
-	printMatrix(S, "S");
-	Matrix V = svd.getV();
-	printMatrix(V, "V");
 
+	Matrix U = svd.getU();
+	Matrix S = svd.getS();
+	Matrix V = svd.getV();
+
+	printMatrix(U, "U");
+	printMatrix(S, "S");
+	printMatrix(V, "V");
+	
 	Matrix A;
 
 	// singular case
