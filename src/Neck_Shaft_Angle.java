@@ -634,7 +634,11 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	double[][] points = {{0,1}, {1,0}, {-1, 0}, {0, -1}};
 	FitCircle fc = new FitCircle();
 	double[] circle = fc.hyperCircleStable(mL);
-	IJ.log("Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	IJ.log("Stable Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	circle = fc.hyperCircleSimple(mL);
+	IJ.log("Simple Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	circle = fc.kasaCircle(mL);
+	IJ.log("Kåsa Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	return;
     }
 

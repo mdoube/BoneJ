@@ -22,6 +22,43 @@ import Jama.SingularValueDecomposition;
  */
 public class FitCircle {
 
+    /**
+     * Kåsa fit
+     * 
+     * 
+     */
+    public double[] kasaCircle(double[][] points){
+	/*
+
+Z = XY(:,1).*XY(:,1) + XY(:,2).*XY(:,2);
+
+XY1 = [XY ones(n,1)];
+P = XY1 \ Z;
+
+Par = [P(1)/2 , P(2)/2 , sqrt((P(1)*P(1)+P(2)*P(2))/4+P(3))];
+	 */
+	int nPoints = points.length;
+	double[][] z = new double[nPoints][1];
+	double[][] xy1 = new double[nPoints][3];
+	for (int n = 0; n < nPoints; n++){
+	    z[n][0] = points[n][0] * points[n][0] + points[n][1] * points[n][1];
+	    xy1[n][0] = points[n][0];
+	    xy1[n][1] = points[n][1];
+	    xy1[n][2] = 1;
+	}
+	Matrix XY1 = new Matrix(xy1);
+	Matrix Z = new Matrix(z);
+	Matrix P = (XY1.inverse()).times(Z); //no matrix left divide in Jama!
+	double[] centreRadius = new double[3];
+	
+	double p0 = P.get(0, 0);
+	double p1 = P.get(1, 0);
+	double p2 = P.get(2, 0);
+	centreRadius[0] = p0/2;
+	centreRadius[1] = p1/2;
+	centreRadius[2] = Math.sqrt((p0 * p0 + p1 * p1) / 4 + p2 ); 
+	return centreRadius;
+    }
 
     /**
      * Chernov's non-biased Hyper algebraic method. Simple version.
@@ -64,24 +101,28 @@ public class FitCircle {
 
 	double[][] n = {{8*s[0], 4*s[1], 4*s[2], 2}, {4*s[1], 1, 0, 0}, {4*s[2], 0, 1, 0}, {2, 0 ,0, 0}};
 	Matrix N = new Matrix(n);
-	//NM and NM2 should be identical only faster and more accurate to use NM2
+	printMatrix(N, "N");
 	Matrix NM = (N.inverse()).times(M);
-	Matrix NM2 = N.arrayLeftDivide(M);
 	printMatrix(NM, "NM");
-	printMatrix(NM2, "NM2");
 
 	EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
 	Matrix E = ED.getV();
 	Matrix D = ED.getD();
 
+	printMatrix(E, "E");
+	printMatrix(D, "D");
+
 	double[] diagD = new double[D.getColumnDimension()];
+	double[] diagDorig = new double [D.getColumnDimension()];
 	for (int i = 0; i < D.getColumnDimension(); i++){
 	    diagD[i] = D.get(i, i);
+	    diagDorig[i] = D.get(i, i);
 	}
-	double[] diagDorig = Arrays.copyOf(diagD, diagD.length);
 	Arrays.sort(diagD);
-	int secondSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
-
+	//	Arrays.sort(diagDorig);
+	//	int secondSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
+	int secondSmallest = 3;
+	IJ.log("secondSmallest = "+secondSmallest);
 	if (diagD[0] > 0){
 	    IJ.error("Error: the smallest e-value is positive...");
 	} 
@@ -183,17 +224,17 @@ public class FitCircle {
 	    }
 	    double[] diagDorig = Arrays.copyOf(diagD, diagD.length);
 	    Arrays.sort(diagD);
-	    int almostSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
+	    int secondSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
 	    IJ.log("diagD = {"+diagD[0]+", "+diagD[1]+", "+diagD[2]+", "+diagD[3]+"}");
 	    IJ.log("diagDorig = {"+diagDorig[0]+", "+diagDorig[1]+", "+diagDorig[2]+", "+diagDorig[3]+"}");
-
+	    IJ.log("secondSmallest = "+secondSmallest);
 
 	    // get the 2nd to last column from eigenvectors
 	    //	    A = E.getMatrix(0, E.getRowDimension() - 1,
 	    //		    E.getColumnDimension()-2, E.getColumnDimension()-2);
 
 	    A = E.getMatrix(0, E.getRowDimension() - 1,
-		    almostSmallest, almostSmallest);
+		    secondSmallest, secondSmallest);
 
 	    printMatrix(A, "A");
 
