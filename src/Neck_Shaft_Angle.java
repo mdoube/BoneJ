@@ -546,7 +546,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
 	//with denominator = 1 because we use a unit vector for |(x2 - x1)|
 
-	
+	double[][] mL = new double[ this.endSlice - this.startSlice + 1][2];
+	int i = 0;
 	for (int s = this.startSlice; s <= this.endSlice; s++){
 	    if (!emptySlices[s]){
 		double x0x = sliceCentroids[0][s];
@@ -622,12 +623,17 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 				
 //		IJ.log("Mediolateral deflection at slice "+s+" is "+medioLateral);
 		IJ.log(s+", "+distance+", "+medioLateral+", "+cranioCaudal);
-		
+		mL[i][0] = medioLateral;
+		mL[i][1] = s * this.cal.pixelDepth;
+		i++;
 	    }
 	    else{
 //		IJ.log("No pixels to calculate centroid in slice "+s);
 	    }
 	}
+	FitCircle fc = new FitCircle();
+	double[] circle = fc.hyperCircleStable(mL);
+	IJ.log("Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	return;
     }
 

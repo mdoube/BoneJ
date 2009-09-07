@@ -21,16 +21,20 @@ import Jama.SingularValueDecomposition;
  */
 public class FitCircle {
 
+
     /**
      * Chernov's non-biased Hyper algebraic method. Stability optimised version.
+     * 
+     * @see <p><a href="http://www.math.uab.edu/~chernov/cl/HyperSVD.m">http://www.math.uab.edu/~chernov/cl/HyperSVD.m</a></p>
      * 
      * @param points
      *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] hyperCircle(double[][] points) {
+    public double[] hyperCircleStable(double[][] points) {
 	int nPoints = points.length;
+	IJ.log("nPoints = "+nPoints);
 	double[] centroid = getCentroid(points);
 
 	double[] x = new double[nPoints];
@@ -51,15 +55,14 @@ public class FitCircle {
 	Matrix XYZ1 = new Matrix(xyz1);
 	SingularValueDecomposition svd = new SingularValueDecomposition(XYZ1);
 	Matrix U = svd.getU();
-	Matrix S = svd.getS();
-	Matrix V = svd.getV();
-	
 	printMatrix(U, "U");
+	Matrix S = svd.getS();
 	printMatrix(S, "S");
+	Matrix V = svd.getV();
 	printMatrix(V, "V");
-	
+
 	Matrix A;
-	
+
 	// singular case
 	if (S.get(4, 4) / S.get(1, 1) < 1e-12) {
 	    double[][] v = V.getArray();
@@ -71,32 +74,50 @@ public class FitCircle {
 	    printMatrix(A, "A");
 	} else {
 	    // regular case
-	    Matrix Y = V.times(S.times(V));
+	    // Y=V*S*V';
+	    Matrix Y = V.times(S.times(V.transpose()));
 	    printMatrix(Y, "Y");
-	    
+
 	    double[][] bInv = { { 0, 0, 0, 0.5 }, { 0, 1, 0, 0 },
 		    { 0, 0, 1, 0 }, { 0.5, 0, 0, -2 * sumZ / nPoints } };
 	    Matrix Binv = new Matrix(bInv);
 	    printMatrix(Binv, "Binv");
-	    
-	    EigenvalueDecomposition ED = new EigenvalueDecomposition(Y.times(Binv.times(Y.transpose())));
+
+	    EigenvalueDecomposition ED = new EigenvalueDecomposition((Y.transpose()).times(Binv.times(Y)));
 	    Matrix D = ED.getD(); //eigenvalues
 	    Matrix E = ED.getV(); //eigenvectors
-	    
+
 	    printMatrix(D, "D");
 	    printMatrix(E, "E");
-	    
+
 	    //    [Dsort,ID] = sort(diag(D));
 	    //	    A = E(:,ID(2));
 	    //I think these 2 likes mean "Make an array, A, out of the eigenvector
-	    //corresponding to the 2nd biggest eigenvalue"
+	    //corresponding to the 2nd smallest eigenvalue"
 	    //Jama's eigenvalues are ordered, so don't have to do this.
-	    
-	    //get the 2nd column from eigenvectors
-	    A = E.getMatrix(0, E.getRowDimension(), 1, 1);
+
+	    //get the 2nd to last column from eigenvectors
+	    A = E.getMatrix(0, E.getRowDimension(), E.getColumnDimension()-2, E.getColumnDimension()-2);
 	    printMatrix(A, "A");
+
+	    for (int i = 0; i < 4; i++){
+		double p = 1/S.get(i, i);
+		S.set(i, i, p);
+	    }
+	    //	    A = V*S*V'*A;
+	    A = V.times(S.times((V.transpose()).times(A)));
+	    printMatrix(A, "A again");
 	}
+	
 	double[] centreRadius = new double[3];
+//	Par = [-(A(2:3))'/A(1)/2+centroid , sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2];
+	centreRadius[0] = (A.get(1, 0) / A.get(0, 0) )/ 2 + centroid[0];
+	centreRadius[1] = (A.get(2, 0) / A.get(0, 0) )/ 2 + centroid[1];
+	
+	//radius
+	double[][] a = A.getArray();
+	centreRadius[2] = Math.sqrt(a[1][0] * a[1][0] + a[2][0] * a[2][0] - 4 * a[0][0] * a[3][0])/Math.abs(a[0][0])/2;
+	
 	return centreRadius;
     }
 
@@ -116,7 +137,7 @@ public class FitCircle {
 
 	return centroid;
     }
-    
+
     public void printMatrix(Matrix matrix, String title){
 	IJ.log(title);
 	int nCols = matrix.getColumnDimension();
