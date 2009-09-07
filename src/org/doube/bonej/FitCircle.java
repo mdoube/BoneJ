@@ -53,6 +53,13 @@ public class FitCircle {
 	Matrix U = svd.getU();
 	Matrix S = svd.getS();
 	Matrix V = svd.getV();
+	
+	printMatrix(U, "U");
+	printMatrix(S, "S");
+	printMatrix(V, "V");
+	
+	Matrix A;
+	
 	// singular case
 	if (S.get(4, 4) / S.get(1, 1) < 1e-12) {
 	    double[][] v = V.getArray();
@@ -60,17 +67,35 @@ public class FitCircle {
 	    for (int i = 0; i < a.length; i++) {
 		a[i][0] = v[i][4];
 	    }
-	    Matrix A = new Matrix(a);
+	    A = new Matrix(a);
+	    printMatrix(A, "A");
 	} else {
 	    // regular case
 	    Matrix Y = V.times(S.times(V));
+	    printMatrix(Y, "Y");
+	    
 	    double[][] bInv = { { 0, 0, 0, 0.5 }, { 0, 1, 0, 0 },
 		    { 0, 0, 1, 0 }, { 0.5, 0, 0, -2 * sumZ / nPoints } };
 	    Matrix Binv = new Matrix(bInv);
-	    EigenvalueDecomposition ED = new EigenvalueDecomposition(Y.transpose().times(Binv).times(Y));
+	    printMatrix(Binv, "Binv");
 	    
+	    EigenvalueDecomposition ED = new EigenvalueDecomposition(Y.times(Binv.times(Y.transpose())));
+	    Matrix D = ED.getD(); //eigenvalues
+	    Matrix E = ED.getV(); //eigenvectors
+	    
+	    printMatrix(D, "D");
+	    printMatrix(E, "E");
+	    
+	    //    [Dsort,ID] = sort(diag(D));
+	    //	    A = E(:,ID(2));
+	    //I think these 2 likes mean "Make an array, A, out of the eigenvector
+	    //corresponding to the 2nd biggest eigenvalue"
+	    //Jama's eigenvalues are ordered, so don't have to do this.
+	    
+	    //get the 2nd column from eigenvectors
+	    A = E.getMatrix(0, E.getRowDimension(), 1, 1);
+	    printMatrix(A, "A");
 	}
-
 	double[] centreRadius = new double[3];
 	return centreRadius;
     }
@@ -90,6 +115,22 @@ public class FitCircle {
 	centroid[1] = sumY / nPoints;
 
 	return centroid;
+    }
+    
+    public void printMatrix(Matrix matrix, String title){
+	IJ.log(title);
+	int nCols = matrix.getColumnDimension();
+	int nRows = matrix.getRowDimension();
+	double[][] eVal = matrix.getArrayCopy();
+	for (int r = 0; r < nRows; r++){
+	    String row = "||";
+	    for (int c = 0; c < nCols; c++){
+		row = row + eVal[r][c] + "|";
+	    }
+	    row = row + "|";
+	    IJ.log(row);
+	}
+	return;
     }
 
 }
