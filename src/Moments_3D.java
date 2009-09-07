@@ -281,20 +281,6 @@ public class Moments_3D implements PlugInFilter {
 	inertiaTensor[2][0] = -Icxz;
 	inertiaTensor[2][1] = -Icyz;
 	Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
-	//
-
-	/*rt.addValue("Vol ("+units+"^3)", sumVoxVol);
-	rt.addValue("Mass (g)", sumVoxMass);
-	rt.addValue("Icxx (kg.m^2)", Icxx);
-	rt.addValue("Icyy (kg.m^2)", Icyy);
-	rt.addValue("Iczz (kg.m^2)", Iczz);
-	rt.addValue("Icxy (kg.m^2)", Icxy);
-	rt.addValue("Icxz (kg.m^2)", Icxz);
-	rt.addValue("Icyz (kg.m^2)", Icyz);
-	rt.addValue("I1 (kg.m^2)", E.getD().get(2, 2));
-	rt.addValue("I2 (kg.m^2)", E.getD().get(1, 1));
-	rt.addValue("I3 (kg.m^2)", E.getD().get(0, 0));*/
-
 
 	//do the Eigenvalue decomposition
 	EigenvalueDecomposition E = new EigenvalueDecomposition(inertiaTensorMatrix);
