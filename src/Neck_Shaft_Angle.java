@@ -631,6 +631,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 //		IJ.log("No pixels to calculate centroid in slice "+s);
 	    }
 	}
+	double[][] points = {{0,1}, {1,0}, {-1, 0}, {0, -1}};
 	FitCircle fc = new FitCircle();
 	double[] circle = fc.hyperCircleStable(mL);
 	IJ.log("Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
