@@ -190,8 +190,6 @@ public class FitCircle {
 	    Matrix D = ed.getD();
 	    Matrix E = ed.getV();
 	    int col = getNthSmallestCol(D, 2);
-	    printMatrix(D, "pratt D");
-	    IJ.log("pratt D index = " + col);
 	    A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 	    for (int i = 0; i < 4; i++) {
 		S.set(i, i, 1 / S.get(i, i));
@@ -381,26 +379,15 @@ public class FitCircle {
 	double[][] n = { { 8 * s0, 4 * s1, 4 * s2, 2 }, { 4 * s1, 1, 0, 0 },
 		{ 4 * s2, 0, 1, 0 }, { 2, 0, 0, 0 } };
 	Matrix N = new Matrix(n);
-	printMatrix(N, "N");
 	Matrix NM = (N.inverse()).times(M);
-	printMatrix(NM, "NM");
-
+	
 	EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
 	Matrix E = ED.getV();
 	Matrix D = ED.getD();
-	/*
-	 * double[] diagD = new double[D.getColumnDimension()]; double[] dDtest
-	 * = new double[D.getColumnDimension()]; for (int i = 0; i <
-	 * D.getColumnDimension(); i++) { diagD[i] = D.get(i, i); dDtest[i] =
-	 * D.get(i, i); } Arrays.sort(diagD); double sSvalue = diagD[1]; int col
-	 * = Arrays.binarySearch(dDtest, sSvalue);
-	 */
 
 	int col = getNthSmallestCol(D, 2);
 
 	Matrix A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
-
-	printMatrix(A, "A");
 
 	double[] centreRadius = new double[3];
 
@@ -414,18 +401,6 @@ public class FitCircle {
 
 	return centreRadius;
     }
-
-    /*
-     * X = XY(:,1); Y = XY(:,2); Z = X.*X + Y.*Y; ZXY1 = [Z X Y
-     * ones(length(Z),1)]; M = ZXY1'*ZXY1; S = mean(ZXY1); N = [8*S(1) 4*S(2)
-     * 4*S(3) 2; 4*S(2) 1 0 0; 4*S(3) 0 1 0; 2 0 0 0]; NM = inv(N)*M; [E,D] =
-     * eig(NM); [Dsort,ID] = sort(diag(D)); if (Dsort(1)>0) disp('Error: the
-     * smallest e-value is positive...') end if (Dsort(2)<0) disp('Error: the
-     * second smallest e-value is negative...') end A = E(:,ID(2));
-     * 
-     * Par = zeros(1,3); Par(1:2) = -(A(2:3))'/A(1)/2; Par(3) =
-     * sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2;
-     */
 
     /**
      * Chernov's non-biased Hyper algebraic method. Stability optimised version.
@@ -443,22 +418,24 @@ public class FitCircle {
      */
     public double[] hyperStable(double[][] points) {
 	int nPoints = points.length;
-
 	double[] centroid = getCentroid(points);
 
 	double sumZ = 0;
-	double[][] xyz1 = new double[nPoints][4];
+	double[][] zxy1 = new double[nPoints][4];
 	// centre data and assign vector values
 	for (int n = 0; n < nPoints; n++) {
-	    xyz1[n][0] = points[n][0] - centroid[0];
-	    xyz1[n][1] = points[n][1] - centroid[1];
-	    xyz1[n][2] = xyz1[n][0] * xyz1[n][0] + xyz1[n][1] * xyz1[n][1];
-	    xyz1[n][3] = 1;
-	    sumZ += xyz1[n][2];
+	    double x = points[n][0] - centroid[0];
+	    double y = points[n][1] - centroid[1];
+	    double z = x * x + y * y;
+	    sumZ += z;
+	    zxy1[n][0] = z;
+	    zxy1[n][1] = x;
+	    zxy1[n][2] = y;
+	    zxy1[n][3] = 1;
 	}
 
-	Matrix XYZ1 = new Matrix(xyz1);
-	SingularValueDecomposition svd = new SingularValueDecomposition(XYZ1);
+	Matrix ZXY1 = new Matrix(zxy1);
+	SingularValueDecomposition svd = new SingularValueDecomposition(ZXY1);
 
 	Matrix S = svd.getS();
 	Matrix V = svd.getV();
@@ -467,58 +444,65 @@ public class FitCircle {
 
 	// singular case
 	if (S.get(3, 3) / S.get(0, 0) < 1e-12) {
-	    double[][] v = V.getArray();
-	    double[][] a = new double[v.length][1];
-	    for (int i = 0; i < a.length; i++) {
-		a[i][0] = v[i][3];
-	    }
-	    A = new Matrix(a);
-	    printMatrix(A, "A");
+	    A = V.getMatrix(0, V.getRowDimension() - 1, 3, 3);
 	} else {
 	    // regular case
 	    Matrix Y = V.times(S.times(V.transpose()));
-	    printMatrix(Y, "Y");
 
 	    double[][] bInv = { { 0, 0, 0, 0.5 }, { 0, 1, 0, 0 },
 		    { 0, 0, 1, 0 }, { 0.5, 0, 0, -2 * sumZ / nPoints } };
 	    Matrix Binv = new Matrix(bInv);
-	    printMatrix(Binv, "Binv");
-
 	    EigenvalueDecomposition ED = new EigenvalueDecomposition((Y
 		    .transpose()).times(Binv.times(Y)));
 	    Matrix D = ED.getD(); // eigenvalues
 	    Matrix E = ED.getV(); // eigenvectors
 
-	    printMatrix(D, "D");
-	    printMatrix(E, "E");
-
 	    int col = getNthSmallestCol(D, 2);
 
 	    A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 
-	    printMatrix(A, "A");
-
 	    for (int i = 0; i < 4; i++) {
-		double p = 1 / S.get(i, i);
-		S.set(i, i, p);
+		S.set(i, i, 1 / S.get(i, i));
 	    }
 	    A = V.times(S.times((V.transpose()).times(A)));
-	    printMatrix(A, "A again");
 	}
+
+	double a0 = A.get(0, 0);
+	double a1 = A.get(1, 0);
+	double a2 = A.get(2, 0);
+	double a3 = A.get(3, 0);
 
 	double[] centreRadius = new double[3];
 	// Par = [-(A(2:3))'/A(1)/2+centroid ,
 	// sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2];
-	centreRadius[0] = -1 * (A.get(1, 0) / A.get(0, 0)) / 2 + centroid[0];
-	centreRadius[1] = -1 * (A.get(2, 0) / A.get(0, 0)) / 2 + centroid[1];
-
-	// radius
-	double[][] a = A.getArray();
-	centreRadius[2] = Math.sqrt(a[1][0] * a[1][0] + a[2][0] * a[2][0] - 4
-		* a[0][0] * a[3][0])
-		/ Math.abs(a[0][0]) / 2;
+	centreRadius[0] = -(a1 / a0) / 2 + centroid[0];
+	centreRadius[1] = -(a2 / a0) / 2 + centroid[1];
+	centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
+		.abs(a0)) / 2;
 	return centreRadius;
     }
+
+    // X = XY(:,1) - centroid(1); % centering data
+    // Y = XY(:,2) - centroid(2); % centering data
+    // Z = X.*X + Y.*Y;
+    // ZXY1 = [Z X Y ones(length(Z),1)];
+    // [U,S,V]=svd(ZXY1,0);
+    // if (S(4,4)/S(1,1) < 1e-12) % singular case
+    // A = V(:,4);
+    // else % regular case
+    // Y=V*S*V';
+    // Binv = [0 0 0 0.5; 0 1 0 0; 0 0 1 0; 0.5 0 0 -2*sum(Z)/length(Z)];
+    // [E,D] = eig(Y'*Binv*Y);
+    // [Dsort,ID] = sort(diag(D));
+    // A = E(:,ID(2));
+    // for i=1:4
+    // S(i,i)=1/S(i,i);
+    // end
+    // A = V*S*V'*A;
+    // end
+    //
+    // Par = [-(A(2:3))'/A(1)/2+centroid ,
+    // sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2];
 
     private double[] getCentroid(double[][] points) {
 	double[] centroid = new double[2];
@@ -614,7 +598,6 @@ public class FitCircle {
 	if (diagD[1] < 0) {
 	    IJ.error("Error: the second smallest e-value is negative...");
 	}
-
 	return col;
     }
 
