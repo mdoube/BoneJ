@@ -75,6 +75,8 @@ public class FitCircle {
     /**
      * Pratt method (Newton style)
      * 
+     * Can't handle noise
+     * 
      * @param points
      * @return
      */
@@ -147,6 +149,87 @@ public class FitCircle {
 	double[] centreRadius = { x + centroid[0], y + centroid[1], r };
 	return centreRadius;
     }
+
+    /**
+     * Pratt method (SVD style)
+     * 
+     * Can't handle noise
+     * 
+     * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
+     */
+    public double[] prattSVD(double[][] points) {
+	int nPoints = points.length;
+	double[] centroid = getCentroid(points);
+	double[][] xyXY1 = new double[nPoints][4];
+	for (int i = 0; i < nPoints; i++) {
+	    double x = points[i][0] - centroid[0];
+	    double y = points[i][1] - centroid[1];
+	    xyXY1[i][0] = x * x + y * y;
+	    xyXY1[i][1] = x;
+	    xyXY1[i][2] = y;
+	    xyXY1[i][3] = 1;
+	}
+
+	Matrix XYXY1 = new Matrix(xyXY1);
+	SingularValueDecomposition svd = new SingularValueDecomposition(XYXY1);
+	Matrix S = svd.getS();
+	Matrix V = svd.getV();
+	Matrix A;
+	Matrix W;
+	if (S.get(3, 3) / S.get(0, 0) < 1e-12) {
+	    A = V.getMatrix(0, V.getRowDimension() - 1, 3, 3);
+	    IJ.log("Pratt singular case");
+	} else {
+	    W = V.times(S);
+	    double[][] bInv = { { 0, 0, 0, -0.5 }, { 0, 1, 0, 0 },
+		    { 0, 0, 1, 0 }, { -0.5, 0, 0, 0 } };
+	    Matrix Binv = new Matrix(bInv);
+	    EigenvalueDecomposition ed = new EigenvalueDecomposition((W
+		    .transpose()).times(Binv.times(W)));
+	    Matrix D = ed.getD();
+	    Matrix E = ed.getV();
+	    double[] diagD = new double[D.getColumnDimension()];
+	    double[] dDtest = new double[D.getColumnDimension()];
+	    for (int i = 0; i < diagD.length; i++) {
+		diagD[i] = D.get(i, i);
+		dDtest[i] = D.get(i, i);
+	    }
+	    Arrays.sort(diagD);
+	    double sSvalue = diagD[diagD.length - 2];
+	    int col = Arrays.binarySearch(dDtest, sSvalue);
+	    IJ.log("pratt D index = " + col);
+	    A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
+	    for (int i = 0; i < 4; i++) {
+		S.set(i, i, 1 / S.get(i, i));
+	    }
+	    A = V.times(S.times(A));
+	}
+	double a0 = A.get(0, 0);
+	double a1 = A.get(1, 0);
+	double a2 = A.get(2, 0);
+	double a3 = A.get(3, 0);
+	double[] centreRadius = new double[3];
+	centreRadius[0] = -(a1 / a0) / 2 + centroid[0];
+	centreRadius[1] = -(a2 / a0) / 2 + centroid[1];
+	centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
+		.abs(a0)) / 2;
+	return centreRadius;
+    }
+
+    /*
+     * 
+     * [U,S,V]=svd([(XY(:,1)-centroid(1)).^2+(XY(:,2)-centroid(2)).^2,...
+     * XY(:,1)-centroid(1), XY(:,2)-centroid(2), ones(size(XY,1),1)],0);
+     * 
+     * if (S(4,4)/S(1,1) < 1e-12) % singular case A = V(:,4); disp('Pratt
+     * singular case'); else % regular case W=V*S; Binv = [0 0 0 -0.5; 0 1 0 0;
+     * 0 0 1 0; -0.5 0 0 0]; [E,D] = eig(W'*Binv*W); [Dsort,ID] = sort(diag(D));
+     * A = E(:,ID(2)); for i=1:4 S(i,i)=1/S(i,i); end A = V*S*A; end
+     * 
+     * Par = -(A(2:3))'/A(1)/2 + centroid; Par = [Par ,
+     * sqrt(A(2)^2+A(3)^2-4*A(1)*A(4))/abs(A(1))/2];
+     */
 
     /**
      * Taubin method (Newton Style)
@@ -476,8 +559,6 @@ public class FitCircle {
 	centreRadius[2] = Math.sqrt(a[1][0] * a[1][0] + a[2][0] * a[2][0] - 4
 		* a[0][0] * a[3][0])
 		/ Math.abs(a[0][0]) / 2;
-
-	IJ.log("Centroid is at (" + centroid[0] + ", " + centroid[1] + ")");
 	return centreRadius;
     }
 
@@ -526,7 +607,7 @@ public class FitCircle {
      * @param n
      *            Number of coordinates
      * @param noise
-     *            Add noise of intensity 'noise' (does nothing)
+     *            Add noise of intensity 'noise'
      * 
      * @return
      */
@@ -536,8 +617,8 @@ public class FitCircle {
 
 	for (int i = 0; i < n; i++) {
 	    double theta = i * 2 * Math.PI / n;
-	    testCircle[i][0] = r * Math.sin(theta) + x;
-	    testCircle[i][1] = r * Math.cos(theta) + y;
+	    testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5)) * Math.sin(theta) + x;
+	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5)) * Math.cos(theta) + y;
 	    IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
 		    + testCircle[i][1] + ")");
 	}

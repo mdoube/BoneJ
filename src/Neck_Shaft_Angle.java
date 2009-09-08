@@ -632,17 +632,25 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    }
 	}
 	FitCircle fc = new FitCircle();
-	double[][] testCircle = fc.getTestCircle(10, 10, 15, 20, 0);
+	double[][] testCircle = fc.getTestCircle(10, 10, 15, 200, 0);
 	double[] circle = fc.hyperStable(testCircle);
 	IJ.log("Stable Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
 	circle = fc.hyperSimple(testCircle);
 	IJ.log("Simple Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
 	circle = fc.kasaFit(testCircle);
 	IJ.log("Kåsa Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
 	circle = fc.prattNewton(testCircle);
 	IJ.log("Pratt-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.prattSVD(testCircle);
+	IJ.log("Pratt-SVD Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
 	circle = fc.taubinNewton(testCircle);
 	IJ.log("Taubin-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
 	circle = fc.taubinSVD(testCircle);
 	IJ.log("Taubin-SVD Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	return;
