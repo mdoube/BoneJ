@@ -217,20 +217,6 @@ public class FitCircle {
 	return centreRadius;
     }
 
-    /*
-     * 
-     * [U,S,V]=svd([(XY(:,1)-centroid(1)).^2+(XY(:,2)-centroid(2)).^2,...
-     * XY(:,1)-centroid(1), XY(:,2)-centroid(2), ones(size(XY,1),1)],0);
-     * 
-     * if (S(4,4)/S(1,1) < 1e-12) % singular case A = V(:,4); disp('Pratt
-     * singular case'); else % regular case W=V*S; Binv = [0 0 0 -0.5; 0 1 0 0;
-     * 0 0 1 0; -0.5 0 0 0]; [E,D] = eig(W'*Binv*W); [Dsort,ID] = sort(diag(D));
-     * A = E(:,ID(2)); for i=1:4 S(i,i)=1/S(i,i); end A = V*S*A; end
-     * 
-     * Par = -(A(2:3))'/A(1)/2 + centroid; Par = [Par ,
-     * sqrt(A(2)^2+A(3)^2-4*A(1)*A(4))/abs(A(1))/2];
-     */
-
     /**
      * Taubin method (Newton Style)
      * 
