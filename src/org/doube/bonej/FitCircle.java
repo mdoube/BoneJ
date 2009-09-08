@@ -189,15 +189,8 @@ public class FitCircle {
 		    .transpose()).times(Binv.times(W)));
 	    Matrix D = ed.getD();
 	    Matrix E = ed.getV();
-	    double[] diagD = new double[D.getColumnDimension()];
-	    double[] dDtest = new double[D.getColumnDimension()];
-	    for (int i = 0; i < diagD.length; i++) {
-		diagD[i] = D.get(i, i);
-		dDtest[i] = D.get(i, i);
-	    }
-	    Arrays.sort(diagD);
-	    double sSvalue = diagD[diagD.length - 2];
-	    int col = Arrays.binarySearch(dDtest, sSvalue);
+	    int col = getNthSmallestCol(D, 2);
+	    printMatrix(D, "pratt D");
 	    IJ.log("pratt D index = " + col);
 	    A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 	    for (int i = 0; i < 4; i++) {
@@ -363,29 +356,30 @@ public class FitCircle {
 	int nPoints = points.length;
 
 	double[][] zxy1 = new double[nPoints][4];
-	double[] zxy1Sum = new double[4];
-	double[] s = new double[4];
+	double xSum = 0, ySum = 0, zSum = 0;
 	for (int n = 0; n < nPoints; n++) {
-	    zxy1[n][1] = points[n][0];
-	    zxy1[n][2] = points[n][1];
-	    zxy1[n][0] = zxy1[n][0] * zxy1[n][0] + zxy1[n][1] * zxy1[n][1];
+	    double x = points[n][0];
+	    double y = points[n][1];
+	    double z = x * x + y * y;
+	    zxy1[n][0] = z;
+	    zxy1[n][1] = x;
+	    zxy1[n][2] = y;
 	    zxy1[n][3] = 1;
-	    zxy1Sum[0] += points[n][0];
-	    zxy1Sum[1] += points[n][1];
-	    zxy1Sum[2] += zxy1[n][3];
+
+	    xSum += x;
+	    ySum += y;
+	    zSum += z;
+
 	}
-	s[0] = zxy1Sum[0] / nPoints;
-	s[1] = zxy1Sum[1] / nPoints;
-	s[2] = zxy1Sum[2] / nPoints;
-	s[3] = 1;
+	double s0 = zSum / nPoints;
+	double s1 = xSum / nPoints;
+	double s2 = ySum / nPoints;
 
 	Matrix ZXY1 = new Matrix(zxy1);
 	Matrix M = (ZXY1.transpose()).times(ZXY1);
 
-	// N = [8*S(1) 4*S(2) 4*S(3) 2; 4*S(2) 1 0 0; 4*S(3) 0 1 0; 2 0 0 0];
-
-	double[][] n = { { 8 * s[0], 4 * s[1], 4 * s[2], 2 },
-		{ 4 * s[1], 1, 0, 0 }, { 4 * s[2], 0, 1, 0 }, { 2, 0, 0, 0 } };
+	double[][] n = { { 8 * s0, 4 * s1, 4 * s2, 2 }, { 4 * s1, 1, 0, 0 },
+		{ 4 * s2, 0, 1, 0 }, { 2, 0, 0, 0 } };
 	Matrix N = new Matrix(n);
 	printMatrix(N, "N");
 	Matrix NM = (N.inverse()).times(M);
@@ -394,30 +388,17 @@ public class FitCircle {
 	EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
 	Matrix E = ED.getV();
 	Matrix D = ED.getD();
+	/*
+	 * double[] diagD = new double[D.getColumnDimension()]; double[] dDtest
+	 * = new double[D.getColumnDimension()]; for (int i = 0; i <
+	 * D.getColumnDimension(); i++) { diagD[i] = D.get(i, i); dDtest[i] =
+	 * D.get(i, i); } Arrays.sort(diagD); double sSvalue = diagD[1]; int col
+	 * = Arrays.binarySearch(dDtest, sSvalue);
+	 */
 
-	printMatrix(E, "E");
-	printMatrix(D, "D");
+	int col = getNthSmallestCol(D, 2);
 
-	double[] diagD = new double[D.getColumnDimension()];
-	double[] diagDorig = new double[D.getColumnDimension()];
-	for (int i = 0; i < D.getColumnDimension(); i++) {
-	    diagD[i] = D.get(i, i);
-	    diagDorig[i] = D.get(i, i);
-	}
-	Arrays.sort(diagD);
-	// Arrays.sort(diagDorig);
-	// int secondSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
-	int secondSmallest = 3;
-	IJ.log("secondSmallest = " + secondSmallest);
-	if (diagD[0] > 0) {
-	    IJ.error("Error: the smallest e-value is positive...");
-	}
-	if (diagD[1] < 0) {
-	    IJ.error("Error: the second smallest e-value is negative...");
-	}
-
-	Matrix A = E.getMatrix(0, E.getRowDimension() - 1, secondSmallest,
-		secondSmallest);
+	Matrix A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 
 	printMatrix(A, "A");
 
@@ -433,6 +414,18 @@ public class FitCircle {
 
 	return centreRadius;
     }
+
+    /*
+     * X = XY(:,1); Y = XY(:,2); Z = X.*X + Y.*Y; ZXY1 = [Z X Y
+     * ones(length(Z),1)]; M = ZXY1'*ZXY1; S = mean(ZXY1); N = [8*S(1) 4*S(2)
+     * 4*S(3) 2; 4*S(2) 1 0 0; 4*S(3) 0 1 0; 2 0 0 0]; NM = inv(N)*M; [E,D] =
+     * eig(NM); [Dsort,ID] = sort(diag(D)); if (Dsort(1)>0) disp('Error: the
+     * smallest e-value is positive...') end if (Dsort(2)<0) disp('Error: the
+     * second smallest e-value is negative...') end A = E(:,ID(2));
+     * 
+     * Par = zeros(1,3); Par(1:2) = -(A(2:3))'/A(1)/2; Par(3) =
+     * sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2;
+     */
 
     /**
      * Chernov's non-biased Hyper algebraic method. Stability optimised version.
@@ -499,30 +492,9 @@ public class FitCircle {
 	    printMatrix(D, "D");
 	    printMatrix(E, "E");
 
-	    // [Dsort,ID] = sort(diag(D));
-	    // A = E(:,ID(2));
-	    // I think these 2 lines mean "Make an array, A, out of the
-	    // eigenvector corresponding to the 2nd smallest eigenvalue"
+	    int col = getNthSmallestCol(D, 2);
 
-	    double[] diagD = new double[D.getColumnDimension()];
-	    for (int i = 0; i < D.getColumnDimension(); i++) {
-		diagD[i] = D.get(i, i);
-	    }
-	    double[] diagDorig = Arrays.copyOf(diagD, diagD.length);
-	    Arrays.sort(diagD);
-	    int secondSmallest = Arrays.binarySearch(diagDorig, diagD[1]);
-	    IJ.log("diagD = {" + diagD[0] + ", " + diagD[1] + ", " + diagD[2]
-		    + ", " + diagD[3] + "}");
-	    IJ.log("diagDorig = {" + diagDorig[0] + ", " + diagDorig[1] + ", "
-		    + diagDorig[2] + ", " + diagDorig[3] + "}");
-	    IJ.log("secondSmallest = " + secondSmallest);
-
-	    // get the 2nd to last column from eigenvectors
-	    // A = E.getMatrix(0, E.getRowDimension() - 1,
-	    // E.getColumnDimension()-2, E.getColumnDimension()-2);
-
-	    A = E.getMatrix(0, E.getRowDimension() - 1, secondSmallest,
-		    secondSmallest);
+	    A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 
 	    printMatrix(A, "A");
 
@@ -603,12 +575,47 @@ public class FitCircle {
 
 	for (int i = 0; i < n; i++) {
 	    double theta = i * 2 * Math.PI / n;
-	    testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5)) * Math.sin(theta) + x;
-	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5)) * Math.cos(theta) + y;
+	    testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5))
+		    * Math.sin(theta) + x;
+	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
+		    * Math.cos(theta) + y;
 	    IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
 		    + testCircle[i][1] + ")");
 	}
 
 	return testCircle;
     }
+
+    /**
+     * Return the column in Matrix D that contains the nth smallest diagonal
+     * value
+     * 
+     * @param D
+     *            the matrix to search
+     * @param n
+     *            the order of the diagonal value to find (1 = smallest, 2 =
+     *            second smallest, etc.)
+     * @return column index of the nth smallest diagonal in D
+     */
+    private int getNthSmallestCol(Matrix D, int n) {
+	double[] diagD = new double[D.getColumnDimension()];
+	double[] dDtest = new double[D.getColumnDimension()];
+	for (int i = 0; i < D.getColumnDimension(); i++) {
+	    diagD[i] = D.get(i, i);
+	    dDtest[i] = D.get(i, i);
+	}
+	Arrays.sort(diagD);
+	double sSvalue = diagD[n - 1];
+	int col = Arrays.binarySearch(dDtest, sSvalue);
+
+	if (diagD[0] > 0) {
+	    IJ.error("Error: the smallest e-value is positive...");
+	}
+	if (diagD[1] < 0) {
+	    IJ.error("Error: the second smallest e-value is negative...");
+	}
+
+	return col;
+    }
+
 }
