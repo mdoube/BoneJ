@@ -28,7 +28,7 @@ public class FitCircle {
      * 
      * 
      */
-    public double[] kasaCircle(double[][] points) {
+    public double[] kasaFit(double[][] points) {
 	int nPoints = points.length;
 	double[][] z = new double[nPoints][1];
 	double[][] xy1 = new double[nPoints][3];
@@ -57,7 +57,7 @@ public class FitCircle {
      * Taubin method (Newton Style)
      * 
      */
-    public double[] taubinCircle(double[][] points) {
+    public double[] taubinNewton(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
@@ -119,8 +119,14 @@ public class FitCircle {
 		xnew = 0;
 	    }
 	}
-
 	double[] centreRadius = new double[3];
+	double det = xnew * xnew - xnew * Mz + Cov_xy;
+	double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det / 2);
+	double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det / 2);
+	centreRadius[0] = x + centroid[0];
+	centreRadius[1] = y + centroid[1];
+	centreRadius[2] = Math.sqrt(x * x + y * y + Mz);
+
 	return centreRadius;
     }
 
@@ -153,7 +159,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] hyperCircleSimple(double[][] points) {
+    public double[] hyperSimple(double[][] points) {
 	int nPoints = points.length;
 
 	double[][] zxy1 = new double[nPoints][4];
@@ -242,7 +248,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] hyperCircleStable(double[][] points) {
+    public double[] hyperStable(double[][] points) {
 	int nPoints = points.length;
 
 	double[] centroid = getCentroid(points);
@@ -399,10 +405,10 @@ public class FitCircle {
 
 	for (int i = 0; i < n; i++) {
 	    double theta = i * 2 * Math.PI / n;
-	    testCircle[n][0] = r * Math.sin(theta);
-	    testCircle[n][1] = r * Math.cos(theta);
-	    IJ.log("testCircle[n] is (" + testCircle[n][0] + ", "
-		    + testCircle[n][1] + ")");
+	    testCircle[i][0] = r * Math.sin(theta) + x;
+	    testCircle[i][1] = r * Math.cos(theta) + y;
+	    IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
+		    + testCircle[i][1] + ")");
 	}
 
 	return testCircle;
