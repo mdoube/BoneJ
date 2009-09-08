@@ -89,19 +89,19 @@ public class FitCircle {
 	    double Xi = points[i][0] - centroid[0];
 	    double Yi = points[i][1] - centroid[1];
 	    double Zi = Xi * Xi + Yi * Yi;
-	    Mxy = Mxy + Xi * Yi;
-	    Mxx = Mxx + Xi * Xi;
-	    Myy = Myy + Yi * Yi;
-	    Mxz = Mxz + Xi * Zi;
-	    Myz = Myz + Yi * Zi;
-	    Mzz = Mzz + Zi * Zi;
+	    Mxy += Xi * Yi;
+	    Mxx += Xi * Xi;
+	    Myy += Yi * Yi;
+	    Mxz += Xi * Zi;
+	    Myz += Yi * Zi;
+	    Mzz += Zi * Zi;
 	}
-	Mxx = Mxx / nPoints;
-	Myy = Myy / nPoints;
-	Mxy = Mxy / nPoints;
-	Mxz = Mxz / nPoints;
-	Myz = Myz / nPoints;
-	Mzz = Mzz / nPoints;
+	Mxx /= nPoints;
+	Myy /= nPoints;
+	Mxy /= nPoints;
+	Mxz /= nPoints;
+	Myz /= nPoints;
+	Mzz /= nPoints;
 
 	double Mz = Mxx + Myy;
 	double Cov_xy = Mxx * Myy - Mxy * Mxy;
@@ -120,7 +120,7 @@ public class FitCircle {
 	double xnew = 0;
 	for (int iter = 0; iter < IterMax; iter++) {
 	    double yold = ynew;
-	    ynew = A0 + xnew * (A1 + xnew * (A2 + 4. * xnew * xnew));
+	    ynew = A0 + xnew * (A1 + xnew * (A2 + 4 * xnew * xnew));
 	    if (Math.abs(ynew) > Math.abs(yold)) {
 		IJ.log("Newton-Pratt goes wrong direction: |ynew| > |yold|");
 		xnew = 0;
@@ -153,7 +153,6 @@ public class FitCircle {
     /**
      * Pratt method (SVD style)
      * 
-     * Can't handle noise
      * 
      * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
