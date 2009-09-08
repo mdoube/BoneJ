@@ -73,6 +73,82 @@ public class FitCircle {
     }
 
     /**
+     * Pratt method (Newton style)
+     * 
+     * @param points
+     * @return
+     */
+    public double[] prattNewton(double[][] points) {
+	int nPoints = points.length;
+	double[] centroid = getCentroid(points);
+	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
+
+	for (int i = 0; i < nPoints; i++) {
+	    double Xi = points[i][0] - centroid[0];
+	    double Yi = points[i][1] - centroid[1];
+	    double Zi = Xi * Xi + Yi * Yi;
+	    Mxy = Mxy + Xi * Yi;
+	    Mxx = Mxx + Xi * Xi;
+	    Myy = Myy + Yi * Yi;
+	    Mxz = Mxz + Xi * Zi;
+	    Myz = Myz + Yi * Zi;
+	    Mzz = Mzz + Zi * Zi;
+	}
+	Mxx = Mxx / nPoints;
+	Myy = Myy / nPoints;
+	Mxy = Mxy / nPoints;
+	Mxz = Mxz / nPoints;
+	Myz = Myz / nPoints;
+	Mzz = Mzz / nPoints;
+
+	double Mz = Mxx + Myy;
+	double Cov_xy = Mxx * Myy - Mxy * Mxy;
+	double Mxz2 = Mxz * Mxz;
+	double Myz2 = Myz * Myz;
+
+	double A2 = 4 * Cov_xy - 3 * Mz * Mz - Mzz;
+	double A1 = Mzz * Mz + 4 * Cov_xy * Mz - Mxz2 - Myz2 - Mz * Mz * Mz;
+	double A0 = Mxz2 * Myy + Myz2 * Mxx - Mzz * Cov_xy - 2 * Mxz * Myz
+		* Mxy + Mz * Mz * Cov_xy;
+	double A22 = A2 + A2;
+
+	double epsilon = 1e-12;
+	double ynew = 1e+20;
+	int IterMax = 20;
+	double xnew = 0;
+	for (int iter = 0; iter < IterMax; iter++) {
+	    double yold = ynew;
+	    ynew = A0 + xnew * (A1 + xnew * (A2 + 4. * xnew * xnew));
+	    if (Math.abs(ynew) > Math.abs(yold)) {
+		IJ.log("Newton-Pratt goes wrong direction: |ynew| > |yold|");
+		xnew = 0;
+		break;
+	    }
+	    double Dy = A1 + xnew * (A22 + 16 * xnew * xnew);
+	    double xold = xnew;
+	    xnew = xold - ynew / Dy;
+	    if (Math.abs((xnew - xold) / xnew) < epsilon) {
+		break;
+	    }
+	    if (iter >= IterMax) {
+		IJ.log("Newton-Pratt will not converge");
+		xnew = 0;
+	    }
+	    if (xnew < 0.) {
+		IJ.log("Newton-Pratt negative root:  x= " + xnew);
+		xnew = 0;
+	    }
+	}
+	double det = xnew * xnew - xnew * Mz + Cov_xy;
+	double x = Mxz * (Myy - xnew) - Myz * Mxy / (det * 2);
+	double y = Myz * (Mxx - xnew) - Mxz * Mxy / (det * 2);
+	double r = Math.sqrt(x * x + y * y + Mz + 2 * xnew);
+
+	double[] centreRadius = { x + centroid[0], y + centroid[1], r };
+	return centreRadius;
+    }
+
+    /**
      * Taubin method (Newton Style)
      * 
      * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates

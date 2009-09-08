@@ -639,6 +639,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	IJ.log("Simple Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	circle = fc.kasaFit(testCircle);
 	IJ.log("Kåsa Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	circle = fc.prattNewton(testCircle);
+	IJ.log("Pratt-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	circle = fc.taubinNewton(testCircle);
 	IJ.log("Taubin-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	circle = fc.taubinSVD(testCircle);
