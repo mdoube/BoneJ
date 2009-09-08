@@ -80,7 +80,9 @@ public class Fit_Sphere implements PlugInFilter {
 	    }
 	}
 	if (!imp.lock()) imp.lock(); //if we have unlocked the image to reset properties, relock it.
-	showDialog();
+	if (!showDialog()){
+	    return;
+	}
 	double[] sphereDim = fitSphere(imp, roiMan);
 	if (doCopy) copySphere(imp, ip, padding, cropFactor, sphereDim);
 	if (doInnerCube) copyInnerCube(imp, ip, cropFactor, sphereDim);
@@ -96,6 +98,9 @@ public class Fit_Sphere implements PlugInFilter {
 	gd.addNumericField("Padding", 2, 0, 2, "voxels");
 	gd.addNumericField("Crop Factor", 1.0, 2, 4, "");
 	gd.showDialog();
+	if (gd.wasCanceled()) {
+	    return false;
+	}
 	doCopy = gd.getNextBoolean();
 	doInnerCube = gd.getNextBoolean();
 	doOuterCube = gd.getNextBoolean();
