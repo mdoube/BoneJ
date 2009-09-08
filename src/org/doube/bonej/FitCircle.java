@@ -473,36 +473,12 @@ public class FitCircle {
 	double a3 = A.get(3, 0);
 
 	double[] centreRadius = new double[3];
-	// Par = [-(A(2:3))'/A(1)/2+centroid ,
-	// sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2];
 	centreRadius[0] = -(a1 / a0) / 2 + centroid[0];
 	centreRadius[1] = -(a2 / a0) / 2 + centroid[1];
 	centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
 		.abs(a0)) / 2;
 	return centreRadius;
     }
-
-    // X = XY(:,1) - centroid(1); % centering data
-    // Y = XY(:,2) - centroid(2); % centering data
-    // Z = X.*X + Y.*Y;
-    // ZXY1 = [Z X Y ones(length(Z),1)];
-    // [U,S,V]=svd(ZXY1,0);
-    // if (S(4,4)/S(1,1) < 1e-12) % singular case
-    // A = V(:,4);
-    // else % regular case
-    // Y=V*S*V';
-    // Binv = [0 0 0 0.5; 0 1 0 0; 0 0 1 0; 0.5 0 0 -2*sum(Z)/length(Z)];
-    // [E,D] = eig(Y'*Binv*Y);
-    // [Dsort,ID] = sort(diag(D));
-    // A = E(:,ID(2));
-    // for i=1:4
-    // S(i,i)=1/S(i,i);
-    // end
-    // A = V*S*V'*A;
-    // end
-    //
-    // Par = [-(A(2:3))'/A(1)/2+centroid ,
-    // sqrt(A(2)*A(2)+A(3)*A(3)-4*A(1)*A(4))/abs(A(1))/2];
 
     private double[] getCentroid(double[][] points) {
 	double[] centroid = new double[2];
