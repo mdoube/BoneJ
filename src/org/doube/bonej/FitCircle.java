@@ -56,6 +56,8 @@ public class FitCircle {
     /**
      * Taubin method (Newton Style)
      * 
+     * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      */
     public double[] taubinNewton(double[][] points) {
 	int nPoints = points.length;
@@ -130,20 +132,54 @@ public class FitCircle {
 	return centreRadius;
     }
 
-    // % Newton's method starting at x=0
+    /**
+     * Taubin method, SVD version
+     * 
+     * @param points
+     * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius 
+     */
+    public double[] taubinSVD(double[][] points) {
+	int nPoints = points.length;
+	double[] centroid = getCentroid(points);
 
-    // % computing the circle parameters
-    //
-    // DET = xnew*xnew - xnew*Mz + Cov_xy;
-    // Center = [Mxz*(Myy-xnew)-Myz*Mxy , Myz*(Mxx-xnew)-Mxz*Mxy]/DET/2;
-    //
-    // Par = [Center+centroid , sqrt(Center*Center'+Mz)];
-    //
-    // end % TaubinNTN
-    //
-    //
-    // *
-    // */
+	double[][] zxy = new double[nPoints][3];
+	double[] z = new double[nPoints];
+	double sumZ = 0;
+	for (int n = 0; n < nPoints; n++) {
+	    double x = points[n][0] - centroid[0];
+	    double y = points[n][1] - centroid[1];
+	    zxy[n][1] = x;
+	    zxy[n][2] = y;
+	    z[n] = x * x + y * y;
+	    sumZ += z[n];
+	}
+	double meanZ = sumZ / nPoints;
+	double sqrtMeanZ2 = 2 * Math.sqrt(meanZ);
+	for (int n = 0; n < nPoints; n++) {
+	    zxy[n][0] = (z[n] - meanZ) / sqrtMeanZ2;
+	}
+
+	Matrix ZXY = new Matrix(zxy);
+	SingularValueDecomposition svd = new SingularValueDecomposition(ZXY);
+	Matrix V = svd.getV();
+	Matrix A = V.getMatrix(0, V.getRowDimension() - 1, 2, 2);
+	double a1 = A.get(0, 0) / sqrtMeanZ2;
+	A.set(0, 0, a1);
+	double[][] a = A.getArray();
+	double[] b = new double[a.length + 1];
+	for (int i = 0; i < a.length; i++) {
+	    b[i] = a[i][0];
+	}
+	b[b.length - 1] = -meanZ * a1;
+	double[] centreRadius = new double[3];
+
+	centreRadius[0] = b[1] / (a1 * 2) + centroid[0];
+	centreRadius[1] = b[2] / (a1 * 2) + centroid[1];
+	centreRadius[2] = Math
+		.sqrt(b[1] * b[1] + b[2] * b[2] - 4 * b[0] * b[3])
+		/ (Math.abs(b[0]) * 2);
+	return centreRadius;
+    }
 
     /**
      * Chernov's non-biased Hyper algebraic method. Simple version.
