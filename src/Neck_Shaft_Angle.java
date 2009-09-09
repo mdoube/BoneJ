@@ -57,13 +57,10 @@ import java.awt.event.*;
 import Jama.*;
 
 import org.doube.bonej.ResultInserter;
+import org.doube.bonej.FitCircle;
 /*
  * TODO incorporate curvature
- * curvature = maximum deflection of the slice centroid from the 
- * SVD long axis as a ratio to bone length.  Deflection should
- * be resolved to M-L and Cr-Ca planes; M-L plane contains SVD
- * long axis and centre of femoral head; Cr-Ca plane is perpendicular to
- * M-L plane
+ * curvature = radius of circle fit to diaphyseal slice centroids
  */
 
 public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
@@ -549,7 +546,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	//http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
 	//with denominator = 1 because we use a unit vector for |(x2 - x1)|
 
-	
+	double[][] mL = new double[ this.endSlice - this.startSlice + 1][2];
+	int i = 0;
 	for (int s = this.startSlice; s <= this.endSlice; s++){
 	    if (!emptySlices[s]){
 		double x0x = sliceCentroids[0][s];
@@ -625,12 +623,36 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 				
 //		IJ.log("Mediolateral deflection at slice "+s+" is "+medioLateral);
 		IJ.log(s+", "+distance+", "+medioLateral+", "+cranioCaudal);
-		
+		mL[i][0] = medioLateral;
+		mL[i][1] = s * this.cal.pixelDepth;
+		i++;
 	    }
 	    else{
 //		IJ.log("No pixels to calculate centroid in slice "+s);
 	    }
 	}
+	FitCircle fc = new FitCircle();
+	double[][] testCircle = fc.getTestCircle(10, 10, 15, 20, 0.03);
+	double[] circle = fc.hyperStable(testCircle);
+	IJ.log("Stable Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.hyperSimple(testCircle);
+	IJ.log("Simple Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.kasaFit(testCircle);
+	IJ.log("Kåsa Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.prattNewton(testCircle);
+	IJ.log("Pratt-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.prattSVD(testCircle);
+	IJ.log("Pratt-SVD Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.taubinNewton(testCircle);
+	IJ.log("Taubin-Newton Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
+	
+	circle = fc.taubinSVD(testCircle);
+	IJ.log("Taubin-SVD Circle of radius "+circle[2]+" centred on ("+circle[0]+","+circle[1]+")");
 	return;
     }
 
