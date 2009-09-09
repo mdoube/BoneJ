@@ -16,7 +16,6 @@
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import Jama.Matrix;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -25,12 +24,9 @@ import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
-//import ij.measure.ResultsTable;
-
-import java.awt.Rectangle;
-import java.awt.List;
 
 import org.doube.bonej.ResultInserter;
+import org.doube.bonej.FitSphere;
 
 /**
  *<p>Takes point selections from ROI manager and returns the
@@ -83,10 +79,20 @@ public class Fit_Sphere implements PlugInFilter {
 	if (!showDialog()){
 	    return;
 	}
-	double[] sphereDim = fitSphere(imp, roiMan);
+	FitSphere fs = new FitSphere();
+	double[][] points = fs.getRoiManPoints(imp, roiMan);
+	double[] sphereDim = fs.fitSphere(points);
 	if (doCopy) copySphere(imp, ip, padding, cropFactor, sphereDim);
 	if (doInnerCube) copyInnerCube(imp, ip, cropFactor, sphereDim);
 	if (doOuterCube) copyOuterCube(imp, ip, cropFactor, sphereDim);
+	
+	String units = imp.getCalibration().getUnits();
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(imp, "X centroid ("+units+")", sphereDim[0]);
+	ri.setResultInRow(imp, "Y centroid ("+units+")", sphereDim[1]);
+	ri.setResultInRow(imp, "Z centroid ("+units+")", sphereDim[2]);
+	ri.setResultInRow(imp, "Radius ("+units+")", sphereDim[3]);
+	ri.updateTable();
     }
 
     public boolean showDialog(){
@@ -117,103 +123,7 @@ public class Fit_Sphere implements PlugInFilter {
 	voxDim[2] = cal.pixelDepth;
 	return voxDim;
     }
-    /**
-     * Fit a sphere to a set of 3D point ROI's
-     * 
-     * @param imp ImagePlus
-     * @param roiMan RoiManager containing points placed on sphere
-     * @return double[4] containing calibrated (x,y,z,r) coordinates of the centre and radius, r.
-     */
-    public double[] fitSphere(ImagePlus imp, RoiManager roiMan){
-	double[] voxDim = getVoxDim(imp);
-	double[] sphereDim = new double[4];
-	int no_p = roiMan.getCount();
-	List listRoi = roiMan.getList();
-	double[] datapoints = new double[3*no_p];
-	double xSum = 0, ySum = 0, zSum = 0;
-	Roi[] roiList = roiMan.getRoisAsArray();
-	int j = 0;
-	for (int i = 0; i<roiMan.getCount(); i++){
-	    Roi roi = roiList[i];
-	    if (roi.getType() == 10){
-		String label = listRoi.getItem(i);
-		Rectangle xy = roi.getBoundingRect();
-		datapoints[3*j] = xy.getX()*voxDim[0];
-		datapoints[3*j+1] = xy.getY()*voxDim[1];
-		datapoints[3*j+2] = roiMan.getSliceNumber(label)*voxDim[2];
-		xSum += datapoints[3*j];
-		ySum += datapoints[3*j+1];
-		zSum += datapoints[3*j+2];
-		j++;
-	    }
-	}
-	no_p = j;
-	if (no_p < 5) IJ.error("ROI Manager contains < 5 point ROIs./n" +
-	"Add some point ROIs and try again.");
-	sphereDim[0] = xSum/no_p;
-	sphereDim[1] = ySum/no_p;
-	sphereDim[2] = zSum/no_p;
-	double[] r = new double[no_p];
-	double g_new = 100.0;
-	double g_old = 1.0;
-	sphereDim[3] = 0;
-	for (int i = 0; i < no_p; i++)
-	    sphereDim[3] += Math.sqrt((datapoints[3*i]-sphereDim[0])*(datapoints[3*i]-sphereDim[0])
-		    + (datapoints[3*i+1]-sphereDim[1])*(datapoints[3*i+1]-sphereDim[1])
-		    + (datapoints[3*i+2]-sphereDim[2])*(datapoints[3*i+2]-sphereDim[2]));
-	sphereDim[3] /= no_p;
-	while (Math.abs(g_new-g_old) > 1e-10){
-	    Matrix J = new Matrix(no_p, 4);
-	    double[][] Jp = J.getArray();
-	    Matrix d = new Matrix(no_p, 1);
-	    double[][] dp = d.getArray(); //dp is a pointer to d's values
-	    g_old = g_new;
-	    for (int i = 0; i < no_p; i++){
-		r[i] = Math.sqrt((datapoints[3*i]-sphereDim[0])*(datapoints[3*i]-sphereDim[0])
-			+ (datapoints[3*i+1]-sphereDim[1])*(datapoints[3*i+1]-sphereDim[1])
-			+ (datapoints[3*i+2]-sphereDim[2])*(datapoints[3*i+2]-sphereDim[2]));
-		dp[i][0] = r[i] - sphereDim[3];
-		Jp[i][0] = -(datapoints[3*i]-sphereDim[0])/r[i];
-		Jp[i][1] = -(datapoints[3*i+1]-sphereDim[1])/r[i];
-		Jp[i][2] = -(datapoints[3*i+2]-sphereDim[2])/r[i];
-		Jp[i][3] = -1;
-	    }
-	    d = d.times(-1);
-	    Matrix J1 = J;
-	    J = J.transpose();
-	    Matrix J2 = J.times(J1);
-	    Matrix Jd = J.times(d);
-	    Matrix x = J2.inverse().times(Jd);
-	    double[][] xp = x.getArray();
-	    sphereDim[0] += xp[0][0];
-	    sphereDim[1] += xp[1][0];
-	    sphereDim[2] += xp[2][0];
-	    sphereDim[3] += xp[3][0];
-	    d = d.times(-1);
-	    Matrix G = J.times(d);
-	    double[][] Gp = G.getArray();
-	    g_new = 0.0;
-	    for (int i = 0; i < 4; i++)
-		g_new += Gp[i][0];
-	}
-	Calibration cal = imp.getCalibration();
-	/*
-	ResultsTable rt = ResultsTable.getResultsTable();
-	int row = rt.getCounter();
-	rt.incrementCounter();
-	rt.setLabel(imp.getTitle(), row);rt.setValue("X centroid ("+cal.getUnits()+")", row, sphereDim[0]);
-	rt.setValue("Y centroid ("+cal.getUnits()+")", row, sphereDim[1]);
-	rt.setValue("Z centroid ("+cal.getUnits()+")", row, sphereDim[2]);
-	rt.setValue("Radius ("+cal.getUnits()+")", row, sphereDim[3]);
-	rt.show("Results");*/
-	ResultInserter ri = new ResultInserter();
-	ri.setResultInRow(imp, "X centroid ("+cal.getUnits()+")", sphereDim[0]);
-	ri.setResultInRow(imp, "Y centroid ("+cal.getUnits()+")", sphereDim[1]);
-	ri.setResultInRow(imp, "Z centroid ("+cal.getUnits()+")", sphereDim[2]);
-	ri.setResultInRow(imp, "Radius ("+cal.getUnits()+")", sphereDim[3]);
-	ri.updateTable();
-	return sphereDim;
-    }
+    
     //TODO make this go faster by getting slice pixels and iterating through
     //it's array rather than using setSlice and getPixel
     public void copySphere(ImagePlus imp, ImageProcessor ip, int padding, double cropFactor, double[] sphereDim){

@@ -150,7 +150,7 @@ public class FitSphere {
 	    for (int i = 0; i < 4; i++)
 		g_new += Gp[i][0];
 	}
-	double[] centreRadius = new double[4];
+	double[] centreRadius = {x, y, z, r};
 	return centreRadius;
     }
 }
