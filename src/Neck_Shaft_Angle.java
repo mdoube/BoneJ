@@ -47,15 +47,14 @@ import ij.process.ImageProcessor;
 import ij.plugin.filter.PlugInFilter;
 import ij.plugin.frame.RoiManager;
 import ij.measure.Calibration;
-//import ij.measure.ResultsTable;
 import ij.gui.*;
 
-import java.awt.List;
 import java.awt.Rectangle;
 import java.awt.event.*;
 
 import Jama.*;
 
+import org.doube.bonej.FitSphere;
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitCircle;
 /*
@@ -123,7 +122,9 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	    "placed on the boundary of the femoral head");
 	    return;
 	} else {
-	    this.headCentre = fitSphere(this.imp, roiMan);
+	    FitSphere fs = new FitSphere();
+	    double[][] points = fs.getRoiManPoints(imp, roiMan);
+	    this.headCentre = fs.fitSphere(points);
 	}
 	ImageWindow win = this.imp.getWindow();
 	this.canvas = win.getCanvas();
@@ -154,89 +155,6 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener{
 	this.canvas.removeMouseListener(this);
 	return;
     }
-
-    /**
-     * Fit a sphere to points in the ROI manager
-     * 
-     * @param imp
-     * @param roiMan
-     * @return double[4] containing (x,y,z) coordinates of centre and radius of sphere
-     */
-    public double[] fitSphere(ImagePlus imp, RoiManager roiMan){
-	double[] voxDim = {cal.pixelWidth, cal.pixelHeight, cal.pixelDepth};
-	double[] sphereDim = new double[4];
-	int no_p = roiMan.getCount();
-	List listRoi = roiMan.getList();
-	double[] datapoints = new double[3*no_p];
-	double xSum = 0, ySum = 0, zSum = 0;
-	Roi[] roiList = roiMan.getRoisAsArray();
-	int j = 0;
-	for (int i = 0; i<roiMan.getCount(); i++){
-	    Roi roi = roiList[i];
-	    if (roi.getType() == 10){
-		String label = listRoi.getItem(i);
-		Rectangle xy = roi.getBoundingRect();
-		datapoints[3*j] = xy.getX()*voxDim[0];
-		datapoints[3*j+1] = xy.getY()*voxDim[1];
-		datapoints[3*j+2] = roiMan.getSliceNumber(label)*voxDim[2];
-		xSum += datapoints[3*j];
-		ySum += datapoints[3*j+1];
-		zSum += datapoints[3*j+2];
-		j++;
-	    }
-	}
-	no_p = j;
-	if (no_p < 5) IJ.error("ROI Manager contains < 5 point ROIs./n" +
-	"Add some point ROIs and try again.");
-	sphereDim[0] = xSum/no_p;
-	sphereDim[1] = ySum/no_p;
-	sphereDim[2] = zSum/no_p;
-	double[] r = new double[no_p];
-	double g_new = 100.0;
-	double g_old = 1.0;
-	sphereDim[3] = 0;
-	for (int i = 0; i < no_p; i++)
-	    sphereDim[3] += Math.sqrt((datapoints[3*i]-sphereDim[0])*(datapoints[3*i]-sphereDim[0])
-		    + (datapoints[3*i+1]-sphereDim[1])*(datapoints[3*i+1]-sphereDim[1])
-		    + (datapoints[3*i+2]-sphereDim[2])*(datapoints[3*i+2]-sphereDim[2]));
-	sphereDim[3] /= no_p;
-	while (Math.abs(g_new-g_old) > 1e-10){
-	    Matrix J = new Matrix(no_p, 4);
-	    double[][] Jp = J.getArray();
-	    Matrix d = new Matrix(no_p, 1);
-	    double[][] dp = d.getArray(); //dp is a pointer to d's values
-	    g_old = g_new;
-	    for (int i = 0; i < no_p; i++){
-		r[i] = Math.sqrt((datapoints[3*i]-sphereDim[0])*(datapoints[3*i]-sphereDim[0])
-			+ (datapoints[3*i+1]-sphereDim[1])*(datapoints[3*i+1]-sphereDim[1])
-			+ (datapoints[3*i+2]-sphereDim[2])*(datapoints[3*i+2]-sphereDim[2]));
-		dp[i][0] = r[i] - sphereDim[3];
-		Jp[i][0] = -(datapoints[3*i]-sphereDim[0])/r[i];
-		Jp[i][1] = -(datapoints[3*i+1]-sphereDim[1])/r[i];
-		Jp[i][2] = -(datapoints[3*i+2]-sphereDim[2])/r[i];
-		Jp[i][3] = -1;
-	    }
-	    d = d.times(-1);
-	    Matrix J1 = J;
-	    J = J.transpose();
-	    Matrix J2 = J.times(J1);
-	    Matrix Jd = J.times(d);
-	    Matrix x = J2.inverse().times(Jd);
-	    double[][] xp = x.getArray();
-	    sphereDim[0] += xp[0][0];
-	    sphereDim[1] += xp[1][0];
-	    sphereDim[2] += xp[2][0];
-	    sphereDim[3] += xp[3][0];
-	    d = d.times(-1);
-	    Matrix G = J.times(d);
-	    double[][] Gp = G.getArray();
-	    g_new = 0.0;
-	    for (int i = 0; i < 4; i++)
-		g_new += Gp[i][0];
-	}
-	IJ.log("headCentre = ("+sphereDim[0]+", "+sphereDim[1]+", "+sphereDim[2]+"): headRadius = "+sphereDim[3]+" "+cal.getUnits());
-	return sphereDim;
-    }/* end fitSPhere */
 
     /**
      * Find the centroid of the voxels of interest
