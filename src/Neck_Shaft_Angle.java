@@ -415,23 +415,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
     }
 
     public void calculateAngles() {
-	double[][] neckVector = neckVector(headCentre, neckPoint); // contains a
-	// 3D
-	// coordinate
-	// that
-	// defines
-	// the middle
-	// of the
-	// neck;
-	// perhaps
-	// get it
-	// with a
-	// mouse
-	// click and
-	// dynamically
-	// update
-	// neck-shaft
-	// angle?
+	double[][] neckVector = neckVector(headCentre, neckPoint);
 	double[][] projectionPlane = projectionPlane(shaftVector, headCentre,
 		centroid);
 	double[][] neckPlane = neckPlane(neckVector, projectionPlane);

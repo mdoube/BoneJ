@@ -514,6 +514,149 @@ public class FitCircle {
 	return;
     }
 
+    private double getNorm(double[] values){
+	int nValues = values.length;
+	double sumSquares = 0;
+	for (int i = 0; i < nValues; i++){
+	    sumSquares += values[i] * values[i];
+	}
+	double norm = Math.sqrt(sumSquares);
+	return norm;
+    }
+    
+    private double getNorm(Matrix A){
+	int n = A.getColumnDimension();
+	int m = A.getRowDimension();
+	double sumSquares = 0;
+	for (int i = 0; i < m; i++){
+	    for (int j = 0; j < n; j++){
+	    sumSquares += A.get(i, j);
+	    }
+	}
+	double norm = Math.sqrt(sumSquares);
+	return norm;
+    }
+    
+    /**
+     * Levenberg-Marquardt fit in the "full" (a,b,R) space
+     * 
+     * @param points
+     * @return
+     */
+    public double[] levenMarqFull(double[][] points){
+	int nPoints = points.length;
+	double[] guess = taubinSVD(points);
+	double[][] par = {{guess[0]},{guess[1]},{guess[2]}};
+	Matrix Par = new Matrix(par);
+	Matrix ParTemp = new Matrix(par);
+	double lambdaIni = 1;
+	double epsilon = 1e-6;
+	double progress;
+	int iterMax = 50;
+	double lambda_sqrt = Math.sqrt(lambdaIni);
+	double x = guess[0];
+	double y = guess[1];
+	double r = guess[2];
+	
+	double f = 0;
+	double[][] j = new double[nPoints+3][3];
+	double[][] g = new double[nPoints+3][1];
+	for (int i = 0; i < nPoints; i++){
+	    double dX = points[i][0] - x;
+	    double dY = points[i][1] - y;
+	    double d = Math.sqrt(dX * dX + dY * dY);
+	    j[i][0] = -dX / d;
+	    j[i][1] = -dY / d;
+	    j[i][2] = -1;
+	    g[i][0] = d - r;
+	    f += (d-r)*(d-r);
+	}
+	double fTemp = 0;
+	double[][] jTemp = new double[nPoints+3][3];
+	double[][] gTemp = new double[nPoints+3][1];
+	Matrix J = new Matrix(j);
+	Matrix G = new Matrix(g);
+	for (int iter = 0; iter < iterMax; iter++){
+	    while (1 > 0){ //always true
+		J.set(nPoints-3, 0, lambda_sqrt);
+		J.set(nPoints-2, 1, lambda_sqrt);
+		J.set(nPoints-1, 2, lambda_sqrt);
+		G.set(nPoints-3, 0, 0);
+		G.set(nPoints-2, 0, 0);
+		G.set(nPoints-1, 0, 0);
+		Matrix DelPar = (J.inverse()).times(G);
+		progress = getNorm(DelPar)/getNorm(guess) + epsilon;
+		if (progress < epsilon){
+		    break;
+		}
+		ParTemp = Par.minus(DelPar.transpose());
+		for (int i = 0; i < nPoints; i++){
+		    double dX = points[i][0] - ParTemp.get(0, 0);
+		    double dY = points[i][1] - ParTemp.get(1, 0);
+		    double d = Math.sqrt(dX * dX + dY * dY);
+		    jTemp[i][0] = -dX / d;
+		    jTemp[i][1] = -dY / d;
+		    jTemp[i][2] = -1;
+		    gTemp[i][0] = d - r;
+		    fTemp += (d-r)*(d-r);
+		}
+		if (fTemp < f && ParTemp.get(2,0) > 0){
+	               lambda_sqrt /= 2;
+	               break;
+		} else {
+		    lambda_sqrt *= 2;
+		    continue;
+		}
+	    }
+	    if (progress < epsilon){
+		break;
+	    }
+	}
+	Par = ParTemp;  j = jTemp;  g = gTemp;  f = fTemp;
+	double[] centreRadius = new double[3];
+	return centreRadius;	
+    }
+    
+//    for iter=1:IterMAX         %  main loop, each run is one (main) iteration
+//
+//        while (1)         %  secondary loop - adjusting Lambda (no limit on cycles)
+//
+//            DelPar = [J; lambda_sqrt*eye(3)]\[g; zeros(3,1)];   % step candidate
+//            progress = norm(DelPar)/(norm(Par)+epsilon);
+//            if (progress < epsilon)  break;  end;               % stopping rule
+//            ParTemp = Par - DelPar';
+//            [JTemp,gTemp,FTemp] = CurrentIteration(ParTemp,XY);  % objective function + derivatives
+//
+//            if (FTemp < F && ParTemp(3)>0)        %   yes, improvement
+//               lambda_sqrt = lambda_sqrt/2;   % reduce lambda, move to next iteration
+//               break;
+//            else                            %   no improvement
+//               lambda_sqrt = lambda_sqrt*2; % increase lambda, recompute the step
+//               continue;
+//            end
+//        end   %   while (1), the end of the secondary loop
+//    %    fprintf(1,'   %d     %.8f   %.8f   %.8f\n',iter,Par);
+//        if (progress < epsilon)  break;  end;             % stopping rule
+//        Par = ParTemp;  J = JTemp;  g = gTemp;  F = FTemp;  % update the iteration
+//    end    %  the end of the main loop (over iterations)
+//    end    %    LM
+//
+//    %================ function CurrentIteration ================
+//
+//    function [J,g,F] = CurrentIteration(Par,XY)
+//
+//    %    computes the objective function F and its derivatives at the current point Par
+//
+//    Dx = XY(:,1) - Par(1);
+//    Dy = XY(:,2) - Par(2);
+//    D = sqrt(Dx.*Dx + Dy.*Dy);
+//    J = [-Dx./D, -Dy./D,  -ones(size(XY,1),1)];
+//    g = D - Par(3);
+//    F = norm(g)^2;
+//
+//    end  %  CurrentIteration
+
+    
     /**
      * Generate coordinates of a circle
      * 
