@@ -118,7 +118,7 @@ public class FitCircle {
 	double ynew = 1e+20;
 	int IterMax = 20;
 	double xnew = 0;
-	for (int iter = 0; iter < IterMax; iter++) {
+	for (int iter = 0; iter <= IterMax; iter++) {
 	    double yold = ynew;
 	    ynew = A0 + xnew * (A1 + xnew * (A2 + 4 * xnew * xnew));
 	    if (Math.abs(ynew) > Math.abs(yold)) {
@@ -136,14 +136,14 @@ public class FitCircle {
 		IJ.log("Newton-Pratt will not converge");
 		xnew = 0;
 	    }
-	    if (xnew < 0.) {
+	    if (xnew < 0) {
 		IJ.log("Newton-Pratt negative root:  x= " + xnew);
 		xnew = 0;
 	    }
 	}
 	double det = xnew * xnew - xnew * Mz + Cov_xy;
-	double x = Mxz * (Myy - xnew) - Myz * Mxy / (det * 2);
-	double y = Myz * (Mxx - xnew) - Mxz * Mxy / (det * 2);
+	double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
+	double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
 	double r = Math.sqrt(x * x + y * y + Mz + 2 * xnew);
 
 	double[] centreRadius = { x + centroid[0], y + centroid[1], r };
@@ -379,7 +379,7 @@ public class FitCircle {
 		{ 4 * s2, 0, 1, 0 }, { 2, 0, 0, 0 } };
 	Matrix N = new Matrix(n);
 	Matrix NM = (N.inverse()).times(M);
-	
+
 	EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
 	Matrix E = ED.getV();
 	Matrix D = ED.getD();
@@ -538,8 +538,8 @@ public class FitCircle {
 		    * Math.sin(theta) + x;
 	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
 		    * Math.cos(theta) + y;
-	    IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
-		    + testCircle[i][1] + ")");
+	    // IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
+	    // + testCircle[i][1] + ")");
 	}
 
 	return testCircle;
