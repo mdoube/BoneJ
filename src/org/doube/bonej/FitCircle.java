@@ -35,6 +35,7 @@ import Jama.SingularValueDecomposition;
  *      Al-Sharadqha & Chernov (2009) <a
  *      href="http://dx.doi.org/10.1214/09-EJS419"> Error analysis for circle
  *      fitting algorithms</a>. Electronic Journal of Statistics 3, pp. 886-911<br/>
+ *      <br />
  *      <a href="http://www.math.uab.edu/~chernov/cl/MATLABcircle.html"
  *      >http://www.math.uab.edu/~chernov/cl/MATLABcircle.html</a>
  *      </p>
@@ -45,6 +46,8 @@ public class FitCircle {
     /**
      * Kåsa fit
      * 
+     * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      * 
      */
     public double[] kasaFit(double[][] points) {
@@ -75,10 +78,9 @@ public class FitCircle {
     /**
      * Pratt method (Newton style)
      * 
-     * Can't handle noise
+     * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      * 
-     * @param points
-     * @return
      */
     public double[] prattNewton(double[][] points) {
 	int nPoints = points.length;
@@ -289,7 +291,7 @@ public class FitCircle {
     /**
      * Taubin method, SVD version
      * 
-     * @param points
+     * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      */
     public double[] taubinSVD(double[][] points) {
@@ -538,8 +540,6 @@ public class FitCircle {
 		    * Math.sin(theta) + x;
 	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
 		    * Math.cos(theta) + y;
-	    // IJ.log("testCircle[n] is (" + testCircle[i][0] + ", "
-	    // + testCircle[i][1] + ")");
 	}
 
 	return testCircle;
