@@ -618,45 +618,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 		// IJ.log("No pixels to calculate centroid in slice "+s);
 	    }
 	}
-	FitCircle fc = new FitCircle();
-	double[][] testCircle = fc.getTestCircle(5, 10, 15, 200, 0.3 , 0.5 * Math.PI, 0.01);	
-	double[] circle = fc.kasaFit(testCircle);
-	IJ.log("Kåsa Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.hyperStable(testCircle);
-	IJ.log("Stable Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.hyperSimple(testCircle);
-	IJ.log("Simple Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-	
-	circle = fc.prattNewton(testCircle);
-	IJ.log("Pratt-Newton Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.prattSVD(testCircle);
-	IJ.log("Pratt-SVD Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.taubinNewton(testCircle);
-	IJ.log("Taubin-Newton Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.taubinSVD(testCircle);
-	IJ.log("Taubin-SVD Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-	
-	circle = fc.levenMarqFull(testCircle);
-	IJ.log("Levenburg-Marquardt (Full) Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-	
-	circle = fc.levenMarqRed(testCircle);
-	IJ.log("Levenburg-Marquardt (Reduced) Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-	
-	return;
+		return;
     }
 
     public void mousePressed(MouseEvent e) {
