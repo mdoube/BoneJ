@@ -19,7 +19,7 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import ij.IJ;
+//import ij.IJ;
 
 import Jama.Matrix;
 import Jama.EigenvalueDecomposition;
@@ -122,7 +122,7 @@ public class FitCircle {
 	    double yold = ynew;
 	    ynew = A0 + xnew * (A1 + xnew * (A2 + 4 * xnew * xnew));
 	    if (Math.abs(ynew) > Math.abs(yold)) {
-		IJ.log("Newton-Pratt goes wrong direction: |ynew| > |yold|");
+		System.out.println("Newton-Pratt goes wrong direction: |ynew| > |yold|");
 		xnew = 0;
 		break;
 	    }
@@ -133,11 +133,11 @@ public class FitCircle {
 		break;
 	    }
 	    if (iter >= IterMax) {
-		IJ.log("Newton-Pratt will not converge");
+		System.out.println("Newton-Pratt will not converge");
 		xnew = 0;
 	    }
 	    if (xnew < 0) {
-		IJ.log("Newton-Pratt negative root:  x= " + xnew);
+		System.out.println("Newton-Pratt negative root:  x= " + xnew);
 		xnew = 0;
 	    }
 	}
@@ -178,7 +178,7 @@ public class FitCircle {
 	Matrix W;
 	if (S.get(3, 3) / S.get(0, 0) < 1e-12) {
 	    A = V.getMatrix(0, V.getRowDimension() - 1, 3, 3);
-	    IJ.log("Pratt singular case");
+	    System.out.println("Pratt singular case");
 	} else {
 	    W = V.times(S);
 	    double[][] bInv = { { 0, 0, 0, -0.5 }, { 0, 1, 0, 0 },
@@ -256,7 +256,7 @@ public class FitCircle {
 	    double yold = ynew;
 	    ynew = A0 + xnew * (A1 + xnew * (A2 + xnew * A3));
 	    if (Math.abs(ynew) > Math.abs(yold)) {
-		IJ.log("Newton-Taubin goes wrong direction: |ynew| > |yold|");
+		System.out.println("Newton-Taubin goes wrong direction: |ynew| > |yold|");
 		xnew = 0;
 		break;
 	    }
@@ -267,11 +267,11 @@ public class FitCircle {
 		break;
 	    }
 	    if (iter >= iterMax) {
-		IJ.log("Newton-Taubin will not converge");
+		System.out.println("Newton-Taubin will not converge");
 		xnew = 0;
 	    }
 	    if (xnew < 0.) {
-		IJ.log("Newton-Taubin negative root: x = " + xnew);
+		System.out.println("Newton-Taubin negative root: x = " + xnew);
 		xnew = 0;
 	    }
 	}
@@ -497,7 +497,7 @@ public class FitCircle {
     }
 
     public void printMatrix(Matrix matrix, String title) {
-	IJ.log(title);
+	System.out.println(""+title);
 	int nCols = matrix.getColumnDimension();
 	int nRows = matrix.getRowDimension();
 	double[][] eVal = matrix.getArrayCopy();
@@ -507,7 +507,7 @@ public class FitCircle {
 		row = row + eVal[r][c] + "|";
 	    }
 	    row = row + "|";
-	    IJ.log(row);
+	    System.out.println(row);
 	}
 	return;
     }
@@ -535,7 +535,7 @@ public class FitCircle {
      */
     public double[] levenMarqFull(double[][] points) {
 	int nPoints = points.length;
-	double[] guess = taubinSVD(points);
+	double[] guess = hyperStable(points);
 	double x = guess[0];
 	double y = guess[1];
 	double r = guess[2];
@@ -627,7 +627,7 @@ public class FitCircle {
      */
     public double[] levenMarqRed(double[][] points) {
 	int nPoints = points.length;
-	double[] guess = taubinSVD(points);
+	double[] guess = hyperStable(points);
 	double x = guess[0];
 	double y = guess[1];
 
@@ -817,14 +817,12 @@ public class FitCircle {
 	for (int a = diagD.length - 1; a >= 0; a--) {
 	    double currentMax = diagD[0];
 	    int maxIndex = 0;
-//	    int currentMaxNum = 0;
 	    int maxValue = index[0];
 	    for (int b = 1; b <= a; b++) {
 		if (currentMax > diagD[b]) {
 		    currentMax = diagD[b];
 		    maxIndex = b;
 		    maxValue = index[b];
-//		    currentMaxNum = b;
 		}
 	    }
 	    if (maxIndex != a){
@@ -836,10 +834,10 @@ public class FitCircle {
 	}
 
 	if (diagD[diagD.length-1] > 0) {
-	    IJ.error("Error: the smallest e-value is positive...");
+	    System.out.println("Error: the smallest e-value is positive...");
 	}
 	if (diagD[diagD.length-2] < 0) {
-	    IJ.error("Error: the second smallest e-value is negative...");
+	    System.out.println("Error: the second smallest e-value is negative...");
 	}
 	int col = index[index.length - n];
 	return col;

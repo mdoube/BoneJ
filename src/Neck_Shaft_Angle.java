@@ -624,6 +624,14 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	IJ.log("Kåsa Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
 
+	circle = fc.hyperStable(testCircle);
+	IJ.log("Stable Circle of radius " + circle[2] + " centred on ("
+		+ circle[0] + "," + circle[1] + ")");
+
+	circle = fc.hyperSimple(testCircle);
+	IJ.log("Simple Circle of radius " + circle[2] + " centred on ("
+		+ circle[0] + "," + circle[1] + ")");
+	
 	circle = fc.prattNewton(testCircle);
 	IJ.log("Pratt-Newton Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
@@ -648,14 +656,6 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	IJ.log("Levenburg-Marquardt (Reduced) Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
 	
-	circle = fc.hyperStable(testCircle);
-	IJ.log("Stable Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.hyperSimple(testCircle);
-	IJ.log("Simple Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
 	return;
     }
 
