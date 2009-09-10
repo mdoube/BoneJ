@@ -619,16 +619,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	    }
 	}
 	FitCircle fc = new FitCircle();
-	double[][] testCircle = fc.getTestCircle(10, 10, 15, 20, 0.03);
-	double[] circle = fc.hyperStable(testCircle);
-	IJ.log("Stable Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.hyperSimple(testCircle);
-	IJ.log("Simple Circle of radius " + circle[2] + " centred on ("
-		+ circle[0] + "," + circle[1] + ")");
-
-	circle = fc.kasaFit(testCircle);
+	double[][] testCircle = fc.getTestCircle(5, 10, 15, 200, 0.3 , 0.5 * Math.PI, 0.01);	
+	double[] circle = fc.kasaFit(testCircle);
 	IJ.log("Kåsa Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
 
@@ -655,6 +647,15 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	circle = fc.levenMarqRed(testCircle);
 	IJ.log("Levenburg-Marquardt (Reduced) Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
+	
+	circle = fc.hyperStable(testCircle);
+	IJ.log("Stable Circle of radius " + circle[2] + " centred on ("
+		+ circle[0] + "," + circle[1] + ")");
+
+	circle = fc.hyperSimple(testCircle);
+	IJ.log("Simple Circle of radius " + circle[2] + " centred on ("
+		+ circle[0] + "," + circle[1] + ")");
+
 	return;
     }
 

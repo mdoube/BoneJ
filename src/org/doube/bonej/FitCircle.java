@@ -19,8 +19,6 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.Arrays;
-
 import ij.IJ;
 
 import Jama.Matrix;
@@ -534,7 +532,6 @@ public class FitCircle {
      *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
-
      */
     public double[] levenMarqFull(double[][] points) {
 	int nPoints = points.length;
@@ -627,14 +624,13 @@ public class FitCircle {
      *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
-
      */
     public double[] levenMarqRed(double[][] points) {
 	int nPoints = points.length;
 	double[] guess = taubinSVD(points);
 	double x = guess[0];
 	double y = guess[1];
-	
+
 	double[][] par = { { x, y } };
 	Matrix Par = new Matrix(par);
 	Matrix ParTemp = new Matrix(par);
@@ -667,7 +663,7 @@ public class FitCircle {
 	double meanDx = sumDx / nPoints;
 	double meanDy = sumDy / nPoints;
 	double r = sumD / nPoints;
-	for (int i = 0; i < nPoints; i++){
+	for (int i = 0; i < nPoints; i++) {
 	    j[i][0] += meanDx;
 	    j[i][1] += meanDy;
 	    double d = dd[i];
@@ -697,7 +693,9 @@ public class FitCircle {
 		ParTemp = Par.minus(DelPar.transpose());
 		x = ParTemp.get(0, 0);
 		y = ParTemp.get(0, 1);
-		sumDx = 0; sumDy = 0; sumD = 0;
+		sumDx = 0;
+		sumDy = 0;
+		sumD = 0;
 		for (int i = 0; i < nPoints; i++) {
 		    double dX = points[i][0] - x;
 		    double dY = points[i][1] - y;
@@ -714,7 +712,7 @@ public class FitCircle {
 		meanDx = sumDx / nPoints;
 		meanDy = sumDy / nPoints;
 		rTemp = sumD / nPoints;
-		for (int i = 0; i < nPoints; i++){
+		for (int i = 0; i < nPoints; i++) {
 		    jTemp[i][0] += meanDx;
 		    jTemp[i][1] += meanDy;
 		    double d = dd[i];
@@ -741,6 +739,41 @@ public class FitCircle {
 	double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), r };
 	return centreRadius;
     }
+
+    /**
+     * Generate coordinates of a circular arc
+     * 
+     * @param x
+     *            x coordinate of centre
+     * @param y
+     *            y coordinate of centre
+     * @param r
+     *            radius of circle
+     * @param startAngle
+     *            initial angle in radians
+     * @param endAngle
+     *            final angle in radians
+     * @param n
+     *            Number of coordinates
+     * @param noise
+     *            Add noise of intensity 'noise'
+     * 
+     * @return
+     */
+    public double[][] getTestCircle(double x, double y, double r, int n,
+	    double startAngle, double endAngle, double noise) {
+	double[][] testCircle = new double[n][2];
+	double arc = (endAngle - startAngle) / (2 * Math.PI);
+	for (int i = 0; i < n; i++) {
+	    double theta = startAngle + i * 2 * Math.PI * arc / n;
+	    testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5))
+		    * Math.sin(theta) + x;
+	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
+		    * Math.cos(theta) + y;
+	}
+
+	return testCircle;
+    }
     
     /**
      * Generate coordinates of a circle
@@ -758,19 +791,8 @@ public class FitCircle {
      * 
      * @return
      */
-    public double[][] getTestCircle(double x, double y, double r, int n,
-	    double noise) {
-	double[][] testCircle = new double[n][2];
-
-	for (int i = 0; i < n; i++) {
-	    double theta = i * 2 * Math.PI / n;
-	    testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5))
-		    * Math.sin(theta) + x;
-	    testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
-		    * Math.cos(theta) + y;
-	}
-
-	return testCircle;
+    public double[][] getTestCircle(double x, double y, double r, int n, double noise) {
+	return getTestCircle(x, y, r, 0, 2*Math.PI, n, noise);
     }
 
     /**
@@ -786,35 +808,40 @@ public class FitCircle {
      */
     private int getNthSmallestCol(Matrix D, int n) {
 	double[] diagD = new double[D.getColumnDimension()];
-	double[] dDtest = new double[D.getColumnDimension()];
+	int[] index = new int[D.getColumnDimension()];
 	for (int i = 0; i < D.getColumnDimension(); i++) {
 	    diagD[i] = D.get(i, i);
-	    dDtest[i] = D.get(i, i);
+	    index[i] = i;
 	}
-	Arrays.sort(diagD);
-	double sSvalue = diagD[n - 1];
-	int col = Arrays.binarySearch(dDtest, sSvalue);
 
-	if (diagD[0] > 0) {
+	for (int a = diagD.length - 1; a >= 0; a--) {
+	    double currentMax = diagD[0];
+	    int maxIndex = 0;
+//	    int currentMaxNum = 0;
+	    int maxValue = index[0];
+	    for (int b = 1; b <= a; b++) {
+		if (currentMax > diagD[b]) {
+		    currentMax = diagD[b];
+		    maxIndex = b;
+		    maxValue = index[b];
+//		    currentMaxNum = b;
+		}
+	    }
+	    if (maxIndex != a){
+		      diagD[maxIndex] = diagD[a];
+		      diagD[a] = currentMax;
+		      index[maxIndex] = index[a];
+		      index[a] = maxValue;
+	    }
+	}
+
+	if (diagD[diagD.length-1] > 0) {
 	    IJ.error("Error: the smallest e-value is positive...");
 	}
-	if (diagD[1] < 0) {
+	if (diagD[diagD.length-2] < 0) {
 	    IJ.error("Error: the second smallest e-value is negative...");
 	}
+	int col = index[index.length - n];
 	return col;
     }
-    
-    /**
-     * Return the mean value of an array
-     * @param values
-     * @return
-     */
-    double getMean(double[] values){
-	double sumValues = 0;
-	for (int i = 0; i < values.length; i++){
-	    sumValues += values[i];
-	}
-	return sumValues / values.length;
-    }
-
 }
