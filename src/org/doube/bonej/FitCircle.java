@@ -571,7 +571,9 @@ public class FitCircle {
 	double[][] gTemp = new double[nPoints + 3][1];
 
 	for (int iter = 0; iter < iterMax; iter++) {
-	    while (1 > 0) {
+	    int safety = 0;
+	    while (safety < 100) {
+		safety++;
 		J.set(nPoints, 0, lambda_sqrt);
 		J.set(nPoints + 1, 1, lambda_sqrt);
 		J.set(nPoints + 2, 2, lambda_sqrt);
@@ -680,7 +682,9 @@ public class FitCircle {
 	double[][] gTemp = new double[nPoints + 2][1];
 
 	for (int iter = 0; iter < iterMax; iter++) {
-	    while (1 > 0) {
+	    int safety = 0;
+	    while (safety < 100) {
+		safety++;
 		J.set(nPoints, 0, lambda_sqrt);
 		J.set(nPoints + 1, 1, lambda_sqrt);
 		G.set(nPoints, 0, 0);
