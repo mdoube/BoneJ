@@ -531,7 +531,10 @@ public class FitCircle {
      * Levenberg-Marquardt fit in the "full" (a,b,R) space
      * 
      * @param points
-     * @return
+     *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
+     *         circle radius
+
      */
     public double[] levenMarqFull(double[][] points) {
 	int nPoints = points.length;
@@ -618,6 +621,171 @@ public class FitCircle {
     }
 
     /**
+     * Levenberg-Marquardt fit in the "reduced" (a,b) space
+     * 
+     * @param points
+     *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+     * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
+     *         circle radius
+
+     */
+    public double[] levenMarqRed(double[][] points) {
+	int nPoints = points.length;
+	double[] guess = taubinSVD(points);
+	double x = guess[0];
+	double y = guess[1];
+	
+	double[][] par = { { x, y } };
+	Matrix Par = new Matrix(par);
+	Matrix ParTemp = new Matrix(par);
+	double lambdaIni = 1;
+	double epsilon = 1e-6;
+	double progress = epsilon;
+	int iterMax = 50;
+	double lambda_sqrt = Math.sqrt(lambdaIni);
+
+	double f = 0;
+	double[][] j = new double[nPoints + 2][2];
+	double[][] g = new double[nPoints + 2][1];
+	double sumDx = 0;
+	double sumDy = 0;
+	double sumD = 0;
+	double[] dd = new double[nPoints];
+	for (int i = 0; i < nPoints; i++) {
+	    double dX = points[i][0] - x;
+	    double dY = points[i][1] - y;
+	    double d = Math.sqrt(dX * dX + dY * dY);
+	    dX /= d;
+	    dY /= d;
+	    dd[i] = d;
+	    sumDx += dX;
+	    sumDy += dY;
+	    sumD += d;
+	    j[i][0] = -dX;
+	    j[i][1] = -dY;
+	}
+	double meanDx = sumDx / nPoints;
+	double meanDy = sumDy / nPoints;
+	double r = sumD / nPoints;
+	for (int i = 0; i < nPoints; i++){
+	    j[i][0] += meanDx;
+	    j[i][1] += meanDy;
+	    double d = dd[i];
+	    g[i][0] = d - r;
+	    f += (d - r) * (d - r);
+	}
+
+	Matrix J = new Matrix(j);
+	Matrix G = new Matrix(g);
+
+	double fTemp = 0;
+	double rTemp = 0;
+	double[][] jTemp = new double[nPoints + 2][2];
+	double[][] gTemp = new double[nPoints + 2][1];
+
+	for (int iter = 0; iter < iterMax; iter++) {
+	    while (1 > 0) {
+		J.set(nPoints, 0, lambda_sqrt);
+		J.set(nPoints + 1, 1, lambda_sqrt);
+		G.set(nPoints, 0, 0);
+		G.set(nPoints + 1, 0, 0);
+		Matrix DelPar = (J.inverse()).times(G);
+		progress = getNorm(DelPar) / (r + getNorm(Par) + epsilon);
+		if (progress < epsilon) {
+		    break;
+		}
+		ParTemp = Par.minus(DelPar.transpose());
+		x = ParTemp.get(0, 0);
+		y = ParTemp.get(0, 1);
+		sumDx = 0; sumDy = 0; sumD = 0;
+		for (int i = 0; i < nPoints; i++) {
+		    double dX = points[i][0] - x;
+		    double dY = points[i][1] - y;
+		    double d = Math.sqrt(dX * dX + dY * dY);
+		    dX /= d;
+		    dY /= d;
+		    dd[i] = d;
+		    sumDx += dX;
+		    sumDy += dY;
+		    sumD += d;
+		    jTemp[i][0] = -dX;
+		    jTemp[i][1] = -dY;
+		}
+		meanDx = sumDx / nPoints;
+		meanDy = sumDy / nPoints;
+		rTemp = sumD / nPoints;
+		for (int i = 0; i < nPoints; i++){
+		    jTemp[i][0] += meanDx;
+		    jTemp[i][1] += meanDy;
+		    double d = dd[i];
+		    gTemp[i][0] = d - rTemp;
+		    fTemp += (d - rTemp) * (d - rTemp);
+		}
+		if (fTemp < f) {
+		    lambda_sqrt /= 2;
+		    break;
+		} else {
+		    lambda_sqrt *= 2;
+		    continue;
+		}
+	    }
+	    if (progress < epsilon) {
+		break;
+	    }
+	    Par = ParTemp;
+	    j = jTemp;
+	    g = gTemp;
+	    f = fTemp;
+	    r = rTemp;
+	}
+	double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), r };
+	return centreRadius;
+    }
+//
+//    for iter=1:IterMAX         %  main loop, each run is one (main) iteration
+//
+//        while (1)         %  secondary loop - adjusting Lambda (no limit on cycles)
+//        
+//            DelPar = [J; lambda_sqrt*eye(2)]\[g; zeros(2,1)];   % step candidate
+//            progress = norm(DelPar)/(Radius+norm(Par)+epsilon);
+//            if (progress < epsilon)  break;  end;               % stopping rule
+//            ParTemp = Par - DelPar';
+//            [JTemp,gTemp,FTemp,RadiusTemp] = CurrentIteration(ParTemp,XY); objective function + derivatives
+//
+//            if (FTemp < F)                  %   yes, improvement
+//               lambda_sqrt = lambda_sqrt/2;   % reduce lambda, move to next iteration
+//               break;
+//            else                            %   no improvement
+//               lambda_sqrt = lambda_sqrt*2; % increase lambda, recompute the step
+//               continue;
+//            end
+//        end   %   while (1), the end of the secondary loop
+//        if (progress < epsilon)  break;  end;             % stopping rule
+//        Par = ParTemp;  J = JTemp;  g = gTemp;  F = FTemp;  Radius = RadiusTemp;  % update the iteration
+//    %    fprintf(1,' %3d   %.5f  %.5f\n',iter,Par);
+//    end    %  the end of the main loop (over iterations)
+//    Par = [Par , Radius];   % assembling the full parameter vector "Par" for output
+//    end    %    LMreduced
+//
+//    %================ function CurrentIteration ================
+//
+//    function [J,g,F,Radius] = CurrentIteration(Par,XY)
+//
+//    %    computes the objective function F and its derivatives at the current point Par
+//
+//    Dx = XY(:,1) - Par(1);
+//    Dy = XY(:,2) - Par(2);
+//    D = sqrt(Dx.*Dx + Dy.*Dy);
+//    Dx = Dx./D;  Dy = Dy./D;
+//    J = [-Dx+mean(Dx) , -Dy+mean(Dy)];
+//    Radius = mean(D);
+//    g = D - Radius;
+//    F = norm(g)^2;
+//
+//    end  %  CurrentIteration
+
+    
+    /**
      * Generate coordinates of a circle
      * 
      * @param x
@@ -677,6 +845,19 @@ public class FitCircle {
 	    IJ.error("Error: the second smallest e-value is negative...");
 	}
 	return col;
+    }
+    
+    /**
+     * Return the mean value of an array
+     * @param values
+     * @return
+     */
+    double getMean(double[] values){
+	double sumValues = 0;
+	for (int i = 0; i < values.length; i++){
+	    sumValues += values[i];
+	}
+	return sumValues / values.length;
     }
 
 }

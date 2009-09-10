@@ -652,6 +652,9 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	IJ.log("Levenburg-Marquardt (Full) Circle of radius " + circle[2] + " centred on ("
 		+ circle[0] + "," + circle[1] + ")");
 	
+	circle = fc.levenMarqRed(testCircle);
+	IJ.log("Levenburg-Marquardt (Reduced) Circle of radius " + circle[2] + " centred on ("
+		+ circle[0] + "," + circle[1] + ")");
 	return;
     }
 
