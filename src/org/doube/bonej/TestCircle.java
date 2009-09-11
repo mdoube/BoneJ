@@ -8,7 +8,7 @@ import org.doube.bonej.FitCircle;
 /**
  * Check out how different circle fitting algorithms handle data.
  * 
- * @author mdoube
+ * @author Michael Doube
  *
  */
 public class TestCircle implements PlugIn {

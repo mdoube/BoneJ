@@ -19,8 +19,6 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//import ij.IJ;
-
 import Jama.Matrix;
 import Jama.EigenvalueDecomposition;
 import Jama.SingularValueDecomposition;
@@ -797,6 +795,19 @@ public class FitCircle {
      */
     public double[][] getTestCircle(double x, double y, double r, int n, double noise) {
 	return getTestCircle(x, y, r, 0, 2*Math.PI, n, noise);
+    }
+    
+    /**
+     * Calculate the errors between the fit and the coordinates
+     * 
+     * @param points
+     * @param abR
+     * @return
+     */
+    public double[] getErrors(double[][] points, double[] abR){
+	//TODO implement errors of estimates
+	double[] errors = new double[3];
+	return errors;
     }
 
     /**
