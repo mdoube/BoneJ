@@ -531,7 +531,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] levenMarqFull(double[][] points) {
+    public double[] levenMarqFull(double[][] points, double lambdaIni) {
 	int nPoints = points.length;
 	double[] guess = hyperStable(points);
 	double x = guess[0];
@@ -541,7 +541,6 @@ public class FitCircle {
 	double[][] par = { { x, y, r } };
 	Matrix Par = new Matrix(par);
 	Matrix ParTemp = new Matrix(par);
-	double lambdaIni = 1;
 	double epsilon = 1e-6;
 	double progress = epsilon;
 	int iterMax = 50;
@@ -616,6 +615,16 @@ public class FitCircle {
 	double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), Par.get(0, 2) };
 	return centreRadius;
     }
+    
+    /**
+     * If initial value of Lambda is not supplied, it defaults to 1
+     * 
+     * @param points
+     * @return
+     */
+    public double[] levenMarqFull(double[][] points){
+	return levenMarqFull(points, 1);	
+    }
 
     /**
      * Levenberg-Marquardt fit in the "reduced" (a,b) space
@@ -625,16 +634,14 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] levenMarqRed(double[][] points) {
+    public double[] levenMarqRed(double[][] points, double lambdaIni) {
 	int nPoints = points.length;
 	double[] guess = hyperStable(points);
 	double x = guess[0];
 	double y = guess[1];
-
 	double[][] par = { { x, y } };
 	Matrix Par = new Matrix(par);
 	Matrix ParTemp = new Matrix(par);
-	double lambdaIni = 1;
 	double epsilon = 1e-6;
 	double progress = epsilon;
 	int iterMax = 50;
@@ -740,6 +747,15 @@ public class FitCircle {
 	}
 	double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), r };
 	return centreRadius;
+    }
+    
+    /**
+     * If initial value for lambda is not supplied, it defaults to 1.
+     * @param points
+     * @return
+     */
+    public double[] levenMarqRed(double[][] points) {
+	return levenMarqRed(points, 1);
     }
 
     /**
