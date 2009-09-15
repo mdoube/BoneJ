@@ -19,7 +19,6 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import ij.IJ;
 import Jama.Matrix;
 import Jama.EigenvalueDecomposition;
 import Jama.SingularValueDecomposition;
@@ -326,8 +325,8 @@ public class FitCircle {
 	b[b.length - 1] = -meanZ * a1;
 	double[] centreRadius = new double[3];
 
-	centreRadius[0] = b[1] / (a1 * 2) + centroid[0];
-	centreRadius[1] = b[2] / (a1 * 2) + centroid[1];
+	centreRadius[0] = -b[1] / (a1 * 2) + centroid[0];
+	centreRadius[1] = -b[2] / (a1 * 2) + centroid[1];
 	centreRadius[2] = Math
 		.sqrt(b[1] * b[1] + b[2] * b[2] - 4 * b[0] * b[3])
 		/ (Math.abs(b[0]) * 2);
@@ -506,7 +505,6 @@ public class FitCircle {
 		row = row + eVal[r][c] + "|";
 	    }
 	    row = row + "|";
-	    System.out.println(row);
 	}
 	return;
     }
