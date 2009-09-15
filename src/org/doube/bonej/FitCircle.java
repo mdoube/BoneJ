@@ -814,15 +814,39 @@ public class FitCircle {
     }
     
     /**
-     * Calculate the errors between the fit and the coordinates
+     * Calculate the mean squared errors between the fit circle and the coordinates
      * 
      * @param points
      * @param abR
-     * @return
+     * @return double[] containing mean squared errors in x, y, R and sum of (x, y, R)
      */
     public double[] getErrors(double[][] points, double[] abR){
-	//TODO implement errors of estimates
-	double[] errors = new double[3];
+	int nPoints = points.length;
+
+	double a = abR[0];
+	double b = abR[1];
+	double R = abR[2];
+	double sumX2 = 0;
+	double sumY2 = 0;
+	double sumR2 = 0;
+	
+	for (int i = 0; i < nPoints; i++){
+	    double x = points[i][0];
+	    double y = points[i][1];
+	    double r = Math.sqrt((x-a)*(x-a) + (y-b)*(y-b));
+	    double theta = Math.atan2((y-b), (x-a));
+	    double xt = R * Math.cos(theta) + a;
+	    double yt = R * Math.sin(theta) + b;
+	    
+	    sumX2 += (x - xt) * (x - xt);
+	    sumY2 += (y - yt) * (y - yt);
+	    sumR2 += (R - r) * (R - r);
+	}
+	double[] errors = new double[4];
+	errors[0] = sumX2 / nPoints;
+	errors[1] = sumY2 / nPoints;
+	errors[2] = sumR2 / nPoints;
+	errors[3] = errors[0] + errors[1] + errors[2];
 	return errors;
     }
 

@@ -43,6 +43,8 @@ public class TestCircle implements PlugIn {
     boolean doLevenMarqFull;
 
     boolean doLevenMarqRed;
+    
+    boolean doErrors;
 
     ResultsTable rt;
 
@@ -58,41 +60,59 @@ public class TestCircle implements PlugIn {
 	if (doKasa) {
 	    double[] circle = fc.kasaFit(testCircle);
 	    addResult(circle, "Kåsa");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	if (doHyperStable) {
 	    double[] circle = fc.hyperStable(testCircle);
 	    addResult(circle, "Hyper Stable");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 
 	if (doHyperSimple) {
 	    double[] circle = fc.hyperSimple(testCircle);
 	    addResult(circle, "Hyper Simple");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 
 	if (doPrattNTN) {
 	    double[] circle = fc.prattNewton(testCircle);
 	    addResult(circle, "Pratt-Newton");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 
 	if (doPrattSVD) {
 	    double[] circle = fc.prattSVD(testCircle);
 	    addResult(circle, "Pratt-SVD");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	if (doTaubinNTN) {
 	    double[] circle = fc.taubinNewton(testCircle);
 	    addResult(circle, "Taubin-Newton");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	if (doTaubinSVD) {
 	    double[] circle = fc.taubinSVD(testCircle);
 	    addResult(circle, "Taubin-SVD");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	if (doLevenMarqFull) {
 	    double[] circle = fc.levenMarqFull(testCircle);
 	    addResult(circle, "Levenburg-Marquardt (full)");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	if (doLevenMarqRed) {
 	    double[] circle = fc.levenMarqRed(testCircle);
 	    addResult(circle, "Levenburg-Marquardt (reduced)");
+	    if (doErrors)
+		addErrors(fc.getErrors(testCircle, circle));
 	}
 	return;
     }
@@ -106,7 +126,16 @@ public class TestCircle implements PlugIn {
 	rt.show("Results");
 	return;
     }
-
+    
+    private void addErrors(double[] errors) {
+	rt.addValue("Xe", errors[0]);
+	rt.addValue("Ye", errors[1]);
+	rt.addValue("Re", errors[2]);
+	rt.addValue("MSE", errors[3]);
+	rt.show("Results");
+	return;
+    }
+    
     private boolean showDialog() {
 	GenericDialog gd = new GenericDialog("Options");
 	gd.addMessage("Circle parameters");
@@ -128,6 +157,7 @@ public class TestCircle implements PlugIn {
 	gd.addCheckbox("Taubin-SVD", true);
 	gd.addCheckbox("Levenburg-Marquardt (Full)", true);
 	gd.addCheckbox("Levenburg-Marquardt (Reduced)", true);
+	gd.addCheckbox("Calculate errors", true);
 
 	gd.showDialog();
 	if (gd.wasCanceled()) {
@@ -150,6 +180,7 @@ public class TestCircle implements PlugIn {
 	    doTaubinSVD = gd.getNextBoolean();
 	    doLevenMarqFull = gd.getNextBoolean();
 	    doLevenMarqRed = gd.getNextBoolean();
+	    doErrors = gd.getNextBoolean();
 	    return true;
 	}
     }
