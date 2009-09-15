@@ -50,13 +50,11 @@ import org.doube.bonej.FitCircle;
  * <b>S</b> is the singular value decomposition (orthogonal distance regression)
  * vector that passes through the centroid (<b>B</b>) of the bone and describes
  * the long axis of the bone.<br/>
- * <b>C</b> is the centre of a sphere fit to the
- * femoral head.<br/>
+ * <b>C</b> is the centre of a sphere fit to the femoral head.<br/>
  * 
- * <b>P</b> is the plane that contains <b>S</b> and <b>C</b>.
- * <br />
- * <b>N</b> is the projection onto <b>P</b> of a vector originating at <b>C</b> and passing through
- * the 'middle' of the femoral neck.<br />
+ * <b>P</b> is the plane that contains <b>S</b> and <b>C</b>. <br />
+ * <b>N</b> is the projection onto <b>P</b> of a vector originating at <b>C</b>
+ * and passing through the 'middle' of the femoral neck.<br />
  * 
  * Singular value decomposition performed with the <a
  * href="http://math.nist.gov/javanumerics/jama/">Jama</a> package
@@ -526,6 +524,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	// with denominator = 1 because we use a unit vector for |(x2 - x1)|
 
 	double[][] mL = new double[this.endSlice - this.startSlice + 1][2];
+	double[][] cC = new double[this.endSlice - this.startSlice + 1][2];
 	int i = 0;
 	for (int s = this.startSlice; s <= this.endSlice; s++) {
 	    if (!emptySlices[s]) {
@@ -584,7 +583,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 
 		double cranioCaudal = (defVectX * pPx + defVectY * pPy + defVectZ
 			* pPz);
-
+		cC[i][0] = cranioCaudal;
+		cC[i][1] = t;
 		// IJ.log("Craniocaudal deflection at slice "+s+" is "+cranioCaudal);
 
 		// mediolateral deflection is distance in projectionPlane, i.e.
@@ -609,16 +609,30 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 		medioLateral *= sign;
 
 		// IJ.log("Mediolateral deflection at slice "+s+" is "+medioLateral);
-		IJ.log(s + ", " + distance + ", " + medioLateral + ", "
-			+ cranioCaudal);
+		IJ.log(s + "," + t + ", " + distance + ", " + medioLateral
+			+ ", " + cranioCaudal);
 		mL[i][0] = medioLateral;
-		mL[i][1] = s * this.cal.pixelDepth;
+		mL[i][1] = t;
 		i++;
 	    } else {
 		// IJ.log("No pixels to calculate centroid in slice "+s);
 	    }
 	}
-		return;
+	// Calculate circle fitting for mL and cC deflections
+	ResultInserter ri = new ResultInserter();
+	String units = this.cal.getUnits();
+	
+	FitCircle fc = new FitCircle();
+	double[] mLabR = fc.hyperStable(mL);
+	double[] cCabR = fc.hyperStable(cC);
+	ri.setResultInRow(imp, "M-L radius ("+units+")", mLabR[2]);
+	ri.setResultInRow(imp, "M-L centre X ("+units+")", mLabR[0]);
+	ri.setResultInRow(imp, "M-L centre Y ("+units+")", mLabR[1]);
+	ri.setResultInRow(imp, "Cr-Ca radius ("+units+")", cCabR[2]);
+	ri.setResultInRow(imp, "Cr-Ca centre X ("+units+")", cCabR[0]);
+	ri.setResultInRow(imp, "Cr-Ca centre Y ("+units+")", cCabR[1]);
+	ri.updateTable();
+	return;
     }
 
     public void mousePressed(MouseEvent e) {
@@ -650,8 +664,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 
     public void showDialog(String valueUnit) {
 	GenericDialog gd = new GenericDialog("Setup");
-	gd.addNumericField("Start Slice:", startSlice, 0);
-	gd.addNumericField("End Slice:", endSlice, 0);
+	gd.addNumericField("Shaft Start Slice:", startSlice, 0);
+	gd.addNumericField("Shaft End Slice:", endSlice, 0);
 	gd.addMessage("Only use pixels between clip values:");
 	gd.addNumericField("Clip min.", minT, 0, 6, valueUnit);
 	gd.addNumericField("Clip max.", maxT, 0, 6, valueUnit);
