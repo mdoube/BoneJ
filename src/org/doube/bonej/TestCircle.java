@@ -139,13 +139,13 @@ public class TestCircle implements PlugIn {
     private boolean showDialog() {
 	GenericDialog gd = new GenericDialog("Options");
 	gd.addMessage("Circle parameters");
-	gd.addNumericField("Centre X", 0, 2);
-	gd.addNumericField("Centre Y", 0, 2);
-	gd.addNumericField("Radius", 10, 2);
+	gd.addNumericField("Centre X", 5, 2);
+	gd.addNumericField("Centre Y", 10, 2);
+	gd.addNumericField("Radius", 15, 2);
 	gd.addNumericField("Start angle", 0, 4);
-	gd.addNumericField("End angle", 2 * Math.PI, 4);
-	gd.addNumericField("N points", 50, 0);
-	gd.addNumericField("Noise", 0.01, 2);
+	gd.addNumericField("End angle", 0.5 * Math.PI, 4);
+	gd.addNumericField("N points", 20, 0);
+	gd.addNumericField("Noise", 0, 2);
 
 	gd.addMessage("Algorithms");
 	gd.addCheckbox("Kåsa", true);

@@ -19,6 +19,7 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import ij.IJ;
 import Jama.Matrix;
 import Jama.EigenvalueDecomposition;
 import Jama.SingularValueDecomposition;
@@ -219,20 +220,20 @@ public class FitCircle {
 	    double Xi = points[i][0] - centroid[0];
 	    double Yi = points[i][1] - centroid[1];
 	    double Zi = Xi * Xi + Yi * Yi;
-	    Mxy = Mxy + Xi * Yi;
-	    Mxx = Mxx + Xi * Xi;
-	    Myy = Myy + Yi * Yi;
-	    Mxz = Mxz + Xi * Zi;
-	    Myz = Myz + Yi * Zi;
-	    Mzz = Mzz + Zi * Zi;
+	    Mxy += Xi * Yi;
+	    Mxx += Xi * Xi;
+	    Myy += Yi * Yi;
+	    Mxz += Xi * Zi;
+	    Myz += Yi * Zi;
+	    Mzz += Zi * Zi;
 
 	}
-	Mxx = Mxx / nPoints;
-	Myy = Myy / nPoints;
-	Mxy = Mxy / nPoints;
-	Mxz = Mxz / nPoints;
-	Myz = Myz / nPoints;
-	Mzz = Mzz / nPoints;
+	Mxx /= nPoints;
+	Myy /= nPoints;
+	Mxy /= nPoints;
+	Mxz /= nPoints;
+	Myz /= nPoints;
+	Mzz /= nPoints;
 
 	double Mz = Mxx + Myy;
 	double Cov_xy = Mxx * Myy - Mxy * Mxy;
@@ -275,8 +276,8 @@ public class FitCircle {
 	}
 	double[] centreRadius = new double[3];
 	double det = xnew * xnew - xnew * Mz + Cov_xy;
-	double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det / 2);
-	double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det / 2);
+	double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
+	double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
 	centreRadius[0] = x + centroid[0];
 	centreRadius[1] = y + centroid[1];
 	centreRadius[2] = Math.sqrt(x * x + y * y + Mz);
