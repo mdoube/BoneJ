@@ -505,6 +505,7 @@ public class FitCircle {
 		row = row + eVal[r][c] + "|";
 	    }
 	    row = row + "|";
+	    System.out.println(row);
 	}
 	return;
     }
