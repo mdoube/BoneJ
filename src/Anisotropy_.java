@@ -33,6 +33,7 @@ import javax.vecmath.Color3f;
 import customnode.CustomPointMesh;
 
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -73,7 +74,7 @@ public class Anisotropy_ implements PlugInFilter {
 
     protected ImageStack stack;
 
-    private double radius, vectorSampling, vW, vH, vD;
+    private double radius, vectorSampling, vW, vH, vD, autoModeTolerance = 0.005;
 
     private double[][] coOrdinates;
 
@@ -190,18 +191,27 @@ public class Anisotropy_ implements PlugInFilter {
 	return anisotropy;
     }
 
+    /**
+     * Run Anisotropy using automatic settings. End point is determined by the
+     * coefficient of variation (stDev / mean) of the last 100 anisotropy
+     * measurements falling below a cutoff value.
+     * 
+     * @return anisotropy
+     * 
+     */
     private double runToStableResult() {
-	int minIterations = 50;
+	int minIterations = 100;
 	int maxIterations = 2000;
 	double[][] vectorList = randomVectors(nVectors);
 	double variance = Double.MAX_VALUE;
-	double tolerance = 0.000000000001;
+	double tolerance = autoModeTolerance;
 	double anisotropy = Double.NaN;
 	double[][] centroidList = new double[1][3];
 	double[] centroid = new double[3];
 	double[] interceptCounts = new double[nVectors];
 	double[] sumInterceptCounts = new double[nVectors];
-	double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
+	// double previous = 2; // Anisotropy cannot be greater than 1, so 2
+	// gives
 	// a very high variance
 	double error = 0;
 	this.interceptLengths = new ArrayList<double[]>();
@@ -283,11 +293,17 @@ public class Anisotropy_ implements PlugInFilter {
 	    Matrix eigenValuesF = F.getD();
 	    double[][] fVal = eigenValuesF.getArrayCopy();
 	    error = 1 - fVal[0][0] / fVal[2][2];
-	    errorHistory.add(Math.abs(Math.abs(error) - Math.abs(anisotropy)));
+	    // errorHistory.add(Math.abs(Math.abs(error) -
+	    // Math.abs(anisotropy)));
+	    variance = getVariance(anisotropyHistory, minIterations);
+	    if (variance + anisotropy > 1 || anisotropy - variance < 0) {
+		variance = Math.max(Math.min(1 - anisotropy, anisotropy),
+			tolerance);
+	    }
+	    errorHistory.add(variance);
 	    updateGraph(anisotropyHistory, errorHistory);
-
-	    variance = Math.abs(previous - anisotropy);
-	    previous = anisotropy;
+	    // variance = Math.abs(previous - anisotropy);
+	    // previous = anisotropy;
 	}
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(this.imp, "DA", anisotropy);
@@ -295,6 +311,45 @@ public class Anisotropy_ implements PlugInFilter {
 		- Math.abs(anisotropy)));
 	ri.updateTable();
 	return anisotropy;
+    }
+
+    /**
+     * Calculate coefficient of variation of last n results.
+     * 
+     * @param anisotropyHistory
+     * @return
+     */
+    private double getVariance(Vector<Double> anisotropyHistory, int n) {
+
+	ListIterator<Double> iter = anisotropyHistory
+		.listIterator(anisotropyHistory.size());
+
+	double sum = 0;
+	double sumSquares = 0;
+	int count = 0;
+	while (iter.hasPrevious()) {
+	    double value = iter.previous();
+	    sum += value;
+	    count++;
+	    if (count >= n)
+		break;
+	}
+	double mean = sum / n;
+
+	ListIterator<Double> itr = anisotropyHistory
+		.listIterator(anisotropyHistory.size());
+	count = 0;
+	while (itr.hasPrevious()) {
+	    double value = itr.previous();
+	    sumSquares += (value - mean) * (value - mean);
+	    count++;
+	    if (count >= n)
+		break;
+	}
+
+	double stDev = Math.sqrt(sumSquares / n);
+	double coeffVariation = stDev / mean;
+	return coeffVariation;
     }
 
     /**
@@ -341,6 +396,7 @@ public class Anisotropy_ implements PlugInFilter {
 		stack.getSize() * vD, stack.getWidth() * vW)) / 4;
 	GenericDialog gd = new GenericDialog("Setup");
 	gd.addCheckbox("Auto Mode", doAutoMode);
+	gd.addNumericField("Auto Mode Tolerance", autoModeTolerance, 3);
 	// radius of vector field
 	gd.addNumericField("Radius", radius, 3, 6, units);
 	// number of random vectors in vector field
@@ -369,6 +425,7 @@ public class Anisotropy_ implements PlugInFilter {
 		    return false;
 		}
 		doAutoMode = gd.getNextBoolean();
+		autoModeTolerance = gd.getNextNumber();
 		nVectors = (int) gd.getNextNumber();
 		vectorSampling = gd.getNextNumber();
 		nSpheres = (int) gd.getNextNumber();
