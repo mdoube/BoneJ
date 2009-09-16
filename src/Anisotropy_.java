@@ -215,7 +215,7 @@ public class Anisotropy_ implements PlugInFilter {
 	// a very high variance
 	// double error = 0;
 	this.interceptLengths = new ArrayList<double[]>();
-	createGraph();
+	if (!Interpreter.isBatchMode()) createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
 	Vector<Double> errorHistory = new Vector<Double>();
 	int s = 0;
@@ -392,7 +392,7 @@ public class Anisotropy_ implements PlugInFilter {
 		stack.getSize() * vD, stack.getWidth() * vW)) / 4;
 	GenericDialog gd = new GenericDialog("Setup");
 	gd.addCheckbox("Auto Mode", doAutoMode);
-	gd.addNumericField("Auto Mode Tolerance", autoModeTolerance, 3);
+	gd.addNumericField("Tolerance", autoModeTolerance, 3);
 	// radius of vector field
 	gd.addNumericField("Radius", radius, 3, 6, units);
 	// number of random vectors in vector field

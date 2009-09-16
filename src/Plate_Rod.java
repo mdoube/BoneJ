@@ -9,8 +9,9 @@ import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.GenericDialog;
+import ij.macro.Interpreter;
 import ij.measure.Calibration;
-//import ij.measure.ResultsTable;
+
 
 /**
  * <p>
@@ -33,7 +34,7 @@ import ij.measure.Calibration;
  */
 
 public class Plate_Rod implements PlugInFilter {
-    public ImagePlus imp;
+    private ImagePlus imp;
 
     protected int nVectors = 1000;
 
@@ -68,19 +69,19 @@ public class Plate_Rod implements PlugInFilter {
 
     public void run(ImageProcessor ip) {
 	samplingIncrement = Math.max(vH, Math.max(vW, vD)); // need to get
-                                                                // this from a
-                                                                // dialog
+	// this from a
+	// dialog
 	showDialog();
 	double[][] randomVectors = randomVectors(nVectors);
 	double[][] skeletonPoints = skeletonPoints(this.imp);
 	double[][] localEigenValues = localEigenValues(stack, randomVectors,
 		skeletonPoints, samplingIncrement);
 
-//	ResultsTable rt = ResultsTable.getResultsTable();
+	//	ResultsTable rt = ResultsTable.getResultsTable();
 	double sumEv1 = 0, sumEv2 = 0, sumEv3 = 0;
 	int NaNs = 0;
 	for (int l = 0; l < localEigenValues.length; l++) {
-//	  i.e. so long as it's not NaN
+	    //	  i.e. so long as it's not NaN
 	    if (localEigenValues[l][0] >= 0 || localEigenValues[l][0] < 0) { 
 		sumEv1 += localEigenValues[l][0];
 		sumEv2 += localEigenValues[l][1];
@@ -90,15 +91,7 @@ public class Plate_Rod implements PlugInFilter {
 	    }
 	}
 	IJ.log(NaNs + " tests hit the sides");
-	/*rt.incrementCounter();
-	rt.addLabel("Label", this.imp.getTitle());
-	rt.addValue("ΣeV1", sumEv1);
-	rt.addValue("ΣeV2", sumEv2);
-	rt.addValue("ΣeV3", sumEv3);
-	rt.addValue("eV2/eV1", sumEv2 / sumEv1);
-	rt.addValue("eV3/eV1", sumEv3 / sumEv1);
-	rt.show("Results");*/
-	
+
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(this.imp, "ΣeV1", sumEv1);
 	ri.setResultInRow(this.imp, "ΣeV2", sumEv2);
@@ -110,18 +103,18 @@ public class Plate_Rod implements PlugInFilter {
 
     /* ----------------------------------------------------------------------- */
     /**
-         * Generate an array of randomly-oriented 3D unit vectors
-         * 
-         * @param nVectors
-         *                number of vectors to generate
-         * @return 2D array (nVectors x 3) containing unit vectors
-         */
+     * Generate an array of randomly-oriented 3D unit vectors
+     * 
+     * @param nVectors
+     *                number of vectors to generate
+     * @return 2D array (nVectors x 3) containing unit vectors
+     */
     public double[][] randomVectors(int nVectors) {
 	double[][] randomVectors = new double[nVectors][3];
 	for (int n = 0; n < nVectors; n++) {
 	    randomVectors[n][2] = 2 * Math.random() - 1;
 	    double rho = Math.sqrt(1 - randomVectors[n][2]
-		    * randomVectors[n][2]);
+	                                                * randomVectors[n][2]);
 	    double phi = Math.PI * (2 * Math.random() - 1);
 	    randomVectors[n][0] = rho * Math.cos(phi);
 	    randomVectors[n][1] = rho * Math.sin(phi);
@@ -196,12 +189,12 @@ public class Plate_Rod implements PlugInFilter {
 	int pixPerSlice = w * h;
 	for (int s = 0; s < d; s++) {
 	    byte[] slicePixels = (byte[]) stack.getPixels(s + 1); // slice
-                                                                        // number
-                                                                        // starts
-                                                                        // at 1,
-                                                                        // array
-                                                                        // starts
-                                                                        // at 0
+	    // number
+	    // starts
+	    // at 1,
+	    // array
+	    // starts
+	    // at 0
 	    System.arraycopy(slicePixels, 0, workArray, s * pixPerSlice,
 		    pixPerSlice);
 	}
@@ -218,17 +211,17 @@ public class Plate_Rod implements PlugInFilter {
 		double vectorLength = 0;
 		while (pixelValue < 0 && !hitSide) {
 		    int testPixelX = (int) Math
-			    .floor((skeletonPoints[p][0] + randomVectors[v][0]
-				    * vectorLength)
-				    / vW);
+		    .floor((skeletonPoints[p][0] + randomVectors[v][0]
+		                                                    * vectorLength)
+		                                                    / vW);
 		    int testPixelY = (int) Math
-			    .floor((skeletonPoints[p][1] + randomVectors[v][1]
-				    * vectorLength)
-				    / vH);
+		    .floor((skeletonPoints[p][1] + randomVectors[v][1]
+		                                                    * vectorLength)
+		                                                    / vH);
 		    int testPixelZ = (int) Math
-			    .floor((skeletonPoints[p][2] + randomVectors[v][2]
-				    * vectorLength)
-				    / vD);
+		    .floor((skeletonPoints[p][2] + randomVectors[v][2]
+		                                                    * vectorLength)
+		                                                    / vD);
 		    if (testPixelX < 0 || testPixelX >= w || testPixelY < 0
 			    || testPixelY >= h || testPixelZ < 0
 			    || testPixelZ >= d) {
@@ -236,7 +229,7 @@ public class Plate_Rod implements PlugInFilter {
 			break;
 		    } else {
 			pixelValue = workArray[testPixelZ * pixPerSlice
-				+ testPixelY * w + testPixelX];
+			                       + testPixelY * w + testPixelX];
 			vectorLength += samplingIncrement;
 		    }
 		}
@@ -260,15 +253,15 @@ public class Plate_Rod implements PlugInFilter {
 
     /*---------------------------------------------------------*/
     /**
-         * Calculate the eigenvectors and eigenvalues of a set of points by the
-         * covariance method and eigendecomposition.
-         * 
-         * @param coOrdinates
-         *                n x 3 array centred on (0,0,0)
-         * @return EigenvalueDecomposition containing eigenvectors and
-         *         eigenvalues
-         * 
-         */
+     * Calculate the eigenvectors and eigenvalues of a set of points by the
+     * covariance method and eigendecomposition.
+     * 
+     * @param coOrdinates
+     *                n x 3 array centred on (0,0,0)
+     * @return EigenvalueDecomposition containing eigenvectors and
+     *         eigenvalues
+     * 
+     */
     public EigenvalueDecomposition PrincipalComponents(double[][] coOrdinates) {
 	double sumX = 0, sumY = 0, sumZ = 0;
 	for (int n = 0; n < coOrdinates.length; n++) {
@@ -307,16 +300,20 @@ public class Plate_Rod implements PlugInFilter {
     public boolean showDialog() {
 	GenericDialog gd = new GenericDialog("Setup");
 	gd
-		.addNumericField("Sampling increment", samplingIncrement, 3, 8,
-			units);
+	.addNumericField("Sampling increment", samplingIncrement, 3, 8,
+		units);
 	gd.addNumericField("Vectors", nVectors, 0, 8, "");
 	gd.showDialog();
 	if (gd.wasCanceled()) {
 	    return false;
 	} else {
-	    samplingIncrement = gd.getNextNumber();
-	    nVectors = (int) Math.round(gd.getNextNumber());
-	    return true;
+	    if (!Interpreter.isBatchMode()){
+		samplingIncrement = gd.getNextNumber();
+		nVectors = (int) Math.round(gd.getNextNumber());
+		return true;
+	    } else {
+		return true;
+	    }
 	}
     }
 }

@@ -3,6 +3,7 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.PlotWindow;
+import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ImageProcessor;
@@ -225,18 +226,12 @@ public class Fractal_Count implements PlugInFilter {
 			+ ":" + numOffsets);
 	    }
 
-/*	    ResultsTable rt = ResultsTable.getResultsTable();
-	    rt.incrementCounter();
-	    rt.addLabel(imRef.getTitle());
-	    rt.addValue("Fractal Dimension", p[1]);
-	    rt.show("Results");
-*/
 	    ResultInserter ri = new ResultInserter();
 	    ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
 	    ri.updateTable();
 	    
-	    if (plotGraph) {
-		doPlotGraph(p, boxSizes, boxCountSums);
+	    if (plotGraph && !Interpreter.isBatchMode()) {
+		drawGraph(p, boxSizes, boxCountSums);
 	    }
 
 	} catch (Exception e) {
@@ -247,7 +242,7 @@ public class Fractal_Count implements PlugInFilter {
 	    imRef.unlock();
     }
 
-    public void doPlotGraph(double[] params, double[] boxSizes, double[] boxCountSums) {
+    public void drawGraph(double[] params, double[] boxSizes, double[] boxCountSums) {
 
 	final int samples = 100;
 	float[] px = new float[samples];

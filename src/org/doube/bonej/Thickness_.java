@@ -80,7 +80,7 @@ public class Thickness_ implements  PlugInFilter {
 	if (Interpreter.isBatchMode()){
 	    //show helpful message about voxel size
 	}
-	
+
 	this.baseImp = imp;
 	return DOES_8G;
     }
@@ -88,7 +88,7 @@ public class Thickness_ implements  PlugInFilter {
 	if (!showDialog()){
 	    return;
 	}
-	
+
 	String title = stripExtension(baseImp.getTitle());
 	baseImp.unlock();
 	IJ.freeMemory();
@@ -99,39 +99,42 @@ public class Thickness_ implements  PlugInFilter {
 	vH = baseImp.getCalibration().pixelHeight;
 	vD = baseImp.getCalibration().pixelDepth;
 	//calculate trabecular thickness (Tb.Th)
-	
+
 	float[][] s; 
 	if(doThickness){
-	s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
-	DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
-	DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
-	ImagePlus impLTC = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
-	IJ.freeMemory();
+	    s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
+	    DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
+	    DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
+	    ImagePlus impLTC = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
+	    IJ.freeMemory();
 
-	impLTC.setTitle(title+"_Tr.Th");
-	impLTC.setCalibration(baseImp.getCalibration());
-	meanStdDev(impLTC);
+	    impLTC.setTitle(title+"_Tr.Th");
+	    impLTC.setCalibration(baseImp.getCalibration());
+	    meanStdDev(impLTC);
 
-	impLTC.show();
-	IJ.run("Fire");
+	    if (!Interpreter.isBatchMode()) {
+		impLTC.show();
+		IJ.run("Fire");
+	    }
 	}
 	if(doSpacing){
-	// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
-	inverse = true;
-	s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
-	DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
-	DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
-	ImagePlus impLTCi = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
-	for (int i = 0; i < s.length; i++){
-	    Arrays.fill(s[i], 0);
-	}
-	IJ.freeMemory();
-	impLTCi.setTitle(title+"_Tb.Sp");
-	impLTCi.setCalibration(baseImp.getCalibration());
-	impLTCi.show();
-	IJ.run("Fire");
-
-	meanStdDev(impLTCi);
+	    // check marrow cavity size (i.e. trabcular separation, Tb.Sp)
+	    inverse = true;
+	    s = GeometrytoDistanceMap(baseImp); //8-bit in, 32-bit out
+	    DistanceMaptoDistanceRidge(s); //32-bit in, 32-bit out
+	    DistanceRidgetoLocalThickness(s); //32-bit in, 32-bit out
+	    ImagePlus impLTCi = LocalThicknesstoCleanedUpLocalThickness(s); //32-bit in, 32-bit out
+	    for (int i = 0; i < s.length; i++){
+		Arrays.fill(s[i], 0);
+	    }
+	    IJ.freeMemory();
+	    impLTCi.setTitle(title+"_Tb.Sp");
+	    impLTCi.setCalibration(baseImp.getCalibration());
+	    if (!Interpreter.isBatchMode()){
+		impLTCi.show();
+		IJ.run("Fire");
+	    }
+	    meanStdDev(impLTCi);
 	}
 	IJ.showProgress(1.0);
 	IJ.showStatus("Done");
@@ -175,7 +178,7 @@ public class Thickness_ implements  PlugInFilter {
 	ImageStack stack = imp.getStack();
 	byte[][] data = new byte[d][];
 	for (int k = 0; k < d; k++) data[k] = (byte[])stack.getPixels(k+1);
-	
+
 	//Create 32 bit floating point stack for output, s.  Will also use it for g in Transformation 1.
 	float[][] s = new float[d][];
 	for(int k = 0; k < d; k++){
@@ -268,7 +271,7 @@ public class Thickness_ implements  PlugInFilter {
 	    if(d > n) n = d;
 	    int noResult = 3*(n+1)*(n+1);
 	    boolean[] background = new boolean[n];			
-//	    boolean nonempty;
+	    //	    boolean nonempty;
 	    int test, min;			
 	    for(int k = thread; k < d; k+=nThreads){
 		IJ.showProgress(k/(1.*d));
@@ -365,7 +368,7 @@ public class Thickness_ implements  PlugInFilter {
 	}
 	public void run(){
 	    int zStart,zStop,zBegin,zEnd;
-//	    float[] sk;
+	    //	    float[] sk;
 	    int n = w;
 	    if(h > n) n = h;
 	    if(d > n) n = d;
@@ -591,7 +594,7 @@ public class Thickness_ implements  PlugInFilter {
 		int r = 1 + (int)Math.sqrt(rSq);
 		int scank,scankj;
 		int dk,dkji;
-//		int iBall;
+		//		int iBall;
 		int iPlus;
 		for(int k = 0; k <= r; k++){
 		    scank = k*k;
@@ -1099,7 +1102,7 @@ public class Thickness_ implements  PlugInFilter {
 	    }
 	}
 	double stDev = Math.sqrt(sumSquares / pixCount);
-		
+
 	ResultInserter ri = new ResultInserter();
 	if (!inverse){ 
 	    //trab thickness
@@ -1115,7 +1118,7 @@ public class Thickness_ implements  PlugInFilter {
 	ri.updateTable();
 	return;
     }
-        
+
     private boolean showDialog(){
 	GenericDialog gd = new GenericDialog("Options");
 	gd.addCheckbox("Thickness", true);
