@@ -114,7 +114,6 @@ public class Connectivity_ implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	long startTime = System.currentTimeMillis();
 	Calibration cal = imRef.getCalibration();
 	this.width = this.imRef.getWidth();
 	this.height = this.imRef.getHeight();
@@ -164,15 +163,12 @@ public class Connectivity_ implements PlugInFilter {
 		    + "particles or enclosed cavities.\n\n"
 		    + "Try running Purify prior to Connectivity.");
 	}
-	double duration = ((double) System.currentTimeMillis() - (double) startTime)
-		/ (double) 1000;
 	ResultInserter ri = new ResultInserter();
 	ri.setResultInRow(this.imRef, "Euler ch.", (double) sumEuler / 8);
 	ri.setResultInRow(this.imRef, "Δ(χ)", deltaChi);
 	ri.setResultInRow(this.imRef, "Connectivity", connectivity);
 	ri.setResultInRow(this.imRef, "Tb.N (" + cal.getUnit() + "^-3)",
 		connDensity);
-	ri.setResultInRow(this.imRef, "Duration (s)", duration);
 	ri.updateTable();
 	return;
     }

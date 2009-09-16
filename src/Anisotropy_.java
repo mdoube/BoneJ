@@ -33,7 +33,6 @@ import javax.vecmath.Color3f;
 import customnode.CustomPointMesh;
 
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -74,7 +73,8 @@ public class Anisotropy_ implements PlugInFilter {
 
     protected ImageStack stack;
 
-    private double radius, vectorSampling, vW, vH, vD, autoModeTolerance = 0.005;
+    private double radius, vectorSampling, vW, vH, vD,
+	    autoModeTolerance = 0.005;
 
     private double[][] coOrdinates;
 
@@ -124,10 +124,10 @@ public class Anisotropy_ implements PlugInFilter {
 	    anisotropy = runToStableResult();
 	else {
 	    anisotropy = runOnce();
-	    ResultInserter ri = new ResultInserter();
-	    ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
-	    ri.updateTable();
 	}
+	ResultInserter ri = new ResultInserter();
+	ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
+	ri.updateTable();
 	if (do3DResult) {
 	    plotPoints3D(coOrdinates, "Intercept Lengths");
 	}
@@ -213,7 +213,7 @@ public class Anisotropy_ implements PlugInFilter {
 	// double previous = 2; // Anisotropy cannot be greater than 1, so 2
 	// gives
 	// a very high variance
-	double error = 0;
+	// double error = 0;
 	this.interceptLengths = new ArrayList<double[]>();
 	createGraph();
 	Vector<Double> anisotropyHistory = new Vector<Double>();
@@ -289,10 +289,11 @@ public class Anisotropy_ implements PlugInFilter {
 	    }
 
 	    // calculate principal components
-	    EigenvalueDecomposition F = principalComponents(errorCoOrdinates);
-	    Matrix eigenValuesF = F.getD();
-	    double[][] fVal = eigenValuesF.getArrayCopy();
-	    error = 1 - fVal[0][0] / fVal[2][2];
+	    // EigenvalueDecomposition F =
+	    // principalComponents(errorCoOrdinates);
+	    // Matrix eigenValuesF = F.getD();
+	    // double[][] fVal = eigenValuesF.getArrayCopy();
+	    // error = 1 - fVal[0][0] / fVal[2][2];
 	    // errorHistory.add(Math.abs(Math.abs(error) -
 	    // Math.abs(anisotropy)));
 	    variance = getVariance(anisotropyHistory, minIterations);
@@ -301,15 +302,10 @@ public class Anisotropy_ implements PlugInFilter {
 			tolerance);
 	    }
 	    errorHistory.add(variance);
-	    updateGraph(anisotropyHistory, errorHistory);
+	    if (!Interpreter.isBatchMode()) updateGraph(anisotropyHistory, errorHistory);
 	    // variance = Math.abs(previous - anisotropy);
 	    // previous = anisotropy;
 	}
-	ResultInserter ri = new ResultInserter();
-	ri.setResultInRow(this.imp, "DA", anisotropy);
-	ri.setResultInRow(this.imp, "error", Math.abs(Math.abs(error)
-		- Math.abs(anisotropy)));
-	ri.updateTable();
 	return anisotropy;
     }
 

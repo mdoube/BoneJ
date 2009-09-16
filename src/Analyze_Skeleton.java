@@ -9,6 +9,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.GenericDialog;
+import ij.macro.Interpreter;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ByteProcessor;
@@ -189,7 +190,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    ImageStack stack1 = tagImage(this.inputImage);
 	    this.taggedImage = pruneEndBranches(stack1);
 	    ImagePlus taggedIP = new ImagePlus("Tagged Pruned Image", this.taggedImage);
-	    taggedIP.show();
+	    if (!Interpreter.isBatchMode()) taggedIP.show();
 	}
 	else
 	    this.taggedImage = tagImage(this.inputImage);
@@ -298,15 +299,8 @@ public class Analyze_Skeleton implements PlugInFilter
     private void showResults() 
     {
 	String unit = this.imRef.getCalibration().getUnits();
-	ResultsTable rt = new ResultsTable();
+	
 	ResultInserter ri = new ResultInserter();
-
-	String[] head = {"Skeleton", "# Branches","# Junctions", "# End-point voxels",
-		"# Junction voxels","# Slab voxels", "# Triple points", "Average Branch Length ("+unit+")", 
-		"Maximum Branch Length ("+unit+")", "Sum Branch Length ("+unit+")"};
-
-	for (int i = 0; i < head.length; i++)
-	    rt.setHeading(i,head[i]);	
 
 	for(int i = 0 ; i < this.numOfTrees; i++)
 	{
@@ -580,7 +574,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    }
 	}
 	//Optionally show the trees, colour-coded
-	if (doTrees){
+	if (doTrees && !Interpreter.isBatchMode()){
 	    ImagePlus treeIP = new ImagePlus("Trees", outputImage);
 	    treeIP.show();
 	    IJ.run("Fire");

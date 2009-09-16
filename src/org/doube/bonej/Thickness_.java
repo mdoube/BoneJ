@@ -9,7 +9,7 @@ import ij.process.*;
 import java.util.Arrays;
 
 /* Bob Dougherty 8/10/2007
-Perform all of the steps for the local thickness calculaton
+Perform all of the steps for the local thickness calculation
 
 
  License:
@@ -1073,10 +1073,7 @@ public class Thickness_ implements  PlugInFilter {
 	ImageStack stack = imp.getStack();
 	long pixCount = 0;
 	double sumThick = 0;
-	long pixCountFiltered = 0;
-	double sumThickFiltered = 0;
 	double maxThick = 0;
-	double minRes = 2 * baseImp.getCalibration().pixelWidth;
 	for (int s = 1; s <= stack.getSize(); s++){
 	    float[] slicePixels = (float[])stack.getPixels(s);
 	    for (int p = 0; p < slicePixels.length; p++){
@@ -1085,18 +1082,12 @@ public class Thickness_ implements  PlugInFilter {
 		    sumThick += pixVal;
 		    maxThick = Math.max(maxThick, pixVal);
 		    pixCount++;
-		    if (pixVal > minRes){
-			sumThickFiltered += pixVal;
-			pixCountFiltered++;
-		    }
 		}
 	    }
 	}
 	double meanThick = sumThick / pixCount;
-	double meanThickFiltered = sumThickFiltered / pixCountFiltered;
 
 	double sumSquares = 0;
-	double sumSquaresFiltered = 0;
 	for (int s = 1; s <= stack.getSize(); s++){
 	    float[] slicePixels = (float[])stack.getPixels(s);
 	    for (int p = 0; p < slicePixels.length; p++){
@@ -1104,30 +1095,21 @@ public class Thickness_ implements  PlugInFilter {
 		if (pixVal > 0){
 		    double d = meanThick - pixVal;
 		    sumSquares += d * d;
-		    if (pixVal > minRes){
-			double df = meanThickFiltered - pixVal;
-			sumSquaresFiltered += df * df;					    
-		    }
 		}
 	    }
 	}
 	double stDev = Math.sqrt(sumSquares / pixCount);
-	double stDevF = Math.sqrt(sumSquaresFiltered / pixCountFiltered);
-	
+		
 	ResultInserter ri = new ResultInserter();
 	if (!inverse){ 
 	    //trab thickness
 	    ri.setResultInRow(baseImp, "Tb.Th Mean ("+units+")", meanThick);
-	    ri.setResultInRow(baseImp, "Tb.Th Mean F ("+units+")", meanThickFiltered);
 	    ri.setResultInRow(baseImp, "Tb.Th Std Dev ("+units+")", stDev);
-	    ri.setResultInRow(baseImp, "Tb.Th Std Dev F ("+units+")", stDevF);
 	    ri.setResultInRow(baseImp, "Tb.Th Max ("+units+")", maxThick);
 	} else {
 	    //trab separation
 	    ri.setResultInRow(baseImp, "Tb.Sp Mean ("+units+")", meanThick);
-	    ri.setResultInRow(baseImp, "Tb.Sp Mean F ("+units+")", meanThickFiltered);
 	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev ("+units+")", stDev);
-	    ri.setResultInRow(baseImp, "Tb.Sp Std Dev F ("+units+")", stDevF);
 	    ri.setResultInRow(baseImp, "Tb.Sp Max ("+units+")", maxThick);
 	}
 	ri.updateTable();
