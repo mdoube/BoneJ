@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  * Connectivity_ plugin for ImageJ
  * Copyright 2009 Michael Doube 
@@ -23,7 +24,6 @@ import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
-import org.doube.bonej.ResultInserter;
 
 /**
  * <p>
@@ -80,7 +80,7 @@ import org.doube.bonej.ResultInserter;
  *      </p>
  * 
  */
-public class Connectivity_ implements PlugInFilter {
+public class Connectivity implements PlugInFilter {
     /** working image plus */
     private ImagePlus imRef;
 
