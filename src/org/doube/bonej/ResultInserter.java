@@ -18,96 +18,106 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.PlugInFilter;
 
 /**
- * Receive results from analytic methods and insert them into the 
- * Results table in a sensible way.
+ * Receive results from analytic methods and insert them into the Results table
+ * in a sensible way.
  * 
- * <p>Each image gets a line; measurements of different types 
- * are added to the same line; repeat measurements on same image
- * go on a new line.</p>
+ * <p>
+ * Each image gets a line; measurements of different types are added to the same
+ * line; repeat measurements on same image go on a new line.
+ * </p>
  * 
  * @author Michael Doube
- *
+ * 
  */
-public class ResultInserter implements PlugInFilter{
-    @SuppressWarnings("unused")
-    private ImagePlus imp;
-    private ResultsTable rt;
+public class ResultInserter implements PlugInFilter {
+	@SuppressWarnings("unused")
+	private ImagePlus imp;
+	private ResultsTable rt;
 
-    public int setup(String arg, ImagePlus imp){
-	this.imp = imp;
-	return DOES_ALL;
-    }
-    public void run(ImageProcessor ip){
-	return;
-    }
-    /**
-     * Finds the first available space for a result,
-     * avoiding lots of empty space when measurements of different types
-     * are made on the same image
-     * 
-     * @param imp ImagePlus
-     * @param colHeading column heading
-     * @param value value to insert
-     */
-    //TODO use a table other than the system Results table
-    public void setResultInRow(ImagePlus imp, String colHeading, double value){
-	rt = ResultsTable.getResultsTable();
-	String table = "Results";
-	rt.show(table);
-	
-	String title = imp.getTitle();
+	public int setup(String arg, ImagePlus imp) {
+		this.imp = imp;
+		return DOES_ALL;
+	}
 
-	//search for the first row that contains the image title
-	//and contains no value for the heading
-	for (int row = 0; row < rt.getCounter(); row++){
-	    if (rt.getLabel(row).equals(title)){
-		//there could be no column called colHeading
-		if (!rt.columnExists(rt.getColumnIndex(colHeading))){
-		    //in which case, just insert the value
-		    rt.setValue(colHeading, row, value); 
-		    return;
-		} else {
-		    //but if there is, it might or might not have data in it
-		    Double currentValue =  rt.getValue(colHeading, row);
-		    if(currentValue.equals(Double.NaN)){
-			rt.setValue(colHeading, row, value);
-			return;
-		    } else {
-			//look for another row with the right title
-			continue;
-		    }
+	public void run(ImageProcessor ip) {
+		return;
+	}
+
+	/**
+	 * Finds the first available space for a result, avoiding lots of empty
+	 * space when measurements of different types are made on the same image
+	 * 
+	 * @param imp
+	 *            ImagePlus
+	 * @param colHeading
+	 *            column heading
+	 * @param value
+	 *            value to insert
+	 */
+	// TODO use a table other than the system Results table
+	public void setResultInRow(ImagePlus imp, String colHeading, double value) {
+		rt = ResultsTable.getResultsTable();
+		String table = "Results";
+		rt.show(table);
+
+		String title = imp.getTitle();
+
+		// search for the first row that contains the image title
+		// and contains no value for the heading
+		for (int row = 0; row < rt.getCounter(); row++) {
+			if (rt.getLabel(row).equals(title)) {
+				// there could be no column called colHeading
+				if (!rt.columnExists(rt.getColumnIndex(colHeading))) {
+					// in which case, just insert the value
+					rt.setValue(colHeading, row, value);
+					// and fill all other newly created cells with NaN
+					for (int r = 0; r < rt.getCounter(); r++) {
+						if (r != row)
+							rt.setValue(colHeading, r, Double.NaN);
+					}
+					return;
+				} else {
+					// but if there is, it might or might not have data in it
+					Double currentValue = rt.getValue(colHeading, row);
+					if (currentValue.equals(Double.NaN)) {
+						rt.setValue(colHeading, row, value);
+						return;
+					} else {
+						// look for another row with the right title
+						continue;
+					}
+				}
+			}
 		}
-	    }
+		// we got to the end of the table without finding a space to insert
+		// the value, so make a new row for it
+		String label = "Image";
+		rt.incrementCounter();
+		rt.addLabel(label, title);
+		rt.addValue(colHeading, value);
+		// set all the other values in the row to Double.NaN
+		// (IJ has set them to 0, which is unhelpful, and we can't use null)
+		int row = rt.getCounter() - 1;
+		for (int c = 0; c <= rt.getLastColumn(); c++) {
+			if (!rt.getColumnHeading(c).equals(colHeading)
+					&& !rt.getColumnHeading(c).equals(label)) {
+				rt.setValue(c, row, Double.NaN);
+			}
+		}
+		return;
 	}
-	//we got to the end of the table without finding a space to insert
-	//the value, so make a new row for it
-	String label = "Image";
-	rt.incrementCounter();
-	rt.addLabel(label, title);
-	rt.addValue(colHeading, value);
-	//set all the other values in the row to Double.NaN
-	//(IJ has set them to 0, which is unhelpful, and we can't use null)
-	int row = rt.getCounter() - 1;
-	for (int c = 0; c <= rt.getLastColumn(); c++){
-	    if (!rt.getColumnHeading(c).equals(colHeading)
-		    && !rt.getColumnHeading(c).equals(label)){
-		rt.setValue(c, row, Double.NaN);
-	    }
+
+	/**
+	 * Show the table
+	 */
+	public void updateTable() {
+		String table = "Results";
+		rt.show(table);
 	}
-	return;
-    }
-    /**
-     * Show the table
-     */
-    public void updateTable(){
-	String table = "Results";
-	rt.show(table);
-    }
 }
