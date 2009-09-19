@@ -3,6 +3,8 @@ package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.Plot;
+import ij.measure.CurveFitter;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ImageProcessor;
 
@@ -26,7 +28,7 @@ public class ThresholdMinConn implements PlugInFilter {
 
 		// get a range of thresholds to test
 		int nTests = 11;
-		double testRange = 0.1; // as a fraction of the autothreshold
+		double testRange = 0.2; // as a fraction of the autothreshold
 		double testStep = 2 * testRange * startThreshold / (nTests - 1);
 		int[] testThreshold = new int[nTests];
 		for (int i = 0; i < nTests; i++) {
@@ -37,6 +39,56 @@ public class ThresholdMinConn implements PlugInFilter {
 		// for each test threshold, Purify, get connectivity
 		double[] conns = getConns(this.imp, testThreshold);
 
+		showPlot(testThreshold, conns);
+		
+		double minimum = getMinimum(testThreshold, conns);
+	}
+
+	/**
+	 * Fit a parabola to the threshold and connectivity data and return its minimum
+	 * @param testThreshold
+	 * @param conns
+	 * @return
+	 */
+	private double getMinimum(int[] testThreshold, double[] conns) {
+		//convert xData to double
+		int nPoints = testThreshold.length;
+		double[] xData = new double[nPoints];
+		for (int i = 0; i < nPoints; i++){
+			xData[i] = (double) testThreshold[i];
+		}
+		CurveFitter cf = new CurveFitter(xData, conns);
+		cf.doFit(CurveFitter.POLY2);
+		String parabola = cf.getFormula();
+		double[] params = cf.getParams();
+		IJ.log(parabola);
+		return 0;
+	}
+
+	/**
+	 * Display a graph showing connectivity vs. threshold
+	 * 
+	 * @param testThreshold
+	 * @param conns
+	 */
+	private void showPlot(int[] testThreshold, double[] conns) {
+		//convert arrays to floats
+		int nPoints = testThreshold.length;
+		float[] xData = new float[nPoints];
+		float[] yData = new float[nPoints];
+		for (int i = 0; i < nPoints; i++){
+			xData[i] = (float)testThreshold[i];
+			yData[i] = (float)conns[i];
+		}
+		Plot plot = new Plot("Connectivity vs. Threshold", "Threshold", "Connectivity",
+				xData, yData);
+		plot.addPoints(xData, yData, Plot.DOT);
+		plot.draw();
+		
+		ImageProcessor plotIp = plot.getProcessor();
+		ImagePlus plotImage = new ImagePlus();
+		plotImage.setProcessor(null, plotIp);
+		plotImage.show();
 	}
 
 	/**

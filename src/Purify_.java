@@ -911,6 +911,7 @@ public class Purify_ implements PlugInFilter {
 		for (int z = 0; z < nSlices; z++) {
 			stackPurified.setPixels(workArray[z], z + 1);
 		}
+		this.imp.show();
 		if (!this.imp.isInvertedLut()) IJ.run("Invert LUT");
 	}
 
