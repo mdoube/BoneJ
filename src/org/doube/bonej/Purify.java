@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  *  
  * Purify_ plugin for ImageJ
@@ -87,7 +88,7 @@ import java.util.Arrays;
  *      </p>
  * 
  */
-public class Purify_ implements PlugInFilter {
+public class Purify implements PlugInFilter {
 
 	private final int foreground = -1, background = 0;
 
