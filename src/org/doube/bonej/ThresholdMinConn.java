@@ -12,6 +12,8 @@ import ij.process.ImageProcessor;
 public class ThresholdMinConn implements PlugInFilter {
 
 	private ImagePlus imp;
+	private int testCount = 11;
+	private double testRange = 0.2;
 	private boolean doPlot = false, applyThreshold = false;
 
 	public int setup(String arg, ImagePlus imp) {
@@ -29,29 +31,37 @@ public class ThresholdMinConn implements PlugInFilter {
 			return;
 		}
 
-		int[] testThreshold = getTestThreshold(this.imp);
-		double[] conns = getConns(this.imp, testThreshold);
+		int[] testThreshold = getTestThreshold(imp);
+		double[] conns = getConns(imp, testThreshold);
 		double minimum = getMinimum(testThreshold, conns);
 
 		if (doPlot)
 			showPlot(testThreshold, conns);
 
 		if (applyThreshold) {
-			ip.setThreshold(minimum, getMaximum(this.imp), ImageProcessor.BLACK_AND_WHITE_LUT);
-			IJ.run("Convert to Mask", " ");
-		}
-	}
-
-	private double getMaximum(ImagePlus imp2) {
-		double max = Double.MIN_VALUE;
-		ImageStack stack2 = imp2.getImageStack();
-		for (int z = 1; z <= imp2.getStackSize(); z++){
-			short[] pixels = (short[])stack2.getPixels(z);
-			for (int i = 0; i < pixels.length; i++){
-				max = Math.max(max, pixels[i]);
+			int w = imp.getWidth();
+			int h = imp.getHeight();
+			ImageStack stack = imp.getImageStack();
+			ImageStack stack2 = new ImageStack(w, h);
+			int nPixels = w * h;
+			for (int z = 1; z <= imp.getStackSize(); z++){
+				byte[] slice = new byte[nPixels];
+				ip = stack.getProcessor(z);
+				short[] pixels = (short[])ip.getPixels();
+				for (int i = 0; i < nPixels; i++){
+					if (pixels[i] > minimum){
+						slice[i] = (byte) 255;
+					} else {
+						slice[i] = (byte) 0;
+					}
+				}
+				stack2.addSlice("", slice);
 			}
+			imp.setStack(imp.getTitle(), stack2);
+			IJ.selectWindow(imp.getTitle());
+			if (!imp.isInvertedLut()) IJ.run("Invert LUT");
 		}
-		return max;
+		return;
 	}
 
 	private int[] getTestThreshold(ImagePlus imp2) {
@@ -60,15 +70,13 @@ public class ThresholdMinConn implements PlugInFilter {
 		int startThreshold = ip.getAutoThreshold(histogram);
 
 		// get a range of thresholds to test
-		int nTests = 21;
-		double testRange = 0.2; // as a fraction of the autothreshold
+		int nTests = testCount;
 		double testStep = 2 * testRange * startThreshold / (nTests - 1);
 		int[] testThreshold = new int[nTests];
 		for (int i = 0; i < nTests; i++) {
 			testThreshold[i] = (int) Math.round(startThreshold
 					* (1 - testRange) + i * testStep);
 		}
-
 		return testThreshold;
 	}
 
@@ -169,7 +177,7 @@ public class ThresholdMinConn implements PlugInFilter {
 			imp3.show();
 			if (!imp3.isInvertedLut())
 				IJ.run("Invert LUT");
-			Purify p = new Purify();
+//			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
 //			p.purify(imp3, 4, false, false).show();
@@ -189,7 +197,6 @@ public class ThresholdMinConn implements PlugInFilter {
 			IJ.log("Connectivity is " + conns[i] + " for threshold "
 					+ testThreshold[i]);
 		}
-
 		return conns;
 	}
 
@@ -244,12 +251,16 @@ public class ThresholdMinConn implements PlugInFilter {
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addCheckbox("Show Plot", true);
 		gd.addCheckbox("Apply Threshold", false);
+		gd.addNumericField("Tests", testCount, 0);
+		gd.addNumericField("Range", testRange, 2);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
 			doPlot = gd.getNextBoolean();
 			applyThreshold = gd.getNextBoolean();
+			testCount = (int)Math.floor(gd.getNextNumber());
+			testRange = gd.getNextNumber();
 			return true;
 		}
 	}
