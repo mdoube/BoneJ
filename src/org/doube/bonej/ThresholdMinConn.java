@@ -169,12 +169,15 @@ public class ThresholdMinConn implements PlugInFilter {
 			imp3.show();
 			if (!imp3.isInvertedLut())
 				IJ.run("Invert LUT");
-			IJ.run("Purify", "chunk=4");
+			Purify p = new Purify();
 			Erode e = new Erode();
-			e.erode(imp3, 255, false);
-			IJ.run("Purify", "chunk=4");
 			Dilate d = new Dilate();
-			d.dilate(imp3, 255, false);			
+//			p.purify(imp3, 4, false, false).show();
+			IJ.run("Purify", "chunk=4");
+			e.erode(imp3, 255, false).show();
+			IJ.run("Purify", "chunk=4");
+//			p.purify(imp3, 4, false, false).show();
+			d.dilate(imp3, 255, false).show();			
 
 			// get the connectivity
 			Connectivity con = new Connectivity();

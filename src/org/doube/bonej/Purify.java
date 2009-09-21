@@ -1,4 +1,5 @@
 package org.doube.bonej;
+
 /**
  *  
  * Purify_ plugin for ImageJ
@@ -103,13 +104,39 @@ public class Purify implements PlugInFilter {
 	private boolean showPerformance, doCopy;
 
 	public int setup(String arg, ImagePlus imp) {
+		if (imp == null) {
+			IJ.noImage();
+			return DONE;
+		} else if (imp.getStackSize() == 1) {
+			IJ.error("Stack required");
+			return DONE;
+		} else if (imp.getType() != ImagePlus.GRAY8) {
+			IJ.error("8 bit binary image required");
+			return DONE;
+		} else if (imp != null
+				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
+			ImageStatistics stats = imp.getStatistics();
+			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
+				IJ.error("8-bit binary (black and white only) image required.");
+				return DONE;
+			}
+		}
 		this.imp = imp;
 		return DOES_8G;
 	}
 
 	public void run(ImageProcessor ip) {
-		if (!setupGUI())
+		if (!showDialog())
 			return;
+		purify(imp, slicesPerChunk, doCopy, showPerformance).show();
+		return;
+	}
+
+	public ImagePlus purify(ImagePlus imp2, int slicesPerChunk, boolean doCopy, boolean showPerformance) {
+		width = imp2.getWidth();
+		height = imp2.getHeight();
+		nSlices = imp2.getStackSize();
+		sliceSize = width * height;
 		nThreads = Runtime.getRuntime().availableProcessors();
 		nChunks = (int) Math.floor((double) nSlices / (double) slicesPerChunk);
 		if (nChunks == 0)
@@ -128,7 +155,7 @@ public class Purify implements PlugInFilter {
 
 		long startTime = System.currentTimeMillis();
 
-		byte[][] workArray = makeWorkArray();
+		byte[][] workArray = makeWorkArray(imp2);
 
 		sPhase = "foreground";
 		int[][] particleLabels = firstIDAttribution(workArray, foreground);
@@ -197,42 +224,19 @@ public class Purify implements PlugInFilter {
 				background);
 
 		if (doCopy)
-			displayWorkArray(workArray);
+			displayWorkArray(imp2, workArray);
 		else
-			replaceImage(workArray);
+			replaceImage(imp2, workArray);
 
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
 				/ (double) 1000;
 		IJ.showStatus("Image Purified");
 		if (showPerformance)
 			showResults(chunkRanges, duration);
-		return;
+		return imp2;
 	}
 
-	public boolean setupGUI() {
-		imp = WindowManager.getCurrentImage();
-		if (imp == null) {
-			IJ.noImage();
-			return false;
-		} else if (imp.getStackSize() == 1) {
-			IJ.error("Stack required");
-			return false;
-		} else if (imp.getType() != ImagePlus.GRAY8) {
-			IJ.error("8 bit binary image required");
-			return false;
-		} else if (imp != null
-				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
-			ImageStatistics stats = imp.getStatistics();
-			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
-				IJ.error("8-bit binary (black and white only) image required.");
-				return false;
-			}
-		}
-		this.width = imp.getWidth();
-		this.height = imp.getHeight();
-		this.nSlices = imp.getStackSize();
-		this.sliceSize = width * height;
-
+	private boolean showDialog() {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
@@ -252,12 +256,14 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @return byte[] work array
 	 */
-	public byte[][] makeWorkArray() {
-		byte[][] workArray = new byte[nSlices][sliceSize];
-		ImageStack stack = imp.getStack();
-		for (int z = 0; z < nSlices; z++) {
+	private byte[][] makeWorkArray(ImagePlus imp2) {
+		int s = imp2.getStackSize();
+		int p = imp2.getWidth() * imp2.getHeight();
+		byte[][] workArray = new byte[s][p];
+		ImageStack stack = imp2.getStack();
+		for (int z = 0; z < s; z++) {
 			byte[] slicePixels = (byte[]) stack.getPixels(z + 1);
-			System.arraycopy(slicePixels, 0, workArray[z], 0, sliceSize);
+			System.arraycopy(slicePixels, 0, workArray[z], 0, p);
 		}
 		return workArray;
 	}
@@ -890,14 +896,14 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @param workArray
 	 */
-	public void displayWorkArray(byte[][] workArray) {
+	public void displayWorkArray(ImagePlus imp2, byte[][] workArray) {
 		ImageStack stackPurified = new ImageStack(width, height);
 		for (int z = 0; z < nSlices; z++) {
 			stackPurified.addSlice("", workArray[z]);
 		}
-		ImagePlus impPurified = new ImagePlus(imp.getShortTitle() + "_pur",
+		ImagePlus impPurified = new ImagePlus(imp2.getShortTitle() + "_pur",
 				stackPurified);
-		impPurified.setCalibration(imp.getCalibration());
+		impPurified.setCalibration(imp2.getCalibration());
 		impPurified.show();
 		IJ.run("Invert LUT");
 	}
@@ -907,13 +913,14 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @param workArray
 	 */
-	public void replaceImage(byte[][] workArray) {
-		ImageStack stackPurified = this.imp.getStack();
+	public void replaceImage(ImagePlus imp2, byte[][] workArray) {
+		ImageStack stackPurified = imp2.getStack();
 		for (int z = 0; z < nSlices; z++) {
 			stackPurified.setPixels(workArray[z], z + 1);
 		}
-		this.imp.show();
-		if (!this.imp.isInvertedLut()) IJ.run("Invert LUT");
+		imp2.show();
+		if (!imp2.isInvertedLut())
+			IJ.run("Invert LUT");
 	}
 
 	/**
