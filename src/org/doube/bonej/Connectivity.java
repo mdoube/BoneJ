@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  * Connectivity_ plugin for ImageJ
  * Copyright 2009 Michael Doube 
@@ -23,7 +24,6 @@ import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
-import org.doube.bonej.ResultInserter;
 
 /**
  * <p>
@@ -80,7 +80,7 @@ import org.doube.bonej.ResultInserter;
  *      </p>
  * 
  */
-public class Connectivity_ implements PlugInFilter {
+public class Connectivity implements PlugInFilter {
     /** working image plus */
     private ImagePlus imRef;
 
@@ -94,7 +94,7 @@ public class Connectivity_ implements PlugInFilter {
     private int depth = 0;
 
     /** working image stack */
-    private ImageStack stack = null;
+//    private ImageStack stack = null;
 
     public int setup(String arg, ImagePlus imp) {
 	if (imp == null || imp.getNSlices() < 2) {
@@ -114,49 +114,15 @@ public class Connectivity_ implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
-	Calibration cal = imRef.getCalibration();
-	this.width = this.imRef.getWidth();
-	this.height = this.imRef.getHeight();
-	this.depth = this.imRef.getStackSize();
-	this.stack = this.imRef.getStack();
-
-	int eulerLUT[] = new int[256];
-	fillEulerLUT(eulerLUT);
-
-	int nThreads = Runtime.getRuntime().availableProcessors();
-	int[] sumEulerInt = new int[nThreads];
+		
+	double sumEuler = getSumEuler(this.imRef);
 	
-	SliceThread[] sliceThread = new SliceThread[nThreads];
-	for (int thread = 0; thread < nThreads; thread++) {
-	    sliceThread[thread] = new SliceThread(thread, nThreads, this.imRef, eulerLUT, sumEulerInt);
-	    sliceThread[thread].start();
-	}
-	try {
-	    for (int thread = 0; thread < nThreads; thread++) {
-		sliceThread[thread].join();
-	    }
-	} catch (InterruptedException ie) {
-	    IJ.error("A thread was interrupted.");
-	}
-
-	for (int z = 0; z <= this.depth; z++) {
-
-	}
-	// sumEuler /= 8; //deltaEuler values in LUT are 8*true value for
-	// clarity
-
-	double sumEuler = 0;
-	for (int i = 0; i < sumEulerInt.length; i++){
-	    sumEuler += sumEulerInt[i];
-	}
+	double deltaChi = getDeltaChi(this.imRef, sumEuler);
 	
-	double deltaChi = (double) sumEuler / 8 - correctForEdges(stack);
-
-	double connectivity = 1 - deltaChi;
-	double stackVolume = this.width * this.height * this.depth
-		* cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
-	double connDensity = connectivity / stackVolume;
-
+	double connectivity = getConnectivity(deltaChi);
+	
+	double connDensity = getConnDensity(this.imRef, connectivity);
+	
 	if (connectivity < 0) {
 	    IJ.showMessage("Caution", "Connectivity is negative.\n\n"
 		    + "This usually happens if there are multiple\n"
@@ -164,16 +130,103 @@ public class Connectivity_ implements PlugInFilter {
 		    + "Try running Purify prior to Connectivity.");
 	}
 	ResultInserter ri = new ResultInserter();
-	ri.setResultInRow(this.imRef, "Euler ch.", (double) sumEuler / 8);
+	ri.setResultInRow(this.imRef, "Euler ch.", (double) sumEuler);
 	ri.setResultInRow(this.imRef, "Δ(χ)", deltaChi);
 	ri.setResultInRow(this.imRef, "Connectivity", connectivity);
-	ri.setResultInRow(this.imRef, "Tb.N (" + cal.getUnit() + "^-3)",
+	ri.setResultInRow(this.imRef, "Tb.N (" + this.imRef.getCalibration().getUnit() + "^-3)",
 		connDensity);
 	ri.updateTable();
 	return;
     }
 
-    /* ----------------------------------------------------------------------- */
+    /**
+     * 
+     * 
+     * @param imRef2 Binary ImagePlus
+     * @param connectivity Result of getConnectivity()
+     * @return
+     */
+    public double getConnDensity(ImagePlus imRef2, double connectivity) {
+    	Calibration cal = imRef2.getCalibration();
+    	double w = imRef2.getWidth();
+    	double h = imRef2.getHeight();
+    	double d = imRef2.getStackSize();
+    	double vW = cal.pixelWidth;
+    	double vH = cal.pixelHeight;
+    	double vD = cal.pixelDepth;
+    	double stackVolume = w * h * d * vW * vH * vD;
+    	double connDensity = connectivity / stackVolume;
+		return connDensity;
+	}
+
+	/**
+     * Return the connectivity of the image, which is 1 - deltaChi.
+     * 
+     * @param deltaChi result of getDeltaChi()
+     * @return double connectivity
+     */
+    public double getConnectivity(double deltaChi) {
+		double connectivity = 1 - deltaChi;
+		return connectivity;
+	}
+
+	/**
+     * Get the contribution of the stack's foreground particles to the
+     * Euler characteristic of the universe the stack was cut from.
+     * 
+     * @param imRef2 Binary ImagePlus
+     * @param sumEuler (result of getSumEuler() )
+     * @return delta Chi
+     */
+    public double getDeltaChi(ImagePlus imRef2, double sumEuler) {
+    	this.width = imRef2.getWidth();
+    	this.height = imRef2.getHeight();
+    	this.depth = imRef2.getStackSize();
+    	double deltaChi = sumEuler - correctForEdges(imRef2.getStack());
+		return deltaChi;
+	}
+
+	/**
+     * Calculate the Euler characteristic of the foreground in
+     * a binary stack
+     * 
+     * @param imRef2 Binary ImagePlus
+     * @return Euler characteristic of the foreground particles
+     */
+    public double getSumEuler(ImagePlus imRef2) {
+    	this.width = imRef2.getWidth();
+    	this.height = imRef2.getHeight();
+    	this.depth = imRef2.getStackSize();
+    	
+    	int eulerLUT[] = new int[256];
+    	fillEulerLUT(eulerLUT);
+
+    	int nThreads = Runtime.getRuntime().availableProcessors();
+    	int[] sumEulerInt = new int[nThreads];
+    	
+    	SliceThread[] sliceThread = new SliceThread[nThreads];
+    	for (int thread = 0; thread < nThreads; thread++) {
+    	    sliceThread[thread] = new SliceThread(thread, nThreads, imRef2, eulerLUT, sumEulerInt);
+    	    sliceThread[thread].start();
+    	}
+    	try {
+    	    for (int thread = 0; thread < nThreads; thread++) {
+    		sliceThread[thread].join();
+    	    }
+    	} catch (InterruptedException ie) {
+    	    IJ.error("A thread was interrupted.");
+    	}
+
+    	double sumEuler = 0;
+    	for (int i = 0; i < sumEulerInt.length; i++){
+    	    sumEuler += sumEulerInt[i];
+    	}
+    	
+    	sumEuler /= 8;
+		return sumEuler;
+	}
+
+	/* ----------------------------------------------------------------------- */
     /**
      * Get octant of a vertex at (0,0,0) of a voxel (upper top left) in a 3D
      * image (0 border conditions)
