@@ -24,7 +24,9 @@ import ij.IJ;
  * hood and not a 27-neighborhood.
  * 
  * Imported from Fiji's VIB_.jar on 2009-09-21
+ * @author Benjamin Schmid
  */
+
 public class Erode implements PlugInFilter {
 
 	private int w, h, d;

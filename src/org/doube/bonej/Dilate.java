@@ -24,6 +24,7 @@ import ij.IJ;
  * hood and not a 27-neighborhood.
  * 
  * Imported from Fiji's VIB_.jar on 2009-09-21
+ * @author Benjamin Schimd
  * 
  */
 public class Dilate implements PlugInFilter {
