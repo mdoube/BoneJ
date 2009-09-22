@@ -173,17 +173,18 @@ public class ThresholdMinConn implements PlugInFilter {
 			}
 			// purify
 			imp3.setStack("Threshold " + (i + 1) + "/" + nTests, stack3);
+			imp3.setCalibration(imp2.getCalibration());
 			imp3.show();
 			if (!imp3.isInvertedLut())
 				IJ.run("Invert LUT");
 			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
-			p.purify(imp3, 4, false, false).show();
-//			IJ.run("Purify", "chunk=4");
+			Object[] result = p.purify(imp3, 4, false, false);
+			replaceImage(imp3, (ImagePlus) result[1]);
 			e.erode(imp3, 255, false).show();
-//			IJ.run("Purify", "chunk=4");
-			p.purify(imp3, 4, false, false).show();
+			result = p.purify(imp3, 4, false, false);
+			replaceImage(imp3, (ImagePlus) result[1]);
 			d.dilate(imp3, 255, false).show();			
 
 			// get the connectivity
@@ -198,7 +199,21 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 		return conns;
 	}
-
+	
+	/**
+	 * Replace the image in imp with imp2
+	 * 
+	 * @param imp
+	 * @param imp2
+	 */
+	private void replaceImage(ImagePlus imp, ImagePlus imp2) {
+		ImageStack stack2 = imp2.getStack();
+		imp.setStack(null, stack2);
+		imp.show();
+		if (!imp.isInvertedLut())
+			IJ.run("Invert LUT");
+	}
+	
 	/**
 	 * Get a histogram of stack's pixel values
 	 * 

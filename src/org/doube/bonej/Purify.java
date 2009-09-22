@@ -20,9 +20,8 @@ package org.doube.bonej;
  */
 
 import ij.*;
-import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.measure.ResultsTable;
 import ij.gui.GenericDialog;
 import java.util.Arrays;
@@ -89,54 +88,78 @@ import java.util.Arrays;
  *      </p>
  * 
  */
-public class Purify implements PlugInFilter {
+public class Purify implements PlugIn {
 
-	private final int foreground = -1, background = 0;
+	private final static int foreground = -1, background = 0;
 
-	private int width, height, nSlices, nThreads, nChunks, sliceSize,
-			slicesPerChunk, ID;
+	private int width, height, nSlices, nThreads, nChunks, sliceSize;
 
-	ImagePlus imp;
+	private int ID;
 
-	ImageProcessor ip;
+	private String chunkString = "";
 
-	private String chunkString = "", sPhase = "";
-	private boolean showPerformance, doCopy;
+	private String sPhase = "";
 
-	public int setup(String arg, ImagePlus imp) {
+	public void run(String arg) {
+		ImagePlus imp = IJ.getImage();
+		if (!isBinaryStack(imp))
+			return;
+
+		GenericDialog gd = new GenericDialog("Setup");
+		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
+		gd.addCheckbox("Performance Log", false);
+		gd.addCheckbox("Make copy", true);
+		gd.showDialog();
+		int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
+		boolean showPerformance = gd.getNextBoolean();
+		boolean doCopy = gd.getNextBoolean();
+		if (gd.wasCanceled()) {
+			return;
+		}
+
+		Object[] result = purify(imp, slicesPerChunk, doCopy, showPerformance);
+		if (null != result) {
+			ImagePlus purified = (ImagePlus) result[1];
+
+			if (doCopy){
+				purified.show();
+				if (!purified.isInvertedLut())
+					IJ.run("Invert LUT");
+			}
+			else {
+				replaceImage(imp, purified);
+			}
+		}
+		return;
+	}
+
+	private boolean isBinaryStack(ImagePlus imp) {
 		if (imp == null) {
 			IJ.noImage();
-			return DONE;
+			return false;
 		} else if (imp.getStackSize() == 1) {
 			IJ.error("Stack required");
-			return DONE;
+			return false;
 		} else if (imp.getType() != ImagePlus.GRAY8) {
 			IJ.error("8 bit binary image required");
-			return DONE;
+			return false;
 		} else if (imp != null
 				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
 			ImageStatistics stats = imp.getStatistics();
 			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
 				IJ.error("8-bit binary (black and white only) image required.");
-				return DONE;
+				return false;
 			}
 		}
-		this.imp = imp;
-		return DOES_8G;
+		return true;
 	}
 
-	public void run(ImageProcessor ip) {
-		if (!showDialog())
-			return;
-		purify(imp, slicesPerChunk, doCopy, showPerformance).show();
-		return;
-	}
-
-	public ImagePlus purify(ImagePlus imp2, int slicesPerChunk, boolean doCopy, boolean showPerformance) {
-		width = imp2.getWidth();
-		height = imp2.getHeight();
-		nSlices = imp2.getStackSize();
-		sliceSize = width * height;
+	public Object[] purify(ImagePlus imp, int slicesPerChunk, boolean doCopy,
+			boolean showPerformance) {
+		this.width = imp.getWidth();
+		this.height = imp.getHeight();
+		this.nSlices = imp.getStackSize();
+		this.sliceSize = this.width * this.height;
 		nThreads = Runtime.getRuntime().availableProcessors();
 		nChunks = (int) Math.floor((double) nSlices / (double) slicesPerChunk);
 		if (nChunks == 0)
@@ -150,12 +173,12 @@ public class Purify implements PlugInFilter {
 		}
 
 		// set up the chunks
-		final int[][] chunkRanges = getChunkRanges(nChunks);
-		final int[][] stitchRanges = getStitchRanges(nChunks);
+		final int[][] chunkRanges = getChunkRanges(nChunks, slicesPerChunk);
+		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
 
 		long startTime = System.currentTimeMillis();
 
-		byte[][] workArray = makeWorkArray(imp2);
+		byte[][] workArray = makeWorkArray(imp);
 
 		sPhase = "foreground";
 		int[][] particleLabels = firstIDAttribution(workArray, foreground);
@@ -223,32 +246,21 @@ public class Purify implements PlugInFilter {
 		removeSmallParticles(workArray, particleLabels, particleSizes,
 				background);
 
-		if (doCopy)
-			displayWorkArray(imp2, workArray);
-		else
-			replaceImage(imp2, workArray);
-
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
 				/ (double) 1000;
-		IJ.showStatus("Image Purified");
 		if (showPerformance)
-			showResults(chunkRanges, duration);
-		return imp2;
-	}
+			showResults(chunkRanges, duration, imp, slicesPerChunk);
 
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Setup");
-		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
-		gd.addCheckbox("Performance Log", false);
-		gd.addCheckbox("Make copy", true);
-		gd.showDialog();
-		slicesPerChunk = (int) Math.floor(gd.getNextNumber());
-		showPerformance = gd.getNextBoolean();
-		doCopy = gd.getNextBoolean();
-		if (gd.wasCanceled()) {
-			return false;
+		IJ.showStatus("Image Purified");
+
+		ImageStack stack = new ImageStack(this.width, this.height);
+		for (int z = 0; z < workArray.length; z++) {
+			stack.addSlice("", workArray[z]);
 		}
-		return true;
+		ImagePlus purified = new ImagePlus("Purified", stack);
+		purified.setCalibration(imp.getCalibration());
+		Object[] result = { duration, purified };
+		return result;
 	}
 
 	/**
@@ -256,11 +268,11 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @return byte[] work array
 	 */
-	private byte[][] makeWorkArray(ImagePlus imp2) {
-		int s = imp2.getStackSize();
-		int p = imp2.getWidth() * imp2.getHeight();
+	private byte[][] makeWorkArray(ImagePlus imp) {
+		int s = imp.getStackSize();
+		int p = imp.getWidth() * imp.getHeight();
 		byte[][] workArray = new byte[s][p];
-		ImageStack stack = imp2.getStack();
+		ImageStack stack = imp.getStack();
 		for (int z = 0; z < s; z++) {
 			byte[] slicePixels = (byte[]) stack.getPixels(z + 1);
 			System.arraycopy(slicePixels, 0, workArray[z], 0, p);
@@ -278,7 +290,7 @@ public class Purify implements PlugInFilter {
 	 *         for; int[1][] end of outer for; int[3][] start of inner for;
 	 *         int[4] end of inner 4. Second dimension is chunk number.
 	 */
-	public int[][] getChunkRanges(int nC) {
+	private int[][] getChunkRanges(int nC, int slicesPerChunk) {
 		int[][] scanRanges = new int[4][nC];
 		scanRanges[0][0] = 0; // the first chunk starts at the first (zeroth)
 		// slice
@@ -318,7 +330,7 @@ public class Purify implements PlugInFilter {
 	 * @return scanRanges list of scan limits for connectStructures() to stitch
 	 *         chunks back together
 	 */
-	public int[][] getStitchRanges(int nC) {
+	private int[][] getStitchRanges(int nC, int slicesPerChunk) {
 		if (nC < 2) {
 			return null;
 		}
@@ -369,7 +381,7 @@ public class Purify implements PlugInFilter {
 	 * @return particleLabels int[] array containing label associating every
 	 *         pixel with a particle
 	 */
-	public int[][] firstIDAttribution(byte[][] workArray, int phase) {
+	private int[][] firstIDAttribution(byte[][] workArray, int phase) {
 		IJ.showStatus("Finding " + sPhase + " structures");
 		int[][] particleLabels = new int[nSlices][sliceSize];
 		ID = 1;
@@ -488,7 +500,7 @@ public class Purify implements PlugInFilter {
 	 *            int[][] listing ranges to run connectStructures on
 	 * @return particleLabels with all particles connected
 	 */
-	public void connectStructures(byte[][] workArray, int[][] particleLabels,
+	private void connectStructures(byte[][] workArray, int[][] particleLabels,
 			int phase, int[][] scanRanges) {
 		IJ.showStatus("Connecting " + sPhase + " structures" + chunkString);
 		for (int c = 0; c < scanRanges[0].length; c++) {
@@ -695,7 +707,7 @@ public class Purify implements PlugInFilter {
 	 *            foreground = -1, background = 0
 	 * @return particleSizes
 	 */
-	public long[] getParticleSizes(byte[][] workArray, int[][] particleLabels,
+	private long[] getParticleSizes(byte[][] workArray, int[][] particleLabels,
 			int phase) {
 		IJ.showStatus("Getting " + sPhase + " particle sizes");
 		long[] particleSizes = new long[ID];
@@ -729,7 +741,7 @@ public class Purify implements PlugInFilter {
 	 * @param phase
 	 * @return particleLabels
 	 */
-	public void touchEdges(byte[][] workArray, int[][] particleLabels,
+	private void touchEdges(byte[][] workArray, int[][] particleLabels,
 			long[] particleSizes, int phase) {
 		String status = "Background particles touching ";
 		// find the label associated with the biggest
@@ -851,7 +863,7 @@ public class Purify implements PlugInFilter {
 	 * @param phase
 	 * @return workArray
 	 */
-	public void removeSmallParticles(byte[][] workArray,
+	private void removeSmallParticles(byte[][] workArray,
 			int[][] particleLabels, long[] particleSizes, int phase) {
 		long maxVoxCount = 0;
 		for (int i = 0; i < particleSizes.length; i++) {
@@ -892,34 +904,16 @@ public class Purify implements PlugInFilter {
 	}
 
 	/**
-	 * Display the work array as a new ImagePlus
+	 * Replace the image in imp with imp2
 	 * 
-	 * @param workArray
+	 * @param imp
+	 * @param imp2
 	 */
-	public void displayWorkArray(ImagePlus imp2, byte[][] workArray) {
-		ImageStack stackPurified = new ImageStack(width, height);
-		for (int z = 0; z < nSlices; z++) {
-			stackPurified.addSlice("", workArray[z]);
-		}
-		ImagePlus impPurified = new ImagePlus(imp2.getShortTitle() + "_pur",
-				stackPurified);
-		impPurified.setCalibration(imp2.getCalibration());
-		impPurified.show();
-		IJ.run("Invert LUT");
-	}
-
-	/**
-	 * Display the work array in the original ImagePlus
-	 * 
-	 * @param workArray
-	 */
-	public void replaceImage(ImagePlus imp2, byte[][] workArray) {
-		ImageStack stackPurified = imp2.getStack();
-		for (int z = 0; z < nSlices; z++) {
-			stackPurified.setPixels(workArray[z], z + 1);
-		}
-		imp2.show();
-		if (!imp2.isInvertedLut())
+	private void replaceImage(ImagePlus imp, ImagePlus imp2) {
+		ImageStack stack2 = imp2.getStack();
+		imp.setStack(imp.getTitle(), stack2);
+		imp.show();
+		if (!imp.isInvertedLut())
 			IJ.run("Invert LUT");
 	}
 
@@ -928,7 +922,7 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @param particleLabels
 	 */
-	public void displayParticleLabels(int[] particleLabels) {
+	private void displayParticleLabels(int[] particleLabels, ImagePlus imp) {
 		ImageStack stackParticles = new ImageStack(width, height);
 		for (int z = 0; z < nSlices; z++) {
 			int[] targetSlice = new int[sliceSize];
@@ -961,7 +955,7 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @return True if the pixel is within the bounds of the current stack
 	 */
-	protected boolean withinBounds(int m, int n, int o, int startZ, int endZ) {
+	private boolean withinBounds(int m, int n, int o, int startZ, int endZ) {
 		return (m >= 0 && m < width && n >= 0 && n < height && o >= startZ && o < endZ);
 	}
 
@@ -975,7 +969,7 @@ public class Purify implements PlugInFilter {
 	 * 
 	 * @return Integer offset for looking up pixel in work array
 	 */
-	protected int getOffset(int m, int n) {
+	private int getOffset(int m, int n) {
 		return m + n * width;
 	}
 
@@ -991,7 +985,7 @@ public class Purify implements PlugInFilter {
 	 * @param endZ
 	 *            last+1 z coordinate to check
 	 */
-	protected void replaceLabel(int[][] particleLabels, int m, int n,
+	private void replaceLabel(int[][] particleLabels, int m, int n,
 			int startZ, int endZ) {
 		for (int z = startZ; z < endZ; z++) {
 			for (int i = 0; i < sliceSize; i++)
@@ -1007,7 +1001,8 @@ public class Purify implements PlugInFilter {
 	 * @param chunkRanges
 	 * @param duration
 	 */
-	private void showResults(int[][] chunkRanges, double duration) {
+	private void showResults(int[][] chunkRanges, double duration,
+			ImagePlus imp, int slicesPerChunk) {
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
 		rt.addLabel(imp.getTitle());
