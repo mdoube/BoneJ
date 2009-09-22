@@ -127,7 +127,11 @@ public class Purify implements PlugIn {
 					IJ.run("Invert LUT");
 			}
 			else {
-				replaceImage(imp, purified);
+				ImageStack stack2 = purified.getStack();
+				imp.setStack(imp.getTitle(), stack2);
+				imp.show();
+				if (!imp.isInvertedLut())
+					IJ.run("Invert LUT");
 			}
 		}
 		return;
@@ -900,40 +904,6 @@ public class Purify implements PlugIn {
 				IJ.showProgress(z, nSlices);
 			}
 		}
-		return;
-	}
-
-	/**
-	 * Replace the image in imp with imp2
-	 * 
-	 * @param imp
-	 * @param imp2
-	 */
-	private void replaceImage(ImagePlus imp, ImagePlus imp2) {
-		ImageStack stack2 = imp2.getStack();
-		imp.setStack(imp.getTitle(), stack2);
-		imp.show();
-		if (!imp.isInvertedLut())
-			IJ.run("Invert LUT");
-	}
-
-	/**
-	 * Display the particle labels as an ImagePlus
-	 * 
-	 * @param particleLabels
-	 */
-	private void displayParticleLabels(int[] particleLabels, ImagePlus imp) {
-		ImageStack stackParticles = new ImageStack(width, height);
-		for (int z = 0; z < nSlices; z++) {
-			int[] targetSlice = new int[sliceSize];
-			System.arraycopy(particleLabels, z * sliceSize, targetSlice, 0,
-					sliceSize);
-			stackParticles.addSlice("", targetSlice);
-		}
-		ImagePlus impParticles = new ImagePlus(imp.getShortTitle() + "_parts",
-				stackParticles);
-		impParticles.setCalibration(imp.getCalibration());
-		impParticles.show();
 		return;
 	}
 
