@@ -133,7 +133,6 @@ public class ThresholdMinConn implements PlugInFilter {
 		plot.addPoints(xData, yData, Plot.CIRCLE);
 		plot.setLimits(xMin, xMax, 0, yMax);
 		plot.draw();
-
 		ImageProcessor plotIp = plot.getProcessor();
 		ImagePlus plotImage = new ImagePlus();
 		plotImage.setProcessor("Connectivity vs. Threshold", plotIp);
@@ -177,14 +176,14 @@ public class ThresholdMinConn implements PlugInFilter {
 			imp3.show();
 			if (!imp3.isInvertedLut())
 				IJ.run("Invert LUT");
-//			Purify p = new Purify();
+			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
-//			p.purify(imp3, 4, false, false).show();
-			IJ.run("Purify", "chunk=4");
+			p.purify(imp3, 4, false, false).show();
+//			IJ.run("Purify", "chunk=4");
 			e.erode(imp3, 255, false).show();
-			IJ.run("Purify", "chunk=4");
-//			p.purify(imp3, 4, false, false).show();
+//			IJ.run("Purify", "chunk=4");
+			p.purify(imp3, 4, false, false).show();
 			d.dilate(imp3, 255, false).show();			
 
 			// get the connectivity

@@ -652,13 +652,13 @@ public class Purify implements PlugInFilter {
 	}
 
 	class ConnectStructuresThread extends Thread {
-		int thread, nThreads, nChunks, phase;// w,h,d,nR;
+		final int thread, nThreads, nChunks, phase;// w,h,d,nR;
 
-		byte[][] workArray;
+		final byte[][] workArray;
 
-		int[][] particleLabels;
+		final int[][] particleLabels;
 
-		int[][] chunkRanges;
+		final int[][] chunkRanges;
 
 		public ConnectStructuresThread(int thread, int nThreads,
 				byte[][] workArray, int[][] particleLabels, int phase,
