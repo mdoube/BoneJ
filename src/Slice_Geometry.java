@@ -116,31 +116,38 @@ public class Slice_Geometry implements PlugInFilter {
 		ImageStack annStack = new ImageStack(w, h);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor annIP = this.stack.getProcessor(s).duplicate();
+			annIP.setColor(Color.white);
 			double cX = this.sliceCentroids[0][s] / this.vW;
 			double cY = this.sliceCentroids[1][s] / this.vH;
-			double th = this.theta[s];
-			double rMin = this.R1[s];
-			double rMax = this.R2[s];
-			annIP.setColor(Color.white);
 
-			int x1 = (int) Math.floor(cX - Math.cos(th + Math.PI / 2) * 2
-					* rMin);
-			int y1 = (int) Math.floor(cY - Math.sin(th + Math.PI / 2) * 2
-					* rMin);
-			int x2 = (int) Math.floor(cX + Math.cos(th + Math.PI / 2) * 2
-					* rMin);
-			int y2 = (int) Math.floor(cY + Math.sin(th + Math.PI / 2) * 2
-					* rMin);
-			annIP.drawLine(x1, y1, x2, y2);
+			if (this.doCentroids) {
+				annIP.drawOval((int)Math.floor(cX-4), (int)Math.floor(cY-4), 8, 8);
+			}
 
-			x1 = (int) Math.floor(cX - Math.cos(-th) * 2 * rMax);
-			y1 = (int) Math.floor(cY + Math.sin(-th) * 2 * rMax);
-			x2 = (int) Math.floor(cX + Math.cos(-th) * 2 * rMax);
-			y2 = (int) Math.floor(cY - Math.sin(-th) * 2 * rMax);
-			annIP.drawLine(x1, y1, x2, y2);
-			annStack.addSlice("", annIP);
+			if (this.doAxes) {
+				double th = this.theta[s];
+				double rMin = this.R1[s];
+				double rMax = this.R2[s];
+
+				int x1 = (int) Math.floor(cX - Math.cos(th + Math.PI / 2) * 2
+						* rMin);
+				int y1 = (int) Math.floor(cY - Math.sin(th + Math.PI / 2) * 2
+						* rMin);
+				int x2 = (int) Math.floor(cX + Math.cos(th + Math.PI / 2) * 2
+						* rMin);
+				int y2 = (int) Math.floor(cY + Math.sin(th + Math.PI / 2) * 2
+						* rMin);
+				annIP.drawLine(x1, y1, x2, y2);
+
+				x1 = (int) Math.floor(cX - Math.cos(-th) * 2 * rMax);
+				y1 = (int) Math.floor(cY + Math.sin(-th) * 2 * rMax);
+				x2 = (int) Math.floor(cX + Math.cos(-th) * 2 * rMax);
+				y2 = (int) Math.floor(cY - Math.sin(-th) * 2 * rMax);
+				annIP.drawLine(x1, y1, x2, y2);
+				annStack.addSlice("", annIP);
+			}
 		}
-		ImagePlus ann = new ImagePlus("Annotated Stack", annStack);
+		ImagePlus ann = new ImagePlus("Annotated_"+this.imp.getTitle(), annStack);
 		ann.show();
 	}
 
