@@ -39,7 +39,7 @@ public class VirtualDelete implements PlugIn {
 	 */
 	public void deleteVirtualSlices(VirtualStack stack, int first, int last) {
 		for (int s = first; s <= last; s++){
-			stack.deleteSlice(s);
+			stack.deleteSlice(first);
 		}
 	}
 }
