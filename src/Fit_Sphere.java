@@ -124,7 +124,7 @@ public class Fit_Sphere implements PlugInFilter {
 	return voxDim;
     }
     
-    //TODO make this go faster by getting slice pixels and iterating through
+	// TODO make this go faster by getting slice pixels and iterating through
     //it's array rather than using setSlice and getPixel
     public void copySphere(ImagePlus imp, ImageProcessor ip, int padding, double cropFactor, double[] sphereDim){
 	IJ.showStatus("Copying sphere to new stack");
@@ -137,7 +137,7 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiDepth = (int)Math.round(2*sphereDim[3]*cropFactor/voxDim[2])+2*padding;
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
-	    IJ.showProgress(z, startZ+roiDepth);
+	    IJ.showProgress(z-startZ, roiDepth);
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
@@ -183,7 +183,7 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiDepth = (int)Math.round(2 * h / voxDim[2]);
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
-	    IJ.showProgress(z, startZ+roiDepth);
+	    IJ.showProgress(z-startZ, roiDepth);
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
@@ -218,7 +218,7 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiDepth = (int)Math.round(2 * h / voxDim[2]);
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
-	    IJ.showProgress(z, startZ+roiDepth);
+	    IJ.showProgress(z-startZ, roiDepth);
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
