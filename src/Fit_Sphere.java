@@ -127,7 +127,6 @@ public class Fit_Sphere implements PlugInFilter {
 	// TODO make this go faster by getting slice pixels and iterating through
     //it's array rather than using setSlice and getPixel
     public void copySphere(ImagePlus imp, ImageProcessor ip, int padding, double cropFactor, double[] sphereDim){
-	IJ.showStatus("Copying sphere to new stack");
 	double[] voxDim = getVoxDim(imp);
 	int startX = (int)Math.round((sphereDim[0]-sphereDim[3]*cropFactor)/voxDim[0])-padding;
 	int startY = (int)Math.round((sphereDim[1]-sphereDim[3]*cropFactor)/voxDim[1])-padding;
@@ -138,6 +137,7 @@ public class Fit_Sphere implements PlugInFilter {
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
+	    IJ.showStatus("Copying sphere to new stack");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
@@ -172,7 +172,6 @@ public class Fit_Sphere implements PlugInFilter {
     //its array rather than using setSlice and getPixel
     public void copyInnerCube(ImagePlus imp, ImageProcessor ip, double cropFactor, double[] sphereDim){
 	Calibration cal = imp.getCalibration();
-	IJ.showStatus("Copying largest enclosed cube");
 	double[] voxDim = getVoxDim(imp);
 	double h = sphereDim[3] * cropFactor / Math.sqrt(3);
 	int startX = (int)Math.round((sphereDim[0] - h)/voxDim[0]);
@@ -184,6 +183,7 @@ public class Fit_Sphere implements PlugInFilter {
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
+	    IJ.showStatus("Copying largest enclosed cube");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
@@ -207,7 +207,6 @@ public class Fit_Sphere implements PlugInFilter {
 
     public void copyOuterCube(ImagePlus imp, ImageProcessor ip, double cropFactor, double[] sphereDim){
 	Calibration cal = imp.getCalibration();
-	IJ.showStatus("Copying smallest enclosing cube");
 	double[] voxDim = getVoxDim(imp);
 	double h = sphereDim[3] * cropFactor;
 	int startX = (int)Math.round((sphereDim[0] - h)/voxDim[0]);
@@ -219,6 +218,7 @@ public class Fit_Sphere implements PlugInFilter {
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
+	    IJ.showStatus("Copying smallest enclosing cube");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
 	    imp.setSlice(z);
 	    int nRows = 0;
