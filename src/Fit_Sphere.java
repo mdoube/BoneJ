@@ -64,7 +64,7 @@ public class Fit_Sphere implements PlugInFilter {
 			return DONE;
 		}
 		sourceStack = imp.getStack();
-		return DOES_ALL + STACK_REQUIRED;
+		return DOES_ALL + STACK_REQUIRED + NO_CHANGES;
 	}
 
 	public void run(ImageProcessor ip) {
@@ -124,12 +124,9 @@ public class Fit_Sphere implements PlugInFilter {
 		return true;
 	}
 
-	public static double[] getVoxDim(ImagePlus imp) {
+	private static double[] getVoxDim(ImagePlus imp) {
 		Calibration cal = imp.getCalibration();
-		double[] voxDim = new double[3];
-		voxDim[0] = cal.pixelWidth;
-		voxDim[1] = cal.pixelHeight;
-		voxDim[2] = cal.pixelDepth;
+		double[] voxDim = {cal.pixelWidth, cal.pixelHeight, cal.pixelDepth};
 		return voxDim;
 	}
 
