@@ -20,7 +20,6 @@ package org.doube.bonej;
  */
 
 import ij.*;
-import ij.process.ImageStatistics;
 import ij.plugin.PlugIn;
 import ij.measure.ResultsTable;
 import ij.gui.GenericDialog;
@@ -102,9 +101,11 @@ public class Purify implements PlugIn {
 
 	public void run(String arg) {
 		ImagePlus imp = IJ.getImage();
-		if (!isBinaryStack(imp))
+		ImageCheck ic = new ImageCheck();
+		if (!ic.isBinary(imp)){
+			IJ.error("Purify requires a binary image");
 			return;
-
+		}
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
@@ -135,27 +136,6 @@ public class Purify implements PlugIn {
 			}
 		}
 		return;
-	}
-
-	private boolean isBinaryStack(ImagePlus imp) {
-		if (imp == null) {
-			IJ.noImage();
-			return false;
-		} else if (imp.getStackSize() == 1) {
-			IJ.error("Stack required");
-			return false;
-		} else if (imp.getType() != ImagePlus.GRAY8) {
-			IJ.error("8 bit binary image required");
-			return false;
-		} else if (imp != null
-				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
-			ImageStatistics stats = imp.getStatistics();
-			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
-				IJ.error("8-bit binary (black and white only) image required.");
-				return false;
-			}
-		}
-		return true;
 	}
 
 	public Object[] purify(ImagePlus imp, int slicesPerChunk, boolean doCopy,
