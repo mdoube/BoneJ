@@ -19,6 +19,7 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.VirtualStack;
 import ij.process.ImageProcessor;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
@@ -134,16 +135,17 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiWidth = (int)Math.round(2*sphereDim[3]*cropFactor/voxDim[0])+2*padding;
 	int roiHeight = (int)Math.round(2*sphereDim[3]*cropFactor/voxDim[1])+2*padding;
 	int roiDepth = (int)Math.round(2*sphereDim[3]*cropFactor/voxDim[2])+2*padding;
+	ImageStack sourceStack = imp.getImageStack();
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
 	    IJ.showStatus("Copying sphere to new stack");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
-	    imp.setSlice(z);
 	    int nRows = 0;
 	    for (int y = startY; y < startY+roiHeight; y++){
 		int index = nRows*roiWidth;
 		int nCols = 0;
+		ip = sourceStack.getProcessor(z);
 		for (int x = startX; x < startX+roiWidth; x++){
 		    double distance = Math.sqrt(
 			    (x*voxDim[0] - sphereDim[0])*(x*voxDim[0] - sphereDim[0]) +
@@ -160,7 +162,7 @@ public class Fit_Sphere implements PlugInFilter {
 		}
 		nRows++;
 	    }
-	    targetStack.addSlice("slice "+z, targetSlice);
+	    targetStack.addSlice(sourceStack.getSliceLabel(z), targetSlice);
 	}
 	ImagePlus target = new ImagePlus("Sphere", targetStack);
 	target.setCalibration(imp.getCalibration());
@@ -180,23 +182,24 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiWidth = (int)Math.round(2 * h / voxDim[0]);
 	int roiHeight = (int)Math.round(2 * h / voxDim[1]);
 	int roiDepth = (int)Math.round(2 * h / voxDim[2]);
+	ImageStack sourceStack = imp.getStack();
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
 	    IJ.showStatus("Copying largest enclosed cube");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
-	    imp.setSlice(z);
 	    int nRows = 0;
 	    for (int y = startY; y < startY+roiHeight; y++){
 		int index = nRows*roiWidth;
 		int nCols = 0;
+		ip = sourceStack.getProcessor(z);
 		for (int x = startX; x < startX+roiWidth; x++){
 		    targetSlice[index+nCols] = (short)ip.getPixel(x, y);
 		    nCols++;
 		}
 		nRows++;
 	    }
-	    targetStack.addSlice("slice "+z, targetSlice);
+	    targetStack.addSlice(sourceStack.getSliceLabel(z), targetSlice);
 	}
 	ImagePlus target = new ImagePlus("Inner Cube", targetStack);
 	target.setCalibration(cal);
@@ -215,23 +218,24 @@ public class Fit_Sphere implements PlugInFilter {
 	int roiWidth = (int)Math.round(2 * h / voxDim[0]);
 	int roiHeight = (int)Math.round(2 * h / voxDim[1]);
 	int roiDepth = (int)Math.round(2 * h / voxDim[2]);
+	ImageStack sourceStack = imp.getImageStack();
 	ImageStack targetStack = new ImageStack(roiWidth,roiHeight);
 	for (int z = startZ; z <= startZ+roiDepth; z++){
 	    IJ.showProgress(z-startZ, roiDepth);
 	    IJ.showStatus("Copying smallest enclosing cube");
 	    short[] targetSlice = new short[roiWidth*roiHeight];
-	    imp.setSlice(z);
 	    int nRows = 0;
 	    for (int y = startY; y < startY+roiHeight; y++){
 		int index = nRows*roiWidth;
 		int nCols = 0;
+		ip = sourceStack.getProcessor(z);
 		for (int x = startX; x < startX+roiWidth; x++){
 		    targetSlice[index+nCols] = (short)ip.getPixel(x, y);
 		    nCols++;
 		}
 		nRows++;
 	    }
-	    targetStack.addSlice("slice "+z, targetSlice);
+	    targetStack.addSlice(sourceStack.getSliceLabel(z), targetSlice);
 	}
 	ImagePlus target = new ImagePlus("Outer Cube", targetStack);
 	target.setCalibration(cal);
