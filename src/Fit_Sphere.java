@@ -163,10 +163,10 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying sphere to new stack");
 			short[] targetSlice = new short[roiWidth * roiHeight];
 			int nRows = 0;
+			ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < startY + roiHeight; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				ip = sourceStack.getProcessor(z);
 				for (int x = startX; x < startX + roiWidth; x++) {
 					double distance = Math.sqrt((x * voxDim[0] - sphereDim[0])
 							* (x * voxDim[0] - sphereDim[0])
@@ -213,10 +213,10 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying largest enclosed cube");
 			short[] targetSlice = new short[roiWidth * roiHeight];
 			int nRows = 0;
+			ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < startY + roiHeight; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				ip = sourceStack.getProcessor(z);
 				for (int x = startX; x < startX + roiWidth; x++) {
 					targetSlice[index + nCols] = (short) ip.get(x, y);
 					nCols++;
@@ -251,10 +251,10 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying smallest enclosing cube");
 			short[] targetSlice = new short[roiWidth * roiHeight];
 			int nRows = 0;
+			ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < startY + roiHeight; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				ip = sourceStack.getProcessor(z);
 				for (int x = startX; x < startX + roiWidth; x++) {
 					targetSlice[index + nCols] = (short) ip.get(x, y);
 					nCols++;
