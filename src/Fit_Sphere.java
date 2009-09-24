@@ -19,7 +19,6 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.VirtualStack;
 import ij.process.ImageProcessor;
 import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
