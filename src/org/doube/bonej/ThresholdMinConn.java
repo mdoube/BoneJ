@@ -30,7 +30,12 @@ public class ThresholdMinConn implements PlugInFilter {
 		if (!showDialog()){
 			return;
 		}
-
+		ImageCheck ic = new ImageCheck();
+		if (ic.isBinary(imp)){
+			IJ.error("");
+			return;
+		}
+		
 		int[] testThreshold = getTestThreshold(imp);
 		double[] conns = getConns(imp, testThreshold);
 		double minimum = getMinimum(testThreshold, conns);

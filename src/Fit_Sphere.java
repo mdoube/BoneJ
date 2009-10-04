@@ -104,7 +104,7 @@ public class Fit_Sphere implements PlugInFilter {
 		ri.updateTable();
 	}
 
-	public boolean showDialog() {
+	private boolean showDialog() {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addMessage("");
 		gd.addCheckbox("Copy Sphere", true);
