@@ -24,6 +24,18 @@ public class DeleteSliceRange implements PlugIn {
 		int first = (int) Math.floor(gd.getNextNumber());
 		int last = (int) Math.floor(gd.getNextNumber());
 
+		//check sanity of first and last values
+		if (first < 1){
+			IJ.error("First slice cannot be less than 1.");
+			return;
+		} else if (last > imp.getStackSize()){
+			IJ.error("Last slice cannot be greater than the number of slices.");
+			return;
+		} else if (first > last){
+			IJ.error("First slice cannot be after last slice");
+			return;
+		}
+		
 		if (imp.getStack().isVirtual()) {
 			VirtualStack stack = (VirtualStack) imp.getStack();
 			deleteSliceRange(stack, first, last);
