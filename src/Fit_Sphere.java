@@ -88,13 +88,7 @@ public class Fit_Sphere implements PlugInFilter {
 		FitSphere fs = new FitSphere();
 		double[][] points = fs.getRoiManPoints(imp, roiMan);
 		double[] sphereDim = fs.fitSphere(points);
-		if (doCopy)
-			copySphere(imp, ip, padding, cropFactor, sphereDim);
-		if (doInnerCube)
-			copyInnerCube(imp, ip, cropFactor, sphereDim);
-		if (doOuterCube)
-			copyOuterCube(imp, ip, cropFactor, sphereDim);
-
+		
 		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = new ResultInserter();
 		ri.setResultInRow(imp, "X centroid (" + units + ")", sphereDim[0]);
@@ -102,6 +96,13 @@ public class Fit_Sphere implements PlugInFilter {
 		ri.setResultInRow(imp, "Z centroid (" + units + ")", sphereDim[2]);
 		ri.setResultInRow(imp, "Radius (" + units + ")", sphereDim[3]);
 		ri.updateTable();
+		
+		if (doCopy)
+			copySphere(imp, ip, padding, cropFactor, sphereDim);
+		if (doInnerCube)
+			copyInnerCube(imp, ip, cropFactor, sphereDim);
+		if (doOuterCube)
+			copyOuterCube(imp, ip, cropFactor, sphereDim);
 	}
 
 	private boolean showDialog() {
