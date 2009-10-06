@@ -12,7 +12,7 @@ import ij.process.ImageProcessor;
 public class ThresholdMinConn implements PlugInFilter {
 
 	private ImagePlus imp;
-	private int testCount = 11;
+	private int testCount = 11, subVolume = 256;
 	private double testRange = 0.2;
 	private boolean doPlot = false, applyThreshold = false;
 
@@ -27,17 +27,17 @@ public class ThresholdMinConn implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
-		if (!showDialog()){
+		if (!showDialog()) {
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
-		if (ic.isBinary(imp)){
+		if (ic.isBinary(imp)) {
 			IJ.error("");
 			return;
 		}
-		
+
 		int[] testThreshold = getTestThreshold(imp);
-		double[] conns = getConns(imp, testThreshold);
+		double[] conns = getConns(imp, testThreshold, subVolume);
 		double minimum = getMinimum(testThreshold, conns);
 
 		if (doPlot)
@@ -49,12 +49,13 @@ public class ThresholdMinConn implements PlugInFilter {
 			ImageStack stack = imp.getImageStack();
 			ImageStack stack2 = new ImageStack(w, h);
 			int nPixels = w * h;
-			for (int z = 1; z <= imp.getStackSize(); z++){
+			for (int z = 1; z <= imp.getStackSize(); z++) {
 				byte[] slice = new byte[nPixels];
 				ip = stack.getProcessor(z);
-				short[] pixels = (short[])ip.getPixels();
-				for (int i = 0; i < nPixels; i++){
-					if (pixels[i] > minimum){
+				short[] pixels = (short[]) ip.getPixels();
+				for (int i = 0; i < nPixels; i++) {
+					int value = pixels[i] & 0xffff;
+					if (value > minimum) {
 						slice[i] = (byte) 255;
 					} else {
 						slice[i] = (byte) 0;
@@ -64,7 +65,8 @@ public class ThresholdMinConn implements PlugInFilter {
 			}
 			imp.setStack(imp.getTitle(), stack2);
 			IJ.selectWindow(imp.getTitle());
-			if (!imp.isInvertedLut()) IJ.run("Invert LUT");
+			if (!imp.isInvertedLut())
+				IJ.run("Invert LUT");
 		}
 		return;
 	}
@@ -102,13 +104,13 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 		CurveFitter cf = new CurveFitter(xData, conns);
 		cf.doFit(CurveFitter.POLY2);
-		String parabola = cf.getResultString();
-		IJ.log(parabola);
+//		String parabola = cf.getResultString();
+//		IJ.log(parabola);
 		double[] params = cf.getParams();
-		double a = params[0], b = params[1], c = params[2];
+		double b = params[1], c = params[2];
 		double xmin = -b / (2 * c);
-		double ymin = a + b * xmin + c * xmin * xmin;
-		IJ.log("minimum connectivity is at (" + xmin + ", " + ymin + ")");
+//		double ymin = a + b * xmin + c * xmin * xmin;
+//		IJ.log("minimum connectivity is at (" + xmin + ", " + ymin + ")");
 		return xmin;
 	}
 
@@ -150,22 +152,45 @@ public class ThresholdMinConn implements PlugInFilter {
 	 * @param testThreshold
 	 * @return
 	 */
-	private double[] getConns(ImagePlus imp2, int[] testThreshold) {
+	private double[] getConns(ImagePlus imp2, int[] testThreshold, int subVolume) {
 		int nTests = testThreshold.length;
 		double[] conns = new double[nTests];
 
-		ImageStack stack2 = imp2.getImageStack();
+		// make a stack out of imp2 that is no greater than 256 pixels in
+		// any dimension
+		ImageStack stack = imp2.getImageStack();
+
+		int width = (int) Math.min(imp2.getWidth(), subVolume);
+		int height = (int) Math.min(imp2.getHeight(), subVolume);
+		int depth = (int) Math.min(imp2.getStackSize(), subVolume);
+		int oldWidth = imp2.getWidth();
+
+		ImageStack stack2 = new ImageStack(width, height);
+		for (int z = 1; z <= depth+1; z++) {
+			short[] pixels = (short[])stack.getPixels(z);
+			short[] newPixels = new short[width*height];
+			for (int y = 0; y < height; y++) {
+				int offset = y * width;
+				int oldOffset = y * oldWidth;
+				for (int x = 0; x < width; x++) {
+					newPixels[offset+x] = pixels[oldOffset+x];
+				}
+			}
+			stack2.addSlice(stack.getSliceLabel(z), newPixels);
+		}
+
 		ImageStack stack3 = new ImageStack(stack2.getWidth(), stack2
 				.getHeight());
 		ImagePlus imp3 = new ImagePlus();
 		// for each test
 		for (int i = 0; i < nTests; i++) {
 			int thresh = testThreshold[i];
-			for (int z = 1; z < imp2.getNSlices(); z++) {
+			for (int z = 1; z < stack2.getSize(); z++) {
 				short[] pixels = (short[]) stack2.getPixels(z);
 				byte[] tpixels = new byte[pixels.length];
 				for (int j = 0; j < pixels.length; j++) {
-					if (pixels[j] > thresh) {
+					int value = pixels[j] & 0xffff;
+					if (value > thresh) {
 						tpixels[j] = (byte) 255;
 					} else {
 						tpixels[j] = (byte) 0;
@@ -190,7 +215,7 @@ public class ThresholdMinConn implements PlugInFilter {
 			e.erode(imp3, 255, false).show();
 			result = p.purify(imp3, 4, false, false);
 			replaceImage(imp3, (ImagePlus) result[1]);
-			d.dilate(imp3, 255, false).show();			
+			d.dilate(imp3, 255, false).show();
 
 			// get the connectivity
 			Connectivity con = new Connectivity();
@@ -199,12 +224,13 @@ public class ThresholdMinConn implements PlugInFilter {
 			double connectivity = con.getConnectivity(deltaChi);
 			// add connectivity to the array
 			conns[i] = connectivity;
-			IJ.log("Connectivity is " + conns[i] + " for threshold "
-					+ testThreshold[i]);
+//			IJ.log("Connectivity is " + conns[i] + " for threshold "
+//					+ testThreshold[i]);
 		}
+		imp3.close();
 		return conns;
 	}
-	
+
 	/**
 	 * Replace the image in imp with imp2
 	 * 
@@ -218,7 +244,7 @@ public class ThresholdMinConn implements PlugInFilter {
 		if (!imp.isInvertedLut())
 			IJ.run("Invert LUT");
 	}
-	
+
 	/**
 	 * Get a histogram of stack's pixel values
 	 * 
@@ -272,14 +298,16 @@ public class ThresholdMinConn implements PlugInFilter {
 		gd.addCheckbox("Apply Threshold", false);
 		gd.addNumericField("Tests", testCount, 0);
 		gd.addNumericField("Range", testRange, 2);
+		gd.addNumericField("Subvolume Size", subVolume, 0);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
 			doPlot = gd.getNextBoolean();
 			applyThreshold = gd.getNextBoolean();
-			testCount = (int)Math.floor(gd.getNextNumber());
+			testCount = (int) Math.floor(gd.getNextNumber());
 			testRange = gd.getNextNumber();
+			subVolume = (int) Math.floor(gd.getNextNumber());
 			return true;
 		}
 	}
