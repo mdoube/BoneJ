@@ -109,6 +109,12 @@ public class ThresholdMinConn implements PlugInFilter {
 		return threshold;
 	}
 
+	/**
+	 * 
+	 * @param imp2
+	 * @param histogram
+	 * @return
+	 */
 	private int[] getTestThreshold(ImagePlus imp2, int[] histogram) {
 		ImageProcessor ip = imp2.getProcessor();
 		int startThreshold = ip.getAutoThreshold(histogram);
