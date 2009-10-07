@@ -36,9 +36,14 @@ public class ThresholdMinConn implements PlugInFilter {
 			return;
 		}
 
-		int[] testThreshold = getTestThreshold(imp);
+		int[] histogram = getStackHistogram(imp);
+		int[] testThreshold = getTestThreshold(imp, histogram);
 		double[] conns = getConns(imp, testThreshold, subVolume);
 		double minimum = getMinimum(testThreshold, conns);
+		double threshold = checkMinimum(minimum, histogram);
+
+		IJ.log(imp.getTitle() + " threshold  = "
+				+ IJ.d2s(threshold, 1));
 
 		if (doPlot)
 			showPlot(testThreshold, conns);
@@ -55,7 +60,7 @@ public class ThresholdMinConn implements PlugInFilter {
 				short[] pixels = (short[]) ip.getPixels();
 				for (int i = 0; i < nPixels; i++) {
 					int value = pixels[i] & 0xffff;
-					if (value > minimum) {
+					if (value > threshold) {
 						slice[i] = (byte) 255;
 					} else {
 						slice[i] = (byte) 0;
@@ -71,8 +76,40 @@ public class ThresholdMinConn implements PlugInFilter {
 		return;
 	}
 
-	private int[] getTestThreshold(ImagePlus imp2) {
-		int[] histogram = getStackHistogram(imp2);
+	/**
+	 * Check the calculated optimal (parabolic minimum) value for sanity. If the
+	 * test passes, the original minumum value is returned, otherwise the
+	 * autoThreshold of the histogram is returned.
+	 * 
+	 * @param minimum
+	 * @param histogram
+	 * @return
+	 */
+	private double checkMinimum(double minimum, int[] histogram) {
+		double threshold = minimum;
+		ImageProcessor ip = imp.getProcessor();
+
+		// threshold cannot be greater or less than min and max of histogram
+		int i = 0;
+		while (histogram[i] == 0)
+			i++;
+		int histogramMin = i;
+		
+		i = histogram.length - 1;
+		while (histogram[i] == 0)
+			i--;
+		int histogramMax = i;
+		
+		if (minimum < histogramMin || minimum > histogramMax){
+			threshold = ip.getAutoThreshold(histogram);
+			IJ.log("Calculated threshold is outside bounds of pixel values. " +
+					"Using histogram-based auto threshold.");
+		}
+		
+		return threshold;
+	}
+
+	private int[] getTestThreshold(ImagePlus imp2, int[] histogram) {
 		ImageProcessor ip = imp2.getProcessor();
 		int startThreshold = ip.getAutoThreshold(histogram);
 
@@ -104,13 +141,13 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 		CurveFitter cf = new CurveFitter(xData, conns);
 		cf.doFit(CurveFitter.POLY2);
-//		String parabola = cf.getResultString();
-//		IJ.log(parabola);
+		// String parabola = cf.getResultString();
+		// IJ.log(parabola);
 		double[] params = cf.getParams();
 		double b = params[1], c = params[2];
 		double xmin = -b / (2 * c);
-//		double ymin = a + b * xmin + c * xmin * xmin;
-//		IJ.log("minimum connectivity is at (" + xmin + ", " + ymin + ")");
+		// double ymin = a + b * xmin + c * xmin * xmin;
+		// IJ.log("minimum connectivity is at (" + xmin + ", " + ymin + ")");
 		return xmin;
 	}
 
@@ -167,13 +204,13 @@ public class ThresholdMinConn implements PlugInFilter {
 
 		ImageStack stack2 = new ImageStack(width, height);
 		for (int z = 1; z <= depth; z++) {
-			short[] pixels = (short[])stack.getPixels(z);
-			short[] newPixels = new short[width*height];
+			short[] pixels = (short[]) stack.getPixels(z);
+			short[] newPixels = new short[width * height];
 			for (int y = 0; y < height; y++) {
 				int offset = y * width;
 				int oldOffset = y * oldWidth;
 				for (int x = 0; x < width; x++) {
-					newPixels[offset+x] = pixels[oldOffset+x];
+					newPixels[offset + x] = pixels[oldOffset + x];
 				}
 			}
 			stack2.addSlice(stack.getSliceLabel(z), newPixels);
@@ -224,8 +261,8 @@ public class ThresholdMinConn implements PlugInFilter {
 			double connectivity = con.getConnectivity(deltaChi);
 			// add connectivity to the array
 			conns[i] = connectivity;
-//			IJ.log("Connectivity is " + conns[i] + " for threshold "
-//					+ testThreshold[i]);
+			// IJ.log("Connectivity is " + conns[i] + " for threshold "
+			// + testThreshold[i]);
 		}
 		imp3.close();
 		return conns;
