@@ -22,6 +22,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
+import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
 /**
@@ -106,7 +107,7 @@ public class Connectivity implements PlugIn {
 
 		double connDensity = getConnDensity(imp, connectivity);
 
-		if (connectivity < 0) {
+		if (connectivity < 0 && !Interpreter.isBatchMode()) {
 			IJ.showMessage("Caution", "Connectivity is negative.\n\n"
 					+ "This usually happens if there are multiple\n"
 					+ "particles or enclosed cavities.\n\n"

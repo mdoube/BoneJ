@@ -166,7 +166,7 @@ public class ThresholdMinConn implements PlugInFilter {
 		int oldWidth = imp2.getWidth();
 
 		ImageStack stack2 = new ImageStack(width, height);
-		for (int z = 1; z <= depth+1; z++) {
+		for (int z = 1; z <= depth; z++) {
 			short[] pixels = (short[])stack.getPixels(z);
 			short[] newPixels = new short[width*height];
 			for (int y = 0; y < height; y++) {
