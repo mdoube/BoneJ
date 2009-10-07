@@ -54,8 +54,8 @@ public class ThresholdMinConn implements PlugInFilter {
 				ip = stack.getProcessor(z);
 				short[] pixels = (short[]) ip.getPixels();
 				for (int i = 0; i < nPixels; i++) {
-//					int value = pixels[i] & 0xffff;
-					if (pixels[i] > minimum) {
+					int value = pixels[i] & 0xffff;
+					if (value > minimum) {
 						slice[i] = (byte) 255;
 					} else {
 						slice[i] = (byte) 0;
