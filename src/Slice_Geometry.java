@@ -110,6 +110,9 @@ public class Slice_Geometry implements PlugInFilter {
 			annotateImage();
 	}
 
+	/**
+	 * Show a copy of the input stack with centroids and axes drawn
+	 */
 	private void annotateImage() {
 		int w = this.stack.getWidth();
 		int h = this.stack.getHeight();
@@ -121,7 +124,8 @@ public class Slice_Geometry implements PlugInFilter {
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
 			if (this.doCentroids) {
-				annIP.drawOval((int)Math.floor(cX-4), (int)Math.floor(cY-4), 8, 8);
+				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
+						.floor(cY - 4), 8, 8);
 			}
 
 			if (this.doAxes) {
@@ -144,10 +148,12 @@ public class Slice_Geometry implements PlugInFilter {
 				x2 = (int) Math.floor(cX + Math.cos(-th) * 2 * rMax);
 				y2 = (int) Math.floor(cY - Math.sin(-th) * 2 * rMax);
 				annIP.drawLine(x1, y1, x2, y2);
-				annStack.addSlice("", annIP);
 			}
+			annStack.addSlice(this.stack.getSliceLabel(s), annIP);
 		}
-		ImagePlus ann = new ImagePlus("Annotated_"+this.imp.getTitle(), annStack);
+		ImagePlus ann = new ImagePlus("Annotated_" + this.imp.getTitle(),
+				annStack);
+		ann.setCalibration(imp.getCalibration());
 		ann.show();
 	}
 
