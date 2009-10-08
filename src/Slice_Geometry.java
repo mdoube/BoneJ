@@ -32,7 +32,7 @@ import java.awt.Rectangle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.doube.bonej.Thickness_;
+import org.doube.bonej.Thickness;
 
 /**
  * <p>
@@ -391,7 +391,7 @@ public class Slice_Geometry implements PlugInFilter {
 		this.maxCortThick = new double[this.al];
 		this.meanCortThick = new double[this.al];
 		this.stdevCortThick = new double[this.al];
-		Thickness_ th = new Thickness_();
+		Thickness th = new Thickness();
 		th.baseImp = this.imp;
 		th.vD = this.vD;
 		th.vW = this.vW;

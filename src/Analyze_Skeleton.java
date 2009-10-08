@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.ListIterator;
 
-import org.doube.bonej.Skeletonize3D_;
+import org.doube.bonej.Skeletonize3D;
 import org.doube.bonej.ResultInserter;
 
 import ij.IJ;
@@ -372,7 +372,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	}
 
 	// Now visit branches starting at junctions
-	Skeletonize3D_ sk = new Skeletonize3D_();
+	Skeletonize3D sk = new Skeletonize3D();
 	int[] LUT = new int[256];
 	sk.fillEulerLUT(LUT);
 
@@ -1240,7 +1240,7 @@ public class Analyze_Skeleton implements PlugInFilter
      */
     private ImageStack pruneEndBranches(ImageStack stack){
 	// Prepare Euler LUT [Lee94]
-	Skeletonize3D_ sk = new Skeletonize3D_();
+	Skeletonize3D sk = new Skeletonize3D();
 	int eulerLUT[] = new int[256]; 
 	sk.fillEulerLUT(eulerLUT);
 	int endPoints = this.listOfEndPoints.size();
@@ -1549,7 +1549,7 @@ public class Analyze_Skeleton implements PlugInFilter
 	    ((short[]) image.getPixels(z + 1))[x + y * this.width] = value;
     } /* end getPixel */	
 
-    private boolean isJunctionMiddle(ImageStack image, int[] junctionCoord, int[] LUT, Skeletonize3D_ sk){
+    private boolean isJunctionMiddle(ImageStack image, int[] junctionCoord, int[] LUT, Skeletonize3D sk){
 	//filter out non-branching junction voxels by marking them visited
 
 	int x = junctionCoord[0], y = junctionCoord[1], z = junctionCoord[2];

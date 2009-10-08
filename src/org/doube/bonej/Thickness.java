@@ -62,7 +62,7 @@ import java.util.Arrays;
  * @author Michael Doube (refactoring for BoneJ)
  * 
  */
-public class Thickness_ implements PlugInFilter {
+public class Thickness implements PlugInFilter {
 	public ImagePlus baseImp;
 	public int thresh = 128;
 	public boolean inverse, doThickness, doSpacing;
