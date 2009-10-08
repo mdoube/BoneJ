@@ -33,6 +33,8 @@ import java.awt.Rectangle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.doube.bonej.BoneList;
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.Thickness;
 
 /**
@@ -45,14 +47,14 @@ import org.doube.bonej.Thickness;
  */
 
 public class Slice_Geometry implements PlugIn {
-//	ImagePlus imp;
-	protected ImageStack stack;
+	// ImagePlus imp;
+	// protected ImageStack stack;
 	public static final double PI = 3.141592653589793;
 	private int boneID, al, startSlice, endSlice;
-	private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
+	private double vW, vH, vD;// airHU, minBoneHU, maxBoneHU;
 	private String units, analyse, calString;
 
-	/** Do local thickness measurement in 3D*/
+	/** Do local thickness measurement in 3D */
 	private boolean doThickness3D;
 	private boolean doCopy, doCentroids, doOutline, doAxes, doStack,
 			isCalibrated;
@@ -64,34 +66,87 @@ public class Slice_Geometry implements PlugIn {
 	private double[][] sliceCentroids;
 	Calibration cal;
 
-/*	public int setup(String arg, ImagePlus imp) {
-		if (imp == null) {
-			IJ.noImage();
-			return DONE;
-		}
-		this.imp = imp;
-		this.cal = this.imp.getCalibration();
-		this.vW = this.cal.pixelWidth;
-		this.vH = this.cal.pixelHeight;
-		this.vD = this.cal.pixelDepth;
-		this.units = this.cal.getUnits();
-		this.stack = imp.getStack();
-		this.al = this.stack.getSize() + 1;
-		// TODO properly support 8bit images
-		return DOES_8G + DOES_16 + SUPPORTS_MASKING;
-	} */
+	/*
+	 * public int setup(String arg, ImagePlus imp) {
+	 * 
+	 * this.cal = this.imp.getCalibration(); this.units = this.cal.getUnits();
+	 * this.stack = imp.getStack(); this.al = this.stack.getSize() + 1; // TODO
+	 * properly support 8bit images return DOES_8G + DOES_16 + SUPPORTS_MASKING;
+	 * }
+	 */
 
-//	public void run(ImageProcessor ip) {
-	@Override
+	// public void run(ImageProcessor ip) {
 	public void run(String arg) {
 		ImagePlus imp = IJ.getImage();
-		IJ.run("Threshold...");
-		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
-		this.minBoneHU = (short) imp.getProcessor().getMinThreshold();
-		this.maxBoneHU = (short) imp.getProcessor().getMaxThreshold();
-
-		if (!showDialog()) {
+		if (imp == null) {
+			IJ.noImage();
 			return;
+		}
+		if (imp.getBitDepth() != 16) {
+			IJ.error("Slice Geometry currently supports only 16-bit images.");
+			return;
+		}
+
+		IJ.run("Threshold...");
+
+		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
+
+		// set up some defaults
+		short airHU = -1000;
+		short minBoneHU = (short) imp.getProcessor().getMinThreshold();
+		short maxBoneHU = (short) imp.getProcessor().getMaxThreshold();
+
+		GenericDialog gd = new GenericDialog("Options");
+
+		gd.addCheckbox("3D Cortical Thickness", true);
+		gd.addCheckbox("Draw Axes", true);
+		gd.addCheckbox("Draw Centroids", true);
+		gd.addCheckbox("Draw Outline", false);
+		gd.addCheckbox("Annotated Copy", true);
+		gd.addCheckbox("Process Stack", false);
+		BoneList bl = new BoneList();
+		String[] boneList = bl.getBoneList();
+		gd.addChoice("Bone: ", boneList, boneList[bl.guessBone(imp)]);
+		String[] analyses = { "Weighted", "Unweighted", "Both" };
+		gd.addChoice("Calculate: ", analyses, analyses[1]);
+
+		gd.addMessage("Set the threshold");
+		gd.addNumericField("Air:", airHU, 0);
+		gd.addNumericField("Bone Min:", minBoneHU, 0);
+		gd.addNumericField("Bone Max:", maxBoneHU, 0);
+		gd.showDialog();
+		this.doThickness3D = gd.getNextBoolean();
+		this.doAxes = gd.getNextBoolean();
+		this.doCentroids = gd.getNextBoolean();
+		this.doOutline = gd.getNextBoolean();
+		this.doCopy = gd.getNextBoolean();
+		this.doStack = gd.getNextBoolean();
+		if (this.doStack) {
+			this.startSlice = 1;
+			this.endSlice = this.imp.getImageStackSize();
+		} else {
+			this.startSlice = this.imp.getCurrentSlice();
+			this.endSlice = this.imp.getCurrentSlice();
+		}
+
+		String bone = gd.getNextChoice();
+		for (int n = 0; n < bones.length; n++) {
+			if (bone.equals(bones[n])) {
+				this.boneID = n;
+				continue;
+			}
+		}
+		this.analyse = gd.getNextChoice();
+		// this.vW = gd.getNextNumber();
+		// this.vH = gd.getNextNumber();
+		// this.vD = gd.getNextNumber();
+		this.airHU = gd.getNextNumber();
+		this.minBoneHU = gd.getNextNumber();
+		this.maxBoneHU = gd.getNextNumber();
+		if (gd.wasCanceled()) {
+			return false;
+		} else {
+			return true;
 		}
 
 		if (calculateCentroids() == 0) {
@@ -106,8 +161,6 @@ public class Slice_Geometry implements PlugIn {
 
 		roiMeasurements();
 		// TODO locate centroids of multiple sections in a single plane
-
-		// TODO annotate results
 
 		showSliceResults();
 		if (this.doAxes || this.doCentroids)
@@ -129,7 +182,8 @@ public class Slice_Geometry implements PlugIn {
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
 			if (this.doCentroids) {
-				annIP.drawOval((int)Math.floor(cX-4), (int)Math.floor(cY-4), 8, 8);
+				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
+						.floor(cY - 4), 8, 8);
 			}
 
 			if (this.doAxes) {
@@ -155,7 +209,8 @@ public class Slice_Geometry implements PlugIn {
 				annStack.addSlice("", annIP);
 			}
 		}
-		ImagePlus ann = new ImagePlus("Annotated_"+this.imp.getTitle(), annStack);
+		ImagePlus ann = new ImagePlus("Annotated_" + this.imp.getTitle(),
+				annStack);
 		ann.show();
 	}
 
@@ -516,76 +571,6 @@ public class Slice_Geometry implements PlugIn {
 					this.imp.getCurrentSlice()).getMaxThreshold();
 		}
 		return;
-	}
-
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Options");
-
-		gd.addCheckbox("3D Cortical Thickness", true);
-		gd.addCheckbox("Draw Axes", true);
-		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Draw Outline", false);
-		gd.addCheckbox("Annotated Copy", true);
-		gd.addCheckbox("Process Stack", false);
-		String[] bones = { "unknown", "scapula", "humerus", "radius", "ulna",
-				"metacarpal", "pelvis", "femur", "tibia", "fibula",
-				"metatarsal" };
-		// guess bone from image title
-		String title = this.imp.getTitle();
-		this.boneID = 0;
-		for (int n = 0; n < bones.length; n++) {
-			Pattern p = Pattern.compile(bones[n], Pattern.CASE_INSENSITIVE);
-			Matcher m = p.matcher(title);
-			if (m.find()) {
-				this.boneID = n;
-				continue;
-			}
-		}
-		gd.addChoice("Bone: ", bones, bones[this.boneID]);
-		String[] analyses = { "Weighted", "Unweighted", "Both" };
-		gd.addChoice("Calculate: ", analyses, analyses[1]);
-		// gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
-		// gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
-		// gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
-		// gd.addMessage(this.calString);
-		gd.addMessage("Set the threshold");
-		gd.addNumericField("Air:", this.airHU, 0);
-		gd.addNumericField("Bone Min:", this.minBoneHU, 0);
-		gd.addNumericField("Bone Max:", this.maxBoneHU, 0);
-		gd.showDialog();
-		this.doThickness3D = gd.getNextBoolean();
-		this.doAxes = gd.getNextBoolean();
-		this.doCentroids = gd.getNextBoolean();
-		this.doOutline = gd.getNextBoolean();
-		this.doCopy = gd.getNextBoolean();
-		this.doStack = gd.getNextBoolean();
-		if (this.doStack) {
-			this.startSlice = 1;
-			this.endSlice = this.imp.getImageStackSize();
-		} else {
-			this.startSlice = this.imp.getCurrentSlice();
-			this.endSlice = this.imp.getCurrentSlice();
-		}
-
-		String bone = gd.getNextChoice();
-		for (int n = 0; n < bones.length; n++) {
-			if (bone.equals(bones[n])) {
-				this.boneID = n;
-				continue;
-			}
-		}
-		this.analyse = gd.getNextChoice();
-		// this.vW = gd.getNextNumber();
-		// this.vH = gd.getNextNumber();
-		// this.vD = gd.getNextNumber();
-		this.airHU = gd.getNextNumber();
-		this.minBoneHU = gd.getNextNumber();
-		this.maxBoneHU = gd.getNextNumber();
-		if (gd.wasCanceled()) {
-			return false;
-		} else {
-			return true;
-		}
 	}
 
 	private void showSliceResults() {
