@@ -22,6 +22,7 @@ import ij.ImageStack;
 import ij.process.ByteProcessor; //import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
+import ij.plugin.PlugIn;
 import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -43,16 +44,16 @@ import org.doube.bonej.Thickness;
  * 
  */
 
-public class Slice_Geometry implements PlugInFilter {
-	ImagePlus imp;
+public class Slice_Geometry implements PlugIn {
+//	ImagePlus imp;
 	protected ImageStack stack;
 	public static final double PI = 3.141592653589793;
 	private int boneID, al, startSlice, endSlice;
 	private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
 	private String units, analyse, calString;
 
-	/** Do local thickness measurement */
-	private boolean doThickness;
+	/** Do local thickness measurement in 3D*/
+	private boolean doThickness3D;
 	private boolean doCopy, doCentroids, doOutline, doAxes, doStack,
 			isCalibrated;
 	private double[] cslice, cortArea, meanCortThick, maxCortThick,
@@ -63,7 +64,7 @@ public class Slice_Geometry implements PlugInFilter {
 	private double[][] sliceCentroids;
 	Calibration cal;
 
-	public int setup(String arg, ImagePlus imp) {
+/*	public int setup(String arg, ImagePlus imp) {
 		if (imp == null) {
 			IJ.noImage();
 			return DONE;
@@ -78,13 +79,16 @@ public class Slice_Geometry implements PlugInFilter {
 		this.al = this.stack.getSize() + 1;
 		// TODO properly support 8bit images
 		return DOES_8G + DOES_16 + SUPPORTS_MASKING;
-	}
+	} */
 
-	public void run(ImageProcessor ip) {
+//	public void run(ImageProcessor ip) {
+	@Override
+	public void run(String arg) {
+		ImagePlus imp = IJ.getImage();
 		IJ.run("Threshold...");
 		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
-		this.minBoneHU = (short) this.imp.getProcessor().getMinThreshold();
-		this.maxBoneHU = (short) this.imp.getProcessor().getMaxThreshold();
+		this.minBoneHU = (short) imp.getProcessor().getMinThreshold();
+		this.maxBoneHU = (short) imp.getProcessor().getMaxThreshold();
 
 		if (!showDialog()) {
 			return;
@@ -97,7 +101,7 @@ public class Slice_Geometry implements PlugInFilter {
 		}
 
 		calculateMoments();
-		if (this.doThickness)
+		if (this.doThickness3D)
 			calculateThickness();
 
 		roiMeasurements();
@@ -110,6 +114,10 @@ public class Slice_Geometry implements PlugInFilter {
 			annotateImage();
 	}
 
+	/**
+	 * Copy the original image with axes and/or centroids drawn
+	 * 
+	 */
 	private void annotateImage() {
 		int w = this.stack.getWidth();
 		int h = this.stack.getHeight();
@@ -513,7 +521,7 @@ public class Slice_Geometry implements PlugInFilter {
 	private boolean showDialog() {
 		GenericDialog gd = new GenericDialog("Options");
 
-		gd.addCheckbox("Cortical Thickness", true);
+		gd.addCheckbox("3D Cortical Thickness", true);
 		gd.addCheckbox("Draw Axes", true);
 		gd.addCheckbox("Draw Centroids", true);
 		gd.addCheckbox("Draw Outline", false);
@@ -545,7 +553,7 @@ public class Slice_Geometry implements PlugInFilter {
 		gd.addNumericField("Bone Min:", this.minBoneHU, 0);
 		gd.addNumericField("Bone Max:", this.maxBoneHU, 0);
 		gd.showDialog();
-		this.doThickness = gd.getNextBoolean();
+		this.doThickness3D = gd.getNextBoolean();
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
 		this.doOutline = gd.getNextBoolean();
@@ -608,7 +616,7 @@ public class Slice_Geometry implements PlugInFilter {
 			rt.addValue("Feret Min", this.feretMin[s]);
 			rt.addValue("Feret Max", this.feretMax[s]);
 			rt.addValue("Feret Angle", this.feretAngle[s]);
-			if (this.doThickness) {
+			if (this.doThickness3D) {
 				rt.addValue("Max Thick (" + units + ")", this.maxCortThick[s]);
 				rt
 						.addValue("Mean Thick (" + units + ")",
