@@ -35,6 +35,9 @@ public class ThresholdMinConn implements PlugInFilter {
 			IJ.error("");
 			return;
 		}
+		if (ic.dicomVoxelDepth(imp) > 0){
+			return;
+		}
 
 		int[] histogram = getStackHistogram(imp);
 		int[] testThreshold = getTestThreshold(imp, histogram);

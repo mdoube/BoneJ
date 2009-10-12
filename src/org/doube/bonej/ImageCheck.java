@@ -3,7 +3,9 @@ package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.io.FileInfo;
+import ij.io.Opener;
 import ij.measure.Calibration;
+import ij.plugin.DICOM;
 import ij.process.ImageStatistics;
 
 /**
@@ -86,11 +88,13 @@ public class ImageCheck {
 	 */
 	public double dicomVoxelDepth(ImagePlus imp){
 		double vD = imp.getCalibration().pixelDepth;
-		FileInfo fileInfo = imp.getOriginalFileInfo();
-		if (fileInfo.fileFormat == FileInfo.DICOM){
+		IJ.log(""+imp.getProperty("0020,0032  Image Position (Patient):"));
+		if (imp.getOriginalFileInfo().fileFormat == FileInfo.DICOM){
 			//Image is a DICOM
 			IJ.log("this imp is a DICOM.  Checking voxel depth.");
-			vD = 0; //TODO reassign
+			//check out
+			//http://rsbweb.nih.gov/ij/plugins/download/Query_Dicom_Header.java
+			
 			//get the position of the first and last slices to get stack depth
 			
 			//divide by nSlices to get mean slice thickness
