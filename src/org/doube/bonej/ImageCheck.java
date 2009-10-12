@@ -2,6 +2,7 @@ package org.doube.bonej;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.io.FileInfo;
 import ij.measure.Calibration;
 import ij.process.ImageStatistics;
 
@@ -76,5 +77,32 @@ public class ImageCheck {
 			return false;
 
 		return true;
+	}
+	
+	/** Check that the voxel thickness is correct 
+	 * 
+	 * @param imp
+	 * @return voxel thickness based on DICOM header information
+	 */
+	public double dicomVoxelDepth(ImagePlus imp){
+		double vD = imp.getCalibration().pixelDepth;
+		FileInfo fileInfo = imp.getOriginalFileInfo();
+		if (fileInfo.fileFormat == FileInfo.DICOM){
+			//Image is a DICOM
+			IJ.log("this imp is a DICOM.  Checking voxel depth.");
+			vD = 0; //TODO reassign
+			//get the position of the first and last slices to get stack depth
+			
+			//divide by nSlices to get mean slice thickness
+			
+			//check that individual slices are spaced evenly
+			
+			//notify user if slices are unevenly spaced
+		}
+		else {
+			IJ.log("This image is not a DICOM, using original voxel depth");
+			return vD;
+		}
+		return vD;
 	}
 }
