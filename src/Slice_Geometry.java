@@ -64,8 +64,8 @@ public class Slice_Geometry implements PlugIn {
 	private double[][] sliceCentroids;
 
 	private int airHU;
-	private short minBoneHU;
-	private short maxBoneHU;
+	private int minBoneHU;
+	private int maxBoneHU;
 
 	public void run(String arg) {
 		ImagePlus imp = IJ.getImage();
@@ -127,9 +127,9 @@ public class Slice_Geometry implements PlugIn {
 		IJ.log("Guessing that this is a " + bone + " with code " + boneID);
 
 		this.analyse = gd.getNextChoice();
-		airHU = (short) gd.getNextNumber();
-		minBoneHU = (short) gd.getNextNumber();
-		maxBoneHU = (short) gd.getNextNumber();
+		this.airHU = (int) gd.getNextNumber();
+		this.minBoneHU = (int) gd.getNextNumber();
+		this.maxBoneHU = (int) gd.getNextNumber();
 		if (gd.wasCanceled()) {
 			return;
 		}
@@ -238,6 +238,7 @@ public class Slice_Geometry implements PlugIn {
 				this.sliceCentroids[0][s] = sumX / this.cslice[s];
 				this.sliceCentroids[1][s] = sumY / this.cslice[s];
 				cstack += this.cslice[s];
+				IJ.log("cstack = "+cstack);
 				this.emptySlices[s] = false;
 			} else {
 				this.emptySlices[s] = true;
