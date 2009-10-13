@@ -3,10 +3,7 @@ package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.io.FileInfo;
-import ij.io.Opener;
 import ij.measure.Calibration;
-import ij.plugin.DICOM;
 import ij.process.ImageStatistics;
 
 /**
