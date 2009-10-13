@@ -2,6 +2,7 @@ package org.doube.bonej;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.io.FileInfo;
 import ij.io.Opener;
 import ij.measure.Calibration;
@@ -62,7 +63,7 @@ public class ImageCheck {
 	 * @return true if voxel width == height == depth
 	 */
 	public boolean isVoxelIsotropic(ImagePlus imp) {
-		if (imp == null){
+		if (imp == null) {
 			IJ.noImage();
 			return false;
 		}
@@ -80,33 +81,74 @@ public class ImageCheck {
 
 		return true;
 	}
-	
-	/** Check that the voxel thickness is correct 
+
+	/**
+	 * Check that the voxel thickness is correct
 	 * 
 	 * @param imp
 	 * @return voxel thickness based on DICOM header information
 	 */
-	public double dicomVoxelDepth(ImagePlus imp){
+	public double dicomVoxelDepth(ImagePlus imp) {
 		double vD = imp.getCalibration().pixelDepth;
-		IJ.log(""+imp.getProperty("0020,0032  Image Position (Patient):"));
-		if (imp.getOriginalFileInfo().fileFormat == FileInfo.DICOM){
-			//Image is a DICOM
-			IJ.log("this imp is a DICOM.  Checking voxel depth.");
-			//check out
-			//http://rsbweb.nih.gov/ij/plugins/download/Query_Dicom_Header.java
-			
-			//get the position of the first and last slices to get stack depth
-			
-			//divide by nSlices to get mean slice thickness
-			
-			//check that individual slices are spaced evenly
-			
-			//notify user if slices are unevenly spaced
+
+		String position = getDicomAttribute(imp, 1, "0020,0032");
+		String[] xyz = position.split("\\\\");
+		double first = Double.parseDouble(xyz[2]);
+
+		position = getDicomAttribute(imp, imp.getStackSize(), "0020,0032");
+		xyz = position.split("\\\\");
+		double last = Double.parseDouble(xyz[2]);
+
+		double sliceSpacing = Math.abs((last - first)
+				/ (imp.getStackSize() - 1));
+
+		String units = imp.getCalibration().getUnits();
+
+		if (vD != sliceSpacing) {
+			IJ
+					.log("Voxel Depth Error: \n"
+							+ "Voxel depth does not agree with slice spacing.\n"
+							+ "Voxel depth: " + IJ.d2s(vD, 4) + " " + units
+							+ "\n" + "Slice spacing: "
+							+ IJ.d2s(sliceSpacing, 4) + " " + units);
 		}
-		else {
-			IJ.log("This image is not a DICOM, using original voxel depth");
-			return vD;
-		}
-		return vD;
+		return sliceSpacing;
 	}
+
+	/**
+	 * Get the value associated with a DICOM tag from an ImagePlus header
+	 * 
+	 * @param imp
+	 * @param slice
+	 * @param tag
+	 *            , in 0000,0000 format.
+	 * @return the value associated with the tag
+	 */
+	private String getDicomAttribute(ImagePlus imp, int slice, String tag) {
+		ImageStack stack = imp.getImageStack();
+		String header = stack.getSliceLabel(slice);
+		// tag must be in format 0000,0000
+		if (slice < 1 || slice > stack.getSize()) {
+			return null;
+		}
+		String attribute = " ";
+		String value = " ";
+		int idx1 = header.indexOf(tag);
+		int idx2 = header.indexOf(":", idx1);
+		int idx3 = header.indexOf("\n", idx2);
+		if (idx1 >= 0 && idx2 >= 0 && idx3 >= 0) {
+			try {
+				attribute = header.substring(idx1 + 9, idx2);
+				attribute = attribute.trim();
+				value = header.substring(idx2 + 1, idx3);
+				value = value.trim();
+				// IJ.log("tag = " + tag + ", attribute = " + attribute
+				// + ", value = " + value);
+			} catch (Throwable e) {
+				return " ";
+			}
+		}
+		return value;
+	}
+
 }
