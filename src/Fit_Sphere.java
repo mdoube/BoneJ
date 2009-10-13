@@ -27,7 +27,7 @@ import ij.measure.Calibration;
 
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitSphere;
-
+//TODO bounds checking
 /**
  *<p>
  * Takes point selections from ROI manager and returns the centroid and radius
@@ -88,13 +88,7 @@ public class Fit_Sphere implements PlugInFilter {
 		FitSphere fs = new FitSphere();
 		double[][] points = fs.getRoiManPoints(imp, roiMan);
 		double[] sphereDim = fs.fitSphere(points);
-		if (doCopy)
-			copySphere(imp, ip, padding, cropFactor, sphereDim);
-		if (doInnerCube)
-			copyInnerCube(imp, ip, cropFactor, sphereDim);
-		if (doOuterCube)
-			copyOuterCube(imp, ip, cropFactor, sphereDim);
-
+		
 		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = new ResultInserter();
 		ri.setResultInRow(imp, "X centroid (" + units + ")", sphereDim[0]);
@@ -102,6 +96,13 @@ public class Fit_Sphere implements PlugInFilter {
 		ri.setResultInRow(imp, "Z centroid (" + units + ")", sphereDim[2]);
 		ri.setResultInRow(imp, "Radius (" + units + ")", sphereDim[3]);
 		ri.updateTable();
+		
+		if (doCopy)
+			copySphere(imp, ip, padding, cropFactor, sphereDim);
+		if (doInnerCube)
+			copyInnerCube(imp, ip, cropFactor, sphereDim);
+		if (doOuterCube)
+			copyOuterCube(imp, ip, cropFactor, sphereDim);
 	}
 
 	private boolean showDialog() {
@@ -144,6 +145,7 @@ public class Fit_Sphere implements PlugInFilter {
 		int startZ = (int) Math
 				.round((sphereDim[2] - sphereDim[3] * cropFactor) / voxDim[2])
 				- padding;
+		if (startZ < 1) startZ = 1;
 		int roiWidth = (int) Math.round(2 * sphereDim[3] * cropFactor
 				/ voxDim[0])
 				+ 2 * padding;
@@ -153,6 +155,9 @@ public class Fit_Sphere implements PlugInFilter {
 		int roiDepth = (int) Math.round(2 * sphereDim[3] * cropFactor
 				/ voxDim[2])
 				+ 2 * padding;
+		if (startZ + roiDepth > imp.getStackSize()){
+			roiDepth = imp.getStackSize() - startZ;
+		}
 		ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		for (int z = startZ; z <= startZ + roiDepth; z++) {
