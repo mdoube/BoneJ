@@ -344,6 +344,7 @@ public class ThresholdMinConn implements PlugInFilter {
 			}
 			// scale the histogram so that getAutoThreshold()
 			//returns a sensible value
+			//remove this section when IJ 1.43i is available with bug fix.
 			int mode = 0;
 			int modePoint = 0;
 			for (int i = 0; i < histogram.length; i++) {
@@ -370,6 +371,7 @@ public class ThresholdMinConn implements PlugInFilter {
 				IJ.log("Scaled peak pixel count of " + mode
 						+ " found at pixel value " + modePoint);
 			}
+			//end of section to remove after IJ 1.43i released
 			return histogram;
 		} else
 			return null;
