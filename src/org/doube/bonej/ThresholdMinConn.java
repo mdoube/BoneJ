@@ -14,7 +14,18 @@ public class ThresholdMinConn implements PlugInFilter {
 	private ImagePlus imp;
 	private int testCount = 11, subVolume = 256;
 	private double testRange = 0.2;
-	private boolean doPlot = false, applyThreshold = false;
+
+	/** Show a plot of connectivity vs. threshold */
+	private boolean doPlot = false;
+
+	/** Apply the threshold to the stack once it is found */
+	private boolean applyThreshold = false;
+
+	/**
+	 * Return the autothreshold for the stack histogram without doing
+	 * connectivity analysis
+	 */
+	private boolean thresholdOnly = false;
 
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
@@ -40,16 +51,17 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 
 		int[] histogram = getStackHistogram(imp);
-		int[] testThreshold = getTestThreshold(imp, histogram);
-		double[] conns = getConns(imp, testThreshold, subVolume);
-		double minimum = getMinimum(testThreshold, conns);
-		double threshold = checkMinimum(minimum, histogram);
+		double threshold = (double) ip.getAutoThreshold(histogram);
 
-		IJ.log(imp.getTitle() + " threshold  = "
-				+ IJ.d2s(threshold, 1));
-
-		if (doPlot)
-			showPlot(testThreshold, conns);
+		if (!thresholdOnly) {
+			int[] testThreshold = getTestThreshold(imp, histogram);
+			double[] conns = getConns(imp, testThreshold, subVolume);
+			double minimum = getMinimum(testThreshold, conns);
+			threshold = checkMinimum(minimum, histogram);
+			if (doPlot)
+				showPlot(testThreshold, conns);
+		}
+		IJ.log(imp.getTitle() + " threshold  = " + IJ.d2s(threshold, 1));
 
 		if (applyThreshold) {
 			int w = imp.getWidth();
@@ -97,18 +109,18 @@ public class ThresholdMinConn implements PlugInFilter {
 		while (histogram[i] == 0)
 			i++;
 		int histogramMin = i;
-		
+
 		i = histogram.length - 1;
 		while (histogram[i] == 0)
 			i--;
 		int histogramMax = i;
-		
-		if (minimum < histogramMin || minimum > histogramMax){
+
+		if (minimum < histogramMin || minimum > histogramMax) {
 			threshold = ip.getAutoThreshold(histogram);
-			IJ.log("Calculated threshold is outside bounds of pixel values. " +
-					"Using histogram-based auto threshold.");
+			IJ.log("Calculated threshold is outside bounds of pixel values. "
+					+ "Using histogram-based auto threshold.");
 		}
-		
+
 		return threshold;
 	}
 
@@ -333,6 +345,35 @@ public class ThresholdMinConn implements PlugInFilter {
 					}
 				}
 			}
+			// scale the histogram so that getAutoThreshold() returns a sensible
+			// value
+			int mode = 0;
+			// int modePoint = 0;
+			for (int i = 0; i < histogram.length; i++) {
+				if (histogram[i] > mode) {
+					mode = histogram[i];
+					// modePoint = i;
+				}
+			}
+			// IJ.log("peak pixel count of " + mode + " found at pixel value "
+			// + modePoint);
+			if (mode > 1e5) {
+				double factor = 1e5 / mode;
+				for (int i = 0; i < histogram.length; i++) {
+					histogram[i] = (int) Math.round(histogram[i] * factor);
+				}
+				mode = 0;
+				// modePoint = 0;
+				for (int i = 0; i < histogram.length; i++) {
+					if (histogram[i] > mode) {
+						mode = histogram[i];
+						// modePoint = i;
+					}
+				}
+				// IJ.log("Scaled peak pixel count of " + mode
+				// + " found at pixel value " + modePoint);
+			}
+
 			return histogram;
 		} else
 			return null;
@@ -342,6 +383,7 @@ public class ThresholdMinConn implements PlugInFilter {
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addCheckbox("Show Plot", true);
 		gd.addCheckbox("Apply Threshold", false);
+		gd.addCheckbox("Threshold Only", false);
 		gd.addNumericField("Tests", testCount, 0);
 		gd.addNumericField("Range", testRange, 2);
 		gd.addNumericField("Subvolume Size", subVolume, 0);
@@ -351,6 +393,7 @@ public class ThresholdMinConn implements PlugInFilter {
 		} else {
 			doPlot = gd.getNextBoolean();
 			applyThreshold = gd.getNextBoolean();
+			thresholdOnly = gd.getNextBoolean();
 			testCount = (int) Math.floor(gd.getNextNumber());
 			testRange = gd.getNextNumber();
 			subVolume = (int) Math.floor(gd.getNextNumber());

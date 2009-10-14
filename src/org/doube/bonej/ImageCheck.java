@@ -7,8 +7,7 @@ import ij.measure.Calibration;
 import ij.process.ImageStatistics;
 
 /**
- * Check if an image conforms to the type defined by each method. Methods return
- * true if image satisfies conditions and false if it doesn't.
+ * Check if an image conforms to the type defined by each method.
  * 
  * @author Michael Doube
  * 
