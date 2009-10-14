@@ -48,7 +48,7 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 
 		int[] histogram = getStackHistogram(imp);
-		double threshold = ip.getAutoThreshold(histogram);
+		double threshold = (double) ip.getAutoThreshold(histogram);
 
 		if (!thresholdOnly) {
 			int[] testThreshold = getTestThreshold(imp, histogram);
@@ -59,7 +59,7 @@ public class ThresholdMinConn implements PlugInFilter {
 				showPlot(testThreshold, conns);
 		}
 		IJ.log(imp.getTitle() + " threshold  = " + IJ.d2s(threshold, 1));
-	
+
 		if (applyThreshold) {
 			int w = imp.getWidth();
 			int h = imp.getHeight();
@@ -342,6 +342,35 @@ public class ThresholdMinConn implements PlugInFilter {
 					}
 				}
 			}
+			// scale the histogram so that getAutoThreshold() returns a sensible
+			// value
+			int mode = 0;
+			// int modePoint = 0;
+			for (int i = 0; i < histogram.length; i++) {
+				if (histogram[i] > mode) {
+					mode = histogram[i];
+					// modePoint = i;
+				}
+			}
+			// IJ.log("peak pixel count of " + mode + " found at pixel value "
+			// + modePoint);
+			if (mode > 1e5) {
+				double factor = 1e5 / mode;
+				for (int i = 0; i < histogram.length; i++) {
+					histogram[i] = (int) Math.round(histogram[i] * factor);
+				}
+				mode = 0;
+				// modePoint = 0;
+				for (int i = 0; i < histogram.length; i++) {
+					if (histogram[i] > mode) {
+						mode = histogram[i];
+						// modePoint = i;
+					}
+				}
+				// IJ.log("Scaled peak pixel count of " + mode
+				// + " found at pixel value " + modePoint);
+			}
+
 			return histogram;
 		} else
 			return null;
