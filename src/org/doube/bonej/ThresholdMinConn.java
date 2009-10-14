@@ -345,22 +345,30 @@ public class ThresholdMinConn implements PlugInFilter {
 			// scale the histogram so that getAutoThreshold()
 			//returns a sensible value
 			int mode = 0;
+			int modePoint = 0;
 			for (int i = 0; i < histogram.length; i++) {
 				if (histogram[i] > mode) {
 					mode = histogram[i];
+					modePoint = i;
 				}
 			}
-			if (mode > 1e5) {
-				double factor = 1e5 / mode;
+			IJ.log("peak pixel count of " + mode + " found at pixel value "
+					+ modePoint);
+			if (mode > 1e4) {
+				double factor = 1e4 / mode;
 				for (int i = 0; i < histogram.length; i++) {
 					histogram[i] = (int) Math.round(histogram[i] * factor);
 				}
 				mode = 0;
+				modePoint = 0;
 				for (int i = 0; i < histogram.length; i++) {
 					if (histogram[i] > mode) {
 						mode = histogram[i];
+						modePoint = i;
 					}
 				}
+				IJ.log("Scaled peak pixel count of " + mode
+						+ " found at pixel value " + modePoint);
 			}
 			return histogram;
 		} else
