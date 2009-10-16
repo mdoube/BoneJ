@@ -5,6 +5,7 @@ import org.doube.bonej.ResultInserter;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.measure.Calibration;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.filter.PlugInFilter;
@@ -72,9 +73,11 @@ public class Volume_Fraction implements PlugInFilter {
 			}
 		}
 		double p = (double) volBone / (double) volTotal;
+		Calibration cal = imp.getCalibration();
+		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth; 
 		ResultInserter ri = new ResultInserter();
-		ri.setResultInRow(imp, "BV", volBone);
-		ri.setResultInRow(imp, "TV", volTotal);
+		ri.setResultInRow(imp, "BV ("+cal.getUnits()+"^3)", volBone * voxelVol);
+		ri.setResultInRow(imp, "TV ("+cal.getUnits()+"^3)", volTotal * voxelVol);
 		ri.setResultInRow(imp, "BV/TV", p);
 		ri.updateTable();
 	}
