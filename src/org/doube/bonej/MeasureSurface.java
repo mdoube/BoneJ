@@ -83,7 +83,7 @@ public class MeasureSurface implements PlugIn {
 		c.getColor();
 		c.getColor();
 		c.setColor(green);
-		c.setTransparency((float) 0.7);
+		c.setTransparency((float) 0.33);
 		c.setSelected(true);
 	}
 
