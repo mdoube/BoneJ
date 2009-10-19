@@ -142,8 +142,8 @@ public class TestCircle implements PlugIn {
 	gd.addNumericField("Centre X", 5, 2);
 	gd.addNumericField("Centre Y", 10, 2);
 	gd.addNumericField("Radius", 15, 2);
-	gd.addNumericField("Start angle", 0, 4);
-	gd.addNumericField("End angle", 0.5 * Math.PI, 4);
+	gd.addNumericField("Start angle", 0, 4, 6, "radians");
+	gd.addNumericField("End angle", 0.5 * Math.PI, 4, 6, "radians");
 	gd.addNumericField("N points", 20, 0);
 	gd.addNumericField("Noise", 0, 2);
 
