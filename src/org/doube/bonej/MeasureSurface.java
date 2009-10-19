@@ -50,15 +50,12 @@ public class MeasureSurface implements PlugIn {
 		List<Point3f> points = mct.getTriangles(imp, threshold, channels,
 				resamplingF);
 
-		IJ.log("IsoSurface contains " + (points.size() / 3) + " triangles");
+		IJ.log("Isosurface contains " + (points.size() / 3) + " triangles");
 		
 		ResultInserter ri = new ResultInserter();
 		double area = getSurfaceArea(points);
 		ri.setResultInRow(imp,
 				"BS (" + imp.getCalibration().getUnits() + "^2)", area);
-
-		IJ.log("Area of mesh is " + area + " "
-				+ imp.getCalibration().getUnits() + "^2");
 
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
