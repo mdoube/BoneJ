@@ -82,18 +82,27 @@ public class ImageCheck {
 	 * Check that the voxel thickness is correct
 	 * 
 	 * @param imp
-	 * @return voxel thickness based on DICOM header information
+	 * @return voxel thickness based on DICOM header information. Returns -1 if
+	 *         there is no DICOM slice position information.
 	 */
 	public double dicomVoxelDepth(ImagePlus imp) {
 		double vD = imp.getCalibration().pixelDepth;
 
 		String position = getDicomAttribute(imp, 1, "0020,0032");
 		String[] xyz = position.split("\\\\");
-		double first = Double.parseDouble(xyz[2]);
+		double first = 0;
+		if (xyz.length == 3) // we have 3 values
+			first = Double.parseDouble(xyz[2]);
+		else
+			return -1;
 
 		position = getDicomAttribute(imp, imp.getStackSize(), "0020,0032");
 		xyz = position.split("\\\\");
-		double last = Double.parseDouble(xyz[2]);
+		double last = 0;
+		if (xyz.length == 3) // we have 3 values
+			last = Double.parseDouble(xyz[2]);
+		else
+			return -1;
 
 		double sliceSpacing = Math.abs((last - first)
 				/ (imp.getStackSize() - 1));
