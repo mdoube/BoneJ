@@ -41,6 +41,7 @@ public class Dilate implements PlugInFilter {
 		if(gd.wasCanceled())
 			return;
 		dilate(image, (int)gd.getNextNumber(), false).show();
+		return;
 	}
 
 	public int setup(String arg, ImagePlus imp) {
@@ -108,5 +109,6 @@ public class Dilate implements PlugInFilter {
 
 	public void set(int x, int y, int z, int v) {
 		pixels_out[z][y*w + x] = (byte)v;
+		return;
 	}
 }

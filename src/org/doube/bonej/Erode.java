@@ -41,6 +41,7 @@ public class Erode implements PlugInFilter {
 		if(gd.wasCanceled())
 			return;
 		erode(image, (int)gd.getNextNumber(), false).show();
+		return;
 	}
 
 	public int setup(String arg, ImagePlus imp) {

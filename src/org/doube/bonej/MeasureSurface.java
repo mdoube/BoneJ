@@ -60,6 +60,7 @@ public class MeasureSurface implements PlugIn {
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
 		}
+		points.clear();
 		ri.updateTable();
 		return;
 	}

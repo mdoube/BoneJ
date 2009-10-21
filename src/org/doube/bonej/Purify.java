@@ -119,6 +119,7 @@ public class Purify implements PlugIn {
 		}
 
 		Object[] result = purify(imp, slicesPerChunk, doCopy, showPerformance);
+		IJ.freeMemory();
 		if (null != result) {
 			ImagePlus purified = (ImagePlus) result[1];
 
@@ -135,6 +136,7 @@ public class Purify implements PlugIn {
 					IJ.run("Invert LUT");
 			}
 		}
+		System.gc();
 		return;
 	}
 
@@ -244,6 +246,8 @@ public class Purify implements PlugIn {
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
 		Object[] result = { duration, purified };
+		IJ.freeMemory();
+		System.gc();
 		return result;
 	}
 
