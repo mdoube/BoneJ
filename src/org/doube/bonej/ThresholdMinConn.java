@@ -268,10 +268,10 @@ public class ThresholdMinConn implements PlugInFilter {
 			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
-			Object[] result = p.purify(imp3, 4, false, false);
+			Object[] result = p.purify(imp3, 4, false);
 			replaceImage(imp3, (ImagePlus) result[1]);
 			e.erode(imp3, 255).show();
-			result = p.purify(imp3, 4, false, false);
+			result = p.purify(imp3, 4, false);
 			replaceImage(imp3, (ImagePlus) result[1]);
 			d.dilate(imp3, 255).show();
 
@@ -298,7 +298,6 @@ public class ThresholdMinConn implements PlugInFilter {
 	private void replaceImage(ImagePlus imp, ImagePlus imp2) {
 		ImageStack stack2 = imp2.getStack();
 		imp.setStack(null, stack2);
-		imp.show();
 		if (!imp.isInvertedLut())
 			IJ.run("Invert LUT");
 	}

@@ -118,8 +118,7 @@ public class Purify implements PlugIn {
 			return;
 		}
 
-		Object[] result = purify(imp, slicesPerChunk, doCopy, showPerformance);
-		IJ.freeMemory();
+		Object[] result = purify(imp, slicesPerChunk, showPerformance);
 		if (null != result) {
 			ImagePlus purified = (ImagePlus) result[1];
 
@@ -130,22 +129,15 @@ public class Purify implements PlugIn {
 			}
 			else {
 				ImageStack stack2 = purified.getStack();
-				imp.setStack(imp.getTitle(), stack2);
-				imp.show();
+				imp.setStack(null, stack2);
 				if (!imp.isInvertedLut())
 					IJ.run("Invert LUT");
 			}
 		}
-		IJ.freeMemory();
-		System.gc();
-		System.gc();
-		System.gc();
-		System.gc();
 		return;
 	}
 
-	public Object[] purify(ImagePlus imp, int slicesPerChunk, boolean doCopy,
-			boolean showPerformance) {
+	public Object[] purify(ImagePlus imp, int slicesPerChunk, boolean showPerformance) {
 		this.width = imp.getWidth();
 		this.height = imp.getHeight();
 		this.nSlices = imp.getStackSize();
@@ -250,11 +242,6 @@ public class Purify implements PlugIn {
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
 		Object[] result = { duration, purified };
-		IJ.freeMemory();
-		System.gc();
-		System.gc();
-		System.gc();
-		System.gc();
 		return result;
 	}
 
