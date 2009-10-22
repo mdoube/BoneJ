@@ -58,7 +58,8 @@ import org.doube.bonej.ResultInserter;
  * 
  */
 // TODO implement the star volume method
-// TODO implement the autocorrelation function (ACF) method
+// TODO implement the autocorrelation function (ACF) method - see
+// org.doube.bonej.AutoCorrelation.java
 // TODO multithread
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
