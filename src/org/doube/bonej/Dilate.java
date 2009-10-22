@@ -2,12 +2,11 @@ package org.doube.bonej;
 
 import java.awt.image.ColorModel;
 
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 
 import ij.gui.GenericDialog;
 
 import ij.process.ByteProcessor;
-import ij.process.ImageProcessor;
 
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -26,34 +25,29 @@ import ij.IJ;
  * @author Benjamin Schimd
  * 
  */
-public class Dilate implements PlugInFilter {
+public class Dilate implements PlugIn {
 
 	private int w, h, d;
-	private ImagePlus image;
 	private byte[][] pixels_in;
 	private byte[][] pixels_out;
 
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
+		ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
 		GenericDialog gd = new GenericDialog("Dilate");
 		gd.addNumericField("Iso value", 255, 0);
 		gd.showDialog();
 		if (gd.wasCanceled())
 			return;
-		dilate(this.image, (int) gd.getNextNumber(), false).show();
-		IJ.freeMemory();
-		System.gc();
-		System.gc();
-		System.gc();
-		System.gc();
+		ImagePlus imp2 = dilate(imp, (int) gd.getNextNumber());
+		imp.setStack(null, imp2.getImageStack());
 		return;
 	}
 
-	public int setup(String arg, ImagePlus imp) {
-		this.image = imp;
-		return DOES_8G | DOES_8C | NO_CHANGES;
-	}
-
-	public ImagePlus dilate(ImagePlus image, int threshold, boolean newWin) {
+	public ImagePlus dilate(ImagePlus image, int threshold) {
 
 		// Determine dimensions of the image
 		w = image.getWidth();
@@ -92,15 +86,11 @@ public class Dilate implements PlugInFilter {
 		// create output image
 		ImageStack stack = new ImageStack(w, h);
 		for (int z = 0; z < d; z++) {
-			stack.addSlice("", new ByteProcessor(w, h, this.pixels_out[z], cm));
+			stack.addSlice(image.getImageStack().getSliceLabel(z + 1),
+					new ByteProcessor(w, h, this.pixels_out[z], cm));
 		}
-		if (!newWin) {
-			image.setStack(null, stack);
-			return image;
-		}
-		ImagePlus result = new ImagePlus(image.getTitle() + "_dilated", stack);
-		result.setCalibration(image.getCalibration());
-		return result;
+		image.setStack(null, stack);
+		return image;
 	}
 
 	public int get(int x, int y, int z) {

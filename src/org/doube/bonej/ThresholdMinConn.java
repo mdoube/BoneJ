@@ -270,10 +270,10 @@ public class ThresholdMinConn implements PlugInFilter {
 			Dilate d = new Dilate();
 			Object[] result = p.purify(imp3, 4, false, false);
 			replaceImage(imp3, (ImagePlus) result[1]);
-			e.erode(imp3, 255, false).show();
+			e.erode(imp3, 255).show();
 			result = p.purify(imp3, 4, false, false);
 			replaceImage(imp3, (ImagePlus) result[1]);
-			d.dilate(imp3, 255, false).show();
+			d.dilate(imp3, 255).show();
 
 			// get the connectivity
 			Connectivity con = new Connectivity();
