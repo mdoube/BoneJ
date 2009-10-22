@@ -80,6 +80,7 @@ public class Volume_Fraction implements PlugInFilter {
 		ri.setResultInRow(imp, "TV ("+cal.getUnits()+"^3)", volTotal * voxelVol);
 		ri.setResultInRow(imp, "BV/TV", p);
 		ri.updateTable();
+		return;
 	}
 
 	private void setThreshold(ImagePlus imp) {

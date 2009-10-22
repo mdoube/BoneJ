@@ -136,6 +136,10 @@ public class Purify implements PlugIn {
 					IJ.run("Invert LUT");
 			}
 		}
+		IJ.freeMemory();
+		System.gc();
+		System.gc();
+		System.gc();
 		System.gc();
 		return;
 	}
@@ -247,6 +251,9 @@ public class Purify implements PlugIn {
 		purified.setCalibration(imp.getCalibration());
 		Object[] result = { duration, purified };
 		IJ.freeMemory();
+		System.gc();
+		System.gc();
+		System.gc();
 		System.gc();
 		return result;
 	}

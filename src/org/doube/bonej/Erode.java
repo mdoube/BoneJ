@@ -40,7 +40,7 @@ public class Erode implements PlugInFilter {
 		gd.showDialog();
 		if(gd.wasCanceled())
 			return;
-		erode(image, (int)gd.getNextNumber(), false).show();
+		erode(this.image, (int)gd.getNextNumber(), false).show();
 		return;
 	}
 
@@ -55,11 +55,11 @@ public class Erode implements PlugInFilter {
 		w = image.getWidth(); h = image.getHeight();
 		d = image.getStackSize();
 
-		pixels_in = new byte[d][];
-		pixels_out = new byte[d][];
+		this.pixels_in = new byte[d][];
+		this.pixels_out = new byte[d][];
 		for(int z = 0; z < d; z++) {
-			pixels_in[z] = (byte[])image.getStack().getPixels(z+1);
-			pixels_out[z] = new byte[w*h];
+			this.pixels_in[z] = (byte[])image.getStack().getPixels(z+1);
+			this.pixels_out[z] = new byte[w*h];
 		}
 		
 		// iterate
@@ -90,7 +90,7 @@ public class Erode implements PlugInFilter {
 		ImageStack stack = new ImageStack(w, h);
 		for(int z = 0; z < d; z++) {
 			stack.addSlice("", new ByteProcessor(
-				w, h, pixels_out[z], cm));
+				w, h, this.pixels_out[z], cm));
 		}
 		if(!newWin) {
 			image.setStack(null, stack);
@@ -106,10 +106,11 @@ public class Erode implements PlugInFilter {
 		x = x < 0 ? 0 : x; x = x >= w ? w-1 : x;
 		y = y < 0 ? 0 : y; y = y >= h ? h-1 : y;
 		z = z < 0 ? 0 : z; z = z >= d ? d-1 : z;
-		return (int)(pixels_in[z][y*w + x] & 0xff);
+		return (int)(this.pixels_in[z][y*w + x] & 0xff);
 	}
 
 	public void set(int x, int y, int z, int v) {
-		pixels_out[z][y*w + x] = (byte)v;
+		this.pixels_out[z][y*w + x] = (byte)v;
+		return;
 	}
 }
