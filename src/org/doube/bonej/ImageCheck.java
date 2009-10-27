@@ -89,6 +89,10 @@ public class ImageCheck {
 		double vD = imp.getCalibration().pixelDepth;
 
 		String position = getDicomAttribute(imp, 1, "0020,0032");
+		if (position == null){
+			IJ.log("No DICOM slice position data");
+			return -1;
+		}
 		String[] xyz = position.split("\\\\");
 		double first = 0;
 		if (xyz.length == 3) // we have 3 values
@@ -134,6 +138,9 @@ public class ImageCheck {
 		String header = stack.getSliceLabel(slice);
 		// tag must be in format 0000,0000
 		if (slice < 1 || slice > stack.getSize()) {
+			return null;
+		}
+		if (header == null){
 			return null;
 		}
 		String attribute = " ";
