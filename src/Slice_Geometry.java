@@ -19,18 +19,19 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.process.ByteProcessor;
+import ij.process.ByteProcessor; //import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
-import ij.plugin.PlugIn;
+import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.gui.*;
 
 import java.awt.Color;
 import java.awt.Rectangle;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.doube.bonej.BoneList;
 import org.doube.bonej.Thickness;
 
 /**
@@ -42,18 +43,16 @@ import org.doube.bonej.Thickness;
  * 
  */
 
-public class Slice_Geometry implements PlugIn {
+public class Slice_Geometry implements PlugInFilter {
+	ImagePlus imp;
+	protected ImageStack stack;
+	public static final double PI = 3.141592653589793;
+	private int boneID, al, startSlice, endSlice;
+	private double vW, vH, vD, airHU, minBoneHU, maxBoneHU;
+	private String units, analyse, calString;
 
-	private int startSlice, endSlice;
-	private double vW, vH, vD;
-	private String analyse, calString;
-
-	/** Do local thickness measurement in 3D */
-	private boolean doThickness3D;
-
-	/** Do local thickness measurement in 3D */
-	private boolean doThickness2D;
-
+	/** Do local thickness measurement */
+	private boolean doThickness;
 	private boolean doCopy, doCentroids, doOutline, doAxes, doStack,
 			isCalibrated;
 	private double[] cslice, cortArea, meanCortThick, maxCortThick,
@@ -62,118 +61,67 @@ public class Slice_Geometry implements PlugIn {
 			IminFast, dMin, feretMax, feretAngle, feretMin;
 	private boolean[] emptySlices;
 	private double[][] sliceCentroids;
+	Calibration cal;
 
-	private int airHU;
-	private int minBoneHU;
-	private int maxBoneHU;
-	private int boneID;
-
-	public void run(String arg) {
-		ImagePlus imp = IJ.getImage();
+	public int setup(String arg, ImagePlus imp) {
 		if (imp == null) {
 			IJ.noImage();
-			return;
+			return DONE;
 		}
-		if (imp.getBitDepth() != 16) {
-			IJ.error("Slice Geometry currently supports only 16-bit images.");
-			return;
-		}
+		this.imp = imp;
+		this.cal = this.imp.getCalibration();
+		this.vW = this.cal.pixelWidth;
+		this.vH = this.cal.pixelHeight;
+		this.vD = this.cal.pixelDepth;
+		this.units = this.cal.getUnits();
+		this.stack = imp.getStack();
+		this.al = this.stack.getSize() + 1;
+		// TODO properly support 8bit images
+		return DOES_8G + DOES_16 + SUPPORTS_MASKING;
+	}
 
+	public void run(ImageProcessor ip) {
 		IJ.run("Threshold...");
-
 		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
+		this.minBoneHU = (short) this.imp.getProcessor().getMinThreshold();
+		this.maxBoneHU = (short) this.imp.getProcessor().getMaxThreshold();
 
-		// set up some defaults
-		this.airHU = -1000;
-		this.minBoneHU = (short) imp.getProcessor().getMinThreshold();
-		this.maxBoneHU = (short) imp.getProcessor().getMaxThreshold();
-
-		GenericDialog gd = new GenericDialog("Options");
-
-		gd.addCheckbox("3D_Thickness", true);
-		gd.addCheckbox("2D_Thickness", true);
-		gd.addCheckbox("Draw Axes", true);
-		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Draw Outline", false);
-		gd.addCheckbox("Annotated Copy", true);
-		gd.addCheckbox("Process Stack", false);
-		BoneList bl = new BoneList();
-		String[] boneList = bl.getBoneList();
-		gd.addChoice("Bone: ", boneList, boneList[bl.guessBone(imp)]);
-		String[] analyses = { "Weighted", "Unweighted", "Both" };
-		gd.addChoice("Calculate: ", analyses, analyses[1]);
-
-		gd.addMessage("Set the threshold");
-		gd.addNumericField("Air:", airHU, 0);
-		gd.addNumericField("Bone Min:", minBoneHU, 0);
-		gd.addNumericField("Bone Max:", maxBoneHU, 0);
-		gd.showDialog();
-		this.doThickness3D = gd.getNextBoolean();
-		this.doThickness2D = gd.getNextBoolean();
-		this.doAxes = gd.getNextBoolean();
-		this.doCentroids = gd.getNextBoolean();
-		this.doOutline = gd.getNextBoolean();
-		this.doCopy = gd.getNextBoolean();
-		this.doStack = gd.getNextBoolean();
-		if (this.doStack) {
-			this.startSlice = 1;
-			this.endSlice = imp.getImageStackSize();
-		} else {
-			this.startSlice = imp.getCurrentSlice();
-			this.endSlice = imp.getCurrentSlice();
-		}
-
-		String bone = gd.getNextChoice();
-		this.boneID = bl.guessBone(bone);
-		IJ.log("Guessing that this is a " + bone + " with code " + this.boneID);
-
-		this.analyse = gd.getNextChoice();
-		this.airHU = (int) gd.getNextNumber();
-		this.minBoneHU = (int) gd.getNextNumber();
-		this.maxBoneHU = (int) gd.getNextNumber();
-		if (gd.wasCanceled()) {
+		if (!showDialog()) {
 			return;
 		}
 
-		if (calculateCentroids(imp) == 0) {
+		if (calculateCentroids() == 0) {
 			IJ.error("No pixels available to calculate.\n"
 					+ "Please check the threshold and ROI.");
 			return;
 		}
 
-		calculateMoments(imp);
-		if (this.doThickness3D)
-			calculateThickness(imp);
+		calculateMoments();
+		if (this.doThickness)
+			calculateThickness();
 
-		roiMeasurements(imp);
+		roiMeasurements();
 		// TODO locate centroids of multiple sections in a single plane
 
-		showSliceResults(imp);
+		// TODO annotate results
 
+		showSliceResults();
 		if (this.doAxes || this.doCentroids)
-			annotateImage(imp).show();
+			annotateImage();
 	}
 
-	/**
-	 * Copy the original image with axes and/or centroids drawn
-	 * 
-	 * @return
-	 * 
-	 */
-	private ImagePlus annotateImage(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		int w = stack.getWidth();
-		int h = stack.getHeight();
+	private void annotateImage() {
+		int w = this.stack.getWidth();
+		int h = this.stack.getHeight();
 		ImageStack annStack = new ImageStack(w, h);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			ImageProcessor annIP = stack.getProcessor(s).duplicate();
+			ImageProcessor annIP = this.stack.getProcessor(s).duplicate();
 			annIP.setColor(Color.white);
 			double cX = this.sliceCentroids[0][s] / this.vW;
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
 			if (this.doCentroids) {
-				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
-						.floor(cY - 4), 8, 8);
+				annIP.drawOval((int)Math.floor(cX-4), (int)Math.floor(cY-4), 8, 8);
 			}
 
 			if (this.doAxes) {
@@ -196,32 +144,29 @@ public class Slice_Geometry implements PlugIn {
 				x2 = (int) Math.floor(cX + Math.cos(-th) * 2 * rMax);
 				y2 = (int) Math.floor(cY - Math.sin(-th) * 2 * rMax);
 				annIP.drawLine(x1, y1, x2, y2);
+				annStack.addSlice("", annIP);
 			}
-			annStack.addSlice(stack.getSliceLabel(s), annIP);
 		}
-		ImagePlus annImp = new ImagePlus("Annotated_" + imp.getTitle(),
-				annStack);
-		annImp.setCalibration(imp.getCalibration());
-		return annImp;
+		ImagePlus ann = new ImagePlus("Annotated_"+this.imp.getTitle(), annStack);
+		ann.show();
 	}
 
-	protected double calculateCentroids(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
+	protected double calculateCentroids() {
 		// 2D centroids
-		this.sliceCentroids = new double[2][stack.getSize() + 1];
+		this.sliceCentroids = new double[2][this.al];
 		// pixel counters
 		double cstack = 0;
-		Rectangle r = stack.getRoi();
-		int w = stack.getWidth();
-		this.emptySlices = new boolean[stack.getSize() + 1];
-		this.cslice = new double[stack.getSize() + 1];
-		this.cortArea = new double[stack.getSize() + 1];
+		Rectangle r = this.stack.getRoi();
+		int w = this.stack.getWidth();
+		this.emptySlices = new boolean[this.al];
+		this.cslice = new double[this.al];
+		this.cortArea = new double[this.al];
 		double pixelArea = this.vW * this.vH;
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			double sumX = 0;
 			double sumY = 0;
 			this.cslice[s] = 0;
-			short[] pixels = (short[]) stack.getPixels(s);
+			short[] pixels = (short[]) this.stack.getPixels(s);
 			for (int y = r.y; y < (r.y + r.height); y++) {
 				int offset = y * w;
 				for (int x = r.x; x < (r.x + r.width); x++) {
@@ -239,7 +184,6 @@ public class Slice_Geometry implements PlugIn {
 				this.sliceCentroids[0][s] = sumX / this.cslice[s];
 				this.sliceCentroids[1][s] = sumY / this.cslice[s];
 				cstack += this.cslice[s];
-				IJ.log("cstack = "+cstack);
 				this.emptySlices[s] = false;
 			} else {
 				this.emptySlices[s] = true;
@@ -248,24 +192,22 @@ public class Slice_Geometry implements PlugIn {
 		return cstack;
 	}
 
-	private void calculateMoments(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		Rectangle r = stack.getRoi();
-		int al = stack.getSize() + 1;
-		int w = stack.getWidth();
+	private void calculateMoments() {
+		Rectangle r = this.stack.getRoi();
+		int w = this.stack.getWidth();
 		// START OF Ix AND Iy CALCULATION
-		this.Sx = new double[al];
-		this.Sy = new double[al];
-		this.Sxx = new double[al];
-		this.Syy = new double[al];
-		this.Sxy = new double[al];
-		this.Myy = new double[al];
-		this.Mxx = new double[al];
-		this.Mxy = new double[al];
-		this.theta = new double[al];
-		for (int s = 1; s <= stack.getSize(); s++) {
+		this.Sx = new double[this.al];
+		this.Sy = new double[this.al];
+		this.Sxx = new double[this.al];
+		this.Syy = new double[this.al];
+		this.Sxy = new double[this.al];
+		this.Myy = new double[this.al];
+		this.Mxx = new double[this.al];
+		this.Mxy = new double[this.al];
+		this.theta = new double[this.al];
+		for (int s = 1; s <= this.stack.getSize(); s++) {
 			if (!this.emptySlices[s]) {
-				short[] pixels = (short[]) stack.getPixels(s);
+				short[] pixels = (short[]) this.stack.getPixels(s);
 				for (int y = r.y; y < (r.y + r.height); y++) {
 					int offset = y * w;
 					for (int x = r.x; x < (r.x + r.width); x++) {
@@ -298,25 +240,28 @@ public class Slice_Geometry implements PlugIn {
 							.sqrt(Math.pow(this.Mxx[s] - this.Myy[s], 2) + 4
 									* this.Mxy[s] * this.Mxy[s]))
 							/ (2 * this.Mxy[s]));
+					// thetaFast gives same result except jumps when hits PI/4
+					// and -PI/4
+					// thetaFast[s] = Math.atan(2*Mxy[s]/(Myy[s]-Mxx[s])) / 2;
 				}
 			}
 		}
 		// END OF Ix and Iy CALCULATION
 		// START OF Imax AND Imin CALCULATION
-		this.Imax = new double[al];
-		this.Imin = new double[al];
-		this.Ipm = new double[al];
-		this.R1 = new double[al];
-		this.R2 = new double[al];
-		this.maxRadMin = new double[al];
-		this.maxRadMax = new double[al];
-		this.Zmax = new double[al];
-		this.Zmin = new double[al];
-		this.ImaxFast = new double[al];
-		this.IminFast = new double[al];
-		for (int s = 1; s <= stack.getSize(); s++) {
+		this.Imax = new double[this.al];
+		this.Imin = new double[this.al];
+		this.Ipm = new double[this.al];
+		this.R1 = new double[this.al];
+		this.R2 = new double[this.al];
+		this.maxRadMin = new double[this.al];
+		this.maxRadMax = new double[this.al];
+		this.Zmax = new double[this.al];
+		this.Zmin = new double[this.al];
+		this.ImaxFast = new double[this.al];
+		this.IminFast = new double[this.al];
+		for (int s = 1; s <= this.stack.getSize(); s++) {
 			if (!this.emptySlices[s]) {
-				short[] pixels = (short[]) stack.getPixels(s);
+				short[] pixels = (short[]) this.stack.getPixels(s);
 				this.Sx[s] = 0;
 				this.Sy[s] = 0;
 				this.Sxx[s] = 0;
@@ -442,25 +387,24 @@ public class Slice_Geometry implements PlugIn {
 	 * slice
 	 * 
 	 */
-	private void calculateThickness(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		int al = stack.getSize() + 1;
-		this.maxCortThick = new double[al];
-		this.meanCortThick = new double[al];
-		this.stdevCortThick = new double[al];
+	private void calculateThickness() {
+		this.maxCortThick = new double[this.al];
+		this.meanCortThick = new double[this.al];
+		this.stdevCortThick = new double[this.al];
 		Thickness th = new Thickness();
-		th.baseImp = imp;
+		th.baseImp = this.imp;
 		th.vD = this.vD;
 		th.vW = this.vW;
 		th.vH = this.vH;
-		th.w = imp.getWidth();
-		th.h = imp.getHeight();
-		th.d = imp.getStackSize();
+		th.w = this.imp.getWidth();
+		th.h = this.imp.getHeight();
+		th.d = this.imp.getStackSize();
 
 		// convert to binary
+		ImageStack sourceStack = this.imp.getImageStack();
 		ImageStack binaryStack = new ImageStack(th.w, th.h);
-		for (int s = 1; s <= th.d; s++) {
-			ImageProcessor sliceIp = stack.getProcessor(s);
+		for (int s = 0; s < th.d; s++) {
+			ImageProcessor sliceIp = sourceStack.getProcessor(s + 1);
 			ByteProcessor binaryIp = new ByteProcessor(th.w, th.h);
 			for (int y = 0; y < th.h; y++) {
 				for (int x = 0; x < th.w; x++) {
@@ -472,10 +416,9 @@ public class Slice_Geometry implements PlugIn {
 					}
 				}
 			}
-			binaryStack.addSlice(stack.getSliceLabel(s), binaryIp);
+			binaryStack.addSlice("" + s, binaryIp);
 		}
 		ImagePlus binaryImp = new ImagePlus("binaryImp", binaryStack);
-		binaryImp.setCalibration(imp.getCalibration());
 
 		float[][] s = th.GeometrytoDistanceMap(binaryImp);
 		th.DistanceMaptoDistanceRidge(s);
@@ -515,15 +458,13 @@ public class Slice_Geometry implements PlugIn {
 	 * threshold if it is uncalibrated
 	 * 
 	 */
-	private void setHUCalibration(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		Calibration cal = imp.getCalibration();
-		String units = cal.getUnits();
+	private void setHUCalibration() {
 		this.minBoneHU = 0; // minimum bone value in HU
 		this.maxBoneHU = 4000; // maximum bone value in HU
-		double[] coeff = cal.getCoefficients();
-		if (!cal.calibrated() || cal == null
-				|| (cal.getCValue(0) == 0 && cal.getCoefficients()[1] == 1)) {
+		double[] coeff = this.cal.getCoefficients();
+		if (!this.cal.calibrated()
+				|| this.cal == null
+				|| (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1)) {
 			this.isCalibrated = false;
 			this.calString = "Image is uncalibrated\nEnter air and bone pixel values";
 			ImageStatistics stats = imp.getStatistics();
@@ -541,16 +482,16 @@ public class Slice_Geometry implements PlugIn {
 			this.calString = "Image is calibrated\nEnter HU below:";
 			this.airHU = -1000;
 		}
-		this.minBoneHU = (short) ((short) this.airHU + 1000);
-		this.maxBoneHU = (short) ((short) this.airHU + 5000);
-		if (cal.calibrated()) {
+		this.minBoneHU = this.airHU + 1000;
+		this.maxBoneHU = this.airHU + 5000;
+		if (this.cal.calibrated()) {
 			// convert HU limits to pixel values
 			IJ.log("Image is calibrated, using " + this.minBoneHU + " and "
 					+ this.maxBoneHU + " HU as bone cutoffs");
-			this.minBoneHU = (short) Math
-					.round(cal.getRawValue(this.minBoneHU));
-			this.maxBoneHU = (short) Math
-					.round(cal.getRawValue(this.maxBoneHU));
+			this.minBoneHU = (short) Math.round(this.cal
+					.getRawValue(this.minBoneHU));
+			this.maxBoneHU = (short) Math.round(this.cal
+					.getRawValue(this.maxBoneHU));
 			IJ.log("Vox Width: " + vW + "; Vox Height: " + vH + " " + units);
 			IJ.log("Calibration coefficients:" + coeff[0] + "," + coeff[1]);
 			IJ.log("this.minBoneHU = " + this.minBoneHU + ", this.maxBoneHU = "
@@ -561,28 +502,95 @@ public class Slice_Geometry implements PlugIn {
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			this.minBoneHU = (short) stack.getProcessor(imp.getCurrentSlice())
-					.getMinThreshold();
-			this.maxBoneHU = (short) stack.getProcessor(imp.getCurrentSlice())
-					.getMaxThreshold();
+			this.minBoneHU = (short) this.stack.getProcessor(
+					this.imp.getCurrentSlice()).getMinThreshold();
+			this.maxBoneHU = (short) this.stack.getProcessor(
+					this.imp.getCurrentSlice()).getMaxThreshold();
 		}
 		return;
 	}
 
-	private void showSliceResults(ImagePlus imp) {
+	private boolean showDialog() {
+		GenericDialog gd = new GenericDialog("Options");
+
+		gd.addCheckbox("Cortical Thickness", true);
+		gd.addCheckbox("Draw Axes", true);
+		gd.addCheckbox("Draw Centroids", true);
+		gd.addCheckbox("Draw Outline", false);
+		gd.addCheckbox("Annotated Copy", true);
+		gd.addCheckbox("Process Stack", false);
+		String[] bones = { "unknown", "scapula", "humerus", "radius", "ulna",
+				"metacarpal", "pelvis", "femur", "tibia", "fibula",
+				"metatarsal" };
+		// guess bone from image title
+		String title = this.imp.getTitle();
+		this.boneID = 0;
+		for (int n = 0; n < bones.length; n++) {
+			Pattern p = Pattern.compile(bones[n], Pattern.CASE_INSENSITIVE);
+			Matcher m = p.matcher(title);
+			if (m.find()) {
+				this.boneID = n;
+				continue;
+			}
+		}
+		gd.addChoice("Bone: ", bones, bones[this.boneID]);
+		String[] analyses = { "Weighted", "Unweighted", "Both" };
+		gd.addChoice("Calculate: ", analyses, analyses[1]);
+		// gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
+		// gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
+		// gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
+		// gd.addMessage(this.calString);
+		gd.addMessage("Set the threshold");
+		gd.addNumericField("Air:", this.airHU, 0);
+		gd.addNumericField("Bone Min:", this.minBoneHU, 0);
+		gd.addNumericField("Bone Max:", this.maxBoneHU, 0);
+		gd.showDialog();
+		this.doThickness = gd.getNextBoolean();
+		this.doAxes = gd.getNextBoolean();
+		this.doCentroids = gd.getNextBoolean();
+		this.doOutline = gd.getNextBoolean();
+		this.doCopy = gd.getNextBoolean();
+		this.doStack = gd.getNextBoolean();
+		if (this.doStack) {
+			this.startSlice = 1;
+			this.endSlice = this.imp.getImageStackSize();
+		} else {
+			this.startSlice = this.imp.getCurrentSlice();
+			this.endSlice = this.imp.getCurrentSlice();
+		}
+
+		String bone = gd.getNextChoice();
+		for (int n = 0; n < bones.length; n++) {
+			if (bone.equals(bones[n])) {
+				this.boneID = n;
+				continue;
+			}
+		}
+		this.analyse = gd.getNextChoice();
+		// this.vW = gd.getNextNumber();
+		// this.vH = gd.getNextNumber();
+		// this.vD = gd.getNextNumber();
+		this.airHU = gd.getNextNumber();
+		this.minBoneHU = gd.getNextNumber();
+		this.maxBoneHU = gd.getNextNumber();
+		if (gd.wasCanceled()) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	private void showSliceResults() {
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
 
 		// TODO fix spatial calibration: this assumes isotropic pixels
 		double unit4 = Math.pow(vW, 4);
 		double unit3 = Math.pow(vW, 3);
-
-		String title = imp.getTitle();
-		String units = imp.getCalibration().getUnits();
+		String title = this.imp.getTitle();
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			rt.incrementCounter();
 			rt.addLabel(title);
-			rt.addValue("Bone Code", this.boneID);
 			rt.addValue("Slice", s);
 			rt.addValue("CA (" + units + "^2)", this.cortArea[s]);
 			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
@@ -600,7 +608,7 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Feret Min", this.feretMin[s]);
 			rt.addValue("Feret Max", this.feretMax[s]);
 			rt.addValue("Feret Angle", this.feretAngle[s]);
-			if (this.doThickness3D) {
+			if (this.doThickness) {
 				rt.addValue("Max Thick (" + units + ")", this.maxCortThick[s]);
 				rt
 						.addValue("Mean Thick (" + units + ")",
@@ -611,21 +619,19 @@ public class Slice_Geometry implements PlugIn {
 		rt.show("Results");
 	}
 
-	private void roiMeasurements(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		int al = stack.getSize() + 1;
+	private void roiMeasurements() {
 		double[] feretValues = new double[3];
-		this.feretAngle = new double[al];
-		this.feretMax = new double[al];
-		this.feretMin = new double[al];
-		imp.setActivated();
+		this.feretAngle = new double[this.al];
+		this.feretMax = new double[this.al];
+		this.feretMin = new double[this.al];
+		this.imp.setActivated();
 		Roi r;
 		IJ.setThreshold(this.minBoneHU, this.maxBoneHU);
 		// for the required slices...
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.setSlice(s);
 			IJ.doWand(0, (int) Math.round(this.sliceCentroids[1][s] / this.vH));
-			r = imp.getRoi();
+			r = this.imp.getRoi();
 			if (this.emptySlices[s]) {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;
