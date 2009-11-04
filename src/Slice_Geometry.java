@@ -23,7 +23,6 @@ import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import ij.plugin.PlugIn;
-import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.gui.*;
@@ -45,41 +44,91 @@ import org.doube.bonej.Thickness;
  */
 
 public class Slice_Geometry implements PlugIn {
-//	ImagePlus imp;
-//	protected ImageStack stack;
-	public static final double PI = 3.141592653589793;
 	private int boneID, al, startSlice, endSlice;
-	//
 	private double vW, vH, vD, airHU, min, max;
 	private String units, analyse, calString;
 
 	/** Do local thickness measurement */
-	private boolean doThickness;
-	private boolean doCopy, doCentroids, doOutline, doAxes, doStack,
-			isCalibrated;
-	private double[] cslice, cortArea, meanCortThick, maxCortThick,
-			stdevCortThick, Sx, Sy, Sxx, Syy, Sxy, Myy, Mxx, Mxy, theta, Imax,
-			Imin, Ipm, R1, R2, maxRadMin, maxRadMax, Zmax, Zmin, ImaxFast,
-			IminFast, dMin, feretMax, feretAngle, feretMin;
+	private boolean doThickness3D;
+	/** Show slice centroid */
+	private boolean doCentroids;
+	/** Show principal axes */
+	private boolean doAxes;
+	/** if true, show annotation in a new window */
+	private boolean doCopy;
+	/** If true, process the whole stack */
+	private boolean doStack;
+	private boolean isCalibrated;
+	private double[] cslice;
+	private double[] cortArea;
+	private double[] meanCortThick;
+	private double[] maxCortThick;
+	private double[] stdevCortThick;
+	/** normal x distance from parallel axis summed over pixels */
+	private double[] Sx;
+	/** normal y distance from parallel axis summed over pixels */
+	private double[] Sy;
+	/** squared normal distances from parallel axis (Iz) */
+	private double[] Sxx;
+	/** squared normal distances from parallel axis (Iz) */
+	private double[] Syy;
+	private double[] Sxy;
+	private double[] Myy;
+	private double[] Mxx;
+	private double[] Mxy;
+	private double[] theta;
+	/**
+	 * 2nd moment of area around minimum principal axis (shorter axis, larger I)
+	 */
+	private double[] Imax;
+	/**
+	 * 2nd moment of area around maximum principal axis (longer axis, smaller I)
+	 */
+	private double[] Imin;
+	/** product moment of area, should be 0 if theta calculated perfectly */
+	private double[] Ipm;
+	/** length of major axis */
+	private double[] R1;
+	/** length of minor axis */
+	private double[] R2;
+	/** maximum distance from minimum principal axis (longer) */
+	private double[] maxRadMin;
+	/** maximum distance from maximum principal axis (shorter) */
+	private double[] maxRadMax;
+	/** Section modulus around maximum principal axis */
+	private double[] Zmax;
+	/** Section modulus around minimum principal axis */
+	private double[] Zmin;
+	/** Alternative calculation of Imax */
+	private double[] ImaxFast;
+	/** Alternative calculation of Imin */
+	private double[] IminFast;
+	/** Maximum diameter */
+	private double[] feretMax;
+	/** Angle of maximum diameter */
+	private double[] feretAngle;
+	/** Minimum diameter */
+	private double[] feretMin;
+	/** List of empty slices.  If true, slice contains 0 pixels to analyse */
 	private boolean[] emptySlices;
+	/** List of slice centroids */
 	private double[][] sliceCentroids;
 	Calibration cal;
 
 	public void run(String arg) {
-	    ImagePlus imp = IJ.getImage();
-	    if (null == imp){
-	    	IJ.noImage();
-	    	return;
-	    }
-	    
+		ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+
 		this.cal = imp.getCalibration();
 		this.vW = this.cal.pixelWidth;
 		this.vH = this.cal.pixelHeight;
 		this.vD = this.cal.pixelDepth;
 		this.units = this.cal.getUnits();
 		this.al = imp.getStackSize() + 1;
-	    
-	    
+
 		IJ.run("Threshold...");
 		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
 		this.min = (short) imp.getProcessor().getMinThreshold();
@@ -96,15 +145,22 @@ public class Slice_Geometry implements PlugIn {
 		}
 
 		calculateMoments(imp);
-		if (this.doThickness)
+		if (this.doThickness3D)
 			calculateThickness(imp);
 
 		roiMeasurements(imp);
 		// TODO locate centroids of multiple sections in a single plane
 
 		showSliceResults(imp);
-		if (this.doAxes || this.doCentroids)
-			annotateImage(imp).show();
+
+		if (this.doAxes || this.doCentroids) {
+			if (!this.doCopy) {
+				ImagePlus annImp = annotateImage(imp);
+				imp.setStack(null, annImp.getImageStack());
+			} else {
+				annotateImage(imp).show();
+			}
+		}
 	}
 
 	private ImagePlus annotateImage(ImagePlus imp) {
@@ -119,22 +175,20 @@ public class Slice_Geometry implements PlugIn {
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
 			if (this.doCentroids) {
-				annIP.drawOval((int)Math.floor(cX-4), (int)Math.floor(cY-4), 8, 8);
+				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
+						.floor(cY - 4), 8, 8);
 			}
 
 			if (this.doAxes) {
 				double th = this.theta[s];
 				double rMin = this.R1[s];
 				double rMax = this.R2[s];
+				double thPi = th + Math.PI / 2;
 
-				int x1 = (int) Math.floor(cX - Math.cos(th + Math.PI / 2) * 2
-						* rMin);
-				int y1 = (int) Math.floor(cY - Math.sin(th + Math.PI / 2) * 2
-						* rMin);
-				int x2 = (int) Math.floor(cX + Math.cos(th + Math.PI / 2) * 2
-						* rMin);
-				int y2 = (int) Math.floor(cY + Math.sin(th + Math.PI / 2) * 2
-						* rMin);
+				int x1 = (int) Math.floor(cX - Math.cos(thPi) * 2 * rMin);
+				int y1 = (int) Math.floor(cY - Math.sin(thPi) * 2 * rMin);
+				int x2 = (int) Math.floor(cX + Math.cos(thPi) * 2 * rMin);
+				int y2 = (int) Math.floor(cY + Math.sin(thPi) * 2 * rMin);
 				annIP.drawLine(x1, y1, x2, y2);
 
 				x1 = (int) Math.floor(cX - Math.cos(-th) * 2 * rMax);
@@ -145,7 +199,7 @@ public class Slice_Geometry implements PlugIn {
 				annStack.addSlice(stack.getSliceLabel(s), annIP);
 			}
 		}
-		ImagePlus ann = new ImagePlus("Annotated_"+imp.getTitle(), annStack);
+		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		return ann;
 	}
 
@@ -170,8 +224,7 @@ public class Slice_Geometry implements PlugIn {
 				int offset = y * w;
 				for (int x = r.x; x < (r.x + r.width); x++) {
 					int i = offset + x;
-					if (pixels[i] >= this.min
-							&& pixels[i] <= this.max) {
+					if (pixels[i] >= this.min && pixels[i] <= this.max) {
 						this.cslice[s]++;
 						this.cortArea[s] += pixelArea;
 						sumX += x * this.vW;
@@ -212,8 +265,7 @@ public class Slice_Geometry implements PlugIn {
 					int offset = y * w;
 					for (int x = r.x; x < (r.x + r.width); x++) {
 						int i = offset + x;
-						if (pixels[i] >= this.min
-								&& pixels[i] <= this.max) {
+						if (pixels[i] >= this.min && pixels[i] <= this.max) {
 							this.Sx[s] += x;
 							this.Sy[s] += y;
 							this.Sxx[s] += x * x;
@@ -224,9 +276,8 @@ public class Slice_Geometry implements PlugIn {
 				}
 				this.Myy[s] = this.Sxx[s]
 						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
-						+ this.cslice[s] / 12; // this.cslice[]/12 is for each
-				// pixel's moment around its own
-				// centroid
+						+ this.cslice[s] / 12;
+				// this.cslice[]/12 is for each pixel's own moment
 				this.Mxx[s] = this.Syy[s]
 						- (this.Sy[s] * this.Sy[s] / this.cslice[s])
 						+ this.cslice[s] / 12;
@@ -237,12 +288,10 @@ public class Slice_Geometry implements PlugIn {
 					this.theta[s] = 0;
 				else {
 					this.theta[s] = Math.atan((this.Mxx[s] - this.Myy[s] + Math
-							.sqrt(Math.pow(this.Mxx[s] - this.Myy[s], 2) + 4
+							.sqrt((this.Mxx[s] - this.Myy[s])
+									* (this.Mxx[s] - this.Myy[s]) + 4
 									* this.Mxy[s] * this.Mxy[s]))
 							/ (2 * this.Mxy[s]));
-					// thetaFast gives same result except jumps when hits PI/4
-					// and -PI/4
-					// thetaFast[s] = Math.atan(2*Mxy[s]/(Myy[s]-Mxx[s])) / 2;
 				}
 			}
 		}
@@ -271,26 +320,15 @@ public class Slice_Geometry implements PlugIn {
 					int offset = y * w;
 					for (int x = r.x; x < (r.x + r.width); x++) {
 						int i = offset + x;
-						if (pixels[i] >= this.min
-								&& pixels[i] <= this.max) {
+						if (pixels[i] >= this.min && pixels[i] <= this.max) {
 							this.Sx[s] += x * Math.cos(this.theta[s]) + y
-									* Math.sin(this.theta[s]); // normal
-							// distance from
-							// parallel axis
-							// summed over
-							// pixels
+									* Math.sin(this.theta[s]);
 							this.Sy[s] += y * Math.cos(this.theta[s]) - x
 									* Math.sin(this.theta[s]);
 							this.Sxx[s] += (x * Math.cos(this.theta[s]) + y
 									* Math.sin(this.theta[s]))
 									* (x * Math.cos(this.theta[s]) + y
-											* Math.sin(this.theta[s])); // squared
-							// normal
-							// distances
-							// from
-							// parallel
-							// axis
-							// (Iz)
+											* Math.sin(this.theta[s]));
 							this.Syy[s] += (y * Math.cos(this.theta[s]) - x
 									* Math.sin(this.theta[s]))
 									* (y * Math.cos(this.theta[s]) - x
@@ -299,15 +337,11 @@ public class Slice_Geometry implements PlugIn {
 									* Math.sin(theta[s]))
 									* (x * Math.cos(theta[s]) + y
 											* Math.sin(theta[s]));
-							// maximum distance from minimum principal axis
-							// (longer)
 							this.maxRadMin[s] = Math.max(this.maxRadMin[s],
 									Math.abs((x - this.sliceCentroids[0][s])
 											* Math.cos(this.theta[s])
 											+ (y - this.sliceCentroids[1][s])
 											* Math.sin(theta[s])));
-							// maximum distance from maximum principal axis
-							// (shorter)
 							this.maxRadMax[s] = Math.max(this.maxRadMax[s],
 									Math.abs((y - this.sliceCentroids[1][s])
 											* Math.cos(this.theta[s])
@@ -320,54 +354,21 @@ public class Slice_Geometry implements PlugIn {
 						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
 						+ this.cslice[s]
 						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12; // 2nd moment of
-				// area around
-				// minimum
-				// principal
-				// axis (shorter
-				// axis, bigger
-				// I)
+								.sin(this.theta[s]), 2)) / 12;
 				this.Imin[s] = this.Syy[s]
 						- (this.Sy[s] * this.Sy[s] / this.cslice[s])
 						+ this.cslice[s]
 						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12; // 2nd moment of
-				// area around
-				// maximum
-				// principal
-				// axis (longer
-				// axis, smaller
-				// I)
+								.sin(this.theta[s]), 2)) / 12;
 				this.Ipm[s] = this.Sxy[s]
 						- (this.Sy[s] * this.Sx[s] / this.cslice[s])
 						+ this.cslice[s]
 						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12; // product moment
-				// of area,
-				// should be 0
-				// if theta
-				// calculated
-				// perfectly
-				this.R1[s] = Math.sqrt(this.Imin[s] / this.cslice[s]); // length
-				// of
-				// major
-				// axis
-				this.R2[s] = Math.sqrt(this.Imax[s] / this.cslice[s]); // length
-				// of
-				// minor
-				// axis
-				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s]; // Section
-				// modulus
-				// around
-				// maximum
-				// principal
-				// axis
-				this.Zmin[s] = this.Imin[s] / this.maxRadMax[s]; // Section
-				// modulus
-				// around
-				// minimum
-				// principal
-				// axis
+								.sin(this.theta[s]), 2)) / 12;
+				this.R1[s] = Math.sqrt(this.Imin[s] / this.cslice[s]);
+				this.R2[s] = Math.sqrt(this.Imax[s] / this.cslice[s]);
+				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];
+				this.Zmin[s] = this.Imin[s] / this.maxRadMax[s];
 				this.ImaxFast[s] = (this.Mxx[s] + this.Myy[s])
 						/ 2
 						+ Math.sqrt(Math.pow(((this.Mxx[s] - this.Myy[s]) / 2),
@@ -489,24 +490,21 @@ public class Slice_Geometry implements PlugIn {
 			// convert HU limits to pixel values
 			IJ.log("Image is calibrated, using " + this.min + " and "
 					+ this.max + " HU as bone cutoffs");
-			this.min = (short) Math.round(this.cal
-					.getRawValue(this.min));
-			this.max = (short) Math.round(this.cal
-					.getRawValue(this.max));
+			this.min = (short) Math.round(this.cal.getRawValue(this.min));
+			this.max = (short) Math.round(this.cal.getRawValue(this.max));
 			IJ.log("Vox Width: " + vW + "; Vox Height: " + vH + " " + units);
 			IJ.log("Calibration coefficients:" + coeff[0] + "," + coeff[1]);
-			IJ.log("this.min = " + this.min + ", this.max = "
-					+ this.max);
+			IJ.log("this.min = " + this.min + ", this.max = " + this.max);
 		} else {
 			IJ.log("Image is not calibrated, using user-determined threshold");
 			IJ.run("Threshold...");
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			this.min = (short) stack.getProcessor(
-					imp.getCurrentSlice()).getMinThreshold();
-			this.max = (short) stack.getProcessor(
-					imp.getCurrentSlice()).getMaxThreshold();
+			this.min = (short) stack.getProcessor(imp.getCurrentSlice())
+					.getMinThreshold();
+			this.max = (short) stack.getProcessor(imp.getCurrentSlice())
+					.getMaxThreshold();
 		}
 		return;
 	}
@@ -517,7 +515,6 @@ public class Slice_Geometry implements PlugIn {
 		gd.addCheckbox("Cortical Thickness", true);
 		gd.addCheckbox("Draw Axes", true);
 		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Draw Outline", false);
 		gd.addCheckbox("Annotated Copy", true);
 		gd.addCheckbox("Process Stack", false);
 		String[] bones = { "unknown", "scapula", "humerus", "radius", "ulna",
@@ -537,19 +534,14 @@ public class Slice_Geometry implements PlugIn {
 		gd.addChoice("Bone: ", bones, bones[this.boneID]);
 		String[] analyses = { "Weighted", "Unweighted", "Both" };
 		gd.addChoice("Calculate: ", analyses, analyses[1]);
-		// gd.addNumericField("Voxel Size (x): ", vW, 3, 8, units);
-		// gd.addNumericField("Voxel Size (y): ", vH, 3, 8, units);
-		// gd.addNumericField("Voxel Size (z): ", vD, 3, 8, units);
-		// gd.addMessage(this.calString);
 		gd.addMessage("Set the threshold");
 		gd.addNumericField("Air:", this.airHU, 0);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
 		gd.showDialog();
-		this.doThickness = gd.getNextBoolean();
+		this.doThickness3D = gd.getNextBoolean();
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
-		this.doOutline = gd.getNextBoolean();
 		this.doCopy = gd.getNextBoolean();
 		this.doStack = gd.getNextBoolean();
 		if (this.doStack) {
@@ -568,9 +560,6 @@ public class Slice_Geometry implements PlugIn {
 			}
 		}
 		this.analyse = gd.getNextChoice();
-		// this.vW = gd.getNextNumber();
-		// this.vH = gd.getNextNumber();
-		// this.vD = gd.getNextNumber();
 		this.airHU = gd.getNextNumber();
 		this.min = gd.getNextNumber();
 		this.max = gd.getNextNumber();
@@ -585,7 +574,6 @@ public class Slice_Geometry implements PlugIn {
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
 
-		// TODO fix spatial calibration: this assumes isotropic pixels
 		double unit4 = Math.pow(vW, 4);
 		double unit3 = Math.pow(vW, 3);
 		String title = imp.getTitle();
@@ -610,7 +598,7 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Feret Min", this.feretMin[s]);
 			rt.addValue("Feret Max", this.feretMax[s]);
 			rt.addValue("Feret Angle", this.feretAngle[s]);
-			if (this.doThickness) {
+			if (this.doThickness3D) {
 				rt.addValue("Max Thick (" + units + ")", this.maxCortThick[s]);
 				rt
 						.addValue("Mean Thick (" + units + ")",
