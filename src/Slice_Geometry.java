@@ -170,8 +170,12 @@ public class Slice_Geometry implements PlugIn {
 		}
 	}
 
-	// TODO centroid and axes correct on single slices but wrong on
-	// whole staks - drift?
+	/**
+	 * Draw centroids and / or principal axes on a copy of the original image
+	 * 
+	 * @param imp
+	 * @return
+	 */
 	private ImagePlus annotateImage(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
@@ -448,11 +452,16 @@ public class Slice_Geometry implements PlugIn {
 		return;
 	}
 
+	/**
+	 * Calculate thickness on individual slices using local thickness
+	 * 
+	 * @param imp
+	 */
 	private void calculateThickness2D(ImagePlus imp) {
 		this.maxCortThick2D = new double[this.al];
 		this.meanCortThick2D = new double[this.al];
 		this.stdevCortThick2D = new double[this.al];
-		
+
 		int nThreads = Runtime.getRuntime().availableProcessors();
 		SliceThread[] sliceThread = new SliceThread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
@@ -496,8 +505,7 @@ public class Slice_Geometry implements PlugIn {
 		public void run() {
 			for (int s = this.thread + this.startSlice; s <= this.endSlice; s += this.nThreads) {
 				ImageProcessor ip = impT.getImageStack().getProcessor(s);
-				ImagePlus sliceImp = new ImagePlus(impT.getShortTitle() + " "
-						+ s, ip);
+				ImagePlus sliceImp = new ImagePlus(" " + s, ip);
 				// binarise
 				ImagePlus binaryImp = convertToBinary(sliceImp);
 				Calibration cal = impT.getCalibration();
