@@ -48,8 +48,10 @@ public class Slice_Geometry implements PlugIn {
 	private double vW, vH, vD, airHU, min, max;
 	private String units, analyse, calString;
 
-	/** Do local thickness measurement */
+	/** Do local thickness measurement in 3D */
 	private boolean doThickness3D;
+	/** Do local thickness measurement in 2D */
+	private boolean doThickness2D;
 	/** Show slice centroid */
 	private boolean doCentroids;
 	/** Show principal axes */
@@ -61,9 +63,12 @@ public class Slice_Geometry implements PlugIn {
 	private boolean isCalibrated;
 	private double[] cslice;
 	private double[] cortArea;
-	private double[] meanCortThick;
-	private double[] maxCortThick;
-	private double[] stdevCortThick;
+	private double[] meanCortThick3D;
+	private double[] maxCortThick3D;
+	private double[] stdevCortThick3D;
+	private double[] meanCortThick2D;
+	private double[] maxCortThick2D;
+	private double[] stdevCortThick2D;
 	/** normal x distance from parallel axis summed over pixels */
 	private double[] Sx;
 	/** normal y distance from parallel axis summed over pixels */
@@ -109,7 +114,7 @@ public class Slice_Geometry implements PlugIn {
 	private double[] feretAngle;
 	/** Minimum diameter */
 	private double[] feretMin;
-	/** List of empty slices.  If true, slice contains 0 pixels to analyse */
+	/** List of empty slices. If true, slice contains 0 pixels to analyse */
 	private boolean[] emptySlices;
 	/** List of slice centroids */
 	private double[][] sliceCentroids;
@@ -146,7 +151,9 @@ public class Slice_Geometry implements PlugIn {
 
 		calculateMoments(imp);
 		if (this.doThickness3D)
-			calculateThickness(imp);
+			calculateThickness3D(imp);
+		if (this.doThickness2D)
+			calculateThickness2D(imp);
 
 		roiMeasurements(imp);
 		// TODO locate centroids of multiple sections in a single plane
@@ -163,6 +170,8 @@ public class Slice_Geometry implements PlugIn {
 		}
 	}
 
+	// TODO centroid and axes correct on single slices but wrong on
+	// whole staks - drift?
 	private ImagePlus annotateImage(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
@@ -200,6 +209,7 @@ public class Slice_Geometry implements PlugIn {
 			}
 		}
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
+		ann.setCalibration(imp.getCalibration());
 		return ann;
 	}
 
@@ -388,10 +398,10 @@ public class Slice_Geometry implements PlugIn {
 	 * slice
 	 * 
 	 */
-	private void calculateThickness(ImagePlus imp) {
-		this.maxCortThick = new double[this.al];
-		this.meanCortThick = new double[this.al];
-		this.stdevCortThick = new double[this.al];
+	private void calculateThickness3D(ImagePlus imp) {
+		this.maxCortThick3D = new double[this.al];
+		this.meanCortThick3D = new double[this.al];
+		this.stdevCortThick3D = new double[this.al];
 		Thickness th = new Thickness();
 		th.baseImp = imp;
 		th.vD = this.vD;
@@ -402,13 +412,108 @@ public class Slice_Geometry implements PlugIn {
 		th.d = imp.getStackSize();
 
 		// convert to binary
+		ImagePlus binaryImp = convertToBinary(imp);
+
+		float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
+		th.DistanceMaptoDistanceRidge(workArray);
+		th.DistanceRidgetoLocalThickness(workArray);
+		ImagePlus thickImp = th
+				.LocalThicknesstoCleanedUpLocalThickness(workArray);
+		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			float[] pixels = (float[]) thickImp.getStack().getPixels(s);
+			double sumPix = 0;
+			double sliceMax = 0;
+			double pixCount = 0;
+			for (int p = 0; p < pixels.length; p++) {
+				if (pixels[p] > 0)
+					pixCount++;
+				sumPix += pixels[p];
+				sliceMax = Math.max(sliceMax, pixels[p]);
+			}
+			double sliceMean = sumPix / pixCount;
+			this.meanCortThick3D[s] = sliceMean;
+			this.maxCortThick3D[s] = sliceMax;
+
+			double sumSquares = 0;
+			for (int p = 0; p < pixels.length; p++) {
+				double pixVal = pixels[p];
+				if (pixVal > 0) {
+					double d = sliceMean - pixVal;
+					sumSquares += d * d;
+				}
+			}
+			this.stdevCortThick3D[s] = Math.sqrt(sumSquares / pixCount);
+			// IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
+		}
+		return;
+	}
+
+	private void calculateThickness2D(ImagePlus imp) {
+		this.maxCortThick2D = new double[this.al];
+		this.meanCortThick2D = new double[this.al];
+		this.stdevCortThick2D = new double[this.al];
+
+		// for each slice between startSlice and endSlice
+		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			ImageProcessor ip = imp.getImageStack().getProcessor(s);
+			ImagePlus sliceImp = new ImagePlus(imp.getShortTitle() + " " + s,
+					ip);
+			// binarise
+			ImagePlus binaryImp = convertToBinary(sliceImp);
+			binaryImp.setCalibration(imp.getCalibration());
+			// calculate thickness
+			Thickness th = new Thickness();
+			th.baseImp = binaryImp;
+			th.vD = this.vD;
+			th.vW = this.vW;
+			th.vH = this.vH;
+			th.w = binaryImp.getWidth();
+			th.h = binaryImp.getHeight();
+			th.d = binaryImp.getStackSize();
+			float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
+			th.DistanceMaptoDistanceRidge(workArray);
+			th.DistanceRidgetoLocalThickness(workArray);
+			ImagePlus thickImp = th
+					.LocalThicknesstoCleanedUpLocalThickness(workArray);
+			// get thickness stats
+			float[] pixels = (float[]) thickImp.getImageStack().getPixels(1);
+			double sumPix = 0;
+			double sliceMax = 0;
+			double pixCount = 0;
+			for (int p = 0; p < pixels.length; p++) {
+				if (pixels[p] > 0)
+					pixCount++;
+				sumPix += pixels[p];
+				sliceMax = Math.max(sliceMax, pixels[p]);
+			}
+			double sliceMean = sumPix / pixCount;
+			this.meanCortThick2D[s] = sliceMean;
+			this.maxCortThick2D[s] = sliceMax;
+
+			double sumSquares = 0;
+			for (int p = 0; p < pixels.length; p++) {
+				double pixVal = pixels[p];
+				if (pixVal > 0) {
+					double d = sliceMean - pixVal;
+					sumSquares += d * d;
+				}
+			}
+			this.stdevCortThick2D[s] = Math.sqrt(sumSquares / pixCount);
+		}
+		return;
+	}
+
+	private ImagePlus convertToBinary(ImagePlus imp) {
+		int w = imp.getWidth();
+		int h = imp.getHeight();
+		int d = imp.getStackSize();
 		ImageStack sourceStack = imp.getImageStack();
-		ImageStack binaryStack = new ImageStack(th.w, th.h);
-		for (int s = 0; s < th.d; s++) {
+		ImageStack binaryStack = new ImageStack(w, h);
+		for (int s = 0; s < d; s++) {
 			ImageProcessor sliceIp = sourceStack.getProcessor(s + 1);
-			ByteProcessor binaryIp = new ByteProcessor(th.w, th.h);
-			for (int y = 0; y < th.h; y++) {
-				for (int x = 0; x < th.w; x++) {
+			ByteProcessor binaryIp = new ByteProcessor(w, h);
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) {
 					if (sliceIp.get(x, y) >= this.min
 							&& sliceIp.get(x, y) <= this.max) {
 						binaryIp.set(x, y, 255);
@@ -420,37 +525,8 @@ public class Slice_Geometry implements PlugIn {
 			binaryStack.addSlice("" + s, binaryIp);
 		}
 		ImagePlus binaryImp = new ImagePlus("binaryImp", binaryStack);
-
-		float[][] s = th.GeometrytoDistanceMap(binaryImp);
-		th.DistanceMaptoDistanceRidge(s);
-		th.DistanceRidgetoLocalThickness(s);
-		ImagePlus thickImp = th.LocalThicknesstoCleanedUpLocalThickness(s);
-		for (int n = 0; n < th.d; n++) {
-			float[] pixels = (float[]) thickImp.getStack().getPixels(n + 1);
-			double sumPix = 0;
-			double sliceMax = 0;
-			double pixCount = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				if (pixels[p] > 0)
-					pixCount++;
-				sumPix += pixels[p];
-				sliceMax = Math.max(sliceMax, pixels[p]);
-			}
-			double sliceMean = sumPix / pixCount;
-			this.meanCortThick[n] = sliceMean;
-			this.maxCortThick[n] = sliceMax;
-
-			double sumSquares = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				double pixVal = pixels[p];
-				if (pixVal > 0) {
-					double d = sliceMean - pixVal;
-					sumSquares += d * d;
-				}
-			}
-			this.stdevCortThick[n] = Math.sqrt(sumSquares / pixCount);
-			// IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
-		}
+		binaryImp.setCalibration(imp.getCalibration());
+		return binaryImp;
 	}
 
 	// TODO fix this, it's a mess.
@@ -512,7 +588,8 @@ public class Slice_Geometry implements PlugIn {
 	private boolean showDialog(ImagePlus imp) {
 		GenericDialog gd = new GenericDialog("Options");
 
-		gd.addCheckbox("Cortical Thickness", true);
+		gd.addCheckbox("2D Thickness", true);
+		gd.addCheckbox("3D Thickness", false);
 		gd.addCheckbox("Draw Axes", true);
 		gd.addCheckbox("Draw Centroids", true);
 		gd.addCheckbox("Annotated Copy", true);
@@ -539,6 +616,7 @@ public class Slice_Geometry implements PlugIn {
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
 		gd.showDialog();
+		this.doThickness2D = gd.getNextBoolean();
 		this.doThickness3D = gd.getNextBoolean();
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
@@ -599,11 +677,20 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Feret Max", this.feretMax[s]);
 			rt.addValue("Feret Angle", this.feretAngle[s]);
 			if (this.doThickness3D) {
-				rt.addValue("Max Thick (" + units + ")", this.maxCortThick[s]);
-				rt
-						.addValue("Mean Thick (" + units + ")",
-								this.meanCortThick[s]);
-				rt.addValue("SD Thick (" + units + ")", this.stdevCortThick[s]);
+				rt.addValue("Max Thick 3D (" + units + ")",
+						this.maxCortThick3D[s]);
+				rt.addValue("Mean Thick 3D (" + units + ")",
+						this.meanCortThick3D[s]);
+				rt.addValue("SD Thick 3D (" + units + ")",
+						this.stdevCortThick3D[s]);
+			}
+			if (this.doThickness2D) {
+				rt.addValue("Max Thick 2D (" + units + ")",
+						this.maxCortThick2D[s]);
+				rt.addValue("Mean Thick 2D (" + units + ")",
+						this.meanCortThick2D[s]);
+				rt.addValue("SD Thick 2D (" + units + ")",
+						this.stdevCortThick2D[s]);
 			}
 		}
 		rt.show("Results");
