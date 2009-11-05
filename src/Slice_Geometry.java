@@ -452,55 +452,98 @@ public class Slice_Geometry implements PlugIn {
 		this.maxCortThick2D = new double[this.al];
 		this.meanCortThick2D = new double[this.al];
 		this.stdevCortThick2D = new double[this.al];
-
-		// for each slice between startSlice and endSlice
-		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			ImageProcessor ip = imp.getImageStack().getProcessor(s);
-			ImagePlus sliceImp = new ImagePlus(imp.getShortTitle() + " " + s,
-					ip);
-			// binarise
-			ImagePlus binaryImp = convertToBinary(sliceImp);
-			binaryImp.setCalibration(imp.getCalibration());
-			// calculate thickness
-			Thickness th = new Thickness();
-			th.baseImp = binaryImp;
-			th.vD = this.vD;
-			th.vW = this.vW;
-			th.vH = this.vH;
-			th.w = binaryImp.getWidth();
-			th.h = binaryImp.getHeight();
-			th.d = binaryImp.getStackSize();
-			float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
-			th.DistanceMaptoDistanceRidge(workArray);
-			th.DistanceRidgetoLocalThickness(workArray);
-			ImagePlus thickImp = th
-					.LocalThicknesstoCleanedUpLocalThickness(workArray);
-			// get thickness stats
-			float[] pixels = (float[]) thickImp.getImageStack().getPixels(1);
-			double sumPix = 0;
-			double sliceMax = 0;
-			double pixCount = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				if (pixels[p] > 0)
-					pixCount++;
-				sumPix += pixels[p];
-				sliceMax = Math.max(sliceMax, pixels[p]);
+		
+		int nThreads = Runtime.getRuntime().availableProcessors();
+		SliceThread[] sliceThread = new SliceThread[nThreads];
+		for (int thread = 0; thread < nThreads; thread++) {
+			sliceThread[thread] = new SliceThread(thread, nThreads, imp,
+					this.meanCortThick2D, this.maxCortThick2D,
+					this.stdevCortThick2D, this.startSlice, this.endSlice);
+			sliceThread[thread].start();
+		}
+		try {
+			for (int thread = 0; thread < nThreads; thread++) {
+				sliceThread[thread].join();
 			}
-			double sliceMean = sumPix / pixCount;
-			this.meanCortThick2D[s] = sliceMean;
-			this.maxCortThick2D[s] = sliceMax;
-
-			double sumSquares = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				double pixVal = pixels[p];
-				if (pixVal > 0) {
-					double d = sliceMean - pixVal;
-					sumSquares += d * d;
-				}
-			}
-			this.stdevCortThick2D[s] = Math.sqrt(sumSquares / pixCount);
+		} catch (InterruptedException ie) {
+			IJ.error("A thread was interrupted.");
 		}
 		return;
+	}
+
+	class SliceThread extends Thread {
+		final int thread, nThreads, width, height, startSlice, endSlice;
+
+		final double[] meanThick, maxThick, stdevThick;
+
+		final ImagePlus impT;
+
+		public SliceThread(int thread, int nThreads, ImagePlus imp,
+				double[] meanThick, double[] maxThick, double[] stdevThick,
+				int startSlice, int endSlice) {
+			this.impT = imp;
+			this.width = this.impT.getWidth();
+			this.height = this.impT.getHeight();
+			this.thread = thread;
+			this.nThreads = nThreads;
+			this.meanThick = meanThick;
+			this.maxThick = maxThick;
+			this.stdevThick = stdevThick;
+			this.startSlice = startSlice;
+			this.endSlice = endSlice;
+		}
+
+		public void run() {
+			for (int s = this.thread + this.startSlice; s <= this.endSlice; s += this.nThreads) {
+				ImageProcessor ip = impT.getImageStack().getProcessor(s);
+				ImagePlus sliceImp = new ImagePlus(impT.getShortTitle() + " "
+						+ s, ip);
+				// binarise
+				ImagePlus binaryImp = convertToBinary(sliceImp);
+				Calibration cal = impT.getCalibration();
+				binaryImp.setCalibration(cal);
+				// calculate thickness
+				Thickness th = new Thickness();
+				th.baseImp = binaryImp;
+				th.vD = cal.pixelDepth;
+				th.vW = cal.pixelWidth;
+				th.vH = cal.pixelHeight;
+				th.w = binaryImp.getWidth();
+				th.h = binaryImp.getHeight();
+				th.d = binaryImp.getStackSize();
+				float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
+				th.DistanceMaptoDistanceRidge(workArray);
+				th.DistanceRidgetoLocalThickness(workArray);
+				ImagePlus thickImp = th
+						.LocalThicknesstoCleanedUpLocalThickness(workArray);
+				// get thickness stats
+				float[] pixels = (float[]) thickImp.getImageStack()
+						.getPixels(1);
+				double sumPix = 0;
+				double sliceMax = 0;
+				double pixCount = 0;
+				for (int p = 0; p < pixels.length; p++) {
+					if (pixels[p] > 0)
+						pixCount++;
+					sumPix += pixels[p];
+					sliceMax = Math.max(sliceMax, pixels[p]);
+				}
+				double sliceMean = sumPix / pixCount;
+				this.meanThick[s] = sliceMean;
+				this.maxThick[s] = sliceMax;
+
+				double sumSquares = 0;
+				for (int p = 0; p < pixels.length; p++) {
+					double pixVal = pixels[p];
+					if (pixVal > 0) {
+						double d = sliceMean - pixVal;
+						sumSquares += d * d;
+					}
+				}
+				this.stdevThick[s] = Math.sqrt(sumSquares / pixCount);
+			}
+			return;
+		}
 	}
 
 	private ImagePlus convertToBinary(ImagePlus imp) {
@@ -522,7 +565,7 @@ public class Slice_Geometry implements PlugIn {
 					}
 				}
 			}
-			binaryStack.addSlice("" + s, binaryIp);
+			binaryStack.addSlice(sourceStack.getSliceLabel(s + 1), binaryIp);
 		}
 		ImagePlus binaryImp = new ImagePlus("binaryImp", binaryStack);
 		binaryImp.setCalibration(imp.getCalibration());
