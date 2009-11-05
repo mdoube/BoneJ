@@ -253,6 +253,10 @@ public class Slice_Geometry implements PlugIn {
 				this.emptySlices[s] = false;
 			} else {
 				this.emptySlices[s] = true;
+				this.cortArea[s] = Double.NaN;
+				this.sliceCentroids[0][s] = Double.NaN;
+				this.sliceCentroids[1][s] = Double.NaN;
+				this.cslice[s] = Double.NaN;
 			}
 		}
 		return cstack;
@@ -307,6 +311,8 @@ public class Slice_Geometry implements PlugIn {
 									* this.Mxy[s] * this.Mxy[s]))
 							/ (2 * this.Mxy[s]));
 				}
+			} else {
+				this.theta[s] = Double.NaN;
 			}
 		}
 		// END OF Ix and Iy CALCULATION
@@ -393,8 +399,21 @@ public class Slice_Geometry implements PlugIn {
 						- Math.sqrt(Math.pow(((this.Mxx[s] - this.Myy[s]) / 2),
 								2)
 								+ this.Mxy[s] * this.Mxy[s]);
+			} else {
+				this.Imax[s] = Double.NaN;
+				this.Imin[s] = Double.NaN;
+				this.Ipm[s] = Double.NaN;
+				this.R1[s] = Double.NaN;
+				this.R2[s] = Double.NaN;
+				this.maxRadMin[s] = Double.NaN;
+				this.maxRadMax[s] = Double.NaN;
+				this.Zmax[s] = Double.NaN;
+				this.Zmin[s] = Double.NaN;
+				this.ImaxFast[s] = Double.NaN;
+				this.IminFast[s] = Double.NaN;
 			}
 		}
+		return;
 	}
 
 	/**
@@ -436,7 +455,10 @@ public class Slice_Geometry implements PlugIn {
 			}
 			double sliceMean = sumPix / pixCount;
 			this.meanCortThick3D[s] = sliceMean;
-			this.maxCortThick3D[s] = sliceMax;
+			if (pixCount > 0)
+				this.maxCortThick3D[s] = sliceMax;
+			else
+				this.maxCortThick3D[s] = Double.NaN;
 
 			double sumSquares = 0;
 			for (int p = 0; p < pixels.length; p++) {
@@ -538,7 +560,10 @@ public class Slice_Geometry implements PlugIn {
 				}
 				double sliceMean = sumPix / pixCount;
 				this.meanThick[s] = sliceMean;
-				this.maxThick[s] = sliceMax;
+				if (pixCount > 0)
+					this.maxThick[s] = sliceMax;
+				else
+					this.maxThick[s] = Double.NaN;
 
 				double sumSquares = 0;
 				for (int p = 0; p < pixels.length; p++) {
