@@ -17,7 +17,8 @@ public class BoneList {
 	 * 
 	 * @return array of bone names
 	 */
-	public String[] getBoneList(){
+	public final static String[] getBoneList(){
+		//ONLY ADD TO THE END OF THIS ARRAY
 		String[] boneList = {
 			"unknown",
 			"scapula",
@@ -29,7 +30,8 @@ public class BoneList {
 			"femur",
 			"tibia",
 			"fibula",
-			"metatarsal"
+			"metatarsal",
+			"calcaneus"
 			};
 		return boneList;
 	}

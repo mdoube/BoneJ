@@ -32,6 +32,7 @@ import java.awt.Rectangle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.doube.bonej.BoneList;
 import org.doube.bonej.Thickness;
 
 /**
@@ -670,20 +671,10 @@ public class Slice_Geometry implements PlugIn {
 		gd.addCheckbox("Draw Centroids", true);
 		gd.addCheckbox("Annotated Copy", true);
 		gd.addCheckbox("Process Stack", false);
-		String[] bones = { "unknown", "scapula", "humerus", "radius", "ulna",
-				"metacarpal", "pelvis", "femur", "tibia", "fibula",
-				"metatarsal" };
 		// guess bone from image title
-		String title = imp.getTitle();
-		this.boneID = 0;
-		for (int n = 0; n < bones.length; n++) {
-			Pattern p = Pattern.compile(bones[n], Pattern.CASE_INSENSITIVE);
-			Matcher m = p.matcher(title);
-			if (m.find()) {
-				this.boneID = n;
-				continue;
-			}
-		}
+		BoneList bl = new BoneList();
+		this.boneID = bl.guessBone(imp);
+		String[] bones = bl.getBoneList();
 		gd.addChoice("Bone: ", bones, bones[this.boneID]);
 		String[] analyses = { "Weighted", "Unweighted", "Both" };
 		gd.addChoice("Calculate: ", analyses, analyses[1]);
@@ -707,12 +698,7 @@ public class Slice_Geometry implements PlugIn {
 		}
 
 		String bone = gd.getNextChoice();
-		for (int n = 0; n < bones.length; n++) {
-			if (bone.equals(bones[n])) {
-				this.boneID = n;
-				continue;
-			}
-		}
+		this.boneID = bl.guessBone(bone);
 		this.analyse = gd.getNextChoice();
 		this.airHU = gd.getNextNumber();
 		this.min = gd.getNextNumber();
