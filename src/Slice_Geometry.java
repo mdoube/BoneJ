@@ -29,8 +29,6 @@ import ij.gui.*;
 
 import java.awt.Color;
 import java.awt.Rectangle;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.doube.bonej.BoneList;
 import org.doube.bonej.Thickness;
@@ -62,13 +60,21 @@ public class Slice_Geometry implements PlugIn {
 	/** If true, process the whole stack */
 	private boolean doStack;
 	private boolean isCalibrated;
+	/** Number of thresholded pixels in each slice */
 	private double[] cslice;
+	/** Cross-sectional area */
 	private double[] cortArea;
+	/** Mean of 3D local thickness in slice */
 	private double[] meanCortThick3D;
+	/** Maximum 3D local thickness in slice */
 	private double[] maxCortThick3D;
+	/** Standard deviation of 3D local thickness in slice */
 	private double[] stdevCortThick3D;
+	/** Mean of 2D local thickness in slice */
 	private double[] meanCortThick2D;
+	/** Maximum 2D local thickness in slice */
 	private double[] maxCortThick2D;
+	/** Standard deviation of 2D local thickness in slice */
 	private double[] stdevCortThick2D;
 	/** normal x distance from parallel axis summed over pixels */
 	private double[] Sx;
@@ -82,6 +88,7 @@ public class Slice_Geometry implements PlugIn {
 	private double[] Myy;
 	private double[] Mxx;
 	private double[] Mxy;
+	/** Angle of principal axes */
 	private double[] theta;
 	/**
 	 * 2nd moment of area around minimum principal axis (shorter axis, larger I)
@@ -157,6 +164,7 @@ public class Slice_Geometry implements PlugIn {
 			calculateThickness2D(imp);
 
 		roiMeasurements(imp);
+		
 		// TODO locate centroids of multiple sections in a single plane
 
 		showSliceResults(imp);
@@ -234,6 +242,7 @@ public class Slice_Geometry implements PlugIn {
 			double sumX = 0;
 			double sumY = 0;
 			this.cslice[s] = 0;
+			this.cortArea[s] = 0;
 			short[] pixels = (short[]) stack.getPixels(s);
 			for (int y = r.y; y < (r.y + r.height); y++) {
 				int offset = y * w;
@@ -278,6 +287,11 @@ public class Slice_Geometry implements PlugIn {
 		this.Mxy = new double[this.al];
 		this.theta = new double[this.al];
 		for (int s = 1; s <= stack.getSize(); s++) {
+			this.Sx[s] = 0;
+			this.Sy[s] = 0;
+			this.Sxx[s] = 0;
+			this.Syy[s] = 0;
+			this.Sxy[s] = 0;
 			if (!this.emptySlices[s]) {
 				short[] pixels = (short[]) stack.getPixels(s);
 				for (int y = r.y; y < (r.y + r.height); y++) {
@@ -674,7 +688,7 @@ public class Slice_Geometry implements PlugIn {
 		// guess bone from image title
 		BoneList bl = new BoneList();
 		this.boneID = bl.guessBone(imp);
-		String[] bones = bl.getBoneList();
+		String[] bones = BoneList.getBoneList();
 		gd.addChoice("Bone: ", bones, bones[this.boneID]);
 		String[] analyses = { "Weighted", "Unweighted", "Both" };
 		gd.addChoice("Calculate: ", analyses, analyses[1]);
@@ -764,11 +778,15 @@ public class Slice_Geometry implements PlugIn {
 		this.feretMax = new double[this.al];
 		this.feretMin = new double[this.al];
 		imp.setActivated();
+		int initialSlice = imp.getCurrentSlice();
 		Roi r;
 		IJ.setThreshold(this.min, this.max);
 		// for the required slices...
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			IJ.setSlice(s);
+			ImageProcessor ip = imp.getImageStack().getProcessor(s);
+			ImagePlus sliceImp = new ImagePlus(""+s, ip);
+			sliceImp.setActivated();
+//			IJ.setSlice(s);
 			IJ.doWand(0, (int) Math.round(this.sliceCentroids[1][s] / this.vH));
 			r = imp.getRoi();
 			if (this.emptySlices[s]) {
@@ -787,6 +805,9 @@ public class Slice_Geometry implements PlugIn {
 			}
 			r = null;
 			feretValues = null;
+			sliceImp.changes = false;
+			sliceImp.close();
 		}
+		IJ.setSlice(initialSlice);
 	}
 }
