@@ -762,9 +762,9 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
 			rt.addValue("Zmax (" + units + "^3)", this.Zmax[s] * unit3);
 			rt.addValue("Zmin (" + units + "^3)", this.Zmin[s] * unit3);
-			rt.addValue("Feret Min", this.feretMin[s]);
-			rt.addValue("Feret Max", this.feretMax[s]);
-			rt.addValue("Feret Angle", this.feretAngle[s]);
+			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
+			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
+			rt.addValue("Feret Angle (\u00B0)", this.feretAngle[s]);
 			if (this.doThickness3D) {
 				rt.addValue("Max Thick 3D (" + units + ")",
 						this.maxCortThick3D[s]);
@@ -806,9 +806,9 @@ public class Slice_Geometry implements PlugIn {
 				int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
 				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
 				feretValues = roi.getFeretValues();
-				this.feretMin[s] = feretValues[2];
+				this.feretMin[s] = feretValues[2] * this.vW;
 				this.feretAngle[s] = feretValues[1];
-				this.feretMax[s] = feretValues[0];
+				this.feretMax[s] = feretValues[0] * this.vW;
 			}
 			feretValues = null;
 		}
