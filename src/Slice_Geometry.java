@@ -164,7 +164,7 @@ public class Slice_Geometry implements PlugIn {
 			calculateThickness2D(imp);
 
 		roiMeasurements(imp);
-		
+
 		// TODO locate centroids of multiple sections in a single plane
 
 		showSliceResults(imp);
@@ -191,7 +191,8 @@ public class Slice_Geometry implements PlugIn {
 		int h = stack.getHeight();
 		ImageStack annStack = new ImageStack(w, h);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			if (this.emptySlices[s]) continue;
+			if (this.emptySlices[s])
+				continue;
 			ImageProcessor annIP = stack.getProcessor(s).duplicate();
 			annIP.setColor(Color.white);
 			double cX = this.sliceCentroids[0][s] / this.vW;
@@ -441,6 +442,7 @@ public class Slice_Geometry implements PlugIn {
 		this.maxCortThick3D = new double[this.al];
 		this.meanCortThick3D = new double[this.al];
 		this.stdevCortThick3D = new double[this.al];
+		Rectangle r = imp.getProcessor().getRoi();
 		Thickness th = new Thickness();
 		th.baseImp = imp;
 		th.vD = this.vD;
@@ -477,12 +479,16 @@ public class Slice_Geometry implements PlugIn {
 				this.maxCortThick3D[s] = Double.NaN;
 
 			double sumSquares = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				double pixVal = pixels[p];
-				if (pixVal > 0) {
-					double d = sliceMean - pixVal;
-					sumSquares += d * d;
+			int offset = 0;
+			for (int y = r.y; y < r.y + r.height; y++) { 
+				for (int x = r.x; x < r.x + r.width; x++) {
+					int p = offset + x;
+					if (pixels[p] > 0)
+						pixCount++;
+					sumPix += pixels[p];
+					sliceMax = Math.max(sliceMax, pixels[p]);
 				}
+				offset += imp.getWidth();
 			}
 			this.stdevCortThick3D[s] = Math.sqrt(sumSquares / pixCount);
 			// IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
@@ -544,6 +550,7 @@ public class Slice_Geometry implements PlugIn {
 			for (int s = this.thread + this.startSlice; s <= this.endSlice; s += this.nThreads) {
 				ImageProcessor ip = impT.getImageStack().getProcessor(s);
 				ImagePlus sliceImp = new ImagePlus(" " + s, ip);
+				Rectangle r = ip.getRoi();
 				// binarise
 				ImagePlus binaryImp = convertToBinary(sliceImp);
 				Calibration cal = impT.getCalibration();
@@ -568,11 +575,16 @@ public class Slice_Geometry implements PlugIn {
 				double sumPix = 0;
 				double sliceMax = 0;
 				double pixCount = 0;
-				for (int p = 0; p < pixels.length; p++) {
-					if (pixels[p] > 0)
-						pixCount++;
-					sumPix += pixels[p];
-					sliceMax = Math.max(sliceMax, pixels[p]);
+				int offset = 0;
+				for (int y = r.y; y < r.y + r.height; y++) { 
+					for (int x = r.x; x < r.x + r.width; x++) {
+						int p = offset + x;
+						if (pixels[p] > 0)
+							pixCount++;
+						sumPix += pixels[p];
+						sliceMax = Math.max(sliceMax, pixels[p]);
+					}
+					offset += impT.getWidth();
 				}
 				double sliceMean = sumPix / pixCount;
 				this.meanThick[s] = sliceMean;
@@ -784,14 +796,14 @@ public class Slice_Geometry implements PlugIn {
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
 			Wand w = new Wand(ip);
-			w.autoOutline(0, (int) Math.round(this.sliceCentroids[1][s] / this.vH),
-					this.min, this.max, Wand.EIGHT_CONNECTED);
+			w.autoOutline(0, (int) Math.round(this.sliceCentroids[1][s]
+					/ this.vH), this.min, this.max, Wand.EIGHT_CONNECTED);
 			if (this.emptySlices[s] || w.npoints == 0) {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;
 				this.feretMax[s] = Double.NaN;
 			} else {
-				int type = Wand.allPoints()?Roi.FREEROI:Roi.TRACED_ROI;
+				int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
 				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
 				feretValues = roi.getFeretValues();
 				this.feretMin[s] = feretValues[2];
