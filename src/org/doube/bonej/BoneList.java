@@ -31,7 +31,9 @@ public class BoneList {
 			"tibia",
 			"fibula",
 			"metatarsal",
-			"calcaneus"
+			"calcaneus",
+			"tibiotarsus",
+			"tarsometatarsal"
 			};
 		return boneList;
 	}
