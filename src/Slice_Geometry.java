@@ -191,6 +191,7 @@ public class Slice_Geometry implements PlugIn {
 		int h = stack.getHeight();
 		ImageStack annStack = new ImageStack(w, h);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			if (this.emptySlices[s]) continue;
 			ImageProcessor annIP = stack.getProcessor(s).duplicate();
 			annIP.setColor(Color.white);
 			double cX = this.sliceCentroids[0][s] / this.vW;
@@ -228,12 +229,12 @@ public class Slice_Geometry implements PlugIn {
 
 	protected double calculateCentroids(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
+		Rectangle r = stack.getRoi();
+		int w = stack.getWidth();
 		// 2D centroids
 		this.sliceCentroids = new double[2][this.al];
 		// pixel counters
 		double cstack = 0;
-		Rectangle r = stack.getRoi();
-		int w = stack.getWidth();
 		this.emptySlices = new boolean[this.al];
 		this.cslice = new double[this.al];
 		this.cortArea = new double[this.al];
@@ -773,41 +774,34 @@ public class Slice_Geometry implements PlugIn {
 	}
 
 	private void roiMeasurements(ImagePlus imp) {
+		Roi initialRoi = imp.getRoi();
 		double[] feretValues = new double[3];
 		this.feretAngle = new double[this.al];
 		this.feretMax = new double[this.al];
 		this.feretMin = new double[this.al];
-		imp.setActivated();
 		int initialSlice = imp.getCurrentSlice();
-		Roi r;
-		IJ.setThreshold(this.min, this.max);
 		// for the required slices...
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
-			ImagePlus sliceImp = new ImagePlus(""+s, ip);
-			sliceImp.setActivated();
-//			IJ.setSlice(s);
-			IJ.doWand(0, (int) Math.round(this.sliceCentroids[1][s] / this.vH));
-			r = imp.getRoi();
-			if (this.emptySlices[s]) {
+			Wand w = new Wand(ip);
+			w.autoOutline(0, (int) Math.round(this.sliceCentroids[1][s] / this.vH),
+					this.min, this.max, Wand.EIGHT_CONNECTED);
+			if (this.emptySlices[s] || w.npoints == 0) {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;
 				this.feretMax[s] = Double.NaN;
-			} else if (r != null) {
-				feretValues = r.getFeretValues();
+			} else {
+				int type = Wand.allPoints()?Roi.FREEROI:Roi.TRACED_ROI;
+				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
+				feretValues = roi.getFeretValues();
 				this.feretMin[s] = feretValues[2];
 				this.feretAngle[s] = feretValues[1];
 				this.feretMax[s] = feretValues[0];
-			} else {
-				this.feretMin[s] = Double.NaN;
-				this.feretAngle[s] = Double.NaN;
-				this.feretMax[s] = Double.NaN;
 			}
-			r = null;
 			feretValues = null;
-			sliceImp.changes = false;
-			sliceImp.close();
 		}
 		IJ.setSlice(initialSlice);
+		imp.setRoi(initialRoi);
+		return;
 	}
 }
