@@ -1,7 +1,4 @@
 
-import org.doube.bonej.ResultInserter;
-
-import Jama.*;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -12,6 +9,8 @@ import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
+import org.doube.bonej.ResultInserter;
+import org.doube.jama.*;
 
 /**
  * <p>

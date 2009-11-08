@@ -26,7 +26,7 @@ import ij.ImagePlus;
 import java.awt.List;
 import java.awt.Rectangle;
 
-import Jama.Matrix;
+import org.doube.jama.Matrix;
 
 /**
  *<p>

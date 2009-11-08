@@ -1,5 +1,4 @@
 package org.doube.jama.examples;
-import Jama.*; 
 import java.util.Date;import org.doube.jama.EigenvalueDecomposition;import org.doube.jama.LUDecomposition;import org.doube.jama.Matrix;import org.doube.jama.QRDecomposition;
 
 /** Example of use of Matrix Class, featuring magic squares. **/

@@ -1,5 +1,5 @@
 package org.doube.jama;
-import Jama.util.*;
+import org.doube.jama.util.*;
 
 /** Eigenvalues and eigenvectors of a real matrix. 
 <P>

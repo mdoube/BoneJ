@@ -1,7 +1,6 @@
 package org.doube.jama.test;
-import Jama.*;
+
 import java.io.*;
-import java.util.zip.GZIPInputStream;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;

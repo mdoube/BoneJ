@@ -28,11 +28,10 @@ import ij.gui.*;
 import java.awt.Rectangle;
 import java.awt.event.*;
 
-import Jama.*;
-
 import org.doube.bonej.FitSphere;
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitCircle;
+import org.doube.jama.*;
 
 /*
  * TODO incorporate curvature
