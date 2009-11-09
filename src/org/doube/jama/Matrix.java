@@ -976,7 +976,6 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			X.A[0][0] = A[0][1] * B.A[0][2] - A[0][2] * B.A[0][1];
 			X.A[0][1] = A[0][2] * B.A[0][0] - A[0][0] * B.A[0][2];
 			X.A[0][2] = A[0][0] * B.A[0][1] - A[0][1] * B.A[0][0];
-
 		} else if (m == 3 && n == 1) {
 			X.A[0][0] = A[1][0] * B.A[2][0] - A[2][0] * B.A[1][0];
 			X.A[1][0] = A[2][0] * B.A[0][0] - A[0][0] * B.A[2][0];
