@@ -937,13 +937,8 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	 */
 	public double dotProduct(Matrix B) {
 
-		if (m != B.m) {
-			throw new IllegalArgumentException(
-					"Matrix row dimensions do not agree");
-		}
-		if (n != B.n) {
-			throw new IllegalArgumentException(
-					"Matrix column dimensions do not agree");
+		if (m != B.m || n != B.n) {
+			throw new IllegalArgumentException("Matrix dimensions must agree");
 		}
 		if (m != 1 && n != 1) {
 			throw new IllegalArgumentException(
@@ -964,6 +959,33 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			}
 		}
 		return dot;
+	}
+
+	/**
+	 * Calculate the cross product of 3-dimensional vectors
+	 * 
+	 * @param B
+	 * @return
+	 */
+	public Matrix crossProduct(Matrix B) {
+		if (m != B.m || n != B.n) {
+			throw new IllegalArgumentException("Matrix dimensions must agree");
+		}
+		Matrix X = new Matrix(m, n);
+		if (m == 1 && n == 3) {
+			X.A[0][0] = A[0][1] * B.A[0][2] - A[0][2] * B.A[0][1];
+			X.A[0][1] = A[0][2] * B.A[0][0] - A[0][0] * B.A[0][2];
+			X.A[0][2] = A[0][0] * B.A[0][1] - A[0][1] * B.A[0][0];
+
+		} else if (m == 3 && n == 1) {
+			X.A[0][0] = A[1][0] * B.A[2][0] - A[2][0] * B.A[1][0];
+			X.A[1][0] = A[2][0] * B.A[0][0] - A[0][0] * B.A[2][0];
+			X.A[2][0] = A[0][0] * B.A[1][0] - A[1][0] * B.A[0][0];
+		} else {
+			throw new IllegalArgumentException(
+					"Matrix must be a 3-element row or column vector");
+		}
+		return X;
 	}
 
 	/**
