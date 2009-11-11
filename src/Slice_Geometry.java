@@ -46,8 +46,12 @@ import org.doube.bonej.ThresholdMinConn;
 public class Slice_Geometry implements PlugIn {
 	private int boneID, al, startSlice, endSlice;
 	private double vW, vH, vD, min, max;
-	private String units, analyse, calString;
-
+	/** Linear unit of measure */
+	private String units;
+	/** Unused option to do density-weighted calculations */
+	private String analyse;
+	/** Message to inform the user what to do with their HU-calibrated image */
+	private String calString;
 	/** Hounsfield unit value for air is -1000 */
 	private static final double airHU = -1000;
 	/** Do local thickness measurement in 3D */
@@ -146,10 +150,7 @@ public class Slice_Geometry implements PlugIn {
 		this.units = this.cal.getUnits();
 		this.al = imp.getStackSize() + 1;
 
-		IJ.run("Threshold...");
-		new WaitForUserDialog("Adjust the threshold, then click OK.").show();
-		this.min = (short) imp.getProcessor().getMinThreshold();
-		this.max = (short) imp.getProcessor().getMaxThreshold();
+		setDefaultThreshold(imp);
 
 		if (!showDialog(imp)) {
 			return;
@@ -647,34 +648,33 @@ public class Slice_Geometry implements PlugIn {
 	private void setDefaultThreshold(ImagePlus imp) {
 		this.cal = imp.getCalibration();
 
-		// set some sensible thresholding defaults
-		ThresholdMinConn tmc = new ThresholdMinConn();
-		int[] histogram = tmc.getStackHistogram(imp);
-		int histoMax = histogram.length - 1;
-		int histoMin = 0;
-		for (int i = histogram.length - 1; i >= 0; i--) {
-			if (histogram[i] > 0) {
-				histoMax = histogram[i];
-				break;
-			}
-		}
-		for (int i = 0; i < histogram.length; i++) {
-			if (histogram[i] > 0) {
-				histoMin = histogram[i];
-				break;
-			}
-		}
-		this.min = imp.getProcessor().getAutoThreshold(histogram);
-		this.max = histoMax;
-
 		double[] coeff = this.cal.getCoefficients();
 		if (!this.cal.calibrated() || this.cal == null
 				|| (this.cal.getCValue(0) == 0 && coeff[1] == 1)) {
 			this.isHUCalibrated = false;
 			this.calString = "Image is uncalibrated\nEnter bone threshold values";
+			// set some sensible thresholding defaults
+			ThresholdMinConn tmc = new ThresholdMinConn();
+			int[] histogram = tmc.getStackHistogram(imp);
+			int histoMax = histogram.length - 1;
+			int histoMin = 0;
+			for (int i = histogram.length - 1; i >= 0; i--) {
+				if (histogram[i] > 0) {
+					histoMax = histogram[i];
+					break;
+				}
+			}
+			for (int i = 0; i < histogram.length; i++) {
+				if (histogram[i] > 0) {
+					histoMin = histogram[i];
+					break;
+				}
+			}
+			this.min = imp.getProcessor().getAutoThreshold(histogram);
+			this.max = histoMax;
 		} else {
 			this.isHUCalibrated = true;
-			this.calString = "Image is calibrated\nEnter bone HU below:";
+			this.calString = "Image has Hounsfield calibration.\nEnter bone HU below:";
 			// default bone thresholds are 0- and 4000 HU
 			this.min = Slice_Geometry.airHU + 1000;
 			this.max = Slice_Geometry.airHU + 5000;
@@ -696,10 +696,10 @@ public class Slice_Geometry implements PlugIn {
 		this.boneID = bl.guessBone(imp);
 		String[] bones = BoneList.getBoneList();
 		gd.addChoice("Bone: ", bones, bones[this.boneID]);
-		String[] analyses = { "Weighted", "Unweighted", "Both" };
-		gd.addChoice("Calculate: ", analyses, analyses[1]);
-		gd.addMessage("Set the threshold");
-		gd.addNumericField("Air:", Slice_Geometry.airHU, 0);
+		// String[] analyses = { "Weighted", "Unweighted", "Both" };
+		// gd.addChoice("Calculate: ", analyses, analyses[1]);
+		gd.addMessage(this.calString);
+		gd.addMessage("HU for air is " + Slice_Geometry.airHU);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
 		gd.showDialog();
@@ -719,13 +719,15 @@ public class Slice_Geometry implements PlugIn {
 
 		String bone = gd.getNextChoice();
 		this.boneID = bl.guessBone(bone);
-		this.analyse = gd.getNextChoice();
+		// this.analyse = gd.getNextChoice();
 		this.min = gd.getNextNumber();
 		this.max = gd.getNextNumber();
 		if (this.isHUCalibrated) {
-			this.min = (short) Math.round(this.cal.getRawValue(this.min));
-			this.max = (short) Math.round(this.cal.getRawValue(this.max));
+			this.min = Math.round(this.cal.getRawValue(this.min));
+			this.max = Math.round(this.cal.getRawValue(this.max));
 		}
+		IJ.log("Raw pixel value for bone min = " + this.min + ", max = "
+				+ this.max);
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
