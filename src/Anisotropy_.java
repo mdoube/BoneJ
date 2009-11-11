@@ -16,7 +16,6 @@
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import Jama.*;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -42,6 +41,7 @@ import ij3d.Image3DUniverse;
 import ij3d.Content;
 
 import org.doube.bonej.ResultInserter;
+import org.doube.jama.*;
 
 /**
  * <p>
@@ -58,7 +58,8 @@ import org.doube.bonej.ResultInserter;
  * 
  */
 // TODO implement the star volume method
-// TODO implement the autocorrelation function (ACF) method
+// TODO implement the autocorrelation function (ACF) method - see
+// org.doube.bonej.AutoCorrelation.java
 // TODO multithread
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class

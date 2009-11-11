@@ -93,7 +93,7 @@ public class ThresholdMinConn implements PlugInFilter {
 
 	/**
 	 * Check the calculated optimal (parabolic minimum) value for sanity. If the
-	 * test passes, the original minumum value is returned, otherwise the
+	 * test passes, the original minimum value is returned, otherwise the
 	 * autoThreshold of the histogram is returned.
 	 * 
 	 * @param minimum
@@ -298,6 +298,7 @@ public class ThresholdMinConn implements PlugInFilter {
 	private void replaceImage(ImagePlus imp, ImagePlus imp2) {
 		ImageStack stack2 = imp2.getStack();
 		imp.setStack(null, stack2);
+		imp.show();
 		if (!imp.isInvertedLut())
 			IJ.run("Invert LUT");
 	}
@@ -308,7 +309,7 @@ public class ThresholdMinConn implements PlugInFilter {
 	 * @param imp2
 	 * @return
 	 */
-	private int[] getStackHistogram(ImagePlus imp2) {
+	public int[] getStackHistogram(ImagePlus imp2) {
 
 		int w = imp2.getWidth();
 		int h = imp2.getHeight();

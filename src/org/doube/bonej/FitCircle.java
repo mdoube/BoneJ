@@ -19,9 +19,9 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import Jama.Matrix;
-import Jama.EigenvalueDecomposition;
-import Jama.SingularValueDecomposition;
+import org.doube.jama.Matrix;
+import org.doube.jama.EigenvalueDecomposition;
+import org.doube.jama.SingularValueDecomposition;
 
 /**
  * Methods for fitting circles to coordinates
