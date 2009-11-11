@@ -21,7 +21,6 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
-import ij.process.ImageStatistics;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -49,7 +48,7 @@ public class Slice_Geometry implements PlugIn {
 	/** Linear unit of measure */
 	private String units;
 	/** Unused option to do density-weighted calculations */
-	private String analyse;
+//	private String analyse;
 	/** Message to inform the user what to do with their HU-calibrated image */
 	private String calString;
 	/** Hounsfield unit value for air is -1000 */
@@ -188,7 +187,7 @@ public class Slice_Geometry implements PlugIn {
 	 * Draw centroids and / or principal axes on a copy of the original image
 	 * 
 	 * @param imp
-	 * @return
+	 * @return ImagePlus with centroid and / or principal axes drawn 
 	 */
 	private ImagePlus annotateImage(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
@@ -654,16 +653,9 @@ public class Slice_Geometry implements PlugIn {
 			ThresholdMinConn tmc = new ThresholdMinConn();
 			int[] histogram = tmc.getStackHistogram(imp);
 			int histoMax = histogram.length - 1;
-			int histoMin = 0;
 			for (int i = histogram.length - 1; i >= 0; i--) {
 				if (histogram[i] > 0) {
 					histoMax = i;
-					break;
-				}
-			}
-			for (int i = 0; i < histogram.length; i++) {
-				if (histogram[i] > 0) {
-					histoMin = i;
 					break;
 				}
 			}
@@ -725,8 +717,8 @@ public class Slice_Geometry implements PlugIn {
 		this.min = gd.getNextNumber();
 		this.max = gd.getNextNumber();
 		if (this.isHUCalibrated) {
-			this.min = Math.round(this.cal.getRawValue(this.min));
-			this.max = Math.round(this.cal.getRawValue(this.max));
+			this.min = this.cal.getRawValue(this.min);
+			this.max = this.cal.getRawValue(this.max);
 		}
 		if (gd.wasCanceled()) {
 			return false;
