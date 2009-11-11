@@ -36,7 +36,6 @@ import ij.plugin.filter.PlugInFilter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.gui.*;
-//import Jama.*;
 import java.awt.Rectangle;
 
 import org.doube.bonej.ResultInserter;

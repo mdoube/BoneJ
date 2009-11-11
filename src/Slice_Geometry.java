@@ -32,6 +32,7 @@ import java.awt.Rectangle;
 
 import org.doube.bonej.BoneList;
 import org.doube.bonej.Thickness;
+import org.doube.bonej.ThresholdMinConn;
 
 /**
  * <p>
@@ -44,9 +45,11 @@ import org.doube.bonej.Thickness;
 
 public class Slice_Geometry implements PlugIn {
 	private int boneID, al, startSlice, endSlice;
-	private double vW, vH, vD, airHU, min, max;
+	private double vW, vH, vD, min, max;
 	private String units, analyse, calString;
-
+	
+	/** Hounsfield unit value for air is -1000 */
+	private static final double airHU = -1000;
 	/** Do local thickness measurement in 3D */
 	private boolean doThickness3D;
 	/** Do local thickness measurement in 2D */
@@ -59,7 +62,8 @@ public class Slice_Geometry implements PlugIn {
 	private boolean doCopy;
 	/** If true, process the whole stack */
 	private boolean doStack;
-	private boolean isCalibrated;
+	/** Is this a Hounsfield Unit calibrated image */
+	private boolean isHUCalibrated;
 	/** Number of thresholded pixels in each slice */
 	private double[] cslice;
 	/** Cross-sectional area */
@@ -641,31 +645,52 @@ public class Slice_Geometry implements PlugIn {
 	 */
 	private void setHUCalibration(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
-		this.min = 0; // minimum bone value in HU
-		this.max = 4000; // maximum bone value in HU
+		this.cal = imp.getCalibration();
+		
+		//set some sensible thresholding defaults
+		ThresholdMinConn tmc = new ThresholdMinConn();
+		int[] histogram = tmc.getStackHistogram(imp);
+		int histoMax = histogram.length - 1;
+		int histoMin = 0;
+		for (int i = histogram.length-1; i >= 0; i--){
+			if (histogram[i] > 0){
+				histoMax = histogram[i];
+				break;
+			}
+		}
+		for (int i = 0; i < histogram.length; i++){
+			if (histogram[i] > 0){
+				histoMin = histogram[i];
+				break;
+			}
+		}
+		this.min = imp.getProcessor().getAutoThreshold(histogram);
+		this.max = histoMax;
+		
 		double[] coeff = this.cal.getCoefficients();
 		if (!this.cal.calibrated()
 				|| this.cal == null
 				|| (this.cal.getCValue(0) == 0 && this.cal.getCoefficients()[1] == 1)) {
-			this.isCalibrated = false;
+			this.isHUCalibrated = false;
 			this.calString = "Image is uncalibrated\nEnter air and bone pixel values";
 			ImageStatistics stats = imp.getStatistics();
+			
 			if (stats.min < 50 && stats.min >= 0) {
-				this.airHU = 0;
+//				this.airHU = 0;
 			} else if (stats.min > 31000) {
-				this.airHU = 31768;
+//				this.airHU = 31768;
 			} else if (stats.min < -800) {
-				this.airHU = -1000;
+//				this.airHU = -1000;
 			} else {
-				this.airHU = 0;
+//				this.airHU = 0;
 			}
 		} else {
-			this.isCalibrated = true;
+			this.isHUCalibrated = true;
 			this.calString = "Image is calibrated\nEnter HU below:";
-			this.airHU = -1000;
+//			this.airHU = -1000;
 		}
-		this.min = this.airHU + 1000;
-		this.max = this.airHU + 5000;
+		this.min = Slice_Geometry.airHU + 1000;
+		this.max = Slice_Geometry.airHU + 5000;
 		if (this.cal.calibrated()) {
 			// convert HU limits to pixel values
 			IJ.log("Image is calibrated, using " + this.min + " and "
@@ -706,7 +731,7 @@ public class Slice_Geometry implements PlugIn {
 		String[] analyses = { "Weighted", "Unweighted", "Both" };
 		gd.addChoice("Calculate: ", analyses, analyses[1]);
 		gd.addMessage("Set the threshold");
-		gd.addNumericField("Air:", this.airHU, 0);
+		gd.addNumericField("Air:", Slice_Geometry.airHU, 0);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
 		gd.showDialog();
@@ -727,7 +752,7 @@ public class Slice_Geometry implements PlugIn {
 		String bone = gd.getNextChoice();
 		this.boneID = bl.guessBone(bone);
 		this.analyse = gd.getNextChoice();
-		this.airHU = gd.getNextNumber();
+//		this.airHU = gd.getNextNumber();
 		this.min = gd.getNextNumber();
 		this.max = gd.getNextNumber();
 		if (gd.wasCanceled()) {
