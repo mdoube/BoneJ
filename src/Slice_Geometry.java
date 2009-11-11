@@ -246,6 +246,8 @@ public class Slice_Geometry implements PlugIn {
 		this.cortArea = new double[this.al];
 		double pixelArea = this.vW * this.vH;
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			IJ.showStatus("Calculating centroids...");
+			IJ.showProgress(s - this.startSlice, this.endSlice);
 			double sumX = 0;
 			double sumY = 0;
 			this.cslice[s] = 0;
@@ -294,6 +296,8 @@ public class Slice_Geometry implements PlugIn {
 		this.Mxy = new double[this.al];
 		this.theta = new double[this.al];
 		for (int s = 1; s <= stack.getSize(); s++) {
+			IJ.showStatus("Calculating Ix and Iy...");
+			IJ.showProgress(s - 1, stack.getSize());
 			this.Sx[s] = 0;
 			this.Sy[s] = 0;
 			this.Sxx[s] = 0;
@@ -351,6 +355,8 @@ public class Slice_Geometry implements PlugIn {
 		this.ImaxFast = new double[this.al];
 		this.IminFast = new double[this.al];
 		for (int s = 1; s <= stack.getSize(); s++) {
+			IJ.showStatus("Calculating Imin and Imax...");
+			IJ.showProgress(s - 1, stack.getSize());
 			if (!this.emptySlices[s]) {
 				short[] pixels = (short[]) stack.getPixels(s);
 				this.Sx[s] = 0;
@@ -358,55 +364,46 @@ public class Slice_Geometry implements PlugIn {
 				this.Sxx[s] = 0;
 				this.Syy[s] = 0;
 				this.Sxy[s] = 0;
+				double cosTheta = Math.cos(this.theta[s]);
+				double sinTheta = Math.sin(this.theta[s]);
 				for (int y = r.y; y < (r.y + r.height); y++) {
 					int offset = y * w;
 					for (int x = r.x; x < (r.x + r.width); x++) {
 						int i = offset + x;
 						if (pixels[i] >= this.min && pixels[i] <= this.max) {
-							this.Sx[s] += x * Math.cos(this.theta[s]) + y
-									* Math.sin(this.theta[s]);
-							this.Sy[s] += y * Math.cos(this.theta[s]) - x
-									* Math.sin(this.theta[s]);
-							this.Sxx[s] += (x * Math.cos(this.theta[s]) + y
-									* Math.sin(this.theta[s]))
-									* (x * Math.cos(this.theta[s]) + y
-											* Math.sin(this.theta[s]));
-							this.Syy[s] += (y * Math.cos(this.theta[s]) - x
-									* Math.sin(this.theta[s]))
-									* (y * Math.cos(this.theta[s]) - x
-											* Math.sin(this.theta[s]));
-							this.Sxy[s] += (y * Math.cos(theta[s]) - x
-									* Math.sin(theta[s]))
-									* (x * Math.cos(theta[s]) + y
-											* Math.sin(theta[s]));
+							this.Sx[s] += x * cosTheta + y * sinTheta;
+							this.Sy[s] += y * cosTheta - x * sinTheta;
+							this.Sxx[s] += (x * cosTheta + y * sinTheta)
+									* (x * cosTheta + y * sinTheta);
+							this.Syy[s] += (y * cosTheta - x * sinTheta)
+									* (y * cosTheta - x * sinTheta);
+							this.Sxy[s] += (y * cosTheta - x * sinTheta)
+									* (x * cosTheta + y * sinTheta);
 							this.maxRadMin[s] = Math.max(this.maxRadMin[s],
 									Math.abs((x - this.sliceCentroids[0][s])
-											* Math.cos(this.theta[s])
+											* cosTheta
 											+ (y - this.sliceCentroids[1][s])
-											* Math.sin(theta[s])));
+											* sinTheta));
 							this.maxRadMax[s] = Math.max(this.maxRadMax[s],
 									Math.abs((y - this.sliceCentroids[1][s])
-											* Math.cos(this.theta[s])
+											* cosTheta
 											- (x - sliceCentroids[0][s])
-											* Math.sin(theta[s])));
+											* sinTheta));
 						}
 					}
 				}
 				this.Imax[s] = this.Sxx[s]
 						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
 						+ this.cslice[s]
-						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12;
+						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
 				this.Imin[s] = this.Syy[s]
 						- (this.Sy[s] * this.Sy[s] / this.cslice[s])
 						+ this.cslice[s]
-						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12;
+						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
 				this.Ipm[s] = this.Sxy[s]
 						- (this.Sy[s] * this.Sx[s] / this.cslice[s])
 						+ this.cslice[s]
-						* (Math.pow(Math.cos(this.theta[s]), 2) + Math.pow(Math
-								.sin(this.theta[s]), 2)) / 12;
+						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
 				this.R1[s] = Math.sqrt(this.Imin[s] / this.cslice[s]);
 				this.R2[s] = Math.sqrt(this.Imax[s] / this.cslice[s]);
 				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];
@@ -660,18 +657,22 @@ public class Slice_Geometry implements PlugIn {
 			int histoMin = 0;
 			for (int i = histogram.length - 1; i >= 0; i--) {
 				if (histogram[i] > 0) {
-					histoMax = histogram[i];
+					histoMax = i;
 					break;
 				}
 			}
 			for (int i = 0; i < histogram.length; i++) {
 				if (histogram[i] > 0) {
-					histoMin = histogram[i];
+					histoMin = i;
 					break;
 				}
 			}
 			this.min = imp.getProcessor().getAutoThreshold(histogram);
 			this.max = histoMax;
+			if (this.cal.isSigned16Bit()) {
+				this.min += Short.MIN_VALUE;
+				this.max += Short.MIN_VALUE;
+			}
 		} else {
 			this.isHUCalibrated = true;
 			this.calString = "Image has Hounsfield calibration.\nEnter bone HU below:";
@@ -699,7 +700,8 @@ public class Slice_Geometry implements PlugIn {
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
 		gd.addMessage(this.calString);
-		gd.addMessage("HU for air is " + Slice_Geometry.airHU);
+		if (this.isHUCalibrated)
+			gd.addMessage("HU for air is " + Slice_Geometry.airHU);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
 		gd.showDialog();
@@ -726,8 +728,6 @@ public class Slice_Geometry implements PlugIn {
 			this.min = Math.round(this.cal.getRawValue(this.min));
 			this.max = Math.round(this.cal.getRawValue(this.max));
 		}
-		IJ.log("Raw pixel value for bone min = " + this.min + ", max = "
-				+ this.max);
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
