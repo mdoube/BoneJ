@@ -15357,7 +15357,8 @@ public class ArrayMath {
       ++_i;
       return a;
     }
-    void reset() {
+    @SuppressWarnings("unused")
+	void reset() {
       _i = _i1 = _i2 = _i3 = 0;
     }
     private byte[] _a1;
@@ -15425,7 +15426,8 @@ public class ArrayMath {
       ++_i;
       return a;
     }
-    void reset() {
+    @SuppressWarnings("unused")
+	void reset() {
       _i = _i1 = _i2 = _i3 = 0;
     }
     private short[] _a1;
@@ -15493,7 +15495,8 @@ public class ArrayMath {
       ++_i;
       return a;
     }
-    void reset() {
+    @SuppressWarnings("unused")
+	void reset() {
       _i = _i1 = _i2 = _i3 = 0;
     }
     private int[] _a1;
@@ -15561,7 +15564,8 @@ public class ArrayMath {
       ++_i;
       return a;
     }
-    void reset() {
+    @SuppressWarnings("unused")
+	void reset() {
       _i = _i1 = _i2 = _i3 = 0;
     }
     private long[] _a1;
