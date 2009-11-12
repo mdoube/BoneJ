@@ -6,8 +6,8 @@ available at http://www.eclipse.org/legal/cpl-v10.html
 ****************************************************************************/
 package org.doube.jtk.dsp;
 
-import static edu.mines.jtk.util.ArrayMath.*;
-import edu.mines.jtk.util.Check;
+import static org.doube.jtk.util.ArrayMath.*;
+import org.doube.jtk.util.Check;
 
 /**
  * Fast Fourier transform of complex-valued arrays. The FFT length 

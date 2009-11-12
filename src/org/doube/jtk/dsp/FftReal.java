@@ -9,7 +9,7 @@ package org.doube.jtk.dsp;
 import static java.lang.Math.PI;
 import static java.lang.Math.sin;
 
-import edu.mines.jtk.util.Check;
+import org.doube.jtk.util.Check;
 
 /**
  * Fast Fourier transform of real-valued arrays. The FFT length nfft 
