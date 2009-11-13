@@ -4,6 +4,8 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.PlugIn;
 
+import org.doube.bonej.FastFourierTransform;
+
 /**
  * Calculate and analyse the 3D autocorrelation function
  * 
@@ -68,6 +70,8 @@ public class AutoCorrelation implements PlugIn {
 	 * @return
 	 */
 	private ImagePlus getACF(ImagePlus imp) {
+		FastFourierTransform fft = new FastFourierTransform();
+		fft.run("");
 		/*
 		 * Need a 3D Fourier library I can get 3D FFT thanks to Stephan
 		 * Preibisch's fft plugin:
