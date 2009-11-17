@@ -203,7 +203,7 @@ public class Moments_3D implements PlugInFilter {
 	rt.addValue("Xc ("+units+")", centroid[0]);
 	rt.addValue("Yc ("+units+")", centroid[1]);
 	rt.addValue("Zc ("+units+")", centroid[2]);*/
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 	ri.setResultInRow(imp, "Xc ("+units+")", centroid[0]);
 	ri.setResultInRow(imp, "Yc ("+units+")", centroid[1]);
 	ri.setResultInRow(imp, "Zc ("+units+")", centroid[2]);
@@ -285,7 +285,7 @@ public class Moments_3D implements PlugInFilter {
 	//do the Eigenvalue decomposition
 	EigenvalueDecomposition E = new EigenvalueDecomposition(inertiaTensorMatrix);
 
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 	ri.setResultInRow(this.imp, "Vol ("+units+"^3)", sumVoxVol);
 	ri.setResultInRow(this.imp, "Mass (g)", sumVoxMass);
 	ri.setResultInRow(this.imp, "Icxx (kg.m^2)", Icxx);

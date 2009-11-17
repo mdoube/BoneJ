@@ -19,9 +19,7 @@ package org.doube.bonej;
  */
 
 import ij.ImagePlus;
-import ij.process.ImageProcessor;
 import ij.measure.ResultsTable;
-import ij.plugin.filter.PlugInFilter;
 
 /**
  * Receive results from analytic methods and insert them into the Results table
@@ -35,18 +33,18 @@ import ij.plugin.filter.PlugInFilter;
  * @author Michael Doube
  * 
  */
-public class ResultInserter implements PlugInFilter {
-	@SuppressWarnings("unused")
-	private ImagePlus imp;
-	private ResultsTable rt;
+public class ResultInserter {
+	public static final ResultInserter INSTANCE = new ResultInserter();
+	private static ResultsTable rt;
 
-	public int setup(String arg, ImagePlus imp) {
-		this.imp = imp;
-		return DOES_ALL;
+	private ResultInserter() {
 	}
 
-	public void run(ImageProcessor ip) {
-		return;
+	public static ResultInserter getInstance() {
+		rt = ResultsTable.getResultsTable();
+		String table = "Results";
+		rt.show(table);
+		return INSTANCE;
 	}
 
 	/**
@@ -62,10 +60,6 @@ public class ResultInserter implements PlugInFilter {
 	 */
 	// TODO use a table other than the system Results table
 	public void setResultInRow(ImagePlus imp, String colHeading, double value) {
-		rt = ResultsTable.getResultsTable();
-		String table = "Results";
-		rt.show(table);
-
 		String title = imp.getTitle();
 
 		// search for the first row that contains the image title

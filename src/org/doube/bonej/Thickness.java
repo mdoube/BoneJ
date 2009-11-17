@@ -1269,7 +1269,7 @@ public class Thickness implements PlugInFilter {
 		}
 		double stDev = Math.sqrt(sumSquares / pixCount);
 
-		ResultInserter ri = new ResultInserter();
+		ResultInserter ri = ResultInserter.getInstance();
 		if (!inverse) {
 			// trab thickness
 			ri.setResultInRow(baseImp, "Tb.Th Mean (" + units + ")", meanThick);

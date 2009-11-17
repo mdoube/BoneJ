@@ -226,7 +226,7 @@ public class Fractal_Count implements PlugInFilter {
 			+ ":" + numOffsets);
 	    }
 
-	    ResultInserter ri = new ResultInserter();
+	    ResultInserter ri = ResultInserter.getInstance();
 	    ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
 	    ri.updateTable();
 	    

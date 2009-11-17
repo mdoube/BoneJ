@@ -126,7 +126,7 @@ public class Anisotropy_ implements PlugInFilter {
 		else {
 			anisotropy = runOnce();
 		}
-		ResultInserter ri = new ResultInserter();
+		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
 		ri.updateTable();
 		if (do3DResult) {

@@ -299,7 +299,7 @@ public class Analyze_Skeleton implements PlugInFilter
     {
 	String unit = this.imRef.getCalibration().getUnits();
 	
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 
 	for(int i = 0 ; i < this.numOfTrees; i++)
 	{

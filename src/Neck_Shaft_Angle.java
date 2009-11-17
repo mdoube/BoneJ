@@ -443,7 +443,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 
 	double neckShaftAngle = Math.acos(cosA1);
 	double neckShaftSkew = Math.acos(cosA2);
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 	ri.setResultInRow(this.imp, "Angle (rad)", neckShaftAngle);
 	ri.setResultInRow(this.imp, "Skew (rad)", neckShaftSkew);
 	ri.updateTable();
@@ -618,7 +618,7 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	    }
 	}
 	// Calculate circle fitting for mL and cC deflections
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 	String units = this.cal.getUnits();
 	
 	FitCircle fc = new FitCircle();

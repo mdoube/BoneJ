@@ -113,7 +113,8 @@ public class Connectivity implements PlugIn {
 					+ "particles or enclosed cavities.\n\n"
 					+ "Try running Purify prior to Connectivity.");
 		}
-		ResultInserter ri = new ResultInserter();
+		
+		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Euler ch.", (double) sumEuler);
 		ri.setResultInRow(imp, "Δ(χ)", deltaChi);
 		ri.setResultInRow(imp, "Connectivity", connectivity);

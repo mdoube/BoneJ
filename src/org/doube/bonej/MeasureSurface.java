@@ -52,7 +52,7 @@ public class MeasureSurface implements PlugIn {
 
 		IJ.log("Isosurface contains " + (points.size() / 3) + " triangles");
 		
-		ResultInserter ri = new ResultInserter();
+		ResultInserter ri = ResultInserter.getInstance();
 		double area = getSurfaceArea(points);
 		ri.setResultInRow(imp,
 				"BS (" + imp.getCalibration().getUnits() + "^2)", area);
