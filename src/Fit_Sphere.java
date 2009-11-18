@@ -90,7 +90,7 @@ public class Fit_Sphere implements PlugInFilter {
 		double[] sphereDim = fs.fitSphere(points);
 		
 		String units = imp.getCalibration().getUnits();
-		ResultInserter ri = new ResultInserter();
+		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "X centroid (" + units + ")", sphereDim[0]);
 		ri.setResultInRow(imp, "Y centroid (" + units + ")", sphereDim[1]);
 		ri.setResultInRow(imp, "Z centroid (" + units + ")", sphereDim[2]);

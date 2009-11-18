@@ -91,7 +91,7 @@ public class Plate_Rod implements PlugInFilter {
 	}
 	IJ.log(NaNs + " tests hit the sides");
 
-	ResultInserter ri = new ResultInserter();
+	ResultInserter ri = ResultInserter.getInstance();
 	ri.setResultInRow(this.imp, "ΣeV1", sumEv1);
 	ri.setResultInRow(this.imp, "ΣeV2", sumEv2);
 	ri.setResultInRow(this.imp, "ΣeV3", sumEv3);

@@ -2,7 +2,10 @@ package org.doube.bonej;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.Plot;
 import ij.plugin.PlugIn;
+
+import org.doube.bonej.FastFourierTransform;
 
 /**
  * Calculate and analyse the 3D autocorrelation function
@@ -32,10 +35,10 @@ public class AutoCorrelation implements PlugIn {
 	 */
 	private Object getAnisotropy(ImagePlus acf) {
 		/*
-		 * >> > > Now, I can only _guess_ that the result (basically, the >> >
-		 * > autocorrelation with respect to all possible offsets) is what they
-		 * >> > > refer to as the "anisotropy tensor", and I would expect that
-		 * the >> > > analysis boils down to determining the PCA of the offset
+		 * >> > > Now, I can only _guess_ that the result (basically, the >> > >
+		 * autocorrelation with respect to all possible offsets) is what they >>
+		 * > > refer to as the "anisotropy tensor", and I would expect that the
+		 * >> > > analysis boils down to determining the PCA of the offset
 		 * vectors >> > > (weighted by the corresponding autocorrelation value).
 		 * > > > > I get lost at that part; I think I will have to write to the
 		 * authors.
@@ -68,28 +71,17 @@ public class AutoCorrelation implements PlugIn {
 	 * @return
 	 */
 	private ImagePlus getACF(ImagePlus imp) {
+		FastFourierTransform fft = new FastFourierTransform();
+		fft.run("");
 		/*
-		 * Need a 3D Fourier library I can get 3D FFT thanks to Stephan
-		 * Preibisch's fft plugin:
-		 * http://fly.mpi-cbg.de/~preibisch/software.html Hi,
+		 * the Fourier transform of the complex conjugate of a function f(x) is
+		 * F*(-s), the reflection of the conjugate of the transform
 		 * 
-		 * >>> > > > So does the method I'm reading propose that I work out the
-		 * 3D >>> > > > Fourier transform of a stack, then work out the ACF at
-		 * each 3D >>> > > > angle? >> > > >> > > The autocorrelation of an
-		 * image with itself can be described as a >> > > convolution of the
-		 * image with the flipped version of itself (where >> > > "flipped"
-		 * means "flipped in all available axis"). > > > > Does
-		 * "all available axes" mean the x, y, z axes (for 3D), or every > >
-		 * possible vector passing through the origin?
-		 * 
-		 * Oh, sorry, yes, I meant "Cartesian axes", i.e. x, y and z for 3D.
-		 * 
-		 * >> > > The advantage of looking at it that way is that convolution
-		 * can be >> > > described as a point-wise multiplication in Fourier
-		 * space, > > > > > > > > Then what? Do point-wise multiplications with
-		 * reflected versions of the > > same FFT (or alternatively, the
-		 * location of the reflection pixel??) i.e. > > for each pixel, find
-		 * some 'flipped' pixel and store their product in a > > new stack.
+		 * The autocorrelation of an image with itself can be described as a >>
+		 * > > convolution of the image with the flipped version of itself
+		 * (where >> > > "flipped" means "flipped in all available axis"). > > >
+		 * convolution can be >> > > described as a point-wise multiplication in
+		 * Fourier space, 
 		 * 
 		 * Actually, you need to do point-wise multiplications with the FFT of
 		 * the reflected version (this is not the same as the reflected FFT).
@@ -134,6 +126,27 @@ public class AutoCorrelation implements PlugIn {
 		 */
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	/**
+	 * 1D autocorrelation
+	 * 
+	 * @param x
+	 * @return
+	 */
+	private float[] autoCorrelation(float[] x) {
+		int size = x.length;
+		float[] R = new float[size];
+		float sum;
+
+		for (int i = 0; i < size; i++) {
+			sum = 0;
+			for (int j = 0; j < size - i; j++) {
+				sum += x[j] * x[j + i];
+			}
+			R[i] = sum;
+		}
+		return R;
 	}
 
 }

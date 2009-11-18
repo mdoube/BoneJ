@@ -75,7 +75,7 @@ public class Volume_Fraction implements PlugInFilter {
 		double p = (double) volBone / (double) volTotal;
 		Calibration cal = imp.getCalibration();
 		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth; 
-		ResultInserter ri = new ResultInserter();
+		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "BV ("+cal.getUnits()+"^3)", volBone * voxelVol);
 		ri.setResultInRow(imp, "TV ("+cal.getUnits()+"^3)", volTotal * voxelVol);
 		ri.setResultInRow(imp, "BV/TV", p);
