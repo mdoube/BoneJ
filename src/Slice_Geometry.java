@@ -195,19 +195,17 @@ public class Slice_Geometry implements PlugIn {
 		int h = stack.getHeight();
 		ImageStack annStack = new ImageStack(w, h);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			if (this.emptySlices[s])
-				continue;
 			ImageProcessor annIP = stack.getProcessor(s).duplicate();
 			annIP.setColor(Color.white);
 			double cX = this.sliceCentroids[0][s] / this.vW;
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
-			if (this.doCentroids) {
+			if (this.doCentroids && !this.emptySlices[s]) {
 				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
 						.floor(cY - 4), 8, 8);
 			}
 
-			if (this.doAxes) {
+			if (this.doAxes && !this.emptySlices[s]) {
 				double th = this.theta[s];
 				double rMin = this.R1[s];
 				double rMax = this.R2[s];
@@ -224,8 +222,8 @@ public class Slice_Geometry implements PlugIn {
 				x2 = (int) Math.floor(cX + Math.cos(-th) * 2 * rMax);
 				y2 = (int) Math.floor(cY - Math.sin(-th) * 2 * rMax);
 				annIP.drawLine(x1, y1, x2, y2);
-				annStack.addSlice(stack.getSliceLabel(s), annIP);
 			}
+			annStack.addSlice(stack.getSliceLabel(s), annIP);
 		}
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		ann.setCalibration(imp.getCalibration());
