@@ -136,11 +136,6 @@ public class Purify implements PlugIn {
 					IJ.run("Invert LUT");
 			}
 		}
-		IJ.freeMemory();
-		System.gc();
-		System.gc();
-		System.gc();
-		System.gc();
 		return;
 	}
 
@@ -167,6 +162,7 @@ public class Purify implements PlugIn {
 		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
 
 		long startTime = System.currentTimeMillis();
+		
 
 		byte[][] workArray = makeWorkArray(imp);
 
@@ -250,11 +246,6 @@ public class Purify implements PlugIn {
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
 		Object[] result = { duration, purified };
-		IJ.freeMemory();
-		System.gc();
-		System.gc();
-		System.gc();
-		System.gc();
 		return result;
 	}
 
