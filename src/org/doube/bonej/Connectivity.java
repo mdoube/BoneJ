@@ -118,7 +118,7 @@ public class Connectivity implements PlugIn {
 		ri.setResultInRow(imp, "Euler ch.", (double) sumEuler);
 		ri.setResultInRow(imp, "Δ(χ)", deltaChi);
 		ri.setResultInRow(imp, "Connectivity", connectivity);
-		ri.setResultInRow(imp, "Tb.N ("
+		ri.setResultInRow(imp, "Conn.D ("
 				+ imp.getCalibration().getUnit() + "^-3)", connDensity);
 		ri.updateTable();
 		return;
