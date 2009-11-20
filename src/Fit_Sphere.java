@@ -27,6 +27,7 @@ import ij.measure.Calibration;
 
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitSphere;
+
 //TODO bounds checking
 /**
  *<p>
@@ -81,14 +82,14 @@ public class Fit_Sphere implements PlugInFilter {
 		}
 		if (!imp.lock())
 			imp.lock(); // if we have unlocked the image to reset properties,
-						// relock it.
+		// relock it.
 		if (!showDialog()) {
 			return;
 		}
 		FitSphere fs = new FitSphere();
 		double[][] points = fs.getRoiManPoints(imp, roiMan);
 		double[] sphereDim = fs.fitSphere(points);
-		
+
 		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "X centroid (" + units + ")", sphereDim[0]);
@@ -96,7 +97,7 @@ public class Fit_Sphere implements PlugInFilter {
 		ri.setResultInRow(imp, "Z centroid (" + units + ")", sphereDim[2]);
 		ri.setResultInRow(imp, "Radius (" + units + ")", sphereDim[3]);
 		ri.updateTable();
-		
+
 		if (doCopy)
 			copySphere(imp, ip, padding, cropFactor, sphereDim);
 		if (doInnerCube)
@@ -127,7 +128,7 @@ public class Fit_Sphere implements PlugInFilter {
 
 	private static double[] getVoxDim(ImagePlus imp) {
 		Calibration cal = imp.getCalibration();
-		double[] voxDim = {cal.pixelWidth, cal.pixelHeight, cal.pixelDepth};
+		double[] voxDim = { cal.pixelWidth, cal.pixelHeight, cal.pixelDepth };
 		return voxDim;
 	}
 
@@ -145,7 +146,6 @@ public class Fit_Sphere implements PlugInFilter {
 		int startZ = (int) Math
 				.round((sphereDim[2] - sphereDim[3] * cropFactor) / voxDim[2])
 				- padding;
-		if (startZ < 1) startZ = 1;
 		int roiWidth = (int) Math.round(2 * sphereDim[3] * cropFactor
 				/ voxDim[0])
 				+ 2 * padding;
@@ -155,9 +155,19 @@ public class Fit_Sphere implements PlugInFilter {
 		int roiDepth = (int) Math.round(2 * sphereDim[3] * cropFactor
 				/ voxDim[2])
 				+ 2 * padding;
-		if (startZ + roiDepth > imp.getStackSize()){
+		// bounds checking
+		if (startX < 0)
+			startX = 0;
+		if (startY < 0)
+			startY = 0;
+		if (startZ < 1)
+			startZ = 1;
+		if (startX + roiWidth > imp.getWidth())
+			roiWidth = imp.getWidth() - startX;
+		if (startY + roiHeight > imp.getHeight())
+			roiHeight = imp.getHeight() - startY;
+		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
-		}
 		ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		for (int z = startZ; z <= startZ + roiDepth; z++) {
@@ -208,6 +218,19 @@ public class Fit_Sphere implements PlugInFilter {
 		int roiWidth = (int) Math.round(2 * h / voxDim[0]);
 		int roiHeight = (int) Math.round(2 * h / voxDim[1]);
 		int roiDepth = (int) Math.round(2 * h / voxDim[2]);
+		// bounds checking
+		if (startX < 0)
+			startX = 0;
+		if (startY < 0)
+			startY = 0;
+		if (startZ < 1)
+			startZ = 1;
+		if (startX + roiWidth > imp.getWidth())
+			roiWidth = imp.getWidth() - startX;
+		if (startY + roiHeight > imp.getHeight())
+			roiHeight = imp.getHeight() - startY;
+		if (startZ + roiDepth > imp.getStackSize())
+			roiDepth = imp.getStackSize() - startZ;
 		ImageStack sourceStack = imp.getStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		for (int z = startZ; z <= startZ + roiDepth; z++) {
@@ -246,6 +269,19 @@ public class Fit_Sphere implements PlugInFilter {
 		int roiWidth = (int) Math.round(2 * h / voxDim[0]);
 		int roiHeight = (int) Math.round(2 * h / voxDim[1]);
 		int roiDepth = (int) Math.round(2 * h / voxDim[2]);
+		// bounds checking
+		if (startX < 0)
+			startX = 0;
+		if (startY < 0)
+			startY = 0;
+		if (startZ < 1)
+			startZ = 1;
+		if (startX + roiWidth > imp.getWidth())
+			roiWidth = imp.getWidth() - startX;
+		if (startY + roiHeight > imp.getHeight())
+			roiHeight = imp.getHeight() - startY;
+		if (startZ + roiDepth > imp.getStackSize())
+			roiDepth = imp.getStackSize() - startZ;
 		ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		for (int z = startZ; z <= startZ + roiDepth; z++) {
