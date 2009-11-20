@@ -1,5 +1,4 @@
 package org.doube.jama;
-import org.doube.jama.util.*;
 
    /** Singular Value Decomposition.
    <P>

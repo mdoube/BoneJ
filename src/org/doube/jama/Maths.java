@@ -1,4 +1,4 @@
-package org.doube.jama.util;
+package org.doube.jama;
 
 public class Maths {
 
