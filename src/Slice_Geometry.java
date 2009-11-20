@@ -141,6 +141,10 @@ public class Slice_Geometry implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+		if (imp.getBitDepth() != 16){
+			IJ.error("Slice Geometry expects a 16-bit greyscale image");
+			return;
+		}
 
 		this.cal = imp.getCalibration();
 		this.vW = this.cal.pixelWidth;
