@@ -28,7 +28,6 @@ import ij.measure.Calibration;
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitSphere;
 
-//TODO bounds checking
 /**
  *<p>
  * Takes point selections from ROI manager and returns the centroid and radius
@@ -132,29 +131,22 @@ public class Fit_Sphere implements PlugInFilter {
 		return voxDim;
 	}
 
-	// TODO make this go faster by getting slice pixels and iterating through
-	// it's array rather than using setSlice and getPixel
 	public void copySphere(ImagePlus imp, ImageProcessor ip, int padding,
 			double cropFactor, double[] sphereDim) {
 		double[] voxDim = getVoxDim(imp);
-		int startX = (int) Math
-				.round((sphereDim[0] - sphereDim[3] * cropFactor) / voxDim[0])
-				- padding;
-		int startY = (int) Math
-				.round((sphereDim[1] - sphereDim[3] * cropFactor) / voxDim[1])
-				- padding;
-		int startZ = (int) Math
-				.round((sphereDim[2] - sphereDim[3] * cropFactor) / voxDim[2])
-				- padding;
-		int roiWidth = (int) Math.round(2 * sphereDim[3] * cropFactor
-				/ voxDim[0])
-				+ 2 * padding;
-		int roiHeight = (int) Math.round(2 * sphereDim[3] * cropFactor
-				/ voxDim[1])
-				+ 2 * padding;
-		int roiDepth = (int) Math.round(2 * sphereDim[3] * cropFactor
-				/ voxDim[2])
-				+ 2 * padding;
+		final double vW = voxDim[0];
+		final double vH = voxDim[1];
+		final double vD = voxDim[2];
+		final double xC = sphereDim[0];
+		final double yC = sphereDim[2];
+		final double zC = sphereDim[2];
+		final double r = sphereDim[3];
+		int startX = (int) Math.round((xC - r * cropFactor) / vW) - padding;
+		int startY = (int) Math.round((yC - r * cropFactor) / vH) - padding;
+		int startZ = (int) Math.round((zC - r * cropFactor) / vD) - padding;
+		int roiWidth = (int) Math.round(2 * r * cropFactor / vW) + 2 * padding;
+		int roiHeight = (int) Math.round(2 * r * cropFactor / vH) + 2 * padding;
+		int roiDepth = (int) Math.round(2 * r * cropFactor / vD) + 2 * padding;
 		// bounds checking
 		if (startX < 0)
 			startX = 0;
@@ -170,23 +162,25 @@ public class Fit_Sphere implements PlugInFilter {
 			roiDepth = imp.getStackSize() - startZ;
 		ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
-		for (int z = startZ; z <= startZ + roiDepth; z++) {
+		final int endZ = startZ + roiDepth;
+		final int roiArea = roiWidth * roiHeight;
+		final int endY = startY + roiHeight;
+		final int endX = startX + roiWidth;
+		final double maxRad = r * cropFactor;
+		for (int z = startZ; z <= endZ; z++) {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying sphere to new stack");
-			short[] targetSlice = new short[roiWidth * roiHeight];
+			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
 			ip = sourceStack.getProcessor(z);
-			for (int y = startY; y < startY + roiHeight; y++) {
+			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				for (int x = startX; x < startX + roiWidth; x++) {
-					double distance = Math.sqrt((x * voxDim[0] - sphereDim[0])
-							* (x * voxDim[0] - sphereDim[0])
-							+ (y * voxDim[1] - sphereDim[1])
-							* (y * voxDim[1] - sphereDim[1])
-							+ (z * voxDim[2] - sphereDim[2])
-							* (z * voxDim[2] - sphereDim[2]));
-					if (distance < sphereDim[3] * cropFactor) {
+				for (int x = startX; x < endX; x++) {
+					double distance = Math.sqrt((x * vW - xC) * (x * vW - xC)
+							+ (y * vH - yC) * (y * vH - yC) + (z * vD - zC)
+							* (z * vD - zC));
+					if (distance < maxRad) {
 						targetSlice[index + nCols] = (short) ip.get(x, y);
 					} else {
 						targetSlice[index + nCols] = 0;
@@ -211,13 +205,20 @@ public class Fit_Sphere implements PlugInFilter {
 			double cropFactor, double[] sphereDim) {
 		Calibration cal = imp.getCalibration();
 		double[] voxDim = getVoxDim(imp);
-		double h = sphereDim[3] * cropFactor / Math.sqrt(3);
-		int startX = (int) Math.round((sphereDim[0] - h) / voxDim[0]);
-		int startY = (int) Math.round((sphereDim[1] - h) / voxDim[1]);
-		int startZ = (int) Math.round((sphereDim[2] - h) / voxDim[2]);
-		int roiWidth = (int) Math.round(2 * h / voxDim[0]);
-		int roiHeight = (int) Math.round(2 * h / voxDim[1]);
-		int roiDepth = (int) Math.round(2 * h / voxDim[2]);
+		final double vW = voxDim[0];
+		final double vH = voxDim[1];
+		final double vD = voxDim[2];
+		final double xC = sphereDim[0];
+		final double yC = sphereDim[2];
+		final double zC = sphereDim[2];
+		final double r = sphereDim[3];
+		final double h = r * cropFactor / Math.sqrt(3);
+		int startX = (int) Math.round((xC - h) / vW);
+		int startY = (int) Math.round((yC - h) / vH);
+		int startZ = (int) Math.round((zC - h) / vD);
+		int roiWidth = (int) Math.round(2 * h / vW);
+		int roiHeight = (int) Math.round(2 * h / vH);
+		int roiDepth = (int) Math.round(2 * h / vD);
 		// bounds checking
 		if (startX < 0)
 			startX = 0;
@@ -233,16 +234,20 @@ public class Fit_Sphere implements PlugInFilter {
 			roiDepth = imp.getStackSize() - startZ;
 		ImageStack sourceStack = imp.getStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
-		for (int z = startZ; z <= startZ + roiDepth; z++) {
+		final int endZ = startZ + roiDepth;
+		final int roiArea = roiWidth * roiHeight;
+		final int endY = startY + roiHeight;
+		final int endX = startX + roiWidth;
+		for (int z = startZ; z <= endZ; z++) {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying largest enclosed cube");
-			short[] targetSlice = new short[roiWidth * roiHeight];
+			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
 			ip = sourceStack.getProcessor(z);
-			for (int y = startY; y < startY + roiHeight; y++) {
+			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				for (int x = startX; x < startX + roiWidth; x++) {
+				for (int x = startX; x < endX; x++) {
 					targetSlice[index + nCols] = (short) ip.get(x, y);
 					nCols++;
 				}
@@ -262,13 +267,20 @@ public class Fit_Sphere implements PlugInFilter {
 			double cropFactor, double[] sphereDim) {
 		Calibration cal = imp.getCalibration();
 		double[] voxDim = getVoxDim(imp);
-		double h = sphereDim[3] * cropFactor;
-		int startX = (int) Math.round((sphereDim[0] - h) / voxDim[0]);
-		int startY = (int) Math.round((sphereDim[1] - h) / voxDim[1]);
-		int startZ = (int) Math.round((sphereDim[2] - h) / voxDim[2]);
-		int roiWidth = (int) Math.round(2 * h / voxDim[0]);
-		int roiHeight = (int) Math.round(2 * h / voxDim[1]);
-		int roiDepth = (int) Math.round(2 * h / voxDim[2]);
+		final double vW = voxDim[0];
+		final double vH = voxDim[1];
+		final double vD = voxDim[2];
+		final double xC = sphereDim[0];
+		final double yC = sphereDim[2];
+		final double zC = sphereDim[2];
+		final double r = sphereDim[3];
+		final double h = r * cropFactor;
+		int startX = (int) Math.round((xC - h) / vW);
+		int startY = (int) Math.round((yC - h) / vH);
+		int startZ = (int) Math.round((zC - h) / vD);
+		int roiWidth = (int) Math.round(2 * h / vW);
+		int roiHeight = (int) Math.round(2 * h / vH);
+		int roiDepth = (int) Math.round(2 * h / vD);
 		// bounds checking
 		if (startX < 0)
 			startX = 0;
@@ -284,16 +296,20 @@ public class Fit_Sphere implements PlugInFilter {
 			roiDepth = imp.getStackSize() - startZ;
 		ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
-		for (int z = startZ; z <= startZ + roiDepth; z++) {
+		final int endZ = startZ + roiDepth;
+		final int roiArea = roiWidth * roiHeight;
+		final int endY = startY + roiHeight;
+		final int endX = startX + roiWidth;
+		for (int z = startZ; z <= endZ; z++) {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying smallest enclosing cube");
-			short[] targetSlice = new short[roiWidth * roiHeight];
+			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
 			ip = sourceStack.getProcessor(z);
-			for (int y = startY; y < startY + roiHeight; y++) {
+			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
-				for (int x = startX; x < startX + roiWidth; x++) {
+				for (int x = startX; x < endX; x++) {
 					targetSlice[index + nCols] = (short) ip.get(x, y);
 					nCols++;
 				}
