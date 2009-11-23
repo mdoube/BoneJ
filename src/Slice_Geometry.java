@@ -48,7 +48,7 @@ public class Slice_Geometry implements PlugIn {
 	/** Linear unit of measure */
 	private String units;
 	/** Unused option to do density-weighted calculations */
-//	private String analyse;
+	// private String analyse;
 	/** Message to inform the user what to do with their HU-calibrated image */
 	private String calString;
 	/** Hounsfield unit value for air is -1000 */
@@ -141,10 +141,6 @@ public class Slice_Geometry implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-		if (imp.getBitDepth() != 16){
-			IJ.error("Slice Geometry expects a 16-bit greyscale image");
-			return;
-		}
 
 		this.cal = imp.getCalibration();
 		this.vW = this.cal.pixelWidth;
@@ -191,7 +187,7 @@ public class Slice_Geometry implements PlugIn {
 	 * Draw centroids and / or principal axes on a copy of the original image
 	 * 
 	 * @param imp
-	 * @return ImagePlus with centroid and / or principal axes drawn 
+	 * @return ImagePlus with centroid and / or principal axes drawn
 	 */
 	private ImagePlus annotateImage(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
@@ -237,7 +233,6 @@ public class Slice_Geometry implements PlugIn {
 	protected double calculateCentroids(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
-		int w = stack.getWidth();
 		// 2D centroids
 		this.sliceCentroids = new double[2][this.al];
 		// pixel counters
@@ -245,7 +240,9 @@ public class Slice_Geometry implements PlugIn {
 		this.emptySlices = new boolean[this.al];
 		this.cslice = new double[this.al];
 		this.cortArea = new double[this.al];
-		double pixelArea = this.vW * this.vH;
+		final double pixelArea = this.vW * this.vH;
+		final int roiXEnd = r.x + r.width;
+		final int roiYEnd = r.y + r.height;
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating centroids...");
 			IJ.showProgress(s - this.startSlice, this.endSlice);
@@ -253,12 +250,11 @@ public class Slice_Geometry implements PlugIn {
 			double sumY = 0;
 			this.cslice[s] = 0;
 			this.cortArea[s] = 0;
-			short[] pixels = (short[]) stack.getPixels(s);
-			for (int y = r.y; y < (r.y + r.height); y++) {
-				int offset = y * w;
-				for (int x = r.x; x < (r.x + r.width); x++) {
-					int i = offset + x;
-					if (pixels[i] >= this.min && pixels[i] <= this.max) {
+			ImageProcessor ip = stack.getProcessor(s);
+			for (int y = r.y; y < roiYEnd; y++) {
+				for (int x = r.x; x < roiXEnd; x++) {
+					final double pixel = (double) ip.get(x, y);
+					if (pixel >= this.min && pixel <= this.max) {
 						this.cslice[s]++;
 						this.cortArea[s] += pixelArea;
 						sumX += x * this.vW;
@@ -285,7 +281,6 @@ public class Slice_Geometry implements PlugIn {
 	private void calculateMoments(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
-		int w = stack.getWidth();
 		// START OF Ix AND Iy CALCULATION
 		this.Sx = new double[this.al];
 		this.Sy = new double[this.al];
@@ -304,13 +299,14 @@ public class Slice_Geometry implements PlugIn {
 			this.Sxx[s] = 0;
 			this.Syy[s] = 0;
 			this.Sxy[s] = 0;
+			final int roiXEnd = r.x + r.width;
+			final int roiYEnd = r.y + r.height;
 			if (!this.emptySlices[s]) {
-				short[] pixels = (short[]) stack.getPixels(s);
-				for (int y = r.y; y < (r.y + r.height); y++) {
-					int offset = y * w;
-					for (int x = r.x; x < (r.x + r.width); x++) {
-						int i = offset + x;
-						if (pixels[i] >= this.min && pixels[i] <= this.max) {
+				ImageProcessor ip = stack.getProcessor(s);
+				for (int y = r.y; y < roiYEnd; y++) {
+					for (int x = r.x; x < roiXEnd; x++) {
+						final double pixel = (double) ip.get(x, y);
+						if (pixel >= this.min && pixel <= this.max) {
 							this.Sx[s] += x;
 							this.Sy[s] += y;
 							this.Sxx[s] += x * x;
@@ -359,19 +355,20 @@ public class Slice_Geometry implements PlugIn {
 			IJ.showStatus("Calculating Imin and Imax...");
 			IJ.showProgress(s - 1, stack.getSize());
 			if (!this.emptySlices[s]) {
-				short[] pixels = (short[]) stack.getPixels(s);
+				ImageProcessor ip = stack.getProcessor(s);
 				this.Sx[s] = 0;
 				this.Sy[s] = 0;
 				this.Sxx[s] = 0;
 				this.Syy[s] = 0;
 				this.Sxy[s] = 0;
-				double cosTheta = Math.cos(this.theta[s]);
-				double sinTheta = Math.sin(this.theta[s]);
-				for (int y = r.y; y < (r.y + r.height); y++) {
-					int offset = y * w;
-					for (int x = r.x; x < (r.x + r.width); x++) {
-						int i = offset + x;
-						if (pixels[i] >= this.min && pixels[i] <= this.max) {
+				final double cosTheta = Math.cos(this.theta[s]);
+				final double sinTheta = Math.sin(this.theta[s]);
+				final int roiYEnd = r.y + r.height;
+				final int roiXEnd = r.x + r.width;
+				for (int y = r.y; y < roiYEnd; y++) {
+					for (int x = r.x; x < roiXEnd; x++) {
+						final double pixel = (double) ip.get(x, y);
+						if (pixel >= this.min && pixel <= this.max) {
 							this.Sx[s] += x * cosTheta + y * sinTheta;
 							this.Sy[s] += y * cosTheta - x * sinTheta;
 							this.Sxx[s] += (x * cosTheta + y * sinTheta)
@@ -464,15 +461,20 @@ public class Slice_Geometry implements PlugIn {
 		ImagePlus thickImp = th
 				.LocalThicknesstoCleanedUpLocalThickness(workArray);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			float[] pixels = (float[]) thickImp.getStack().getPixels(s);
+			ImageProcessor ip = thickImp.getStack().getProcessor(s);
 			double sumPix = 0;
 			double sliceMax = 0;
 			double pixCount = 0;
-			for (int p = 0; p < pixels.length; p++) {
-				if (pixels[p] > 0)
-					pixCount++;
-				sumPix += pixels[p];
-				sliceMax = Math.max(sliceMax, pixels[p]);
+			final int roiXEnd = r.x + r.width;
+			final int roiYEnd = r.y + r.height;
+			for (int y = r.y; y < roiYEnd; y++) {
+				for (int x = r.x; x < roiXEnd; x++) {
+					final double pixel = (double) ip.get(x, y);
+					if (pixel > 0)
+						pixCount++;
+					sumPix += pixel;
+					sliceMax = Math.max(sliceMax, pixel);
+				}
 			}
 			double sliceMean = sumPix / pixCount;
 			this.meanCortThick3D[s] = sliceMean;
@@ -482,19 +484,13 @@ public class Slice_Geometry implements PlugIn {
 				this.maxCortThick3D[s] = Double.NaN;
 
 			double sumSquares = 0;
-			int offset = 0;
-			for (int y = r.y; y < r.y + r.height; y++) {
-				for (int x = r.x; x < r.x + r.width; x++) {
-					int p = offset + x;
-					if (pixels[p] > 0)
-						pixCount++;
-					sumPix += pixels[p];
-					sliceMax = Math.max(sliceMax, pixels[p]);
+			for (int y = r.y; y < roiYEnd; y++) {
+				for (int x = r.x; x < roiXEnd; x++) {
+					final double d = sliceMean - (double) ip.get(x, y);
+					sumSquares += d * d;
 				}
-				offset += imp.getWidth();
 			}
 			this.stdevCortThick3D[s] = Math.sqrt(sumSquares / pixCount);
-			// IJ.log("Mean thickness for slice "+(n+1)+" is "+this.meanCortThick[n]+" ("+this.stdevCortThick[n]+")");
 		}
 		return;
 	}
@@ -572,22 +568,21 @@ public class Slice_Geometry implements PlugIn {
 				th.DistanceRidgetoLocalThickness(workArray);
 				ImagePlus thickImp = th
 						.LocalThicknesstoCleanedUpLocalThickness(workArray);
-				// get thickness stats
-				float[] pixels = (float[]) thickImp.getImageStack()
-						.getPixels(1);
+				ImageProcessor thickIp = thickImp.getImageStack().getProcessor(
+						s);
 				double sumPix = 0;
 				double sliceMax = 0;
 				double pixCount = 0;
-				int offset = 0;
-				for (int y = r.y; y < r.y + r.height; y++) {
-					for (int x = r.x; x < r.x + r.width; x++) {
-						int p = offset + x;
-						if (pixels[p] > 0)
+				final double roiXEnd = r.x + r.width;
+				final double roiYEnd = r.y + r.height;
+				for (int y = r.y; y < roiYEnd; y++) {
+					for (int x = r.x; x < roiXEnd; x++) {
+						final double pixel = (double) thickIp.get(x, y);
+						if (pixel > 0)
 							pixCount++;
-						sumPix += pixels[p];
-						sliceMax = Math.max(sliceMax, pixels[p]);
+						sumPix += pixel;
+						sliceMax = Math.max(sliceMax, pixel);
 					}
-					offset += impT.getWidth();
 				}
 				double sliceMean = sumPix / pixCount;
 				this.meanThick[s] = sliceMean;
@@ -597,11 +592,13 @@ public class Slice_Geometry implements PlugIn {
 					this.maxThick[s] = Double.NaN;
 
 				double sumSquares = 0;
-				for (int p = 0; p < pixels.length; p++) {
-					double pixVal = pixels[p];
-					if (pixVal > 0) {
-						double d = sliceMean - pixVal;
-						sumSquares += d * d;
+				for (int y = r.y; y < roiYEnd; y++) {
+					for (int x = r.x; x < roiXEnd; x++) {
+						final double pixel = (double) thickIp.get(x, y);
+						if (pixel > 0) {
+							final double d = sliceMean - pixel;
+							sumSquares += d * d;
+						}
 					}
 				}
 				this.stdevThick[s] = Math.sqrt(sumSquares / pixCount);
@@ -667,6 +664,7 @@ public class Slice_Geometry implements PlugIn {
 				this.min += Short.MIN_VALUE;
 				this.max += Short.MIN_VALUE;
 			}
+
 		} else {
 			this.isHUCalibrated = true;
 			this.calString = "Image has Hounsfield calibration.\nEnter bone HU below:";
