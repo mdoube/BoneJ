@@ -6,12 +6,12 @@ import ij.ImageStack;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.CurveFitter;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
 
-public class ThresholdMinConn implements PlugInFilter {
+public class ThresholdMinConn implements PlugIn {
 
-	private ImagePlus imp;
+//	private ImagePlus imp;
 	private int testCount = 11, subVolume = 256;
 	private double testRange = 0.2;
 
@@ -27,25 +27,17 @@ public class ThresholdMinConn implements PlugInFilter {
 	 */
 	private boolean thresholdOnly = false;
 
-	public int setup(String arg, ImagePlus imp) {
-		this.imp = imp;
-		if (imp == null || imp.getNSlices() < 2) {
-			IJ.showMessage("A stack must be open");
-			return DONE;
-		}
-
-		return DOES_8G + DOES_16 + STACK_REQUIRED;
-	}
-
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
+		ImagePlus imp = IJ.getImage();
+		ImageProcessor ip = imp.getProcessor();
 		if (!showDialog()) {
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
 		if (ic.isBinary(imp)) {
-			IJ.error("");
+			IJ.error("Can't threshold a binary image");
 			return;
 		}
 		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth){
@@ -59,19 +51,20 @@ public class ThresholdMinConn implements PlugInFilter {
 			int[] testThreshold = getTestThreshold(imp, histogram);
 			double[] conns = getConns(imp, testThreshold, subVolume);
 			double minimum = getMinimum(testThreshold, conns);
-			threshold = checkMinimum(minimum, histogram);
+			threshold = checkMinimum(imp, minimum, histogram);
 			if (doPlot)
 				showPlot(testThreshold, conns);
 		}
 		IJ.log(imp.getTitle() + " threshold  = " + IJ.d2s(threshold, 1));
 
 		if (applyThreshold) {
-			int w = imp.getWidth();
-			int h = imp.getHeight();
+			final int w = imp.getWidth();
+			final int h = imp.getHeight();
+			final int d = imp.getStackSize();
+			final int nPixels = w * h;
 			ImageStack stack = imp.getImageStack();
 			ImageStack stack2 = new ImageStack(w, h);
-			int nPixels = w * h;
-			for (int z = 1; z <= imp.getStackSize(); z++) {
+			for (int z = 1; z <= d; z++) {
 				byte[] slice = new byte[nPixels];
 				ip = stack.getProcessor(z);
 				short[] pixels = (short[]) ip.getPixels();
@@ -83,7 +76,7 @@ public class ThresholdMinConn implements PlugInFilter {
 						slice[i] = (byte) 0;
 					}
 				}
-				stack2.addSlice("", slice);
+				stack2.addSlice(stack.getSliceLabel(z), slice);
 			}
 			imp.setStack(imp.getTitle(), stack2);
 			IJ.selectWindow(imp.getTitle());
@@ -102,7 +95,7 @@ public class ThresholdMinConn implements PlugInFilter {
 	 * @param histogram
 	 * @return
 	 */
-	private double checkMinimum(double minimum, int[] histogram) {
+	private double checkMinimum(ImagePlus imp, double minimum, int[] histogram) {
 		double threshold = minimum;
 		ImageProcessor ip = imp.getProcessor();
 
