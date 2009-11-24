@@ -32,14 +32,15 @@ public class ThresholdMinConn implements PlugIn {
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageProcessor ip = imp.getProcessor();
-		if (!showDialog()) {
-			return;
-		}
 		ImageCheck ic = new ImageCheck();
 		if (ic.isBinary(imp)) {
 			IJ.error("Can't threshold a binary image");
 			return;
 		}
+		if (!showDialog()) {
+			return;
+		}
+		
 		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth){
 			IJ.run("Properties...");
 		}
