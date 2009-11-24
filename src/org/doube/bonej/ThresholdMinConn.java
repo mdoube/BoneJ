@@ -310,12 +310,14 @@ public class ThresholdMinConn implements PlugInFilter {
 	 * @return
 	 */
 	public int[] getStackHistogram(ImagePlus imp2) {
-
-		int w = imp2.getWidth();
-		int h = imp2.getHeight();
-		int d = imp2.getStackSize();
+		final int d = imp2.getStackSize();
 		ImageStack stack = imp2.getStack();
-		if (imp2.getBitDepth() == 8) {
+		
+		if (stack.getSize() == 1){
+			return stack.getProcessor(1).getHistogram();
+		}
+		
+		else if (imp2.getBitDepth() == 8) {
 			int[] histogram = new int[256];
 			for (int z = 1; z <= d; z++) {
 				IJ.showStatus("Getting stack histogram...");
@@ -330,19 +332,14 @@ public class ThresholdMinConn implements PlugInFilter {
 		}
 
 		else if (imp2.getBitDepth() == 16) {
-			short adjustment = 0;
-			if (imp2.getCalibration().isSigned16Bit())
-				adjustment = Short.MIN_VALUE;
-			int[] histogram = new int[Short.MAX_VALUE - Short.MIN_VALUE + 1];
+			int[] histogram = new int[65536];
 			for (int z = 1; z <= d; z++) {
 				IJ.showStatus("Getting stack histogram...");
 				IJ.showProgress(z, d);
 				ImageProcessor sliceIP = stack.getProcessor(z);
-				for (int y = 0; y < h; y++) {
-					for (int x = 0; x < w; x++) {
-						int i = sliceIP.get(x, y) - adjustment;
-						histogram[i]++;
-					}
+				int[] sliceHistogram = sliceIP.getHistogram();
+				for (int i = 0; i < 65536; i++) {
+					histogram[i] += sliceHistogram[i];
 				}
 			}
 			return histogram;

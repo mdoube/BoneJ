@@ -754,7 +754,7 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Zmin (" + units + "^3)", this.Zmin[s] * unit3);
 			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
 			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
-			rt.addValue("Feret Angle (\u00B0)", this.feretAngle[s]);
+			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);
 			if (this.doThickness3D) {
 				rt.addValue("Max Thick 3D (" + units + ")",
 						this.maxCortThick3D[s]);
@@ -797,7 +797,7 @@ public class Slice_Geometry implements PlugIn {
 				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
 				feretValues = roi.getFeretValues();
 				this.feretMin[s] = feretValues[2] * this.vW;
-				this.feretAngle[s] = feretValues[1];
+				this.feretAngle[s] = feretValues[1] * Math.PI / 180;
 				this.feretMax[s] = feretValues[0] * this.vW;
 			}
 			feretValues = null;
