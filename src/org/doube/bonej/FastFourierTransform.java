@@ -73,6 +73,8 @@ public class FastFourierTransform implements PlugIn
      */
     public void run(String arg)
     {
+    	if (!ImageCheck.checkIJVersion())
+			return;
         String fftdirection;        
         boolean multiThreaded;
         boolean windowing, isRGB;

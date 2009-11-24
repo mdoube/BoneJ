@@ -15,6 +15,11 @@ import ij.process.ImageStatistics;
 public class ImageCheck {
 
 	/**
+	 * IJ version required by BoneJ
+	 */
+	public static final String requiredIJVersion = "1.43k";
+
+	/**
 	 * Check if image is binary
 	 * 
 	 * @param imp
@@ -89,7 +94,7 @@ public class ImageCheck {
 		double vD = imp.getCalibration().pixelDepth;
 
 		String position = getDicomAttribute(imp, 1, "0020,0032");
-		if (position == null){
+		if (position == null) {
 			IJ.log("No DICOM slice position data");
 			return -1;
 		}
@@ -140,7 +145,7 @@ public class ImageCheck {
 		if (slice < 1 || slice > stack.getSize()) {
 			return null;
 		}
-		if (header == null){
+		if (header == null) {
 			return null;
 		}
 		String attribute = " ";
@@ -163,4 +168,21 @@ public class ImageCheck {
 		return value;
 	}
 
+	/**
+	 * Show a message and return false if the version of IJ is too old for BoneJ
+	 * 
+	 * @return false if the IJ version is too old
+	 */
+	public static boolean checkIJVersion() {
+		if (requiredIJVersion.compareTo(IJ.getVersion()) > 0) {
+			IJ.error("Update ImageJ",
+					"You are using an old version of ImageJ, v"
+							+ IJ.getVersion() + ".\n"
+							+ "Please update to at least ImageJ v"
+							+ requiredIJVersion
+							+ " using Help-Update ImageJ.");
+			return false;
+		} else
+			return true;
+	}
 }

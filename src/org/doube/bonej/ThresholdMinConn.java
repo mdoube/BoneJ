@@ -38,6 +38,8 @@ public class ThresholdMinConn implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		if (!showDialog()) {
 			return;
 		}

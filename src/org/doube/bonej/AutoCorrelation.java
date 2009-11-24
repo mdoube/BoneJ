@@ -16,6 +16,8 @@ import org.doube.bonej.FastFourierTransform;
 public class AutoCorrelation implements PlugIn {
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 
 		ImagePlus acf = getACF(imp);

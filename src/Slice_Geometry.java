@@ -30,6 +30,7 @@ import java.awt.Color;
 import java.awt.Rectangle;
 
 import org.doube.bonej.BoneList;
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.Thickness;
 import org.doube.bonej.ThresholdMinConn;
 
@@ -136,6 +137,8 @@ public class Slice_Geometry implements PlugIn {
 	Calibration cal;
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
@@ -278,6 +281,11 @@ public class Slice_Geometry implements PlugIn {
 		return cstack;
 	}
 
+	/**
+	 * Calculate second moments of area, length and angle of principal axes
+	 * 
+	 * @param imp
+	 */
 	private void calculateMoments(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
@@ -608,13 +616,13 @@ public class Slice_Geometry implements PlugIn {
 	}
 
 	private ImagePlus convertToBinary(ImagePlus imp) {
-		int w = imp.getWidth();
-		int h = imp.getHeight();
-		int d = imp.getStackSize();
-		ImageStack sourceStack = imp.getImageStack();
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		final ImageStack sourceStack = imp.getImageStack();
 		ImageStack binaryStack = new ImageStack(w, h);
-		for (int s = 0; s < d; s++) {
-			ImageProcessor sliceIp = sourceStack.getProcessor(s + 1);
+		for (int s = 1; s <= d; s++) {
+			ImageProcessor sliceIp = sourceStack.getProcessor(s);
 			ByteProcessor binaryIp = new ByteProcessor(w, h);
 			for (int y = 0; y < h; y++) {
 				for (int x = 0; x < w; x++) {
@@ -626,7 +634,7 @@ public class Slice_Geometry implements PlugIn {
 					}
 				}
 			}
-			binaryStack.addSlice(sourceStack.getSliceLabel(s + 1), binaryIp);
+			binaryStack.addSlice(sourceStack.getSliceLabel(s), binaryIp);
 		}
 		ImagePlus binaryImp = new ImagePlus("binaryImp", binaryStack);
 		binaryImp.setCalibration(imp.getCalibration());

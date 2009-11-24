@@ -12,6 +12,7 @@ import ij.util.Tools;
 
 import java.util.ArrayList;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 
 /**
@@ -57,6 +58,8 @@ public class Fractal_Count implements PlugInFilter {
 
     //TODO split run method into more sensible methods
     public void run(ImageProcessor ip) {
+    	if (!ImageCheck.checkIJVersion())
+			return;
 	if (noGo)
 	    return;
 	try {

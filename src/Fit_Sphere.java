@@ -25,6 +25,7 @@ import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitSphere;
 
@@ -48,11 +49,6 @@ public class Fit_Sphere implements PlugInFilter {
 	public double cropFactor;
 
 	public int setup(String arg, ImagePlus imp) {
-		if (IJ.versionLessThan("1.42h")) {
-			IJ.error("Your version of ImageJ is too old/n"
-					+ "Please update (Help->Update ImageJ...)");
-			return DONE;
-		}
 		this.imp = imp;
 		if (imp == null || imp.getNSlices() < 2) {
 			IJ.showMessage("A stack must be open");
@@ -68,6 +64,8 @@ public class Fit_Sphere implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		double[] voxDim = getVoxDim(imp);
 		if (voxDim[2] > voxDim[0] * 20) {
 			if (!IJ

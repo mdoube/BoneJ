@@ -25,6 +25,8 @@ public class MeasureSurface implements PlugIn {
 
 	@SuppressWarnings("unchecked")
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();

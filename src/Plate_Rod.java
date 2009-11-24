@@ -9,6 +9,7 @@ import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
@@ -67,6 +68,8 @@ public class Plate_Rod implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
+    	if (!ImageCheck.checkIJVersion())
+			return;
 	samplingIncrement = Math.max(vH, Math.max(vW, vD)); // need to get
 	// this from a
 	// dialog

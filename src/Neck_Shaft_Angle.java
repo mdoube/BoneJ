@@ -29,6 +29,7 @@ import java.awt.Rectangle;
 import java.awt.event.*;
 
 import org.doube.bonej.FitSphere;
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.bonej.FitCircle;
 import org.doube.jama.*;
@@ -101,6 +102,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
     }
 
     public void run(ImageProcessor ip) {
+    	if (!ImageCheck.checkIJVersion())
+			return;
 	// set up pixel calibration
 	if (!this.cal.isSigned16Bit() && !this.cal.calibrated()) {
 	    IJ.run("Threshold...");

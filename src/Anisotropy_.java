@@ -40,6 +40,7 @@ import java.util.Vector;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
@@ -116,6 +117,8 @@ public class Anisotropy_ implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		if (!showDialog()) {
 			return;
 		}

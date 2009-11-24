@@ -100,6 +100,8 @@ public class Purify implements PlugIn {
 	private String sPhase = "";
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();
 		if (!ic.isBinary(imp)){

@@ -1,5 +1,6 @@
 import java.awt.Rectangle;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 
 import ij.IJ;
@@ -32,6 +33,8 @@ public class Volume_Fraction implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		int startSlice = 1;
 		int endSlice = stack.getSize();
 		GenericDialog gd = new GenericDialog("Limit Slices");

@@ -89,6 +89,8 @@ public class Skeletonize3D implements PlugInFilter
 	 */
 	public void run(ImageProcessor ip) 
 	{
+		if (!ImageCheck.checkIJVersion())
+			return;
 		
 		this.width = this.imRef.getWidth();
 		this.height = this.imRef.getHeight();

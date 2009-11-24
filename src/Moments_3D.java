@@ -38,6 +38,7 @@ import ij.measure.ResultsTable;
 import ij.gui.*;
 import java.awt.Rectangle;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
@@ -68,6 +69,8 @@ public class Moments_3D implements PlugInFilter {
     }
 
     public void run(ImageProcessor ip) {
+    	if (!ImageCheck.checkIJVersion())
+			return;
 
 	Calibration cal = imp.getCalibration();
 	vW = cal.pixelWidth;

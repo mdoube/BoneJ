@@ -90,6 +90,8 @@ public class Thickness implements PlugInFilter {
 	}
 
 	public void run(ImageProcessor ip) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		if (!showDialog()) {
 			return;

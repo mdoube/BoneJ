@@ -92,6 +92,8 @@ public class Connectivity implements PlugIn {
 	private int depth = 0;
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();
 		if (!ic.isBinary(imp)){
