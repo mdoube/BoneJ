@@ -159,6 +159,7 @@ public class Purify implements PlugIn {
 		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
 
 		long startTime = System.currentTimeMillis();
+		
 
 		byte[][] workArray = makeWorkArray(imp);
 
