@@ -704,6 +704,8 @@ public class Slice_Geometry implements PlugIn {
 			gd.addMessage("HU for air is " + Slice_Geometry.airHU);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
+		gd.addMessage("Only pixels <= bone min\n" +
+				"and >= bone max are used.");
 		gd.showDialog();
 		this.doThickness2D = gd.getNextBoolean();
 		this.doThickness3D = gd.getNextBoolean();
@@ -739,15 +741,15 @@ public class Slice_Geometry implements PlugIn {
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
 
-		double unit4 = Math.pow(vW, 4);
-		double unit3 = Math.pow(vW, 3);
+		final double unit4 = Math.pow(vW, 4);
+		final double unit3 = Math.pow(vW, 3);
 		String title = imp.getTitle();
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			rt.incrementCounter();
 			rt.addLabel(title);
 			rt.addValue("Bone Code", this.boneID);
 			rt.addValue("Slice", s);
-			rt.addValue("CA (" + units + "^2)", this.cortArea[s]);
+			rt.addValue("CSA (" + units + "^2)", this.cortArea[s]);
 			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
 			rt.addValue("Y cent. (" + units + ")", this.sliceCentroids[1][s]);
 			rt.addValue("Theta (rad)", this.theta[s]);
