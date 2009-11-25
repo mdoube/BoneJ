@@ -7,11 +7,12 @@ import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
+import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
 public class ThresholdMinConn implements PlugIn {
 
-//	private ImagePlus imp;
+	// private ImagePlus imp;
 	private int testCount = 11, subVolume = 256;
 	private double testRange = 0.2;
 
@@ -40,8 +41,8 @@ public class ThresholdMinConn implements PlugIn {
 		if (!showDialog()) {
 			return;
 		}
-		
-		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth){
+
+		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth) {
 			IJ.run("Properties...");
 		}
 
@@ -62,22 +63,33 @@ public class ThresholdMinConn implements PlugIn {
 			final int w = imp.getWidth();
 			final int h = imp.getHeight();
 			final int d = imp.getStackSize();
-			final int nPixels = w * h;
+			// final int nPixels = w * h;
 			ImageStack stack = imp.getImageStack();
 			ImageStack stack2 = new ImageStack(w, h);
 			for (int z = 1; z <= d; z++) {
-				byte[] slice = new byte[nPixels];
+				// byte[] slice = new byte[nPixels];
 				ip = stack.getProcessor(z);
-				short[] pixels = (short[]) ip.getPixels();
-				for (int i = 0; i < nPixels; i++) {
-					int value = pixels[i] & 0xffff;
-					if (value > threshold) {
-						slice[i] = (byte) 255;
-					} else {
-						slice[i] = (byte) 0;
+				ByteProcessor bp = new ByteProcessor(w, h);
+				for (int y = 0; y < h; y++) {
+					for (int x = 0; x < w; x++) {
+						final double pixel = (double) ip.get(x, y);
+						if (pixel > threshold) {
+							bp.set(x, y, 255);
+						} else {
+							bp.set(x, y, 0);
+						}
 					}
 				}
-				stack2.addSlice(stack.getSliceLabel(z), slice);
+				// short[] pixels = (short[]) ip.getPixels();
+				// for (int i = 0; i < nPixels; i++) {
+				// int value = pixels[i] & 0xffff;
+				// if (value > threshold) {
+				// slice[i] = (byte) 255;
+				// } else {
+				// slice[i] = (byte) 0;
+				// }
+				// }
+				stack2.addSlice(stack.getSliceLabel(z), bp);
 			}
 			imp.setStack(imp.getTitle(), stack2);
 			IJ.selectWindow(imp.getTitle());
@@ -201,59 +213,59 @@ public class ThresholdMinConn implements PlugIn {
 	}
 
 	/**
+	 * Calculate connectivity after threshold-purify-erode-purify-dilate for
+	 * several threshold values. 
 	 * 
 	 * @param imp2
-	 * @param testThreshold
-	 * @return
+	 * @param testThreshold array of test threshold values (from getTestThreshold)
+	 * @return array containing connectivity resulting from each test threshold
 	 */
 	private double[] getConns(ImagePlus imp2, int[] testThreshold, int subVolume) {
 		int nTests = testThreshold.length;
 		double[] conns = new double[nTests];
 
-		// make a stack out of imp2 that is no greater than 256 pixels in
-		// any dimension
+		// make a stack out of imp2 that is no greater than
+		// subvolume pixels in any dimension
 		ImageStack stack = imp2.getImageStack();
 
-		int width = (int) Math.min(imp2.getWidth(), subVolume);
-		int height = (int) Math.min(imp2.getHeight(), subVolume);
-		int depth = (int) Math.min(imp2.getStackSize(), subVolume);
-		int oldWidth = imp2.getWidth();
+		final int width = (int) Math.min(imp2.getWidth(), subVolume);
+		final int height = (int) Math.min(imp2.getHeight(), subVolume);
+		final int depth = (int) Math.min(imp2.getStackSize(), subVolume);
 
 		ImageStack stack2 = new ImageStack(width, height);
 		for (int z = 1; z <= depth; z++) {
-			short[] pixels = (short[]) stack.getPixels(z);
-			short[] newPixels = new short[width * height];
+			byte[] nullPixels = new byte[width * height];
+			stack2.addSlice(stack.getSliceLabel(z), nullPixels);
+			ImageProcessor ip = stack.getProcessor(z);
+			ImageProcessor ip2 = stack2.getProcessor(z);
 			for (int y = 0; y < height; y++) {
-				int offset = y * width;
-				int oldOffset = y * oldWidth;
 				for (int x = 0; x < width; x++) {
-					newPixels[offset + x] = pixels[oldOffset + x];
+					ip2.set(x, y, ip.get(x, y));
 				}
 			}
-			stack2.addSlice(stack.getSliceLabel(z), newPixels);
 		}
-
-		ImageStack stack3 = new ImageStack(stack2.getWidth(), stack2
-				.getHeight());
+		
 		ImagePlus imp3 = new ImagePlus();
-		// for each test
 		for (int i = 0; i < nTests; i++) {
-			int thresh = testThreshold[i];
-			for (int z = 1; z <= stack2.getSize(); z++) {
-				short[] pixels = (short[]) stack2.getPixels(z);
-				byte[] tpixels = new byte[pixels.length];
-				for (int j = 0; j < pixels.length; j++) {
-					int value = pixels[j] & 0xffff;
-					if (value > thresh) {
-						tpixels[j] = (byte) 255;
-					} else {
-						tpixels[j] = (byte) 0;
+			//apply threshold
+			final int thresh = testThreshold[i];
+			ImageStack stack3 = new ImageStack(width, height);
+			for (int z = 1; z <= depth; z++) {
+				ImageProcessor ip2 = stack2.getProcessor(z);
+				ByteProcessor bp = new ByteProcessor(width, height);
+				for (int y = 0; y < height; y++) {
+					for (int x = 0; x < width; x++) {
+						if (ip2.get(x, y) > thresh) {
+							bp.set(x, y, 255);
+						} else {
+							bp.set(x, y, 0);
+						}
 					}
 				}
 				if (z > stack3.getSize())
-					stack3.addSlice("" + z, tpixels);
+					stack3.addSlice(stack2.getSliceLabel(z), bp);
 				else
-					stack3.setPixels(tpixels, z);
+					stack3.setPixels(bp, z);
 			}
 			// purify
 			imp3.setStack("Threshold " + (i + 1) + "/" + nTests, stack3);
@@ -278,8 +290,6 @@ public class ThresholdMinConn implements PlugIn {
 			double connectivity = con.getConnectivity(deltaChi);
 			// add connectivity to the array
 			conns[i] = connectivity;
-			// IJ.log("Connectivity is " + conns[i] + " for threshold "
-			// + testThreshold[i]);
 		}
 		imp3.close();
 		return conns;
@@ -308,11 +318,11 @@ public class ThresholdMinConn implements PlugIn {
 	public int[] getStackHistogram(ImagePlus imp2) {
 		final int d = imp2.getStackSize();
 		ImageStack stack = imp2.getStack();
-		
-		if (stack.getSize() == 1){
+
+		if (stack.getSize() == 1) {
 			return stack.getProcessor(1).getHistogram();
 		}
-		
+
 		else if (imp2.getBitDepth() == 8) {
 			int[] histogram = new int[256];
 			for (int z = 1; z <= d; z++) {
