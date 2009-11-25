@@ -80,15 +80,6 @@ public class ThresholdMinConn implements PlugIn {
 						}
 					}
 				}
-				// short[] pixels = (short[]) ip.getPixels();
-				// for (int i = 0; i < nPixels; i++) {
-				// int value = pixels[i] & 0xffff;
-				// if (value > threshold) {
-				// slice[i] = (byte) 255;
-				// } else {
-				// slice[i] = (byte) 0;
-				// }
-				// }
 				stack2.addSlice(stack.getSliceLabel(z), bp);
 			}
 			imp.setStack(imp.getTitle(), stack2);
@@ -143,8 +134,8 @@ public class ThresholdMinConn implements PlugIn {
 		int startThreshold = ip.getAutoThreshold(histogram);
 
 		// get a range of thresholds to test
-		int nTests = testCount;
-		double testStep = 2 * testRange * startThreshold / (nTests - 1);
+		final int nTests = testCount;
+		final double testStep = 2 * testRange * startThreshold / (nTests - 1);
 		int[] testThreshold = new int[nTests];
 		for (int i = 0; i < nTests; i++) {
 			testThreshold[i] = (int) Math.round(startThreshold
@@ -163,20 +154,16 @@ public class ThresholdMinConn implements PlugIn {
 	 */
 	private double getMinimum(int[] testThreshold, double[] conns) {
 		// convert xData to double
-		int nPoints = testThreshold.length;
+		final int nPoints = testThreshold.length;
 		double[] xData = new double[nPoints];
 		for (int i = 0; i < nPoints; i++) {
 			xData[i] = (double) testThreshold[i];
 		}
 		CurveFitter cf = new CurveFitter(xData, conns);
 		cf.doFit(CurveFitter.POLY2);
-		// String parabola = cf.getResultString();
-		// IJ.log(parabola);
 		double[] params = cf.getParams();
 		double b = params[1], c = params[2];
 		double xmin = -b / (2 * c);
-		// double ymin = a + b * xmin + c * xmin * xmin;
-		// IJ.log("minimum connectivity is at (" + xmin + ", " + ymin + ")");
 		return xmin;
 	}
 
