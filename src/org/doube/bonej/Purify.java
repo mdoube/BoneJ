@@ -104,7 +104,7 @@ public class Purify implements PlugIn {
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)){
+		if (!ic.isBinary(imp)) {
 			IJ.error("Purify requires a binary image");
 			return;
 		}
@@ -124,12 +124,11 @@ public class Purify implements PlugIn {
 		if (null != result) {
 			ImagePlus purified = (ImagePlus) result[1];
 
-			if (doCopy){
+			if (doCopy) {
 				purified.show();
 				if (!purified.isInvertedLut())
 					IJ.run("Invert LUT");
-			}
-			else {
+			} else {
 				ImageStack stack2 = purified.getStack();
 				imp.setStack(null, stack2);
 				if (!imp.isInvertedLut())
@@ -139,7 +138,8 @@ public class Purify implements PlugIn {
 		return;
 	}
 
-	public Object[] purify(ImagePlus imp, int slicesPerChunk, boolean showPerformance) {
+	public Object[] purify(ImagePlus imp, int slicesPerChunk,
+			boolean showPerformance) {
 		this.width = imp.getWidth();
 		this.height = imp.getHeight();
 		this.nSlices = imp.getStackSize();
@@ -161,7 +161,6 @@ public class Purify implements PlugIn {
 		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
 
 		long startTime = System.currentTimeMillis();
-		
 
 		byte[][] workArray = makeWorkArray(imp);
 
@@ -240,7 +239,7 @@ public class Purify implements PlugIn {
 
 		ImageStack stack = new ImageStack(this.width, this.height);
 		for (int z = 0; z < workArray.length; z++) {
-			stack.addSlice("", workArray[z]);
+			stack.addSlice(imp.getStack().getSliceLabel(z+1), workArray[z]);
 		}
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
@@ -388,8 +387,8 @@ public class Purify implements PlugIn {
 							for (int vZ = z - 1; vZ <= z + 1; vZ++) {
 								for (int vY = y - 1; vY <= y + 1; vY++) {
 									for (int vX = x - 1; vX <= x + 1; vX++) {
-										if (withinBounds(vX, vY, vZ, 0, d)) {
-											final int offset = getOffset(vX, vY);
+										if (withinBounds(vX, vY, vZ, w, h, 0, d)) {
+											final int offset = getOffset(vX, vY, w);
 											if (workArray[vZ][offset] == phase) {
 												final int tagv = particleLabels[vZ][offset];
 												if (tagv != 0 && tagv < minTag) {
@@ -450,8 +449,8 @@ public class Purify implements PlugIn {
 									nZ = z + 1;
 									break;
 								}
-								if (withinBounds(nX, nY, nZ, 0, d)) {
-									final int offset = getOffset(nX, nY);
+								if (withinBounds(nX, nY, nZ, w, h, 0, d)) {
+									final int offset = getOffset(nX, nY, w);
 									if (workArray[nZ][offset] == phase) {
 										final int tagv = particleLabels[nZ][offset];
 										if (tagv != 0 && tagv < minTag) {
@@ -513,9 +512,9 @@ public class Purify implements PlugIn {
 								for (int vZ = z - 1; vZ <= z + 1; vZ++) {
 									for (int vY = y - 1; vY <= y + 1; vY++) {
 										for (int vX = x - 1; vX <= x + 1; vX++) {
-											if (withinBounds(vX, vY, vZ, sR2,
-													sR3)) {
-												int offset = getOffset(vX, vY);
+											if (withinBounds(vX, vY, vZ, w, h,
+													sR2, sR3)) {
+												int offset = getOffset(vX, vY, w);
 												if (workArray[vZ][offset] == phase) {
 													int tagv = particleLabels[vZ][offset];
 													if (tagv != 0
@@ -532,9 +531,9 @@ public class Purify implements PlugIn {
 								for (int vZ = z - 1; vZ <= z + 1; vZ++) {
 									for (int vY = y - 1; vY <= y + 1; vY++) {
 										for (int vX = x - 1; vX <= x + 1; vX++) {
-											if (withinBounds(vX, vY, vZ, sR2,
-													sR3)) {
-												int offset = getOffset(vX, vY);
+											if (withinBounds(vX, vY, vZ, w, h,
+													sR2, sR3)) {
+												int offset = getOffset(vX, vY, w);
 												if (workArray[vZ][offset] == phase) {
 													int tagv = particleLabels[vZ][offset];
 													if (tagv != 0
@@ -592,8 +591,8 @@ public class Purify implements PlugIn {
 										nZ = z + 1;
 										break;
 									}
-									if (withinBounds(nX, nY, nZ, sR2, sR3)) {
-										int offset = getOffset(nX, nY);
+									if (withinBounds(nX, nY, nZ, w, h, sR2, sR3)) {
+										int offset = getOffset(nX, nY, w);
 										if (workArray[nZ][offset] == phase) {
 											int tagv = particleLabels[nZ][offset];
 											if (tagv != 0 && tagv < minTag) {
@@ -631,8 +630,8 @@ public class Purify implements PlugIn {
 										nZ = z + 1;
 										break;
 									}
-									if (withinBounds(nX, nY, nZ, sR2, sR3)) {
-										int offset = getOffset(nX, nY);
+									if (withinBounds(nX, nY, nZ, w, h, sR2, sR3)) {
+										int offset = getOffset(nX, nY, w);
 										if (workArray[nZ][offset] == phase) {
 											int tagv = particleLabels[nZ][offset];
 											if (tagv != 0 && tagv != minTag) {
@@ -863,8 +862,6 @@ public class Purify implements PlugIn {
 	 */
 	private void removeSmallParticles(byte[][] workArray,
 			int[][] particleLabels, long[] particleSizes, int phase) {
-		final int w = width;
-		final int h = height;
 		final int d = nSlices;
 		final int s = sliceSize;
 		long maxVoxCount = 0;
@@ -924,8 +921,9 @@ public class Purify implements PlugIn {
 	 * 
 	 * @return True if the pixel is within the bounds of the current stack
 	 */
-	private boolean withinBounds(int m, int n, int o, int startZ, int endZ) {
-		return (m >= 0 && m < width && n >= 0 && n < height && o >= startZ && o < endZ);
+	private boolean withinBounds(int m, int n, int o, int w, int h, int startZ,
+			int endZ) {
+		return (m >= 0 && m < w && n >= 0 && n < h && o >= startZ && o < endZ);
 	}
 
 	/**
@@ -938,8 +936,8 @@ public class Purify implements PlugIn {
 	 * 
 	 * @return Integer offset for looking up pixel in work array
 	 */
-	private int getOffset(int m, int n) {
-		return m + n * width;
+	private int getOffset(int m, int n, int w) {
+		return m + n * w;
 	}
 
 	/**
@@ -954,10 +952,11 @@ public class Purify implements PlugIn {
 	 * @param endZ
 	 *            last+1 z coordinate to check
 	 */
-	private void replaceLabel(int[][] particleLabels, int m, int n,
-			int startZ, int endZ) {
+	private void replaceLabel(int[][] particleLabels, int m, int n, int startZ,
+			int endZ) {
+		final int s = sliceSize;
 		for (int z = startZ; z < endZ; z++) {
-			for (int i = 0; i < sliceSize; i++)
+			for (int i = 0; i < s; i++)
 				if (particleLabels[z][i] == m) {
 					particleLabels[z][i] = n;
 				}
