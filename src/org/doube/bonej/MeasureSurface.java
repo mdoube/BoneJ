@@ -16,7 +16,8 @@ import marchingcubes.MCTriangulator;
 import customnode.CustomTriangleMesh;
 
 /**
- * Make a mesh from a binary image and get some measurements from it.
+ * Make a mesh from a binary or 8-bit image
+ * and get surface area measurements from it.
  * 
  * @author Michael Doube
  * 
@@ -32,20 +33,28 @@ public class MeasureSurface implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+		int threshold = 128;
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
-			IJ.error("Mesh creation requires a binary image.");
+		if (ic.isBinary(imp)) {
+			threshold = 128;
+		} else if (imp.getBitDepth() == 8) {
+			ThresholdMinConn tmc = new ThresholdMinConn();
+			threshold = imp.getProcessor().getAutoThreshold(
+					tmc.getStackHistogram(imp));
+		} else {
+			IJ.error("Isosurface", "Image type not supported");
 			return;
 		}
 
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addNumericField("Resampling", 6, 0);
+		gd.addNumericField("Threshold", threshold, 0);
 		gd.addCheckbox("Show surface", true);
 		gd.showDialog();
 		int resamplingF = (int) Math.floor(gd.getNextNumber());
+		threshold = (int) Math.floor(gd.getNextNumber());
 		boolean doSurfaceRendering = gd.getNextBoolean();
 
-		final int threshold = 128;
 		final boolean[] channels = { true, false, false };
 
 		MCTriangulator mct = new MCTriangulator();
@@ -53,18 +62,18 @@ public class MeasureSurface implements PlugIn {
 				resamplingF);
 
 		IJ.log("Isosurface contains " + (points.size() / 3) + " triangles");
-		
+
 		ResultInserter ri = ResultInserter.getInstance();
 		double area = getSurfaceArea(points);
 		ri.setResultInRow(imp,
 				"BS (" + imp.getCalibration().getUnits() + "^2)", area);
 		ri.updateTable();
-		
-		if (points.size() == 0){
+
+		if (points.size() == 0) {
 			IJ.error("Isosurface contains no points");
 			return;
 		}
-		
+
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
 		}
@@ -79,6 +88,7 @@ public class MeasureSurface implements PlugIn {
 	 * @param title
 	 */
 	private void renderSurface(List<Point3f> points, String title) {
+		IJ.showStatus("Rendering surface...");
 		CustomTriangleMesh mesh = new CustomTriangleMesh(points);
 
 		// Create a universe and show it
@@ -97,39 +107,40 @@ public class MeasureSurface implements PlugIn {
 	/**
 	 * Calculate surface area of the isosurface
 	 * 
-	 * @param points
-	 * @return
+	 * @param points in 3D triangle mesh
+	 * @return surface area
 	 */
 	private double getSurfaceArea(List<Point3f> points) {
 		double sumArea = 0;
-		for (int n = 0; n < points.size(); n += 3) {
-			Point3f point0 = points.get(n);
-			Point3f point1 = points.get(n + 1);
-			Point3f point2 = points.get(n + 2);
+		final int nPoints = points.size();
+		for (int n = 0; n < nPoints; n += 3) {
+			IJ.showStatus("Calculating surface area...");
+			final Point3f point0 = points.get(n);
+			final Point3f point1 = points.get(n + 1);
+			final Point3f point2 = points.get(n + 2);
 
 			// TODO reject triangle and continue if it is flush
 			// with a cut face / image side
 
-			float x1 = point1.x - point0.x;
-			float y1 = point1.y - point0.y;
-			float z1 = point1.z - point0.z;
+			final float x1 = point1.x - point0.x;
+			final float y1 = point1.y - point0.y;
+			final float z1 = point1.z - point0.z;
 
-			float x2 = point2.x - point0.x;
-			float y2 = point2.y - point0.y;
-			float z2 = point2.z - point0.z;
+			final float x2 = point2.x - point0.x;
+			final float y2 = point2.y - point0.y;
+			final float z2 = point2.z - point0.z;
 
 			// area of triangle is half magnitude
 			// of cross product of 2 edge vectors
 
-			double x = y1 * z2 - z1 * y2;
-			double y = z1 * x2 - x1 * z2;
-			double z = x1 * y2 - y1 * x2;
+			final double x = y1 * z2 - z1 * y2;
+			final double y = z1 * x2 - x1 * z2;
+			final double z = x1 * y2 - y1 * x2;
 
-			double deltaArea = 0.5 * Math.sqrt(x * x + y * y + z * z);
+			final double deltaArea = 0.5 * Math.sqrt(x * x + y * y + z * z);
 
 			sumArea += deltaArea;
 		}
 		return sumArea;
-
 	}
 }
