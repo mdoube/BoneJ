@@ -45,7 +45,7 @@ import org.doube.bonej.ThresholdMinConn;
 
 public class Slice_Geometry implements PlugIn {
 	private int boneID, al, startSlice, endSlice;
-	private double vW, vH, vD, min, max;
+	private double vW, vH, min, max;
 	/** Linear unit of measure */
 	private String units;
 	/** Unused option to do density-weighted calculations */
@@ -148,7 +148,6 @@ public class Slice_Geometry implements PlugIn {
 		this.cal = imp.getCalibration();
 		this.vW = this.cal.pixelWidth;
 		this.vH = this.cal.pixelHeight;
-		this.vD = this.cal.pixelDepth;
 		this.units = this.cal.getUnits();
 		this.al = imp.getStackSize() + 1;
 
@@ -452,22 +451,11 @@ public class Slice_Geometry implements PlugIn {
 		this.stdevCortThick3D = new double[this.al];
 		Rectangle r = imp.getProcessor().getRoi();
 		Thickness th = new Thickness();
-		th.baseImp = imp;
-		th.vD = this.vD;
-		th.vW = this.vW;
-		th.vH = this.vH;
-		th.w = imp.getWidth();
-		th.h = imp.getHeight();
-		th.d = imp.getStackSize();
 
 		// convert to binary
 		ImagePlus binaryImp = convertToBinary(imp);
 
-		float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
-		th.DistanceMaptoDistanceRidge(workArray);
-		th.DistanceRidgetoLocalThickness(workArray);
-		ImagePlus thickImp = th
-				.LocalThicknesstoCleanedUpLocalThickness(workArray);
+		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = thickImp.getStack().getProcessor(s);
 			double sumPix = 0;
@@ -564,18 +552,7 @@ public class Slice_Geometry implements PlugIn {
 				binaryImp.setCalibration(cal);
 				// calculate thickness
 				Thickness th = new Thickness();
-				th.baseImp = binaryImp;
-				th.vD = cal.pixelDepth;
-				th.vW = cal.pixelWidth;
-				th.vH = cal.pixelHeight;
-				th.w = binaryImp.getWidth();
-				th.h = binaryImp.getHeight();
-				th.d = binaryImp.getStackSize();
-				float[][] workArray = th.GeometrytoDistanceMap(binaryImp);
-				th.DistanceMaptoDistanceRidge(workArray);
-				th.DistanceRidgetoLocalThickness(workArray);
-				ImagePlus thickImp = th
-						.LocalThicknesstoCleanedUpLocalThickness(workArray);
+				ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
 				ImageProcessor thickIp = thickImp.getImageStack().getProcessor(
 						s);
 				double sumPix = 0;
@@ -704,8 +681,9 @@ public class Slice_Geometry implements PlugIn {
 			gd.addMessage("HU for air is " + Slice_Geometry.airHU);
 		gd.addNumericField("Bone Min:", this.min, 0);
 		gd.addNumericField("Bone Max:", this.max, 0);
-		gd.addMessage("Only pixels <= bone min\n" +
-				"and >= bone max are used.");
+		gd
+				.addMessage("Only pixels <= bone min\n"
+						+ "and >= bone max are used.");
 		gd.showDialog();
 		this.doThickness2D = gd.getNextBoolean();
 		this.doThickness3D = gd.getNextBoolean();

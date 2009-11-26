@@ -1,11 +1,12 @@
 package org.doube.bonej;
 
-import ij.*; //import ij.measure.ResultsTable;
+import ij.*;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.process.*;
-import java.util.Arrays;
+
+import org.doube.bonej.ResultInserter;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -62,101 +63,63 @@ import java.util.Arrays;
  * @author Michael Doube (refactoring for BoneJ)
  * 
  */
-public class Thickness implements PlugInFilter {
-	public ImagePlus baseImp;
-	public int thresh = 128;
-	public boolean inverse, doThickness, doSpacing;
-	public byte[][] data;
-	public float[][] sNew;// , s;
-	public int w, h, d;
-	public double vW, vH, vD;
+public class Thickness implements PlugIn {
+	// public static final int THRESHOLD = 128;
+	private float[][] sNew;
 
-	public int setup(String arg, ImagePlus imp) {
-		
-		if (imp.getType() == ImagePlus.GRAY8
-				|| imp.getType() == ImagePlus.COLOR_256) {
-			ImageStatistics stats = imp.getStatistics();
-			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
-				IJ.error("8-bit binary (black and white only) image required.");
-				return DONE;
-			}
-		} else {
-			IJ.error("8-bit binary (black and white only) image required.");
-			return DONE;
-		}
-		
-		this.baseImp = imp;
-		return DOES_8G;
-	}
-
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
+		ImageCheck ic = new ImageCheck();
 		if (!ImageCheck.checkIJVersion())
 			return;
 		ImagePlus imp = IJ.getImage();
-		if (!showDialog()) {
-			return;
-		}
-		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)){
+		if (!ic.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
 			return;
 		}
 
-		String title = stripExtension(baseImp.getTitle());
-		baseImp.unlock();
-		IJ.freeMemory();
-		w = baseImp.getWidth();
-		h = baseImp.getHeight();
-		d = baseImp.getStackSize();
-		vW = baseImp.getCalibration().pixelWidth;
-		vH = baseImp.getCalibration().pixelHeight;
-		vD = baseImp.getCalibration().pixelDepth;
+		GenericDialog gd = new GenericDialog("Options");
+		gd.addCheckbox("Thickness", true);
+		gd.addCheckbox("Spacing", false);
+		gd.showDialog();
+		if (gd.wasCanceled()) {
+			return;
+		}
+		boolean doThickness = gd.getNextBoolean();
+		boolean doSpacing = gd.getNextBoolean();
+
+		long startTime = System.currentTimeMillis();
+		String title = stripExtension(imp.getTitle());
+
 		// calculate trabecular thickness (Tb.Th)
-
-		float[][] s;
 		if (doThickness) {
-			s = GeometrytoDistanceMap(baseImp); // 8-bit in, 32-bit out
-			DistanceMaptoDistanceRidge(s); // 32-bit in, 32-bit out
-			DistanceRidgetoLocalThickness(s); // 32-bit in, 32-bit out
-			ImagePlus impLTC = LocalThicknesstoCleanedUpLocalThickness(s); // 32-bit
-																			// in,
-																			// 32-bit
-																			// out
-			IJ.freeMemory();
-
+			boolean inverse = false;
+			ImagePlus impLTC = getLocalThickness(imp, inverse);
 			impLTC.setTitle(title + "_Tr.Th");
-			impLTC.setCalibration(baseImp.getCalibration());
-			meanStdDev(impLTC);
-
+			impLTC.setCalibration(imp.getCalibration());
 			if (!Interpreter.isBatchMode()) {
 				impLTC.show();
 				IJ.run("Fire");
 			}
+			meanStdDev(impLTC, inverse);
 		}
 		if (doSpacing) {
+			boolean inverse = true;
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
-			inverse = true;
-			s = GeometrytoDistanceMap(baseImp); // 8-bit in, 32-bit out
-			DistanceMaptoDistanceRidge(s); // 32-bit in, 32-bit out
-			DistanceRidgetoLocalThickness(s); // 32-bit in, 32-bit out
-			ImagePlus impLTCi = LocalThicknesstoCleanedUpLocalThickness(s); // 32-bit
-																			// in,
-																			// 32-bit
-																			// out
-			for (int i = 0; i < s.length; i++) {
-				Arrays.fill(s[i], 0);
-			}
-			IJ.freeMemory();
+			ImagePlus impLTCi = getLocalThickness(imp, inverse);
 			impLTCi.setTitle(title + "_Tb.Sp");
-			impLTCi.setCalibration(baseImp.getCalibration());
+			impLTCi.setCalibration(imp.getCalibration());
 			if (!Interpreter.isBatchMode()) {
 				impLTCi.show();
 				IJ.run("Fire");
 			}
-			meanStdDev(impLTCi);
+			meanStdDev(impLTCi, inverse);
 		}
 		IJ.showProgress(1.0);
 		IJ.showStatus("Done");
+		double duration = ((double) System.currentTimeMillis() - (double) startTime)
+				/ (double) 1000;
+		IJ.log("Duration = " + IJ.d2s(duration, 3) + " s");
+		return;
 	}
 
 	// Modified from ImageJ code by Wayne Rasband
@@ -196,7 +159,10 @@ public class Thickness implements PlugInFilter {
 	 *            8-bit (binary) ImagePlus
 	 * 
 	 */
-	public float[][] GeometrytoDistanceMap(ImagePlus imp) {
+	private float[][] geometryToDistanceMap(ImagePlus imp, boolean inv) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
 		int nThreads = Runtime.getRuntime().availableProcessors();
 
 		// Create references to input data
@@ -217,7 +183,7 @@ public class Thickness implements PlugInFilter {
 		IJ.showStatus("EDT transformation 1/3");
 		Step1Thread[] s1t = new Step1Thread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
-			s1t[thread] = new Step1Thread(thread, nThreads, w, h, d, thresh, s,
+			s1t[thread] = new Step1Thread(thread, nThreads, w, h, d, inv, s,
 					data);
 			s1t[thread].start();
 		}
@@ -246,7 +212,8 @@ public class Thickness implements PlugInFilter {
 		IJ.showStatus("EDT transformation 3/3");
 		Step3Thread[] s3t = new Step3Thread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
-			s3t[thread] = new Step3Thread(thread, nThreads, w, h, d, s, data);
+			s3t[thread] = new Step3Thread(thread, nThreads, w, h, d, inv, s,
+					data);
 			s3t[thread].start();
 		}
 		try {
@@ -259,12 +226,12 @@ public class Thickness implements PlugInFilter {
 		// Find the largest distance for scaling
 		// Also fill in the background values.
 		float distMax = 0;
-		int wh = w * h;
+		final int wh = w * h;
 		float dist;
 		for (int k = 0; k < d; k++) {
 			sk = s[k];
 			for (int ind = 0; ind < wh; ind++) {
-				if (((data[k][ind] & 255) < thresh) ^ inverse) {
+				if (((data[k][ind] & 255) < 128) ^ inv) {
 					sk[ind] = 0;
 				} else {
 					dist = (float) Math.sqrt(sk[ind]);
@@ -282,43 +249,46 @@ public class Thickness implements PlugInFilter {
 		int thread, nThreads, w, h, d, thresh;
 		float[][] s;
 		byte[][] data;
+		boolean inv;
 
 		public Step1Thread(int thread, int nThreads, int w, int h, int d,
-				int thresh, float[][] s, byte[][] data) {
+				boolean inv, float[][] s, byte[][] data) {
 			this.thread = thread;
 			this.nThreads = nThreads;
 			this.w = w;
 			this.h = h;
 			this.d = d;
-			this.thresh = thresh;
+			this.inv = inv;
 			this.data = data;
 			this.s = s;
 		}
 
 		public void run() {
+			final int width = this.w;
+			final int height = this.h;
+			final int depth = this.d;
+			final boolean inverse = inv;
 			float[] sk;
-			byte[] dk;
-			int n = w;
-			if (h > n)
-				n = h;
-			if (d > n)
-				n = d;
+			int n = width;
+			if (height > n)
+				n = height;
+			if (depth > n)
+				n = depth;
 			int noResult = 3 * (n + 1) * (n + 1);
 			boolean[] background = new boolean[n];
-			// boolean nonempty;
 			int test, min;
-			for (int k = thread; k < d; k += nThreads) {
-				IJ.showProgress(k / (1. * d));
+			for (int k = thread; k < depth; k += nThreads) {
+				IJ.showProgress(k / (1. * depth));
 				sk = s[k];
-				dk = data[k];
-				for (int j = 0; j < h; j++) {
-					for (int i = 0; i < w; i++) {
-						background[i] = ((dk[i + w * j] & 255) < thresh)
-								^ inverse;
+				final byte[] dk = data[k];
+				for (int j = 0; j < height; j++) {
+					final int wj = width * j;
+					for (int i = 0; i < width; i++) {
+						background[i] = ((dk[i + wj] & 255) < 128) ^ inverse;
 					}
-					for (int i = 0; i < w; i++) {
+					for (int i = 0; i < width; i++) {
 						min = noResult;
-						for (int x = i; x < w; x++) {
+						for (int x = i; x < width; x++) {
 							if (background[x]) {
 								test = i - x;
 								test *= test;
@@ -335,7 +305,7 @@ public class Thickness implements PlugInFilter {
 								break;
 							}
 						}
-						sk[i + w * j] = min;
+						sk[i + wj] = min;
 					}
 				}
 			}
@@ -357,40 +327,43 @@ public class Thickness implements PlugInFilter {
 		}
 
 		public void run() {
+			final int width = this.w;
+			final int height = this.h;
+			final int depth = this.d;
 			float[] sk;
-			int n = w;
-			if (h > n)
-				n = h;
-			if (d > n)
-				n = d;
+			int n = width;
+			if (height > n)
+				n = height;
+			if (depth > n)
+				n = depth;
 			int noResult = 3 * (n + 1) * (n + 1);
 			int[] tempInt = new int[n];
 			int[] tempS = new int[n];
 			boolean nonempty;
 			int test, min, delta;
-			for (int k = thread; k < d; k += nThreads) {
-				IJ.showProgress(k / (1. * d));
+			for (int k = thread; k < depth; k += nThreads) {
+				IJ.showProgress(k / (1. * depth));
 				sk = s[k];
-				for (int i = 0; i < w; i++) {
+				for (int i = 0; i < width; i++) {
 					nonempty = false;
-					for (int j = 0; j < h; j++) {
-						tempS[j] = (int) sk[i + w * j];
+					for (int j = 0; j < height; j++) {
+						tempS[j] = (int) sk[i + width * j];
 						if (tempS[j] > 0)
 							nonempty = true;
 					}
 					if (nonempty) {
-						for (int j = 0; j < h; j++) {
+						for (int j = 0; j < height; j++) {
 							min = noResult;
 							delta = j;
-							for (int y = 0; y < h; y++) {
+							for (int y = 0; y < height; y++) {
 								test = tempS[y] + delta * delta--;
 								if (test < min)
 									min = test;
 							}
 							tempInt[j] = min;
 						}
-						for (int j = 0; j < h; j++) {
-							sk[i + w * j] = tempInt[j];
+						for (int j = 0; j < height; j++) {
+							sk[i + width * j] = tempInt[j];
 						}
 					}
 				}
@@ -402,9 +375,10 @@ public class Thickness implements PlugInFilter {
 		int thread, nThreads, w, h, d;
 		float[][] s;
 		byte[][] data;
+		boolean inv;
 
 		public Step3Thread(int thread, int nThreads, int w, int h, int d,
-				float[][] s, byte[][] data) {
+				boolean inv, float[][] s, byte[][] data) {
 			this.thread = thread;
 			this.nThreads = nThreads;
 			this.w = w;
@@ -412,46 +386,52 @@ public class Thickness implements PlugInFilter {
 			this.d = d;
 			this.s = s;
 			this.data = data;
+			this.inv = inv;
 		}
 
 		public void run() {
+			final int width = this.w;
+			final int height = this.h;
+			final int depth = this.d;
+			final byte[][] daTa = this.data;
+			final boolean inverse = inv;
 			int zStart, zStop, zBegin, zEnd;
 			// float[] sk;
-			int n = w;
-			if (h > n)
-				n = h;
-			if (d > n)
-				n = d;
+			int n = width;
+			if (height > n)
+				n = height;
+			if (depth > n)
+				n = depth;
 			int noResult = 3 * (n + 1) * (n + 1);
 			int[] tempInt = new int[n];
 			int[] tempS = new int[n];
 			boolean nonempty;
 			int test, min, delta;
-			for (int j = thread; j < h; j += nThreads) {
-				IJ.showProgress(j / (1. * h));
-				for (int i = 0; i < w; i++) {
+			for (int j = thread; j < height; j += nThreads) {
+				final int wj = width * j;
+				IJ.showProgress(j / (1. * height));
+				for (int i = 0; i < width; i++) {
 					nonempty = false;
-					for (int k = 0; k < d; k++) {
-						tempS[k] = (int) s[k][i + w * j];
+					for (int k = 0; k < depth; k++) {
+						tempS[k] = (int) s[k][i + wj];
 						if (tempS[k] > 0)
 							nonempty = true;
 					}
 					if (nonempty) {
 						zStart = 0;
-						while ((zStart < (d - 1)) && (tempS[zStart] == 0))
+						while ((zStart < (depth - 1)) && (tempS[zStart] == 0))
 							zStart++;
 						if (zStart > 0)
 							zStart--;
-						zStop = d - 1;
+						zStop = depth - 1;
 						while ((zStop > 0) && (tempS[zStop] == 0))
 							zStop--;
-						if (zStop < (d - 1))
+						if (zStop < (depth - 1))
 							zStop++;
 
-						for (int k = 0; k < d; k++) {
+						for (int k = 0; k < depth; k++) {
 							// Limit to the non-background to save time,
-							if (((data[k][i + w * j] & 255) >= thresh)
-									^ inverse) {
+							if (((daTa[k][i + wj] & 255) >= 128) ^ inverse) {
 								min = noResult;
 								zBegin = zStart;
 								zEnd = zStop;
@@ -469,8 +449,8 @@ public class Thickness implements PlugInFilter {
 								tempInt[k] = min;
 							}
 						}
-						for (int k = 0; k < d; k++) {
-							s[k][i + w * j] = tempInt[k];
+						for (int k = 0; k < depth; k++) {
+							s[k][i + wj] = tempInt[k];
 						}
 					}
 				}
@@ -509,7 +489,10 @@ public class Thickness implements PlugInFilter {
 	 * @param imp
 	 *            3D Distance map (32-bit stack)
 	 */
-	public void DistanceMaptoDistanceRidge(float[][] s) {
+	private void distanceMaptoDistanceRidge(ImagePlus imp, float[][] s) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
 		sNew = new float[d][];
 		for (int k = 0; k < d; k++) {
 			ImageProcessor ipk = new FloatProcessor(w, h);
@@ -528,8 +511,9 @@ public class Thickness implements PlugInFilter {
 		for (int k = 0; k < d; k++) {
 			sk = s[k];
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					int ind = i + w * j;
+					final int ind = i + wj;
 					if (sk[ind] > distMax)
 						distMax = sk[ind];
 				}
@@ -542,8 +526,9 @@ public class Thickness implements PlugInFilter {
 		for (int k = 0; k < d; k++) {
 			sk = s[k];
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					int ind = i + w * j;
+					final int ind = i + wj;
 					occurs[(int) (sk[ind] * sk[ind] + 0.5f)] = true;
 				}
 			}
@@ -581,8 +566,9 @@ public class Thickness implements PlugInFilter {
 			sk = s[k];
 			skNew = sNew[k];
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					int ind = i + w * j;
+					final int ind = i + wj;
 					if (sk[ind] > 0) {
 						notRidgePoint = false;
 						sk0Sq = (int) (sk[ind] * sk[ind] + 0.5f);
@@ -598,6 +584,7 @@ public class Thickness implements PlugInFilter {
 								}
 								for (dy = -1; dy <= 1; dy++) {
 									j1 = j + dy;
+									final int wj1 = w * j1;
 									if ((j1 >= 0) && (j1 < h)) {
 										if (dy == 0) {
 											numCompY = 0;
@@ -615,9 +602,10 @@ public class Thickness implements PlugInFilter {
 												numComp = numCompX + numCompY
 														+ numCompZ;
 												if (numComp > 0) {
-													sk1Sq = (int) (sk1[i1 + w
-															* j1]
-															* sk1[i1 + w * j1] + 0.5f);
+													final float sk1i1wj1 = sk1[i1
+															+ wj1];
+													sk1Sq = (int) (sk1i1wj1
+															* sk1i1wj1 + 0.5f);
 													if (sk1Sq >= rSqTemplate[numComp - 1][sk0SqInd])
 														notRidgePoint = true;
 												}
@@ -664,20 +652,20 @@ public class Thickness implements PlugInFilter {
 	// that a "ball" of radius r1 centered at (dx,dy,dz) includes a "ball"
 	// of radius r centered at the origin. "Ball" refers to a 3D integer grid.
 	int[] scanCube(int dx, int dy, int dz, int[] distSqValues) {
-		int numRadii = distSqValues.length;
+		final int numRadii = distSqValues.length;
 		int[] r1Sq = new int[numRadii];
 		if ((dx == 0) && (dy == 0) && (dz == 0)) {
 			for (int rSq = 0; rSq < numRadii; rSq++) {
 				r1Sq[rSq] = Integer.MAX_VALUE;
 			}
 		} else {
-			int dxAbs = -(int) Math.abs(dx);
-			int dyAbs = -(int) Math.abs(dy);
-			int dzAbs = -(int) Math.abs(dz);
+			final int dxAbs = -(int) Math.abs(dx);
+			final int dyAbs = -(int) Math.abs(dy);
+			final int dzAbs = -(int) Math.abs(dz);
 			for (int rSqInd = 0; rSqInd < numRadii; rSqInd++) {
-				int rSq = distSqValues[rSqInd];
+				final int rSq = distSqValues[rSqInd];
 				int max = 0;
-				int r = 1 + (int) Math.sqrt(rSq);
+				final int r = 1 + (int) Math.sqrt(rSq);
 				int scank, scankj;
 				int dk, dkji;
 				// int iBall;
@@ -723,7 +711,10 @@ public class Thickness implements PlugInFilter {
 	 * 
 	 * @param imp
 	 */
-	public void DistanceRidgetoLocalThickness(float[][] s) {
+	private void distanceRidgetoLocalThickness(ImagePlus imp, float[][] s) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
 		float[] sk;
 		// Count the distance ridge points on each slice
 		int[] nRidge = new int[d];
@@ -733,8 +724,9 @@ public class Thickness implements PlugInFilter {
 			sk = s[k];
 			nr = 0;
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					ind = i + w * j;
+					ind = i + wj;
 					if (sk[ind] > 0)
 						nr++;
 				}
@@ -759,8 +751,9 @@ public class Thickness implements PlugInFilter {
 			rRidgeK = rRidge[k];
 			iR = 0;
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					ind = i + w * j;
+					ind = i + wj;
 					if (sk[ind] > 0) {
 						;
 						iRidgeK[iR] = i;
@@ -797,8 +790,9 @@ public class Thickness implements PlugInFilter {
 		for (int k = 0; k < d; k++) {
 			sk = s[k];
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					ind = i + w * j;
+					ind = i + wj;
 					sk[ind] = (float) (2 * Math.sqrt(sk[ind]));
 				}
 			}
@@ -832,30 +826,29 @@ public class Thickness implements PlugInFilter {
 		}
 
 		public void run() {
-			int i, j;
+			final int width = this.w;
+			final int height = this.h;
+			final int depth = this.d;
+			final float[][] stack = this.s;
 			float[] sk1;// sk,sk1;
 			// Loop through ridge points. For each one, update the local
 			// thickness for
 			// the points within its sphere.
-			float r;
-			int rInt, ind1;
+			int rInt;
 			int iStart, iStop, jStart, jStop, kStart, kStop;
 			float r1SquaredK, r1SquaredJK, r1Squared, s1;
 			int rSquared;
-			int[] iRidgeK, jRidgeK;
-			float[] rRidgeK;
-			for (int k = thread; k < d; k += nThreads) {
+			for (int k = thread; k < depth; k += nThreads) {
 				IJ.showStatus("Local Thickness: processing slice " + (k + 1)
-						+ "/" + d);
-				int nR = nRidge[k];
-				iRidgeK = iRidge[k];
-				jRidgeK = jRidge[k];
-				rRidgeK = rRidge[k];
-				// sk = s[k];
+						+ "/" + depth);
+				final int nR = nRidge[k];
+				final int[] iRidgeK = iRidge[k];
+				final int[] jRidgeK = jRidge[k];
+				final float[] rRidgeK = rRidge[k];
 				for (int iR = 0; iR < nR; iR++) {
-					i = iRidgeK[iR];
-					j = jRidgeK[iR];
-					r = rRidgeK[iR];
+					final int i = iRidgeK[iR];
+					final int j = jRidgeK[iR];
+					final float r = rRidgeK[iR];
 					rSquared = (int) (r * r + 0.5f);
 					rInt = (int) r;
 					if (rInt < r)
@@ -864,31 +857,32 @@ public class Thickness implements PlugInFilter {
 					if (iStart < 0)
 						iStart = 0;
 					iStop = i + rInt;
-					if (iStop >= w)
-						iStop = w - 1;
+					if (iStop >= width)
+						iStop = width - 1;
 					jStart = j - rInt;
 					if (jStart < 0)
 						jStart = 0;
 					jStop = j + rInt;
-					if (jStop >= h)
-						jStop = h - 1;
+					if (jStop >= height)
+						jStop = height - 1;
 					kStart = k - rInt;
 					if (kStart < 0)
 						kStart = 0;
 					kStop = k + rInt;
-					if (kStop >= d)
-						kStop = d - 1;
+					if (kStop >= depth)
+						kStop = depth - 1;
 					for (int k1 = kStart; k1 <= kStop; k1++) {
 						r1SquaredK = (k1 - k) * (k1 - k);
-						sk1 = s[k1];
+						sk1 = stack[k1];
 						for (int j1 = jStart; j1 <= jStop; j1++) {
+							final int widthJ1 = width * j1;
 							r1SquaredJK = r1SquaredK + (j1 - j) * (j1 - j);
 							if (r1SquaredJK <= rSquared) {
 								for (int i1 = iStart; i1 <= iStop; i1++) {
 									r1Squared = r1SquaredJK + (i1 - i)
 											* (i1 - i);
 									if (r1Squared <= rSquared) {
-										ind1 = i1 + w * j1;
+										final int ind1 = i1 + widthJ1;
 										s1 = sk1[ind1];
 										if (rSquared > s1) {
 											// Get a lock on sk1 and check again
@@ -906,7 +900,7 @@ public class Thickness implements PlugInFilter {
 												}
 											}
 										}
-									}// if within shere of DR point
+									}// if within sphere of DR point
 								}// i1
 							}// if k and j components within sphere of DR point
 						}// j1
@@ -938,7 +932,11 @@ public class Thickness implements PlugInFilter {
 	 * </ul>
 	 * 
 	 */
-	public ImagePlus LocalThicknesstoCleanedUpLocalThickness(float[][] s) {
+	private ImagePlus localThicknesstoCleanedUpLocalThickness(ImagePlus imp,
+			float[][] s) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
 		IJ.showStatus("Cleaning up local thickness...");
 		// Create 32 bit floating point stack for output, sNew.
 		ImageStack newStack = new ImageStack(w, h);
@@ -954,8 +952,9 @@ public class Thickness implements PlugInFilter {
 		// s (input data) for an interior non-background point
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					sNew[k][i + w * j] = setFlag(s, i, j, k);
+					sNew[k][i + wj] = setFlag(s, i, j, k, w, h, d);
 				}// i
 			}// j
 		}// k
@@ -972,10 +971,12 @@ public class Thickness implements PlugInFilter {
 		// the averaging.
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					int ind = i + w * j;
+					final int ind = i + wj;
 					if (sNew[k][ind] == -1) {
-						sNew[k][ind] = -averageInteriorNeighbors(s, i, j, k);
+						sNew[k][ind] = -averageInteriorNeighbors(s, i, j, k, w,
+								h, d);
 					}
 				}// i
 			}// j
@@ -983,16 +984,17 @@ public class Thickness implements PlugInFilter {
 		// Fix the negative values and double the results
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
+				final int wj = w * j;
 				for (int i = 0; i < w; i++) {
-					int ind = i + w * j;
+					final int ind = i + wj;
 					sNew[k][ind] = (float) Math.abs(sNew[k][ind]);
 				}// i
 			}// j
 		}// k
 		IJ.showStatus("Clean Up Local Thickness complete");
-		String title = stripExtension(baseImp.getTitle());
+		String title = stripExtension(imp.getTitle());
 		ImagePlus impOut = new ImagePlus(title + "_CL", newStack);
-		double vW = baseImp.getCalibration().pixelWidth;
+		final double vW = imp.getCalibration().pixelWidth;
 		// calibrate the pixel values to pixel width
 		// so that thicknesses represent real units (not pixels)
 		for (int z = 0; z < d; z++) {
@@ -1004,204 +1006,204 @@ public class Thickness implements PlugInFilter {
 		return impOut;
 	}
 
-	float setFlag(float[][] s, int i, int j, int k) {
-		// !!! null pointer here
+	float setFlag(float[][] s, int i, int j, int k, int w, int h, int d) {
 		if (s[k][i + w * j] == 0)
 			return 0;
 		// change 1
-		if (look(s, i, j, k - 1) == 0)
+		if (look(s, i, j, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i, j, k + 1) == 0)
+		if (look(s, i, j, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i, j - 1, k) == 0)
+		if (look(s, i, j - 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i, j + 1, k) == 0)
+		if (look(s, i, j + 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j, k) == 0)
+		if (look(s, i - 1, j, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j, k) == 0)
+		if (look(s, i + 1, j, k, w, h, d) == 0)
 			return -1;
 		// change 1 before plus
-		if (look(s, i, j + 1, k - 1) == 0)
+		if (look(s, i, j + 1, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i, j + 1, k + 1) == 0)
+		if (look(s, i, j + 1, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j - 1, k) == 0)
+		if (look(s, i + 1, j - 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j + 1, k) == 0)
+		if (look(s, i + 1, j + 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j, k + 1) == 0)
+		if (look(s, i - 1, j, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j, k + 1) == 0)
+		if (look(s, i + 1, j, k + 1, w, h, d) == 0)
 			return -1;
 		// change 1 before minus
-		if (look(s, i, j - 1, k - 1) == 0)
+		if (look(s, i, j - 1, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i, j - 1, k + 1) == 0)
+		if (look(s, i, j - 1, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j - 1, k) == 0)
+		if (look(s, i - 1, j - 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j + 1, k) == 0)
+		if (look(s, i - 1, j + 1, k, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j, k - 1) == 0)
+		if (look(s, i - 1, j, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j, k - 1) == 0)
+		if (look(s, i + 1, j, k - 1, w, h, d) == 0)
 			return -1;
 		// change 3, k+1
-		if (look(s, i + 1, j + 1, k + 1) == 0)
+		if (look(s, i + 1, j + 1, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j - 1, k + 1) == 0)
+		if (look(s, i + 1, j - 1, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j + 1, k + 1) == 0)
+		if (look(s, i - 1, j + 1, k + 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j - 1, k + 1) == 0)
+		if (look(s, i - 1, j - 1, k + 1, w, h, d) == 0)
 			return -1;
 		// change 3, k-1
-		if (look(s, i + 1, j + 1, k - 1) == 0)
+		if (look(s, i + 1, j + 1, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i + 1, j - 1, k - 1) == 0)
+		if (look(s, i + 1, j - 1, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j + 1, k - 1) == 0)
+		if (look(s, i - 1, j + 1, k - 1, w, h, d) == 0)
 			return -1;
-		if (look(s, i - 1, j - 1, k - 1) == 0)
+		if (look(s, i - 1, j - 1, k - 1, w, h, d) == 0)
 			return -1;
 		return s[k][i + w * j];
 	}
 
-	float averageInteriorNeighbors(float[][] s, int i, int j, int k) {
+	float averageInteriorNeighbors(float[][] s, int i, int j, int k, int w,
+			int h, int d) {
 		int n = 0;
 		float sum = 0;
 		// change 1
-		float value = lookNew(i, j, k - 1);
+		float value = lookNew(i, j, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i, j, k + 1);
+		value = lookNew(i, j, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i, j - 1, k);
+		value = lookNew(i, j - 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i, j + 1, k);
+		value = lookNew(i, j + 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j, k);
+		value = lookNew(i - 1, j, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j, k);
+		value = lookNew(i + 1, j, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
 		// change 1 before plus
-		value = lookNew(i, j + 1, k - 1);
+		value = lookNew(i, j + 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i, j + 1, k + 1);
+		value = lookNew(i, j + 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j - 1, k);
+		value = lookNew(i + 1, j - 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j + 1, k);
+		value = lookNew(i + 1, j + 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j, k + 1);
+		value = lookNew(i - 1, j, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j, k + 1);
+		value = lookNew(i + 1, j, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
 		// change 1 before minus
-		value = lookNew(i, j - 1, k - 1);
+		value = lookNew(i, j - 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i, j - 1, k + 1);
+		value = lookNew(i, j - 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j - 1, k);
+		value = lookNew(i - 1, j - 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j + 1, k);
+		value = lookNew(i - 1, j + 1, k, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j, k - 1);
+		value = lookNew(i - 1, j, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j, k - 1);
+		value = lookNew(i + 1, j, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
 		// change 3, k+1
-		value = lookNew(i + 1, j + 1, k + 1);
+		value = lookNew(i + 1, j + 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j - 1, k + 1);
+		value = lookNew(i + 1, j - 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j + 1, k + 1);
+		value = lookNew(i - 1, j + 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j - 1, k + 1);
+		value = lookNew(i - 1, j - 1, k + 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
 		// change 3, k-1
-		value = lookNew(i + 1, j + 1, k - 1);
+		value = lookNew(i + 1, j + 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i + 1, j - 1, k - 1);
+		value = lookNew(i + 1, j - 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j + 1, k - 1);
+		value = lookNew(i - 1, j + 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
 		}
-		value = lookNew(i - 1, j - 1, k - 1);
+		value = lookNew(i - 1, j - 1, k - 1, w, h, d);
 		if (value > 0) {
 			n++;
 			sum += value;
@@ -1211,7 +1213,7 @@ public class Thickness implements PlugInFilter {
 		return s[k][i + w * j];
 	}
 
-	float look(float[][] s, int i, int j, int k) {
+	float look(float[][] s, int i, int j, int k, int w, int h, int d) {
 		if ((i < 0) || (i >= w))
 			return -1;
 		if ((j < 0) || (j >= h))
@@ -1222,7 +1224,7 @@ public class Thickness implements PlugInFilter {
 	}
 
 	// A positive result means this is an interior, non-background, point.
-	float lookNew(int i, int j, int k) {
+	float lookNew(int i, int j, int k, int w, int h, int d) {
 		if ((i < 0) || (i >= w))
 			return -1;
 		if ((j < 0) || (j >= h))
@@ -1237,18 +1239,24 @@ public class Thickness implements PlugInFilter {
 	 * 
 	 * @param imp
 	 *            32-bit thickness image
+	 * @param inverse
+	 *            true if Tb.Sp, false if Tb.Th
 	 */
-	private void meanStdDev(ImagePlus imp) {
+	private void meanStdDev(ImagePlus imp, boolean inverse) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		final int wh = w * h;
 		String units = imp.getCalibration().getUnits();
-
 		ImageStack stack = imp.getStack();
 		long pixCount = 0;
 		double sumThick = 0;
 		double maxThick = 0;
-		for (int s = 1; s <= stack.getSize(); s++) {
-			float[] slicePixels = (float[]) stack.getPixels(s);
-			for (int p = 0; p < slicePixels.length; p++) {
-				double pixVal = slicePixels[p];
+
+		for (int s = 1; s <= d; s++) {
+			final float[] slicePixels = (float[]) stack.getPixels(s);
+			for (int p = 0; p < wh; p++) {
+				final double pixVal = slicePixels[p];
 				if (pixVal > 0) {
 					sumThick += pixVal;
 					maxThick = Math.max(maxThick, pixVal);
@@ -1256,16 +1264,16 @@ public class Thickness implements PlugInFilter {
 				}
 			}
 		}
-		double meanThick = sumThick / pixCount;
+		final double meanThick = sumThick / pixCount;
 
 		double sumSquares = 0;
-		for (int s = 1; s <= stack.getSize(); s++) {
-			float[] slicePixels = (float[]) stack.getPixels(s);
-			for (int p = 0; p < slicePixels.length; p++) {
-				double pixVal = slicePixels[p];
+		for (int s = 1; s <= d; s++) {
+			final float[] slicePixels = (float[]) stack.getPixels(s);
+			for (int p = 0; p < wh; p++) {
+				final double pixVal = slicePixels[p];
 				if (pixVal > 0) {
-					double d = meanThick - pixVal;
-					sumSquares += d * d;
+					final double residual = meanThick - pixVal;
+					sumSquares += residual * residual;
 				}
 			}
 		}
@@ -1274,30 +1282,34 @@ public class Thickness implements PlugInFilter {
 		ResultInserter ri = ResultInserter.getInstance();
 		if (!inverse) {
 			// trab thickness
-			ri.setResultInRow(baseImp, "Tb.Th Mean (" + units + ")", meanThick);
-			ri.setResultInRow(baseImp, "Tb.Th Std Dev (" + units + ")", stDev);
-			ri.setResultInRow(baseImp, "Tb.Th Max (" + units + ")", maxThick);
+			ri.setResultInRow(imp, "Tb.Th Mean (" + units + ")", meanThick);
+			ri.setResultInRow(imp, "Tb.Th Std Dev (" + units + ")", stDev);
+			ri.setResultInRow(imp, "Tb.Th Max (" + units + ")", maxThick);
 		} else {
 			// trab separation
-			ri.setResultInRow(baseImp, "Tb.Sp Mean (" + units + ")", meanThick);
-			ri.setResultInRow(baseImp, "Tb.Sp Std Dev (" + units + ")", stDev);
-			ri.setResultInRow(baseImp, "Tb.Sp Max (" + units + ")", maxThick);
+			ri.setResultInRow(imp, "Tb.Sp Mean (" + units + ")", meanThick);
+			ri.setResultInRow(imp, "Tb.Sp Std Dev (" + units + ")", stDev);
+			ri.setResultInRow(imp, "Tb.Sp Max (" + units + ")", maxThick);
 		}
 		ri.updateTable();
 		return;
 	}
 
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Options");
-		gd.addCheckbox("Thickness", true);
-		gd.addCheckbox("Spacing", false);
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			return false;
-		} else {
-			doThickness = gd.getNextBoolean();
-			doSpacing = gd.getNextBoolean();
-			return true;
-		}
+	/**
+	 * Get a local thickness map from an ImagePlus
+	 * 
+	 * @param imp
+	 *            Binary ImagePlus
+	 * @param inv
+	 *            false if you want the thickness of the foreground and true if
+	 *            you want the thickness of the background
+	 * @return 32-bit ImagePlus containing a local thickness map
+	 */
+	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
+		float[][] s = geometryToDistanceMap(imp, inv);
+		distanceMaptoDistanceRidge(imp, s);
+		distanceRidgetoLocalThickness(imp, s);
+		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
+		return impLTC;
 	}
 }

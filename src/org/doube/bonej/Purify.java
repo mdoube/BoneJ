@@ -254,8 +254,8 @@ public class Purify implements PlugIn {
 	 * @return byte[] work array
 	 */
 	private byte[][] makeWorkArray(ImagePlus imp) {
-		int s = imp.getStackSize();
-		int p = imp.getWidth() * imp.getHeight();
+		final int s = imp.getStackSize();
+		final int p = imp.getWidth() * imp.getHeight();
 		byte[][] workArray = new byte[s][p];
 		ImageStack stack = imp.getStack();
 		for (int z = 0; z < s; z++) {
@@ -366,16 +366,19 @@ public class Purify implements PlugIn {
 	 * @return particleLabels int[] array containing label associating every
 	 *         pixel with a particle
 	 */
-	private int[][] firstIDAttribution(byte[][] workArray, int phase) {
+	private int[][] firstIDAttribution(byte[][] workArray, final int phase) {
+		final int w = width;
+		final int h = height;
+		final int d = nSlices;
 		IJ.showStatus("Finding " + sPhase + " structures");
 		int[][] particleLabels = new int[nSlices][sliceSize];
 		ID = 1;
 
 		if (phase == foreground) {
-			for (int z = 0; z < nSlices; z++) {
-				for (int y = 0; y < height; y++) {
-					int rowIndex = y * width;
-					for (int x = 0; x < width; x++) {
+			for (int z = 0; z < d; z++) {
+				for (int y = 0; y < h; y++) {
+					int rowIndex = y * w;
+					for (int x = 0; x < w; x++) {
 						int arrayIndex = rowIndex + x;
 						if (workArray[z][arrayIndex] == phase) {
 							particleLabels[z][arrayIndex] = ID;
@@ -385,10 +388,10 @@ public class Purify implements PlugIn {
 							for (int vZ = z - 1; vZ <= z + 1; vZ++) {
 								for (int vY = y - 1; vY <= y + 1; vY++) {
 									for (int vX = x - 1; vX <= x + 1; vX++) {
-										if (withinBounds(vX, vY, vZ, 0, nSlices)) {
-											int offset = getOffset(vX, vY);
+										if (withinBounds(vX, vY, vZ, 0, d)) {
+											final int offset = getOffset(vX, vY);
 											if (workArray[vZ][offset] == phase) {
-												int tagv = particleLabels[vZ][offset];
+												final int tagv = particleLabels[vZ][offset];
 												if (tagv != 0 && tagv < minTag) {
 													minTag = tagv;
 												}
@@ -407,14 +410,14 @@ public class Purify implements PlugIn {
 						}
 					}
 				}
-				IJ.showProgress(z, nSlices);
+				IJ.showProgress(z, d);
 			}
 			ID++;
 		} else if (phase == background) {
-			for (int z = 0; z < nSlices; z++) {
-				for (int y = 0; y < height; y++) {
-					int rowIndex = y * width;
-					for (int x = 0; x < width; x++) {
+			for (int z = 0; z < d; z++) {
+				for (int y = 0; y < h; y++) {
+					int rowIndex = y * w;
+					for (int x = 0; x < w; x++) {
 						int arrayIndex = rowIndex + x;
 						if (workArray[z][arrayIndex] == phase) {
 							particleLabels[z][arrayIndex] = ID;
@@ -447,10 +450,10 @@ public class Purify implements PlugIn {
 									nZ = z + 1;
 									break;
 								}
-								if (withinBounds(nX, nY, nZ, 0, nSlices)) {
-									int offset = getOffset(nX, nY);
+								if (withinBounds(nX, nY, nZ, 0, d)) {
+									final int offset = getOffset(nX, nY);
 									if (workArray[nZ][offset] == phase) {
-										int tagv = particleLabels[nZ][offset];
+										final int tagv = particleLabels[nZ][offset];
 										if (tagv != 0 && tagv < minTag) {
 											minTag = tagv;
 										}
@@ -467,7 +470,7 @@ public class Purify implements PlugIn {
 						}
 					}
 				}
-				IJ.showProgress(z, nSlices);
+				IJ.showProgress(z, d);
 			}
 			ID++;
 		}
@@ -488,16 +491,19 @@ public class Purify implements PlugIn {
 	private void connectStructures(byte[][] workArray, int[][] particleLabels,
 			int phase, int[][] scanRanges) {
 		IJ.showStatus("Connecting " + sPhase + " structures" + chunkString);
+		final int w = width;
+		final int h = height;
+		final int d = nSlices;
 		for (int c = 0; c < scanRanges[0].length; c++) {
-			int sR0 = scanRanges[0][c];
-			int sR1 = scanRanges[1][c];
-			int sR2 = scanRanges[2][c];
-			int sR3 = scanRanges[3][c];
+			final int sR0 = scanRanges[0][c];
+			final int sR1 = scanRanges[1][c];
+			final int sR2 = scanRanges[2][c];
+			final int sR3 = scanRanges[3][c];
 			if (phase == foreground) {
 				for (int z = sR0; z < sR1; z++) {
-					for (int y = 0; y < height; y++) {
-						int rowIndex = y * width;
-						for (int x = 0; x < width; x++) {
+					for (int y = 0; y < h; y++) {
+						int rowIndex = y * w;
+						for (int x = 0; x < w; x++) {
 							int arrayIndex = rowIndex + x;
 							if (workArray[z][arrayIndex] == phase
 									&& particleLabels[z][arrayIndex] > 1) {
@@ -548,13 +554,13 @@ public class Purify implements PlugIn {
 					}
 					IJ.showStatus("Connecting foreground structures"
 							+ chunkString);
-					IJ.showProgress(z, nSlices);
+					IJ.showProgress(z, d);
 				}
 			} else if (phase == background) {
 				for (int z = sR0; z < sR1; z++) {
-					for (int y = 0; y < height; y++) {
-						int rowIndex = y * width;
-						for (int x = 0; x < width; x++) {
+					for (int y = 0; y < h; y++) {
+						int rowIndex = y * w;
+						for (int x = 0; x < w; x++) {
 							int arrayIndex = rowIndex + x;
 							if (workArray[z][arrayIndex] == phase) {
 								int minTag = particleLabels[z][arrayIndex];
@@ -641,7 +647,7 @@ public class Purify implements PlugIn {
 					}
 					IJ.showStatus("Connecting background structures"
 							+ chunkString);
-					IJ.showProgress(z, nSlices + 1);
+					IJ.showProgress(z, d + 1);
 				}
 			}
 		}
@@ -695,18 +701,21 @@ public class Purify implements PlugIn {
 	private long[] getParticleSizes(byte[][] workArray, int[][] particleLabels,
 			int phase) {
 		IJ.showStatus("Getting " + sPhase + " particle sizes");
+		final int w = width;
+		final int h = height;
+		final int d = nSlices;
 		long[] particleSizes = new long[ID];
-		for (int z = 0; z < nSlices; z++) {
+		for (int z = 0; z < d; z++) {
 			int arrayIndex = 0;
-			for (int y = 0; y < height; y++) {
-				for (int x = 0; x < width; x++) {
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) {
 					if (workArray[z][arrayIndex] == phase) {
 						particleSizes[particleLabels[z][arrayIndex]]++;
 					}
 					arrayIndex++;
 				}
 			}
-			IJ.showProgress(z, nSlices);
+			IJ.showProgress(z, d);
 		}
 		return particleSizes;
 	}
@@ -729,11 +738,15 @@ public class Purify implements PlugIn {
 	private void touchEdges(byte[][] workArray, int[][] particleLabels,
 			long[] particleSizes, int phase) {
 		String status = "Background particles touching ";
+		final int w = width;
+		final int h = height;
+		final int d = nSlices;
 		// find the label associated with the biggest
 		// particle in phase
 		long maxVoxCount = 0;
 		int biggestParticle = 0;
-		for (int i = 0; i < particleSizes.length; i++) {
+		final int nPartSizes = particleSizes.length;
+		for (int i = 0; i < nPartSizes; i++) {
 			if (particleSizes[i] > maxVoxCount) {
 				maxVoxCount = particleSizes[i];
 				biggestParticle = i;
@@ -746,93 +759,93 @@ public class Purify implements PlugIn {
 
 		// up
 		z = 0;
-		for (y = 0; y < height; y++) {
+		for (y = 0; y < h; y++) {
 			IJ.showStatus(status + "top");
-			IJ.showProgress(y, height);
-			int rowOffset = y * width;
-			for (x = 0; x < width; x++) {
+			IJ.showProgress(y, h);
+			int rowOffset = y * w;
+			for (x = 0; x < w; x++) {
 				int offset = rowOffset + x;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
 
 		// down
-		z = nSlices - 1;
-		for (y = 0; y < height; y++) {
+		z = d - 1;
+		for (y = 0; y < h; y++) {
 			IJ.showStatus(status + "bottom");
-			IJ.showProgress(y, height);
-			int rowOffset = y * width;
-			for (x = 0; x < width; x++) {
+			IJ.showProgress(y, h);
+			int rowOffset = y * w;
+			for (x = 0; x < w; x++) {
 				int offset = rowOffset + x;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
 
 		// left
 		x = 0;
-		for (z = 0; z < nSlices; z++) {
+		for (z = 0; z < d; z++) {
 			IJ.showStatus(status + "left");
-			IJ.showProgress(z, nSlices);
-			for (y = 0; y < height; y++) {
-				int offset = y * width;
+			IJ.showProgress(z, d);
+			for (y = 0; y < h; y++) {
+				int offset = y * w;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
 
 		// right
-		x = width - 1;
-		for (z = 0; z < nSlices; z++) {
+		x = w - 1;
+		for (z = 0; z < d; z++) {
 			IJ.showStatus(status + "right");
-			IJ.showProgress(z, nSlices);
-			for (y = 0; y < height; y++) {
-				int offset = y * width + x;
+			IJ.showProgress(z, d);
+			for (y = 0; y < h; y++) {
+				int offset = y * w + x;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
 
 		// front
-		y = height - 1;
-		int rowOffset = y * width;
-		for (z = 0; z < nSlices; z++) {
+		y = h - 1;
+		int rowOffset = y * w;
+		for (z = 0; z < d; z++) {
 			IJ.showStatus(status + "front");
-			IJ.showProgress(z, nSlices);
-			for (x = 0; x < width; x++) {
+			IJ.showProgress(z, d);
+			for (x = 0; x < w; x++) {
 				int offset = rowOffset + x;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
 
 		// back
 		y = 0;
-		for (z = 0; z < nSlices; z++) {
+		for (z = 0; z < d; z++) {
 			IJ.showStatus(status + "back");
-			IJ.showProgress(z, nSlices);
-			for (x = 0; x < width; x++) {
+			IJ.showProgress(z, d);
+			for (x = 0; x < w; x++) {
 				int offset = x;
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, nSlices);
+							biggestParticle, 0, d);
 				}
 			}
 		}
@@ -850,8 +863,13 @@ public class Purify implements PlugIn {
 	 */
 	private void removeSmallParticles(byte[][] workArray,
 			int[][] particleLabels, long[] particleSizes, int phase) {
+		final int w = width;
+		final int h = height;
+		final int d = nSlices;
+		final int s = sliceSize;
 		long maxVoxCount = 0;
-		for (int i = 0; i < particleSizes.length; i++) {
+		final int nPartSizes = particleSizes.length;
+		for (int i = 0; i < nPartSizes; i++) {
 			if (particleSizes[i] > maxVoxCount) {
 				maxVoxCount = particleSizes[i];
 			}
@@ -859,8 +877,8 @@ public class Purify implements PlugIn {
 		if (phase == foreground) {
 			// go through work array and turn all
 			// smaller foreground particles into background (0)
-			for (int z = 0; z < nSlices; z++) {
-				for (int i = 0; i < sliceSize; i++) {
+			for (int z = 0; z < d; z++) {
+				for (int i = 0; i < s; i++) {
 					if (workArray[z][i] == foreground) {
 						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
 							workArray[z][i] = background;
@@ -868,13 +886,13 @@ public class Purify implements PlugIn {
 					}
 				}
 				IJ.showStatus("Removing foreground particles");
-				IJ.showProgress(z, nSlices);
+				IJ.showProgress(z, d);
 			}
 		} else if (phase == background) {
 			// go through work array and turn all
 			// smaller background particles into foreground
-			for (int z = 0; z < nSlices; z++) {
-				for (int i = 0; i < sliceSize; i++) {
+			for (int z = 0; z < d; z++) {
+				for (int i = 0; i < s; i++) {
 					if (workArray[z][i] == background) {
 						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
 							workArray[z][i] = foreground;
@@ -882,7 +900,7 @@ public class Purify implements PlugIn {
 					}
 				}
 				IJ.showStatus("Removing background particles");
-				IJ.showProgress(z, nSlices);
+				IJ.showProgress(z, d);
 			}
 		}
 		return;
