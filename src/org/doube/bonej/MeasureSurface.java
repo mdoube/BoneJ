@@ -58,12 +58,17 @@ public class MeasureSurface implements PlugIn {
 		double area = getSurfaceArea(points);
 		ri.setResultInRow(imp,
 				"BS (" + imp.getCalibration().getUnits() + "^2)", area);
-
+		ri.updateTable();
+		
+		if (points.size() == 0){
+			IJ.error("Isosurface contains no points");
+			return;
+		}
+		
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
 		}
 		points.clear();
-		ri.updateTable();
 		return;
 	}
 
@@ -83,7 +88,6 @@ public class MeasureSurface implements PlugIn {
 		// Add the mesh
 		Content c = univ.addCustomMesh(mesh, title);
 		Color3f green = new Color3f(0.0f, 0.5f, 0.0f);
-		c.getColor();
 		c.getColor();
 		c.setColor(green);
 		c.setTransparency((float) 0.33);
