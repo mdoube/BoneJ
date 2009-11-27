@@ -96,11 +96,11 @@ public class Connectivity implements PlugIn {
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)){
+		if (!ic.isBinary(imp)) {
 			IJ.error("Connectivity requires a binary image.");
 			return;
 		}
-		
+
 		double sumEuler = getSumEuler(imp);
 
 		double deltaChi = getDeltaChi(imp, sumEuler);
@@ -115,13 +115,13 @@ public class Connectivity implements PlugIn {
 					+ "particles or enclosed cavities.\n\n"
 					+ "Try running Purify prior to Connectivity.");
 		}
-		
+
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Euler ch.", (double) sumEuler);
 		ri.setResultInRow(imp, "Δ(χ)", deltaChi);
 		ri.setResultInRow(imp, "Connectivity", connectivity);
-		ri.setResultInRow(imp, "Conn.D ("
-				+ imp.getCalibration().getUnit() + "^-3)", connDensity);
+		ri.setResultInRow(imp, "Conn.D (" + imp.getCalibration().getUnit()
+				+ "^-3)", connDensity);
 		ri.updateTable();
 		return;
 	}
@@ -234,7 +234,8 @@ public class Connectivity implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 8-pixel octant (0 if out of image)
 	 */
-	private byte[] getOctant(ImageStack stack, int x, int y, int z) {
+	private byte[] getOctant(final ImageStack stack, final int x, final int y,
+			final int z) {
 		byte[] octant = new byte[9]; // index 0 is counter to determine octant
 		// emptiness, index 8 is at (x,y,z)
 
@@ -267,7 +268,7 @@ public class Connectivity implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private byte getPixel(ImageStack stack, int x, int y, int z) {
+	private byte getPixel(final ImageStack stack, int x, int y, int z) {
 		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0
 				&& z < this.depth)
 			return ((byte[]) stack.getPixels(z + 1))[y * this.width + x];
@@ -290,7 +291,7 @@ public class Connectivity implements PlugIn {
 	 *            Euler LUT
 	 * @return or false if the point is Euler invariant or not
 	 */
-	int getDeltaEuler(byte[] octant, int[] LUT) {
+	private int getDeltaEuler(final byte[] octant, final int[] LUT) {
 		int deltaEuler = 0;
 		if (octant[0] == 0) { // check to make sure there is a foreground voxel
 			// in this octant
@@ -387,7 +388,7 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return number of voxel vertices intersecting with stack vertices
 	 */
-	private long getStackVertices(ImageStack stack) {
+	private long getStackVertices(final ImageStack stack) {
 		long nStackVertices = 0;
 		for (int z = 0; z < stack.getSize(); z += stack.getSize() - 1) {
 			for (int y = 0; y < stack.getHeight(); y += stack.getHeight() - 1) {
@@ -407,10 +408,10 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return number of voxel edges intersecting with stack edges
 	 */
-	private long getStackEdges(ImageStack stack) {
-		int width = stack.getWidth();
-		int height = stack.getHeight();
-		int depth = stack.getSize();
+	private long getStackEdges(final ImageStack stack) {
+		final int width = stack.getWidth();
+		final int height = stack.getHeight();
+		final int depth = stack.getSize();
 		long nStackEdges = 0;
 
 		// vertex voxels contribute 3 edges
@@ -457,11 +458,11 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return number of voxel faces intersecting with stack faces
 	 */
-	private long getStackFaces(ImageStack stack) {
+	private long getStackFaces(final ImageStack stack) {
 		long nStackFaces = 0;
-		int width = stack.getWidth();
-		int height = stack.getHeight();
-		int depth = stack.getSize();
+		final int width = stack.getWidth();
+		final int height = stack.getHeight();
+		final int depth = stack.getSize();
 
 		// vertex voxels contribute 3 faces
 		// this could be taken out into a variable to avoid recalculating it
@@ -510,11 +511,11 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return Number of voxel vertices intersecting stack faces
 	 */
-	private long getFaceVertices(ImageStack stack) {
+	private long getFaceVertices(final ImageStack stack) {
 		long nFaceVertices = 0;
-		int width = stack.getWidth();
-		int height = stack.getHeight();
-		int depth = stack.getSize();
+		final int width = stack.getWidth();
+		final int height = stack.getHeight();
+		final int depth = stack.getSize();
 
 		// top and bottom faces (all 4 edges)
 		for (int z = 0; z < depth; z += depth - 1) {
@@ -579,11 +580,11 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return number of intersections between voxel edges and stack faces
 	 */
-	private long getFaceEdges(ImageStack stack) {
+	private long getFaceEdges(final ImageStack stack) {
 		long nFaceEdges = 0;
-		int width = stack.getWidth();
-		int height = stack.getHeight();
-		int depth = stack.getSize();
+		final int width = stack.getWidth();
+		final int height = stack.getHeight();
+		final int depth = stack.getSize();
 
 		// top and bottom faces (all 4 edges)
 		// check 2 edges per voxel
@@ -664,11 +665,11 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return number of voxel vertices intersecting stack edges
 	 */
-	private long getEdgeVertices(ImageStack stack) {
+	private long getEdgeVertices(final ImageStack stack) {
 		long nEdgeVertices = 0;
-		int width = stack.getWidth();
-		int height = stack.getHeight();
-		int depth = stack.getSize();
+		final int width = stack.getWidth();
+		final int height = stack.getHeight();
+		final int depth = stack.getSize();
 
 		// vertex voxels contribute 1 edge vertex each
 		// this could be taken out into a variable to avoid recalculating it
@@ -734,7 +735,7 @@ public class Connectivity implements PlugIn {
 	 * @param stack
 	 * @return edgeCorrection for subtraction from the stack's Euler number
 	 */
-	private double correctForEdges(ImageStack stack) {
+	private double correctForEdges(final ImageStack stack) {
 
 		long f = getStackVertices(stack);
 		long e = getStackEdges(stack) + 3 * f;
@@ -927,7 +928,7 @@ public class Connectivity implements PlugIn {
 			for (int z = this.thread; z <= this.depth; z += this.nThreads) {
 				for (int y = 0; y <= this.height; y++) {
 					for (int x = 0; x <= this.width; x++) {
-						byte[] octant = getOctant(this.stackT, x, y, z);
+						final byte[] octant = getOctant(this.stackT, x, y, z);
 						if (octant[0] > 0) { // this octant is not empty
 							deltaEuler = getDeltaEuler(octant, this.eulerLUT);
 							this.sumEulerInt[this.thread] += deltaEuler;
