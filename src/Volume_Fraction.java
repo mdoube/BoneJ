@@ -8,67 +8,44 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.measure.Calibration;
 import ij.process.ImageProcessor;
-import ij.process.ImageStatistics;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.gui.*;
 
-public class Volume_Fraction implements PlugInFilter {
-	ImagePlus imp;
+public class Volume_Fraction implements PlugIn {
 
-	short minT, maxT;
-
-	protected ImageStack stack;
-
-	boolean showMask = true;
-
-	public int setup(String arg, ImagePlus imp) {
-		if (imp == null) {
-			IJ.noImage();
-			return DONE;
-		}
-		stack = imp.getStack();
-		this.imp = imp;
-		setThreshold(imp);
-		return DOES_8G + DOES_16 + DOES_32;
-	}
-
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
-		int startSlice = 1;
-		int endSlice = stack.getSize();
-		GenericDialog gd = new GenericDialog("Limit Slices");
-		gd.addNumericField("Start Slice:", startSlice, 0);
-		gd.addNumericField("End Slice:", endSlice, 0);
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			IJ.error("PlugIn canceled!");
+		final ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
 			return;
 		}
-		startSlice = (int) gd.getNextNumber();
-		endSlice = (int) gd.getNextNumber();
+		ImageProcessor ip = imp.getProcessor();
+		final ImageStack stack = imp.getImageStack();
+		final ImageProcessor mask = ip.getMask();
+		final boolean hasMask = (mask != null);
 		Rectangle r = ip.getRoi();
-		ImageProcessor mask = ip.getMask();
-		boolean hasMask = (mask != null);
-		if (hasMask && showMask) {
-			(new ImagePlus("The Mask", mask)).show();
-		}
-
-		int rLeft = r.x;
-		int rTop = r.y;
-		int rRight = rLeft + r.width;
-		int rBottom = rTop + r.height;
+		final int rLeft = r.x;
+		final int rTop = r.y;
+		final int rRight = rLeft + r.width;
+		final int rBottom = rTop + r.height;
+		final int nSlices = imp.getStackSize();
 
 		long volTotal = 0;
 		long volBone = 0;
-		for (int s = startSlice; s <= endSlice; s++) {
+		final double[] thresholds = setThreshold(imp);
+		final double minT = thresholds[0];
+		final double maxT = thresholds[1];
+		for (int s = 1; s <= nSlices; s++) {
 			ImageProcessor ipSlice = stack.getProcessor(s);
 			for (int v = rTop; v < rBottom; v++) {
+				final int vrTop = v - rTop;
 				for (int u = rLeft; u < rRight; u++) {
-					if (!hasMask || mask.getPixel(u - rLeft, v - rTop) > 0) {
+					if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
 						volTotal++;
-						if (ipSlice.getPixel(u, v) >= minT
-								&& ipSlice.getPixel(u, v) <= maxT) {
+						final double pixel = ipSlice.get(u, v);
+						if (pixel >= minT && pixel <= maxT) {
 							volBone++;
 						}
 					}
@@ -77,34 +54,29 @@ public class Volume_Fraction implements PlugInFilter {
 		}
 		double p = (double) volBone / (double) volTotal;
 		Calibration cal = imp.getCalibration();
-		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth; 
+		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "BV ("+cal.getUnits()+"^3)", volBone * voxelVol);
-		ri.setResultInRow(imp, "TV ("+cal.getUnits()+"^3)", volTotal * voxelVol);
+		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "^3)", volBone
+				* voxelVol);
+		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "^3)", volTotal
+				* voxelVol);
 		ri.setResultInRow(imp, "BV/TV", p);
 		ri.updateTable();
 		return;
 	}
 
-	private void setThreshold(ImagePlus imp) {
-		if (imp != null
-				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
-			ImageStatistics stats = imp.getStatistics();
-			if (stats.histogram[0] + stats.histogram[255] == stats.pixelCount) {
-				minT = 128;
-				maxT = 255;
-			} else {
-				IJ.run("Threshold...");
-				new WaitForUserDialog("Set the threshold, then click OK.")
-						.show();
-				minT = (short) imp.getProcessor().getMinThreshold();
-				maxT = (short) imp.getProcessor().getMaxThreshold();
-			}
+	private double[] setThreshold(ImagePlus imp) {
+		double[] thresholds = new double[2];
+		ImageCheck ic = new ImageCheck();
+		if (ic.isBinary(imp)) {
+			thresholds[0] = 128;
+			thresholds[1] = 255;
 		} else {
 			IJ.run("Threshold...");
 			new WaitForUserDialog("Set the threshold, then click OK.").show();
-			minT = (short) imp.getProcessor().getMinThreshold();
-			maxT = (short) imp.getProcessor().getMaxThreshold();
+			thresholds[0] = imp.getProcessor().getMinThreshold();
+			thresholds[1] = imp.getProcessor().getMaxThreshold();
 		}
+		return thresholds;
 	}
 }
