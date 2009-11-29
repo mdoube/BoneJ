@@ -286,8 +286,11 @@ public class Slice_Geometry implements PlugIn {
 	 * @param imp
 	 */
 	private void calculateMoments(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		Rectangle r = stack.getRoi();
+		final ImageStack stack = imp.getImageStack();
+		final Rectangle r = stack.getRoi();
+		final int d = stack.getSize();
+		final double pMin = this.min;
+		final double pMax = this.max;
 		// START OF Ix AND Iy CALCULATION
 		this.Sx = new double[this.al];
 		this.Sy = new double[this.al];
@@ -298,9 +301,9 @@ public class Slice_Geometry implements PlugIn {
 		this.Mxx = new double[this.al];
 		this.Mxy = new double[this.al];
 		this.theta = new double[this.al];
-		for (int s = 1; s <= stack.getSize(); s++) {
+		for (int s = 1; s <= d; s++) {
 			IJ.showStatus("Calculating Ix and Iy...");
-			IJ.showProgress(s - 1, stack.getSize());
+			IJ.showProgress(s, d);
 			this.Sx[s] = 0;
 			this.Sy[s] = 0;
 			this.Sxx[s] = 0;
@@ -313,7 +316,7 @@ public class Slice_Geometry implements PlugIn {
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
-						if (pixel >= this.min && pixel <= this.max) {
+						if (pixel >= pMin && pixel <= pMax) {
 							this.Sx[s] += x;
 							this.Sy[s] += y;
 							this.Sxx[s] += x * x;
@@ -358,9 +361,9 @@ public class Slice_Geometry implements PlugIn {
 		this.Zmin = new double[this.al];
 		this.ImaxFast = new double[this.al];
 		this.IminFast = new double[this.al];
-		for (int s = 1; s <= stack.getSize(); s++) {
+		for (int s = 1; s <= d; s++) {
 			IJ.showStatus("Calculating Imin and Imax...");
-			IJ.showProgress(s - 1, stack.getSize());
+			IJ.showProgress(s, d);
 			if (!this.emptySlices[s]) {
 				ImageProcessor ip = stack.getProcessor(s);
 				this.Sx[s] = 0;
@@ -372,57 +375,52 @@ public class Slice_Geometry implements PlugIn {
 				final double sinTheta = Math.sin(this.theta[s]);
 				final int roiYEnd = r.y + r.height;
 				final int roiXEnd = r.x + r.width;
+				final double xC = this.sliceCentroids[0][s];
+				final double yC = this.sliceCentroids[1][s];
+				final double cS = this.cslice[s];
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
-						if (pixel >= this.min && pixel <= this.max) {
-							this.Sx[s] += x * cosTheta + y * sinTheta;
-							this.Sy[s] += y * cosTheta - x * sinTheta;
-							this.Sxx[s] += (x * cosTheta + y * sinTheta)
-									* (x * cosTheta + y * sinTheta);
-							this.Syy[s] += (y * cosTheta - x * sinTheta)
-									* (y * cosTheta - x * sinTheta);
-							this.Sxy[s] += (y * cosTheta - x * sinTheta)
-									* (x * cosTheta + y * sinTheta);
+						if (pixel >= pMin && pixel <= pMax) {
+							final double xCosTheta = x * cosTheta;
+							final double yCosTheta = y * cosTheta;
+							final double xSinTheta = x * sinTheta;
+							final double ySinTheta = y * sinTheta;
+							this.Sx[s] += xCosTheta + ySinTheta;
+							this.Sy[s] += yCosTheta - xSinTheta;
+							this.Sxx[s] += (xCosTheta + ySinTheta)
+									* (xCosTheta + ySinTheta);
+							this.Syy[s] += (yCosTheta - xSinTheta)
+									* (yCosTheta - xSinTheta);
+							this.Sxy[s] += (yCosTheta - xSinTheta)
+									* (xCosTheta + ySinTheta);
 							this.maxRadMin[s] = Math.max(this.maxRadMin[s],
-									Math.abs((x - this.sliceCentroids[0][s])
-											* cosTheta
-											+ (y - this.sliceCentroids[1][s])
+									Math.abs((x - xC) * cosTheta + (y - yC)
 											* sinTheta));
 							this.maxRadMax[s] = Math.max(this.maxRadMax[s],
-									Math.abs((y - this.sliceCentroids[1][s])
-											* cosTheta
-											- (x - sliceCentroids[0][s])
+									Math.abs((y - yC) * cosTheta - (x - xC)
 											* sinTheta));
 						}
 					}
 				}
-				this.Imax[s] = this.Sxx[s]
-						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
-						+ this.cslice[s]
+				final double pixelMoments = cS
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				this.Imin[s] = this.Syy[s]
-						- (this.Sy[s] * this.Sy[s] / this.cslice[s])
-						+ this.cslice[s]
-						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				this.Ipm[s] = this.Sxy[s]
-						- (this.Sy[s] * this.Sx[s] / this.cslice[s])
-						+ this.cslice[s]
-						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				this.R1[s] = Math.sqrt(this.Imin[s] / this.cslice[s]);
-				this.R2[s] = Math.sqrt(this.Imax[s] / this.cslice[s]);
+				this.Imax[s] = this.Sxx[s] - (this.Sx[s] * this.Sx[s] / cS)
+						+ pixelMoments;
+				this.Imin[s] = this.Syy[s] - (this.Sy[s] * this.Sy[s] / cS)
+						+ pixelMoments;
+				this.Ipm[s] = this.Sxy[s] - (this.Sy[s] * this.Sx[s] / cS)
+						+ pixelMoments;
+				this.R1[s] = Math.sqrt(this.Imin[s] / cS);
+				this.R2[s] = Math.sqrt(this.Imax[s] / cS);
 				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];
 				this.Zmin[s] = this.Imin[s] / this.maxRadMax[s];
-				this.ImaxFast[s] = (this.Mxx[s] + this.Myy[s])
-						/ 2
-						+ Math.sqrt(Math.pow(((this.Mxx[s] - this.Myy[s]) / 2),
-								2)
-								+ this.Mxy[s] * this.Mxy[s]);
-				this.IminFast[s] = (this.Mxx[s] + this.Myy[s])
-						/ 2
-						- Math.sqrt(Math.pow(((this.Mxx[s] - this.Myy[s]) / 2),
-								2)
-								+ this.Mxy[s] * this.Mxy[s]);
+				final double a = (this.Mxx[s] + this.Myy[s]) / 2;
+				final double b = Math.sqrt((this.Mxx[s] - this.Myy[s])
+						* (this.Mxx[s] - this.Myy[s]) / 4 + this.Mxy[s]
+						* this.Mxy[s]);
+				this.ImaxFast[s] = a + b;
+				this.IminFast[s] = a - b;
 			} else {
 				this.Imax[s] = Double.NaN;
 				this.Imin[s] = Double.NaN;
@@ -472,7 +470,7 @@ public class Slice_Geometry implements PlugIn {
 					sliceMax = Math.max(sliceMax, pixel);
 				}
 			}
-			double sliceMean = sumPix / pixCount;
+			final double sliceMean = sumPix / pixCount;
 			this.meanCortThick3D[s] = sliceMean;
 			if (pixCount > 0)
 				this.maxCortThick3D[s] = sliceMax;
@@ -569,7 +567,7 @@ public class Slice_Geometry implements PlugIn {
 						sliceMax = Math.max(sliceMax, pixel);
 					}
 				}
-				double sliceMean = sumPix / pixCount;
+				final double sliceMean = sumPix / pixCount;
 				this.meanThick[s] = sliceMean;
 				if (pixCount > 0)
 					this.maxThick[s] = sliceMax;
@@ -636,8 +634,9 @@ public class Slice_Geometry implements PlugIn {
 			// set some sensible thresholding defaults
 			ThresholdMinConn tmc = new ThresholdMinConn();
 			int[] histogram = tmc.getStackHistogram(imp);
-			int histoMax = histogram.length - 1;
-			for (int i = histogram.length - 1; i >= 0; i--) {
+			final int histoLength = histogram.length;
+			int histoMax = histoLength - 1;
+			for (int i = histoLength - 1; i >= 0; i--) {
 				if (histogram[i] > 0) {
 					histoMax = i;
 					break;
