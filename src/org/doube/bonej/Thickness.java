@@ -96,11 +96,12 @@ public class Thickness implements PlugIn {
 			ImagePlus impLTC = getLocalThickness(imp, inverse);
 			impLTC.setTitle(title + "_Tr.Th");
 			impLTC.setCalibration(imp.getCalibration());
+			double[] stats = meanStdDev(impLTC);
+			insertResults(imp, stats, inverse);
 			if (!Interpreter.isBatchMode()) {
 				impLTC.show();
 				IJ.run("Fire");
 			}
-			meanStdDev(impLTC, inverse);
 		}
 		if (doSpacing) {
 			boolean inverse = true;
@@ -108,11 +109,12 @@ public class Thickness implements PlugIn {
 			ImagePlus impLTCi = getLocalThickness(imp, inverse);
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
+			double[] stats = meanStdDev(impLTCi);
+			insertResults(imp, stats, inverse);
 			if (!Interpreter.isBatchMode()) {
 				impLTCi.show();
 				IJ.run("Fire");
 			}
-			meanStdDev(impLTCi, inverse);
 		}
 		IJ.showProgress(1.0);
 		IJ.showStatus("Done");
@@ -1241,14 +1243,16 @@ public class Thickness implements PlugIn {
 	 *            32-bit thickness image
 	 * @param inverse
 	 *            true if Tb.Sp, false if Tb.Th
+	 * @return double[] containing mean, standard deviation and maximum as its
+	 *         0th and 1st and 2nd elements respectively
+	 * 
 	 */
-	private void meanStdDev(ImagePlus imp, boolean inverse) {
+	private double[] meanStdDev(ImagePlus imp) {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
 		final int wh = w * h;
-		String units = imp.getCalibration().getUnits();
-		ImageStack stack = imp.getStack();
+		final ImageStack stack = imp.getStack();
 		long pixCount = 0;
 		double sumThick = 0;
 		double maxThick = 0;
@@ -1277,7 +1281,16 @@ public class Thickness implements PlugIn {
 				}
 			}
 		}
-		double stDev = Math.sqrt(sumSquares / pixCount);
+		final double stDev = Math.sqrt(sumSquares / pixCount);
+		double[] stats = { meanThick, stDev, maxThick };
+		return stats;
+	}
+
+	private void insertResults(ImagePlus imp, double[] stats, boolean inverse) {
+		final double meanThick = stats[0];
+		final double stDev = stats[1];
+		final double maxThick = stats[2];
+		final String units = imp.getCalibration().getUnits();
 
 		ResultInserter ri = ResultInserter.getInstance();
 		if (!inverse) {
