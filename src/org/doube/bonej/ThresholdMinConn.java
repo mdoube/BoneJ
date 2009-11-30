@@ -5,6 +5,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
+import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
@@ -43,6 +44,7 @@ public class ThresholdMinConn implements PlugIn {
 		}
 
 		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth) {
+			if (!Interpreter.isBatchMode())
 			IJ.run("Properties...");
 		}
 
