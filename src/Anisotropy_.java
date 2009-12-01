@@ -63,18 +63,11 @@ import org.doube.jama.*;
 // TODO run to stable result.
 public class Anisotropy_ implements PlugIn {
 
-	/** Graph of results */
-	private ImagePlus plotImage;
-
-	ImageProcessor ip;
-
-	private double[][] coOrdinates;
-
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion()) {
 			return;
 		}
-		ImagePlus imp = IJ.getImage();
+		final ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
 			return;
@@ -88,9 +81,7 @@ public class Anisotropy_ implements PlugIn {
 			IJ.error("Stack required");
 			return;
 		}
-		/*
-		 * if (!showDialog()) { return; }
-		 */
+		
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -121,16 +112,19 @@ public class Anisotropy_ implements PlugIn {
 		final boolean doPlot = gd.getNextBoolean();
 		final boolean do3DResult = gd.getNextBoolean();
 
-		double anisotropy = Double.NaN;
+		Object[] result = new Object[2];
 		if (doAutoMode)
-			anisotropy = runToStableResult(imp, minSpheres, maxSpheres,
+			result = runToStableResult(imp, minSpheres, maxSpheres,
 					nVectors, radius, vectorSampling, doPlot);
 		else
-			anisotropy = runToStableResult(imp, minSpheres, minSpheres,
+			result = runToStableResult(imp, minSpheres, minSpheres,
 					nVectors, radius, vectorSampling, doPlot);
-
+		
+		double[] anisotropy =  (double[]) result[0];
+		double[][] coOrdinates = (double[][]) result[1];
+		
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "Anisotropy", anisotropy);
+		ri.setResultInRow(imp, "DA", anisotropy[0]);
 		ri.updateTable();
 
 		if (do3DResult) {
@@ -149,7 +143,7 @@ public class Anisotropy_ implements PlugIn {
 	 * @deprecated
 	 */
 	@SuppressWarnings("unused")
-	private double runOnce(ImagePlus imp, int minSpheres, int nVectors,
+	private Object[] runOnce(ImagePlus imp, int minSpheres, int nVectors,
 			double radius, double vectorSampling) {
 		final int nSpheres = minSpheres;
 		double[][] centroidList = gridCalculator(imp, nSpheres, radius);
@@ -179,7 +173,7 @@ public class Anisotropy_ implements PlugIn {
 			meanInterceptLengths[v] = radius * (double) nSpheres
 					/ sumInterceptCounts[v];
 		}
-		coOrdinates = new double[nVectors][3];
+		double[][] coOrdinates = new double[nVectors][3];
 		for (int v = 0; v < nVectors; v++) {
 			coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
 			coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
@@ -197,11 +191,12 @@ public class Anisotropy_ implements PlugIn {
 		printMatrix(eigenVectors);
 		double[][] eVal = eigenValues.getArrayCopy();
 		// double[][] eVec = eigenVectors.getArrayCopy();
-		double anisotropy = 1 - eVal[0][0] / eVal[2][2];
-		return anisotropy;
+		double[] anisotropy = {1 - eVal[0][0] / eVal[2][2]};
+		Object[] result = { anisotropy, coOrdinates };
+		return result;
 	}
 
-	private double runToStableResult(ImagePlus imp, int minSpheres,
+	private Object[] runToStableResult(ImagePlus imp, int minSpheres,
 			int maxSpheres, int nVectors, double radius, double vectorSampling,
 			boolean doPlot) {
 		final int minIterations = minSpheres;
@@ -216,9 +211,12 @@ public class Anisotropy_ implements PlugIn {
 		double[] sumInterceptCounts = new double[nVectors];
 		double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
 		// a very high variance
-		coOrdinates = new double[nVectors][3];
-		if (doPlot)
-			createGraph();
+		double[][] coOrdinates = new double[nVectors][3];
+		ImagePlus plotImage = new ImagePlus();
+		if (doPlot){
+			plotImage = createGraph();
+			plotImage.show();
+		}
 		Vector<Double> anisotropyHistory = new Vector<Double>();
 		int s = 0;
 		while (s < minIterations
@@ -252,9 +250,10 @@ public class Anisotropy_ implements PlugIn {
 			}
 			// work out coordinates of vector cloud
 			for (int v = 0; v < nVectors; v++) {
-				coOrdinates[v][0] = meanInterceptLengths[v] * vectorList[v][0];
-				coOrdinates[v][1] = meanInterceptLengths[v] * vectorList[v][1];
-				coOrdinates[v][2] = meanInterceptLengths[v] * vectorList[v][2];
+				final double milV = meanInterceptLengths[v];
+				coOrdinates[v][0] = milV * vectorList[v][0];
+				coOrdinates[v][1] = milV * vectorList[v][1];
+				coOrdinates[v][2] = milV * vectorList[v][2];
 			}
 			// calculate principal components
 			EigenvalueDecomposition E = principalComponents(coOrdinates);
@@ -263,22 +262,23 @@ public class Anisotropy_ implements PlugIn {
 			anisotropy = 1 - eVal[0][0] / eVal[2][2];
 			anisotropyHistory.add(anisotropy);
 			if (doPlot)
-				updateGraph(anisotropyHistory);
+				updateGraph(plotImage, anisotropyHistory);
 			variance = Math.abs(previous - anisotropy);
 			previous = anisotropy;
 		}
-		return anisotropy;
+		double[] da = {anisotropy};
+		Object[] result = {da, coOrdinates};
+		return result;
 	}
 
-	private void createGraph() {
+	private ImagePlus createGraph() {
 		double[] x = { 0 }, y = { 0 };
 		Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
 		plot.setLimits(0, 1, 0, 1);
 		ImageProcessor plotIp = plot.getProcessor();
-		plotImage = new ImagePlus("Anisotropy", plotIp);
+		ImagePlus plotImage = new ImagePlus("Anisotropy", plotIp);
 		plotImage.setProcessor(null, plotIp);
-		plotImage.show();
-		return;
+		return plotImage;
 	}
 
 	/**
@@ -634,7 +634,7 @@ public class Anisotropy_ implements PlugIn {
 		}
 	}
 
-	private void updateGraph(Vector<Double> anisotropyHistory) {
+	private void updateGraph(ImagePlus plotImage, Vector<Double> anisotropyHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];
 		double[] xVariables = new double[anisotropyHistory.size()];
 		Enumeration<Double> e = anisotropyHistory.elements();
@@ -650,6 +650,7 @@ public class Anisotropy_ implements PlugIn {
 		plot.setLimits(0, anisotropyHistory.size(), 0, 1);
 		ImageProcessor plotIp = plot.getProcessor();
 		plotImage.setProcessor(null, plotIp);
+		return;
 	}
 
 	/*-------------------------------------------------------------*/
