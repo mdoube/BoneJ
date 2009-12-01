@@ -397,19 +397,6 @@ public class Anisotropy_ implements PlugIn {
 		final int endSlice = (int) Math.round(cZ / vD) + d;
 
 		final ImageStack stack = imp.getImageStack();
-		if (startSlice < 0 || startSlice >= stack.getSize())
-			IJ.log("!!!startSlice = " + startSlice);
-		if (endSlice < 0 || endSlice >= stack.getSize())
-			IJ.log("!!!endSlice = " + endSlice);
-		if (startRow < 0 || startRow >= stack.getHeight())
-			IJ.log("!!!startRow = " + startRow);
-		if (endRow < 0 || endRow >= stack.getHeight())
-			IJ.log("!!!endRow = " + endRow);
-		if (startCol < 0 || startCol >= stack.getWidth())
-			IJ.log("!!!startCol = " + startCol);
-		if (endCol < 0 || endCol >= stack.getWidth())
-			IJ.log("!!!endCol = " + endCol);
-
 		// fill the work array
 		int i = 0;
 		for (int s = startSlice; s <= endSlice; s++) {
@@ -453,14 +440,6 @@ public class Anisotropy_ implements PlugIn {
 			final int zS = (int) Math.round(radVd * vZ);
 
 			final int startIndex = centroidIndex + b * zS + a * yS + xS;
-
-			if (xS + w < 0 || xS + w >= (2 * w + 1) || yS + h < 0
-					|| yS + h >= (2 * h + 1) || zS + d < 0
-					|| zS + d >= (2 * d + 1)) {
-				IJ.log("!!!!!(xS, yS, zS) (" + (xS + w) + ", " + (yS + h)
-						+ ", " + (zS + d) + ")!!!!!");
-				IJ.log("!!!!!startIndex is " + startIndex + "!!!!!");
-			}
 
 			if (workArray[startIndex] == 0) {
 				lastPos = true;
