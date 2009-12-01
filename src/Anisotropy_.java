@@ -81,7 +81,7 @@ public class Anisotropy_ implements PlugIn {
 			IJ.error("Stack required");
 			return;
 		}
-		
+
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -114,15 +114,15 @@ public class Anisotropy_ implements PlugIn {
 
 		Object[] result = new Object[2];
 		if (doAutoMode)
-			result = runToStableResult(imp, minSpheres, maxSpheres,
-					nVectors, radius, vectorSampling, doPlot);
+			result = runToStableResult(imp, minSpheres, maxSpheres, nVectors,
+					radius, vectorSampling, doPlot);
 		else
-			result = runToStableResult(imp, minSpheres, minSpheres,
-					nVectors, radius, vectorSampling, doPlot);
-		
-		double[] anisotropy =  (double[]) result[0];
+			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
+					radius, vectorSampling, doPlot);
+
+		double[] anisotropy = (double[]) result[0];
 		double[][] coOrdinates = (double[][]) result[1];
-		
+
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "DA", anisotropy[0]);
 		ri.updateTable();
@@ -191,12 +191,36 @@ public class Anisotropy_ implements PlugIn {
 		printMatrix(eigenVectors);
 		double[][] eVal = eigenValues.getArrayCopy();
 		// double[][] eVec = eigenVectors.getArrayCopy();
-		double[] anisotropy = {1 - eVal[0][0] / eVal[2][2]};
+		double[] anisotropy = { 1 - eVal[0][0] / eVal[2][2] };
 		Object[] result = { anisotropy, coOrdinates };
 		return result;
 	}
 
-	private Object[] runToStableResult(ImagePlus imp, int minSpheres,
+	/**
+	 * Calculate degree of anisotropy for a binary stack, running until a stable
+	 * result is achieved, or the maximum number of iterations occurs.
+	 * 
+	 * @param imp
+	 *            ImagePlus input. A binary stack is required.
+	 * @param minSpheres
+	 *            minimum number of iterations
+	 * @param maxSpheres
+	 *            maximum number of iterations
+	 * @param nVectors
+	 *            number of vectors in the sampling sphere
+	 * @param radius
+	 *            radius of the sampling sphere
+	 * @param vectorSampling
+	 *            distance between samples along the sampling vector. Set to 2.3
+	 *            * maximum voxel dimension for a safe and efficient sampling
+	 *            increment
+	 * @param doPlot
+	 *            set to true if you want to see a plot of anisotropy versus
+	 *            number of repeats, updated in real time
+	 * @return Object array containing degree of anisotropy and coordinates of
+	 *         rose plot
+	 */
+	public Object[] runToStableResult(ImagePlus imp, int minSpheres,
 			int maxSpheres, int nVectors, double radius, double vectorSampling,
 			boolean doPlot) {
 		final int minIterations = minSpheres;
@@ -213,7 +237,7 @@ public class Anisotropy_ implements PlugIn {
 		// a very high variance
 		double[][] coOrdinates = new double[nVectors][3];
 		ImagePlus plotImage = new ImagePlus();
-		if (doPlot){
+		if (doPlot) {
 			plotImage = createGraph();
 			plotImage.show();
 		}
@@ -266,8 +290,8 @@ public class Anisotropy_ implements PlugIn {
 			variance = Math.abs(previous - anisotropy);
 			previous = anisotropy;
 		}
-		double[] da = {anisotropy};
-		Object[] result = {da, coOrdinates};
+		double[] da = { anisotropy };
+		Object[] result = { da, coOrdinates };
 		return result;
 	}
 
@@ -457,8 +481,7 @@ public class Anisotropy_ implements PlugIn {
 				final int x = (int) Math.round(pos * vXvW);
 				final int y = (int) Math.round(pos * vYvH);
 				final int z = (int) Math.round(pos * vZvD);
-				final int testIndex = centroidIndex + b * z
-						+ a * y + x;
+				final int testIndex = centroidIndex + b * z + a * y + x;
 				// determine if the voxel is thresholded or not
 				if (workArray[testIndex] == 0) {
 					thisPos = true;
@@ -634,7 +657,8 @@ public class Anisotropy_ implements PlugIn {
 		}
 	}
 
-	private void updateGraph(ImagePlus plotImage, Vector<Double> anisotropyHistory) {
+	private void updateGraph(ImagePlus plotImage,
+			Vector<Double> anisotropyHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];
 		double[] xVariables = new double[anisotropyHistory.size()];
 		Enumeration<Double> e = anisotropyHistory.elements();
