@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  *Anisotropy_ plugin for ImageJ
  *Copyright 2009 Michael Doube 
@@ -37,8 +38,6 @@ import java.util.Vector;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
-import org.doube.bonej.ImageCheck;
-import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
 /**
@@ -61,7 +60,7 @@ import org.doube.jama.*;
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
 // TODO run to stable result.
-public class Anisotropy_ implements PlugIn {
+public class Anisotropy implements PlugIn {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion()) {
