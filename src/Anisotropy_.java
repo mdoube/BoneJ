@@ -20,10 +20,8 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
-import ij.process.ImageStatistics;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.gui.*;
-import ij.macro.Interpreter;
 import ij.measure.Calibration; //import ij.measure.ResultsTable;
 
 // for 3D plotting of coordinates
@@ -39,6 +37,7 @@ import java.util.Vector;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
+import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
@@ -62,66 +61,72 @@ import org.doube.jama.*;
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
 // TODO run to stable result.
-public class Anisotropy_ implements PlugInFilter {
-	ImagePlus imp;
+public class Anisotropy_ implements PlugIn {
 
 	/** Graph of results */
 	private ImagePlus plotImage;
 
 	ImageProcessor ip;
 
-	protected ImageStack stack;
-
-	private double radius, vectorSampling, vW, vH, vD;
-
 	private double[][] coOrdinates;
 
-	private int nVectors = 50000, nSpheres = 100;
-
-	private String units;
-
-	/** Show a 3D graphic of the vector cloud */
-	public boolean do3DResult = false;
-
-	/** Ignore user values and run until result is stable */
-	public boolean doAutoMode = true;
-
-	public int setup(String arg, ImagePlus imp) {
-		if (imp == null || imp.getNSlices() < 2) {
-			IJ.showMessage("A stack must be open");
-			return DONE;
-		}
-		this.imp = imp;
-		this.stack = this.imp.getStack();
-		Calibration cal = this.imp.getCalibration();
-		this.vW = cal.pixelWidth;
-		this.vH = cal.pixelHeight;
-		this.vD = cal.pixelDepth;
-		this.units = cal.getUnits();
-		if (imp != null
-				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
-			ImageStatistics stats = imp.getStatistics();
-			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
-				IJ.error("8-bit binary (black and white only) image required.");
-				return DONE;
-			}
-		}
-		return STACK_REQUIRED + DOES_8G;
-	}
-
-	public void run(ImageProcessor ip) {
-		if (!showDialog()) {
+	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion()) {
 			return;
 		}
+		ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+		ImageCheck ic = new ImageCheck();
+		if (!ic.isBinary(imp)) {
+			IJ.error("8-bit binary (black and white only) image required.");
+			return;
+		}
+		if (!ic.isMultiSlice(imp)) {
+			IJ.error("Stack required");
+			return;
+		}
+		/*
+		 * if (!showDialog()) { return; }
+		 */
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		final double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
+		final double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
+
+		GenericDialog gd = new GenericDialog("Setup");
+		gd.addCheckbox("Auto Mode", true);
+		// number of random vectors in vector field
+		gd.addNumericField("Vectors", 50000, 0, 6, "vectors");
+		// number of randomly-positioned vector fields
+		gd.addNumericField("Min_Spheres", 100, 0, 5, "");
+		gd.addNumericField("Max_Spheres", 2000, 0, 5, "");
+		gd.addCheckbox("3D_Result", false);
+		gd.showDialog();
+		if (gd.wasCanceled()) {
+			return;
+		}
+		final boolean doAutoMode = gd.getNextBoolean();
+		final int nVectors = (int) gd.getNextNumber();
+		final int minSpheres = (int) gd.getNextNumber();
+		final int maxSpheres = (int) gd.getNextNumber();
+		final boolean do3DResult = gd.getNextBoolean();
 
 		double anisotropy = Double.NaN;
 		if (doAutoMode)
-			anisotropy = runToStableResult();
+			anisotropy = runToStableResult(imp, minSpheres, maxSpheres, nVectors, radius, vectorSampling);
 		else
-			anisotropy = runOnce();
+			anisotropy = runToStableResult(imp, minSpheres, minSpheres, nVectors, radius, vectorSampling);
 
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
+		ri.setResultInRow(imp, "Anisotropy", anisotropy);
 		ri.updateTable();
 
 		if (do3DResult) {
@@ -129,7 +134,20 @@ public class Anisotropy_ implements PlugInFilter {
 		}
 	}
 
-	private double runOnce() {
+	/**
+	 * 
+	 * @param imp
+	 * @param minSpheres
+	 * @param nVectors
+	 * @param radius
+	 * @param vectorSampling
+	 * @return
+	 * @deprecated
+	 */
+	@SuppressWarnings("unused")
+	private double runOnce(ImagePlus imp, int minSpheres, int nVectors,
+			double radius, double vectorSampling) {
+		final int nSpheres = minSpheres;
 		double[][] centroidList = gridCalculator(imp, nSpheres, radius);
 		double[][] vectorList = randomVectors(nVectors);
 		double[] sumInterceptCounts = new double[nVectors];
@@ -140,8 +158,8 @@ public class Anisotropy_ implements PlugInFilter {
 			centroid[2] = centroidList[s][2];
 			IJ.showStatus("Counting intercepts at site " + (s + 1) + "/"
 					+ nSpheres);
-			double[] interceptCounts = countIntercepts(centroid, vectorList,
-					radius, vectorSampling);
+			double[] interceptCounts = countIntercepts(imp, centroid,
+					vectorList, nVectors, radius, vectorSampling);
 			for (int i = 0; i < nVectors; i++) {
 				sumInterceptCounts[i] += interceptCounts[i];
 			}
@@ -179,9 +197,10 @@ public class Anisotropy_ implements PlugInFilter {
 		return anisotropy;
 	}
 
-	private double runToStableResult() {
-		int minIterations = 100;
-		int maxIterations = 2000;
+	private double runToStableResult(ImagePlus imp, int minSpheres,
+			int maxSpheres, int nVectors, double radius, double vectorSampling) {
+		final int minIterations = minSpheres;
+		final int maxIterations = maxSpheres;
 		double[][] vectorList = randomVectors(nVectors);
 		double variance = Double.MAX_VALUE;
 		double tolerance = 0.0001;
@@ -191,7 +210,7 @@ public class Anisotropy_ implements PlugInFilter {
 		double[] interceptCounts = new double[nVectors];
 		double[] sumInterceptCounts = new double[nVectors];
 		double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
-								// a very high variance
+		// a very high variance
 		coOrdinates = new double[nVectors][3];
 		createGraph();
 		Vector<Double> anisotropyHistory = new Vector<Double>();
@@ -207,8 +226,8 @@ public class Anisotropy_ implements PlugInFilter {
 			centroid[2] = centroidList[0][2];
 			IJ.showStatus("Counting intercepts at site " + s
 					+ ", anisotropy = " + anisotropy);
-			interceptCounts = countIntercepts(centroid, vectorList, radius,
-					vectorSampling);
+			interceptCounts = countIntercepts(imp, centroid, vectorList,
+					nVectors, radius, vectorSampling);
 
 			// add intercepts to vectors
 			for (int i = 0; i < nVectors; i++) {
@@ -255,54 +274,6 @@ public class Anisotropy_ implements PlugInFilter {
 		return;
 	}
 
-	/** Show a dialog with options */
-	private boolean showDialog() {
-		vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
-		radius = Math.min(stack.getHeight() * vH, Math.min(
-				stack.getSize() * vD, stack.getWidth() * vW)) / 4;
-		GenericDialog gd = new GenericDialog("Setup");
-		gd.addCheckbox("Auto Mode", doAutoMode);
-		// radius of vector field
-		gd.addNumericField("Radius", radius, 3, 6, units);
-		// number of random vectors in vector field
-		gd.addNumericField("Vectors", nVectors, 0, 6, "vectors");
-		// vector sampling increment in units
-		gd.addNumericField("Sampling", vectorSampling, 3, 6, units);
-		// number of randomly-positioned vector fields
-		gd.addNumericField("Spheres", nSpheres, 0, 5, "");
-		gd.addCheckbox("3D_Result", do3DResult);
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			return false;
-		} else {
-			int[] stackDimensions = imp.getDimensions();
-			double stackWidth = vW * stackDimensions[0];
-			double stackHeight = vH * stackDimensions[1];
-			double stackDepth = vD * stackDimensions[3];
-			if (!Interpreter.isBatchMode()) {
-				// get the values from the dialog
-				radius = gd.getNextNumber();
-				if (radius > stackWidth / 2 || radius > stackHeight / 2
-						|| radius > stackDepth / 2) {
-					IJ
-							.error("Sphere is bigger than stack's smallest dimension.\n"
-									+ "Try again with a smaller radius.");
-					return false;
-				}
-				doAutoMode = gd.getNextBoolean();
-				nVectors = (int) gd.getNextNumber();
-				vectorSampling = gd.getNextNumber();
-				nSpheres = (int) gd.getNextNumber();
-				do3DResult = gd.getNextBoolean();
-				return true;
-			} else {
-				// use the default values regardless of dialog settings
-				return true;
-			}
-		}
-	}
-
-	/* ----------------------------------------------------------------------- */
 	/**
 	 * Generate an array of randomly-oriented 3D unit vectors
 	 * 
@@ -314,9 +285,9 @@ public class Anisotropy_ implements PlugInFilter {
 		double[][] randomVectors = new double[nVectors][3];
 		for (int n = 0; n < nVectors; n++) {
 			randomVectors[n][2] = 2 * Math.random() - 1;
-			double rho = Math.sqrt(1 - randomVectors[n][2]
+			final double rho = Math.sqrt(1 - randomVectors[n][2]
 					* randomVectors[n][2]);
-			double phi = Math.PI * (2 * Math.random() - 1);
+			final double phi = Math.PI * (2 * Math.random() - 1);
 			randomVectors[n][0] = rho * Math.cos(phi);
 			randomVectors[n][1] = rho * Math.sin(phi);
 		}
@@ -335,12 +306,18 @@ public class Anisotropy_ implements PlugInFilter {
 	 *            amount of padding between stack edges and centroid field
 	 * @return nCentroids x 3 array of 3D coordinates
 	 */
-	private double[][] gridCalculator(ImagePlus imp, int nCentroids,
-			double radius) {
-		int[] stackDimensions = imp.getDimensions();
-		double stackWidth = vW * stackDimensions[0];
-		double stackHeight = vH * stackDimensions[1];
-		double stackDepth = vD * stackDimensions[3];
+	private double[][] gridCalculator(final ImagePlus imp,
+			final int nCentroids, final double radius) {
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		final double stackWidth = vW * w;
+		final double stackHeight = vH * h;
+		final double stackDepth = vD * d;
 		// strategy: n random coordinates within bounding box (easy, no bias.)
 		double[][] gridCentroids = new double[nCentroids][3];
 		for (int n = 0; n < nCentroids; n++) {
@@ -383,17 +360,23 @@ public class Anisotropy_ implements PlugInFilter {
 	 *            distance between tests along each vector
 	 * @return 1D array containing a count of intercepts for each vector
 	 */
-	private double[] countIntercepts(double[] centroid, double[][] vectorList,
-			double radius, double vectorSampling) {
+	private double[] countIntercepts(ImagePlus imp, double[] centroid,
+			double[][] vectorList, int nVectors, double radius,
+			double vectorSampling) {
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+
 		boolean lastPos, thisPos;
 		/*
 		 * IJ.log("Testing in sphere of radius " + radius + " at centroid (" +
 		 * centroid[0] + "," + centroid[1] + "," + centroid[2] + ")");
 		 */
 		// create a work array containing pixels +- 1 radius from centroid
-		int w = (int) Math.round(radius / vW);
-		int h = (int) Math.round(radius / vH);
-		int d = (int) Math.round(radius / vD);
+		final int w = (int) Math.round(radius / vW);
+		final int h = (int) Math.round(radius / vH);
+		final int d = (int) Math.round(radius / vD);
 		byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
 
 		/*
@@ -408,6 +391,7 @@ public class Anisotropy_ implements PlugInFilter {
 		int startSlice = (int) Math.round(centroid[2] / vD) - d;
 		int endSlice = (int) Math.round(centroid[2] / vD) + d;
 
+		final ImageStack stack = imp.getImageStack();
 		if (startSlice < 0 || startSlice >= stack.getSize())
 			IJ.log("!!!startSlice = " + startSlice);
 		if (endSlice < 0 || endSlice >= stack.getSize())
