@@ -578,20 +578,6 @@ public class Anisotropy implements PlugIn {
 		return ellipsoid;
 	} /* end fitEllipsoid */
 
-	private void printMatrix(Matrix matrix) {
-		int nCols = matrix.getColumnDimension();
-		int nRows = matrix.getRowDimension();
-		double[][] eVal = matrix.getArrayCopy();
-		for (int r = 0; r < nRows; r++) {
-			String row = "||";
-			for (int c = 0; c < nCols; c++) {
-				row = row + eVal[r][c] + "|";
-			}
-			row = row + "|";
-			IJ.log(row);
-		}
-	}
-
 	private void updateGraph(ImagePlus plotImage,
 			Vector<Double> anisotropyHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];

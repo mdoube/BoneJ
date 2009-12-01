@@ -1,5 +1,7 @@
 package org.doube.jama;
 
+import ij.IJ;
+
 import java.text.NumberFormat;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1251,6 +1253,26 @@ public class Matrix implements Cloneable, java.io.Serializable {
 		}
 		output.println(); // end with blank line.
 	}
+	
+	/**
+	 * Print Matrix to ImageJ log window
+	 * 
+	 * @param matrix
+	 */
+	public void printMatrix(Matrix matrix) {
+		int nCols = matrix.getColumnDimension();
+		int nRows = matrix.getRowDimension();
+		double[][] eVal = matrix.getArrayCopy();
+		for (int r = 0; r < nRows; r++) {
+			String row = "||";
+			for (int c = 0; c < nCols; c++) {
+				row = row + IJ.d2s(eVal[r][c], 3) + "|";
+			}
+			row = row + "|";
+			IJ.log(row);
+		}
+	}
+
 
 	/**
 	 * Read a matrix from a stream. The format is the same the print method, so
