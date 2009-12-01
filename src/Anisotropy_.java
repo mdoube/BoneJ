@@ -20,10 +20,11 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
-import ij.plugin.PlugIn;
+import ij.process.ImageStatistics;
+import ij.plugin.filter.PlugInFilter;
 import ij.gui.*;
 import ij.macro.Interpreter;
-import ij.measure.Calibration;
+import ij.measure.Calibration; //import ij.measure.ResultsTable;
 
 // for 3D plotting of coordinates
 import javax.vecmath.Point3f;
@@ -38,7 +39,6 @@ import java.util.Vector;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
-import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
 
@@ -62,13 +62,23 @@ import org.doube.jama.*;
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
 // TODO run to stable result.
-public class Anisotropy_ implements PlugIn {
+public class Anisotropy_ implements PlugInFilter {
+	ImagePlus imp;
 
-	private double radius, vectorSampling;
+	/** Graph of results */
+	private ImagePlus plotImage;
+
+	ImageProcessor ip;
+
+	protected ImageStack stack;
+
+	private double radius, vectorSampling, vW, vH, vD;
 
 	private double[][] coOrdinates;
 
 	private int nVectors = 50000, nSpheres = 100;
+
+	private String units;
 
 	/** Show a 3D graphic of the vector cloud */
 	public boolean do3DResult = false;
@@ -76,35 +86,42 @@ public class Anisotropy_ implements PlugIn {
 	/** Ignore user values and run until result is stable */
 	public boolean doAutoMode = true;
 
-	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
-			return;
-		ImagePlus imp = IJ.getImage();
-		if (null == imp) {
-			IJ.noImage();
-			return;
+	public int setup(String arg, ImagePlus imp) {
+		if (imp == null || imp.getNSlices() < 2) {
+			IJ.showMessage("A stack must be open");
+			return DONE;
 		}
-		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
-			IJ.error("8-bit binary (black and white only) image required.");
-			return;
+		this.imp = imp;
+		this.stack = this.imp.getStack();
+		Calibration cal = this.imp.getCalibration();
+		this.vW = cal.pixelWidth;
+		this.vH = cal.pixelHeight;
+		this.vD = cal.pixelDepth;
+		this.units = cal.getUnits();
+		if (imp != null
+				&& (imp.getType() == ImagePlus.GRAY8 || imp.getType() == ImagePlus.COLOR_256)) {
+			ImageStatistics stats = imp.getStatistics();
+			if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount) {
+				IJ.error("8-bit binary (black and white only) image required.");
+				return DONE;
+			}
 		}
-		if (!ic.isMultiSlice(imp)) {
-			IJ.error("Stack required");
-			return;
-		}
-		if (!showDialog(imp)) {
+		return STACK_REQUIRED + DOES_8G;
+	}
+
+	public void run(ImageProcessor ip) {
+		if (!showDialog()) {
 			return;
 		}
 
 		double anisotropy = Double.NaN;
 		if (doAutoMode)
-			anisotropy = runToStableResult(imp);
+			anisotropy = runToStableResult();
 		else
-			anisotropy = runOnce(imp);
+			anisotropy = runOnce();
 
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "DA", anisotropy);
+		ri.setResultInRow(this.imp, "Anisotropy", anisotropy);
 		ri.updateTable();
 
 		if (do3DResult) {
@@ -112,7 +129,7 @@ public class Anisotropy_ implements PlugIn {
 		}
 	}
 
-	private double runOnce(ImagePlus imp) {
+	private double runOnce() {
 		double[][] centroidList = gridCalculator(imp, nSpheres, radius);
 		double[][] vectorList = randomVectors(nVectors);
 		double[] sumInterceptCounts = new double[nVectors];
@@ -123,8 +140,8 @@ public class Anisotropy_ implements PlugIn {
 			centroid[2] = centroidList[s][2];
 			IJ.showStatus("Counting intercepts at site " + (s + 1) + "/"
 					+ nSpheres);
-			double[] interceptCounts = countIntercepts(imp, centroid,
-					vectorList, radius, vectorSampling);
+			double[] interceptCounts = countIntercepts(centroid, vectorList,
+					radius, vectorSampling);
 			for (int i = 0; i < nVectors; i++) {
 				sumInterceptCounts[i] += interceptCounts[i];
 			}
@@ -162,25 +179,25 @@ public class Anisotropy_ implements PlugIn {
 		return anisotropy;
 	}
 
-	private double runToStableResult(ImagePlus imp) {
-
+	private double runToStableResult() {
+		int minIterations = 100;
+		int maxIterations = 2000;
 		double[][] vectorList = randomVectors(nVectors);
 		double variance = Double.MAX_VALUE;
-		double tolerance = 0.00001;
+		double tolerance = 0.0001;
 		double anisotropy = Double.NaN;
 		double[][] centroidList = new double[1][3];
 		double[] centroid = new double[3];
 		double[] interceptCounts = new double[nVectors];
 		double[] sumInterceptCounts = new double[nVectors];
 		double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
-		// a very high variance
+								// a very high variance
 		coOrdinates = new double[nVectors][3];
-		ImagePlus plotImage = new ImagePlus();
-		if (!Interpreter.isBatchMode())
-			plotImage = createGraph();
+		createGraph();
 		Vector<Double> anisotropyHistory = new Vector<Double>();
 		int s = 0;
-		while (s < 10 || (s >= 10 && variance > tolerance)) {
+		while (s < minIterations
+				|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
 			s++;
 			// return a single centroid within the bounds
 			centroidList = gridCalculator(imp, 1, radius);
@@ -189,9 +206,9 @@ public class Anisotropy_ implements PlugIn {
 			centroid[1] = centroidList[0][1];
 			centroid[2] = centroidList[0][2];
 			IJ.showStatus("Counting intercepts at site " + s
-					+ ", anisotropy = " + IJ.d2s(anisotropy, 4));
-			interceptCounts = countIntercepts(imp, centroid, vectorList,
-					radius, vectorSampling);
+					+ ", anisotropy = " + anisotropy);
+			interceptCounts = countIntercepts(centroid, vectorList, radius,
+					vectorSampling);
 
 			// add intercepts to vectors
 			for (int i = 0; i < nVectors; i++) {
@@ -220,36 +237,29 @@ public class Anisotropy_ implements PlugIn {
 			double[][] eVal = eigenValues.getArrayCopy();
 			anisotropy = 1 - eVal[0][0] / eVal[2][2];
 			anisotropyHistory.add(anisotropy);
-			if (!Interpreter.isBatchMode())
-				updateGraph(plotImage, anisotropyHistory);
+			updateGraph(anisotropyHistory);
 			variance = Math.abs(previous - anisotropy);
 			previous = anisotropy;
 		}
 		return anisotropy;
 	}
 
-	private ImagePlus createGraph() {
+	private void createGraph() {
 		double[] x = { 0 }, y = { 0 };
 		Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
 		plot.setLimits(0, 1, 0, 1);
 		ImageProcessor plotIp = plot.getProcessor();
-		ImagePlus plotImage = new ImagePlus("Anisotropy", plotIp);
+		plotImage = new ImagePlus("Anisotropy", plotIp);
 		plotImage.setProcessor(null, plotIp);
 		plotImage.show();
-		return plotImage;
+		return;
 	}
 
 	/** Show a dialog with options */
-	private boolean showDialog(ImagePlus imp) {
-		Calibration cal = imp.getCalibration();
-		final double vW = cal.pixelWidth;
-		final double vH = cal.pixelHeight;
-		final double vD = cal.pixelDepth;
-		String units = cal.getUnits();
-
+	private boolean showDialog() {
 		vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
-		radius = Math.min(imp.getHeight() * vH, Math.min(imp.getStackSize()
-				* vD, imp.getWidth() * vW)) / 4;
+		radius = Math.min(stack.getHeight() * vH, Math.min(
+				stack.getSize() * vD, stack.getWidth() * vW)) / 4;
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addCheckbox("Auto Mode", doAutoMode);
 		// radius of vector field
@@ -265,9 +275,10 @@ public class Anisotropy_ implements PlugIn {
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
-			final double stackWidth = vW * imp.getWidth();
-			final double stackHeight = vH * imp.getHeight();
-			final double stackDepth = vD * imp.getStackSize();
+			int[] stackDimensions = imp.getDimensions();
+			double stackWidth = vW * stackDimensions[0];
+			double stackHeight = vH * stackDimensions[1];
+			double stackDepth = vD * stackDimensions[3];
 			if (!Interpreter.isBatchMode()) {
 				// get the values from the dialog
 				radius = gd.getNextNumber();
@@ -326,13 +337,10 @@ public class Anisotropy_ implements PlugIn {
 	 */
 	private double[][] gridCalculator(ImagePlus imp, int nCentroids,
 			double radius) {
-		Calibration cal = imp.getCalibration();
-		final double vW = cal.pixelWidth;
-		final double vH = cal.pixelHeight;
-		final double vD = cal.pixelDepth;
-		final double stackWidth = vW * imp.getWidth();
-		final double stackHeight = vH * imp.getHeight();
-		final double stackDepth = vD * imp.getStackSize();
+		int[] stackDimensions = imp.getDimensions();
+		double stackWidth = vW * stackDimensions[0];
+		double stackHeight = vH * stackDimensions[1];
+		double stackDepth = vD * stackDimensions[3];
 		// strategy: n random coordinates within bounding box (easy, no bias.)
 		double[][] gridCentroids = new double[nCentroids][3];
 		for (int n = 0; n < nCentroids; n++) {
@@ -375,28 +383,30 @@ public class Anisotropy_ implements PlugIn {
 	 *            distance between tests along each vector
 	 * @return 1D array containing a count of intercepts for each vector
 	 */
-	private double[] countIntercepts(ImagePlus imp, double[] centroid,
-			double[][] vectorList, double radius, double vectorSampling) {
-		ImageStack stack = imp.getImageStack();
-		final int width = stack.getWidth();
-		Calibration cal = imp.getCalibration();
-		final double vW = cal.pixelWidth;
-		final double vH = cal.pixelHeight;
-		final double vD = cal.pixelDepth;
-
+	private double[] countIntercepts(double[] centroid, double[][] vectorList,
+			double radius, double vectorSampling) {
 		boolean lastPos, thisPos;
+		/*
+		 * IJ.log("Testing in sphere of radius " + radius + " at centroid (" +
+		 * centroid[0] + "," + centroid[1] + "," + centroid[2] + ")");
+		 */
 		// create a work array containing pixels +- 1 radius from centroid
-		final int w = (int) Math.round(radius / vW);
-		final int h = (int) Math.round(radius / vH);
-		final int d = (int) Math.round(radius / vD);
+		int w = (int) Math.round(radius / vW);
+		int h = (int) Math.round(radius / vH);
+		int d = (int) Math.round(radius / vD);
 		byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
 
-		final int startCol = (int) Math.round(centroid[0] / vW) - w;
-		final int endCol = (int) Math.round(centroid[0] / vW) + w;
-		final int startRow = (int) Math.round(centroid[1] / vH) - h;
-		final int endRow = (int) Math.round(centroid[1] / vH) + h;
-		final int startSlice = (int) Math.round(centroid[2] / vD) - d;
-		final int endSlice = (int) Math.round(centroid[2] / vD) + d;
+		/*
+		 * IJ.log("workArray has dimensions " + (2 * w + 1) + " * " + (2 * h +
+		 * 1) + " * " + (2 * d + 1));
+		 */
+
+		int startCol = (int) Math.round(centroid[0] / vW) - w;
+		int endCol = (int) Math.round(centroid[0] / vW) + w;
+		int startRow = (int) Math.round(centroid[1] / vH) - h;
+		int endRow = (int) Math.round(centroid[1] / vH) + h;
+		int startSlice = (int) Math.round(centroid[2] / vD) - d;
+		int endSlice = (int) Math.round(centroid[2] / vD) + d;
 
 		if (startSlice < 0 || startSlice >= stack.getSize())
 			IJ.log("!!!startSlice = " + startSlice);
@@ -414,9 +424,9 @@ public class Anisotropy_ implements PlugIn {
 		// fill the work array
 		int i = 0;
 		for (int s = startSlice; s <= endSlice; s++) {
-			final byte[] slicePixels = (byte[]) stack.getPixels(s + 1);
+			byte[] slicePixels = (byte[]) stack.getPixels(s + 1);
 			for (int r = startRow; r <= endRow; r++) {
-				final int index = width * r;
+				int index = stack.getWidth() * r;
 				for (int c = startCol; c <= endCol; c++) {
 					workArray[i] = slicePixels[index + c];
 					i++;
@@ -424,14 +434,12 @@ public class Anisotropy_ implements PlugIn {
 			}
 		}
 
-		final int a = 2 * w + 1;
-		final int b = a * (2 * h + 1);
 		// centroid position in workArray is at (w+1, h+1, d+1), subtract one
 		// for starting at 0.
-		final int wVz = b * d;
-		final int wVy = a * h;
-		final int wVx = w;
-		final int centroidIndex = wVz + wVy + wVx;
+		int wVz = (2 * w + 1) * (2 * h + 1) * d;
+		int wVy = (2 * w + 1) * h;
+		int wVx = w;
+		int centroidIndex = wVz + wVy + wVx;
 		/*
 		 * IJ.log("Work volume centroid is at (" + w + ", " + h + ", " + d +
 		 * ")"); IJ.log("centroidIndex is " + centroidIndex);
@@ -439,23 +447,21 @@ public class Anisotropy_ implements PlugIn {
 
 		// store an intercept count for each vector
 		double[] interceptCounts = new double[nVectors];
-		final double radVw = -radius / vW;
-		final double radVh = -radius / vH;
-		final double radVd = -radius / vD;
-
 		// loop through all vectors
 		for (int v = 0; v < nVectors; v++) {
 			double nIntercepts = 0;
-			final double vecX = vectorList[v][0];
-			final double vecY = vectorList[v][1];
-			final double vecZ = vectorList[v][2];
+			double[] vector = new double[3];
+			vector[0] = vectorList[v][0];
+			vector[1] = vectorList[v][1];
+			vector[2] = vectorList[v][2];
 
 			// start at negative end of vector
-			final int xS = (int) Math.round(radVw * vecX);
-			final int yS = (int) Math.round(radVh * vecY);
-			final int zS = (int) Math.round(radVd * vecZ);
+			int xS = (int) Math.round(-radius * vector[0] / vW);
+			int yS = (int) Math.round(-radius * vector[1] / vH);
+			int zS = (int) Math.round(-radius * vector[2] / vD);
 
-			final int startIndex = centroidIndex + b * zS + a * yS + xS;
+			int startIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * zS
+					+ (2 * w + 1) * yS + xS;
 
 			if (xS + w < 0 || xS + w >= (2 * w + 1) || yS + h < 0
 					|| yS + h >= (2 * h + 1) || zS + d < 0
@@ -471,16 +477,14 @@ public class Anisotropy_ implements PlugIn {
 				lastPos = false;
 			}
 
-			final double vecXvW = vecX / vW;
-			final double vecYvH = vecY / vH;
-			final double vecZvD = vecZ / vD;
 			for (double pos = -radius; pos <= radius; pos += vectorSampling) {
 				// find the index of the voxel that the sample falls within
 				// offset from centroid
-				final int x = (int) Math.round(pos * vecXvW);
-				final int y = (int) Math.round(pos * vecYvH);
-				final int z = (int) Math.round(pos * vecZvD);
-				final int testIndex = centroidIndex + b * z + a * y + x;
+				int x = (int) Math.round(pos * vector[0] / vW);
+				int y = (int) Math.round(pos * vector[1] / vH);
+				int z = (int) Math.round(pos * vector[2] / vD);
+				int testIndex = centroidIndex + (2 * w + 1) * (2 * h + 1) * z
+						+ (2 * w + 1) * y + x;
 				// determine if the voxel is thresholded or not
 				if (workArray[testIndex] == 0) {
 					thisPos = true;
@@ -489,13 +493,14 @@ public class Anisotropy_ implements PlugIn {
 				}
 				// if this pos is not equal to last pos then an interface is
 				// counted
-				if (thisPos != lastPos) {
-					nIntercepts++;
+				if (thisPos && !lastPos) {
+					nIntercepts += 1;
 				}
 				// then before incrementing the for loop, set lastPos to thisPos
 				lastPos = thisPos;
 			}
 			interceptCounts[v] = nIntercepts;
+			IJ.showProgress(v, nVectors);
 		}
 
 		return interceptCounts;
@@ -512,47 +517,35 @@ public class Anisotropy_ implements PlugIn {
 	 * 
 	 */
 	private EigenvalueDecomposition principalComponents(double[][] coOrdinates) {
+		IJ.showStatus("Calculating eigenvalues");
 		double sumX = 0, sumY = 0, sumZ = 0;
-		final int nCoords = coOrdinates.length;
-		for (int n = 0; n < nCoords; n++) {
+		for (int n = 0; n < coOrdinates.length; n++) {
 			sumX += coOrdinates[n][0];
 			sumY += coOrdinates[n][1];
 			sumZ += coOrdinates[n][2];
 		}
-		final double centX = sumX / nCoords;
-		final double centY = sumY / nCoords;
-		final double centZ = sumZ / nCoords;
+		double centX = sumX / coOrdinates.length;
+		double centY = sumY / coOrdinates.length;
+		double centZ = sumZ / coOrdinates.length;
 
 		double[][] C = new double[3][3];
 		double count = 0;
-		double sXx = 0;
-		double sYy = 0;
-		double sZz = 0;
-		double sXy = 0;
-		double sXz = 0;
-		double sYz = 0;
-		for (int n = 0; n < nCoords; n++) {
-			final double x = coOrdinates[n][0] - centX;
-			final double y = coOrdinates[n][1] - centY;
-			final double z = coOrdinates[n][2] - centZ;
-			sXx += x * x;
-			sYy += y * y;
-			sZz += z * z;
-			sXy += x * y;
-			sXz += x * z;
-			sYz += y * z;
+		for (int n = 0; n < coOrdinates.length; n++) {
+			double x = coOrdinates[n][0] - centX;
+			double y = coOrdinates[n][1] - centY;
+			double z = coOrdinates[n][2] - centZ;
+			C[0][0] += x * x;
+			C[1][1] += y * y;
+			C[2][2] += z * z;
+			C[0][1] += x * y;
+			C[0][2] += x * z;
+			C[1][0] += x * y;
+			C[1][2] += y * z;
+			C[2][0] += x * z;
+			C[2][1] += y * z;
 			count += 1;
 		}
 		double invCount = 1 / count;
-		C[0][0] = sXx;
-		C[1][1] = sYy;
-		C[2][2] = sZz;
-		C[0][1] = sXy;
-		C[0][2] = sXz;
-		C[1][0] = sXy;
-		C[1][2] = sYz;
-		C[2][0] = sXz;
-		C[2][1] = sYz;
 		Matrix covarianceMatrix = new Matrix(C).times(invCount);
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
 				covarianceMatrix);
@@ -656,8 +649,7 @@ public class Anisotropy_ implements PlugIn {
 		}
 	}
 
-	private void updateGraph(ImagePlus plotImage,
-			Vector<Double> anisotropyHistory) {
+	private void updateGraph(Vector<Double> anisotropyHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];
 		double[] xVariables = new double[anisotropyHistory.size()];
 		Enumeration<Double> e = anisotropyHistory.elements();
