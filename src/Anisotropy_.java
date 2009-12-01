@@ -511,34 +511,46 @@ public class Anisotropy_ implements PlugIn {
 	 * 
 	 */
 	private EigenvalueDecomposition principalComponents(double[][] coOrdinates) {
-		IJ.showStatus("Calculating eigenvalues");
 		double sumX = 0, sumY = 0, sumZ = 0;
-		for (int n = 0; n < coOrdinates.length; n++) {
+		final int nCo = coOrdinates.length;
+		for (int n = 0; n < nCo; n++) {
 			sumX += coOrdinates[n][0];
 			sumY += coOrdinates[n][1];
 			sumZ += coOrdinates[n][2];
 		}
-		double centX = sumX / coOrdinates.length;
-		double centY = sumY / coOrdinates.length;
-		double centZ = sumZ / coOrdinates.length;
+		final double cX = sumX / nCo;
+		final double cY = sumY / nCo;
+		final double cZ = sumZ / nCo;
 
-		double[][] C = new double[3][3];
+		double sXx = 0;
+		double sYy = 0;
+		double sZz = 0;
+		double sXy = 0;
+		double sXz = 0;
+		double sYz = 0;
 		double count = 0;
-		for (int n = 0; n < coOrdinates.length; n++) {
-			double x = coOrdinates[n][0] - centX;
-			double y = coOrdinates[n][1] - centY;
-			double z = coOrdinates[n][2] - centZ;
-			C[0][0] += x * x;
-			C[1][1] += y * y;
-			C[2][2] += z * z;
-			C[0][1] += x * y;
-			C[0][2] += x * z;
-			C[1][0] += x * y;
-			C[1][2] += y * z;
-			C[2][0] += x * z;
-			C[2][1] += y * z;
-			count += 1;
+		for (int n = 0; n < nCo; n++) {
+			final double x = coOrdinates[n][0] - cX;
+			final double y = coOrdinates[n][1] - cY;
+			final double z = coOrdinates[n][2] - cZ;
+			sXx += x * x;
+			sYy += y * y;
+			sZz += z * z;
+			sXy += x * y;
+			sXz += x * z;
+			sYz += y * z;
+			count++;
 		}
+		double[][] C = new double[3][3];
+		C[0][0] = sXx;
+		C[1][1] = sYy;
+		C[2][2] = sZz;
+		C[0][1] = sXy;
+		C[0][2] = sXz;
+		C[1][0] = sXy;
+		C[1][2] = sYz;
+		C[2][0] = sXz;
+		C[2][1] = sYz;
 		double invCount = 1 / count;
 		Matrix covarianceMatrix = new Matrix(C).times(invCount);
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
