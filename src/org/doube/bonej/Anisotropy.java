@@ -25,7 +25,7 @@ import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.gui.*;
 import ij.macro.Interpreter;
-import ij.measure.Calibration; //import ij.measure.ResultsTable;
+import ij.measure.Calibration;
 
 // for 3D plotting of coordinates
 import javax.vecmath.Point3f;
@@ -41,11 +41,16 @@ import java.util.Vector;
 import ij3d.Image3DUniverse;
 import ij3d.Content;
 
-import org.doube.jama.*;
+import org.doube.jama.Matrix;
+import org.doube.jama.EigenvalueDecomposition;
 
 /**
  * <p>
- * Calculate degree of anisotropy using the mean intercept length method
+ * Calculate degree of anisotropy using the mean intercept length method.
+ * Samples vectors in a sphere; the location of the sphere is random within the
+ * stack. New sampling spheres are generated until the coefficient of variation
+ * of the anisotropy result reduces to a user-set threshold or a maximum number
+ * of spheres has been sampled.
  * </p>
  * 
  * @see <p>
@@ -57,12 +62,10 @@ import org.doube.jama.*;
  * @author Michael Doube
  * 
  */
-// TODO implement the star volume method
 // TODO implement the autocorrelation function (ACF) method
 // TODO multithread
 // TODO split off anisotropy algorithms into classes in org.doube.bonej
 // and call them from the main Anisotropy_ class
-// TODO run to stable result.
 public class Anisotropy implements PlugIn {
 
 	public void run(String arg) {
@@ -154,6 +157,9 @@ public class Anisotropy implements PlugIn {
 	 *            distance between samples along the sampling vector. Set to 2.3
 	 *            * maximum voxel dimension for a safe and efficient sampling
 	 *            increment
+	 * @param tolerance
+	 *            coefficient of variation of results at which we accept result
+	 *            is stable
 	 * @param doPlot
 	 *            set to true if you want to see a plot of anisotropy versus
 	 *            number of repeats, updated in real time
@@ -207,13 +213,13 @@ public class Anisotropy implements PlugIn {
 
 			// work out the current mean intercept length
 			double[] meanInterceptLengths = new double[nVectors];
+			final double probeLength = radius * (double) s;
 			for (int v = 0; v < nVectors; v++) {
 				if (sumInterceptCounts[v] == 0) {
 					sumInterceptCounts[v] = 1;
 				}
 				// MIL = total vector length / number of intercepts
-				meanInterceptLengths[v] = radius * (double) s
-						/ sumInterceptCounts[v];
+				meanInterceptLengths[v] = probeLength / sumInterceptCounts[v];
 			}
 
 			// work out coordinates of vector cloud
@@ -261,6 +267,7 @@ public class Anisotropy implements PlugIn {
 	 * Calculate coefficient of variation of last n results
 	 * 
 	 * @param anisotropyHistory
+	 *            list of anisotropy results, one result per iteration
 	 * 
 	 * @return coefficient of variation, which is standard deviation / mean.
 	 */
@@ -640,6 +647,14 @@ public class Anisotropy implements PlugIn {
 		return ellipsoid;
 	} /* end fitEllipsoid */
 
+	/**
+	 * Draw on plotImage the data in anisotropyHistory with error bars from
+	 * errorHistory
+	 * 
+	 * @param plotImage the graph image
+	 * @param anisotropyHistory all anisotropy results, 1 for each iteration
+	 * @param errorHistory all error results, 1 for each iteration
+	 */
 	private void updateGraph(ImagePlus plotImage,
 			Vector<Double> anisotropyHistory, Vector<Double> errorHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];
