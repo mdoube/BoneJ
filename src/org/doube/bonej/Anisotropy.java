@@ -137,6 +137,7 @@ public class Anisotropy implements PlugIn {
 		if (do3DResult) {
 			plotPoints3D(coOrdinates, "Intercept Lengths");
 		}
+		return;
 	}
 
 	/**
@@ -252,6 +253,11 @@ public class Anisotropy implements PlugIn {
 		return result;
 	}
 
+	/**
+	 * Create a graph for plotting anisotropy results
+	 * 
+	 * @return ImagePlus for drawing a plot on
+	 */
 	private ImagePlus createGraph() {
 		double[] x = { 0 }, y = { 0 };
 		Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
@@ -283,7 +289,7 @@ public class Anisotropy implements PlugIn {
 		int count = 0;
 
 		while (iter.hasPrevious()) {
-			double value = iter.previous();
+			final double value = iter.previous();
 			sum += value;
 			count++;
 			if (count >= n)
@@ -651,9 +657,12 @@ public class Anisotropy implements PlugIn {
 	 * Draw on plotImage the data in anisotropyHistory with error bars from
 	 * errorHistory
 	 * 
-	 * @param plotImage the graph image
-	 * @param anisotropyHistory all anisotropy results, 1 for each iteration
-	 * @param errorHistory all error results, 1 for each iteration
+	 * @param plotImage
+	 *            the graph image
+	 * @param anisotropyHistory
+	 *            all anisotropy results, 1 for each iteration
+	 * @param errorHistory
+	 *            all error results, 1 for each iteration
 	 */
 	private void updateGraph(ImagePlus plotImage,
 			Vector<Double> anisotropyHistory, Vector<Double> errorHistory) {
