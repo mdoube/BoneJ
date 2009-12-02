@@ -15,9 +15,9 @@ import ij.process.ImageStatistics;
 public class ImageCheck {
 
 	/**
-	 * IJ version required by BoneJ
+	 * ImageJ version required by BoneJ
 	 */
-	public static final String requiredIJVersion = "1.43k";
+	public static final String requiredIJVersion = "1.43l";
 
 	/**
 	 * Check if image is binary
