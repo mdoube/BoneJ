@@ -1259,10 +1259,10 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	 * 
 	 * @param matrix
 	 */
-	public void printMatrix(Matrix matrix) {
-		int nCols = matrix.getColumnDimension();
-		int nRows = matrix.getRowDimension();
-		double[][] eVal = matrix.getArrayCopy();
+	public void printToIJLog() {
+		int nCols = getColumnDimension();
+		int nRows = getRowDimension();
+		double[][] eVal = getArrayCopy();
 		for (int r = 0; r < nRows; r++) {
 			String row = "||";
 			for (int c = 0; c < nCols; c++) {
