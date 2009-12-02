@@ -40,14 +40,7 @@ import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 
 public class Moments_3D implements PlugIn {
-	// ImagePlus imp;
-	// protected ImageStack stack;
-	// public float[] CTable;
-	// public double[] coeff = { 0, 1 };
-	public double m, c;
-	public int minT = 0, maxT = 4000; // min and maximum bone value in HU
-	public int startSlice = 1, endSlice;
-
+	
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
@@ -61,72 +54,68 @@ public class Moments_3D implements PlugIn {
 
 		Calibration cal = imp.getCalibration();
 		final double[] coeff = cal.getCoefficients();
-		final float[] CTable = cal.getCTable();
+//		final float[] CTable = cal.getCTable();
 		final String valueUnit = cal.getValueUnit();
+		double min = 0;
+		double max = 4000; // min and maximum bone value in HU
 		if (!cal.isSigned16Bit() && !cal.calibrated()) {
 			IJ.run("Threshold...");
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			minT = (int) ip.getMinThreshold();
-			maxT = (int) ip.getMaxThreshold();
-//			showDialog(valueUnit);
+			min = ip.getMinThreshold();
+			max = ip.getMaxThreshold();
 			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ minT + " to " + maxT);
+					+ min + " to " + max);
 		} else if (coeff[0] == -1000 && coeff[1] == 1.0) {
 			// looks like an HU calibrated image
 			// convert HU limits to pixel values
-//			showDialog("Hounsfield units");
-			minT = (int) Math.round(cal.getRawValue(minT));
-			maxT = (int) Math.round(cal.getRawValue(maxT));
-			IJ.log("Image looks like it is HU calibrated. Using " + minT
-					+ " and " + maxT + " " + valueUnit + " as bone cutoffs");
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+			IJ.log("Image looks like it is HU calibrated. Using " + min
+					+ " and " + max + " " + valueUnit + " as bone cutoffs");
 		} else if (cal.isSigned16Bit() && !cal.calibrated()) {
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			minT = (int) ip.getMinThreshold();
-			maxT = (int) ip.getMaxThreshold();
-//			showDialog(valueUnit);
+			min = ip.getMinThreshold();
+			max = ip.getMaxThreshold();
 			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ minT + " to " + maxT);
+					+ min + " to " + max);
 		} else {
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			minT = (int) ip.getMinThreshold();
-			maxT = (int) ip.getMaxThreshold();
-//			showDialog(valueUnit);
+			min = ip.getMinThreshold();
+			max = ip.getMaxThreshold();
 			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ minT + " to " + maxT);
-			// IJ.error("Unrecognised file type");
-			// return;
+					+ min + " to " + max);
 		}
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addNumericField("Start Slice:", startSlice, 0);
-		gd.addNumericField("End Slice:", endSlice, 0);
+		gd.addNumericField("Start Slice:", 1, 0);
+		gd.addNumericField("End Slice:", imp.getStackSize(), 0);
 		gd.addMessage("Density calibration constants");
 		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + valueUnit);
 		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
 		gd.addMessage("Only use pixels between clip values:");
-		gd.addNumericField("Minimum", minT, 0, 6, valueUnit);
-		gd.addNumericField("Maximum", maxT, 0, 6, valueUnit);
+		gd.addNumericField("Minimum", min, 0, 6, valueUnit);
+		gd.addNumericField("Maximum", max, 0, 6, valueUnit);
 		gd.addCheckbox("Align result", true);
 		gd.addCheckbox("Show axes", true);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
-		startSlice = (int) gd.getNextNumber();
-		endSlice = (int) gd.getNextNumber();
-		m = gd.getNextNumber();
-		c = gd.getNextNumber();
-		minT = (int) gd.getNextNumber();
-		maxT = (int) gd.getNextNumber();
+		final int startSlice = (int) gd.getNextNumber();
+		final int endSlice = (int) gd.getNextNumber();
+		final double m = gd.getNextNumber();
+		final double c = gd.getNextNumber();
+		min = gd.getNextNumber();
+		max = gd.getNextNumber();
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
 		
-		double[] centroid = findCentroid3D(imp, startSlice, endSlice);
+		double[] centroid = findCentroid3D(imp, startSlice, endSlice, min, max, m, c);
 		if (centroid[0] < 0) {
 			IJ
 					.error(
@@ -136,9 +125,9 @@ public class Moments_3D implements PlugIn {
 			return;
 		}
 		EigenvalueDecomposition E = calculateMoments(imp, startSlice, endSlice,
-				centroid);
+				centroid, min, max, m, c);
 		if (doAlign)
-			alignToPrincipalAxes(imp, E, centroid, doAxes).show();
+			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, doAxes).show();
 		return;
 	}
 
@@ -194,7 +183,7 @@ public class Moments_3D implements PlugIn {
 	 * 
 	 */
 
-	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice) {
+	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice, final double min, final double max, double m, double c) {
 		ImageStack stack = imp.getImageStack();
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
@@ -221,7 +210,7 @@ public class Moments_3D implements PlugIn {
 					i = offset + x;
 					int testPixel = slicePixels[i] & 0xffff; // convert signed
 					// short to int
-					if (testPixel >= minT && testPixel <= maxT) {
+					if (testPixel >= min && testPixel <= max) {
 						double voxelMass = voxelDensity(imp, testPixel, m, c)
 								* voxVol;
 						sumMass += voxelMass;
@@ -281,7 +270,7 @@ public class Moments_3D implements PlugIn {
 	}
 
 	public EigenvalueDecomposition calculateMoments(ImagePlus imp,
-			int startSlice, int endSlice, double[] centroid) {
+			int startSlice, int endSlice, double[] centroid, final double min, final double max, double m, double c) {
 		// START OF 3D MOMENT CALCULATIONS
 		// Our CT scans are not quantitative as they contain sharpening artefact
 		// so density (g.cm^-3) is left out of this calculation and estimated at
@@ -314,7 +303,7 @@ public class Moments_3D implements PlugIn {
 				for (int x = r.x; x < (r.x + r.width); x++) {
 					int i = offset + x;
 					int testPixel = slicePixels[i] & 0xffff;
-					if (testPixel >= minT && testPixel <= maxT) {
+					if (testPixel >= min && testPixel <= max) {
 						sumVoxVol += voxVol;
 						double voxMass = voxelDensity(imp, testPixel, m, c)
 								* voxVol;
@@ -370,7 +359,7 @@ public class Moments_3D implements PlugIn {
 	}
 
 	public ImagePlus alignToPrincipalAxes(ImagePlus imp, EigenvalueDecomposition E,
-			double[] centroid, boolean doAxes) {
+			double[] centroid, int startSlice, int endSlice, boolean doAxes) {
 		ImageStack stack = imp.getImageStack();
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
