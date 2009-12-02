@@ -1,4 +1,3 @@
-
 /** Moments 3D
  *tool to calculate centroid and principal axes 
  *of a thresholded stack; assumes a 16-bit CT scan 
@@ -30,54 +29,40 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
 import ij.gui.*;
 import java.awt.Rectangle;
 
 import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
-import org.doube.jama.*;
+import org.doube.jama.Matrix;
+import org.doube.jama.EigenvalueDecomposition;
 
-public class Moments_3D implements PlugInFilter {
-	ImagePlus imp;
-	protected ImageStack stack;
-	public float[] CTable;
-	public double[] coeff = { 0, 1 };
-	public double vW, vH, vD, m, c;
+public class Moments_3D implements PlugIn {
+	// ImagePlus imp;
+	// protected ImageStack stack;
+	// public float[] CTable;
+	// public double[] coeff = { 0, 1 };
+	public double m, c;
 	public int minT = 0, maxT = 4000; // min and maximum bone value in HU
 	public int startSlice = 1, endSlice;
-	public boolean doAlign, doAxes;
-	public String title, units, valueUnit;
 
-	public int setup(String arg, ImagePlus imp) {
-		if (imp == null || imp.getNSlices() < 2) {
-			IJ.showMessage("A stack must be open");
-			return DONE;
-		}
-		stack = imp.getStack();
-		endSlice = stack.getSize();
-		this.imp = imp;
-		title = imp.getShortTitle();
-		// TODO extend to other image types by using
-		// ImageProcessor sliceProcessor = ImageStack.getProcessor(sliceNumber);
-		// int value32bit = sliceProcessor.getPixelValue(x,y);
-		return DOES_16 + STACK_REQUIRED;
-	}
-
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
+		final ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+
+		ImageProcessor ip = imp.getProcessor();
 
 		Calibration cal = imp.getCalibration();
-		vW = cal.pixelWidth;
-		vH = cal.pixelHeight;
-		vD = cal.pixelDepth;
-		units = cal.getUnits();
-		coeff = cal.getCoefficients();
-		CTable = cal.getCTable();
-		valueUnit = cal.getValueUnit();
+		final double[] coeff = cal.getCoefficients();
+		final float[] CTable = cal.getCTable();
+		final String valueUnit = cal.getValueUnit();
 		if (!cal.isSigned16Bit() && !cal.calibrated()) {
 			IJ.run("Threshold...");
 			new WaitForUserDialog(
@@ -85,13 +70,13 @@ public class Moments_3D implements PlugInFilter {
 					.show();
 			minT = (int) ip.getMinThreshold();
 			maxT = (int) ip.getMaxThreshold();
-			showDialog(valueUnit);
+//			showDialog(valueUnit);
 			IJ.log("Image is uncalibrated: using user-determined threshold "
 					+ minT + " to " + maxT);
 		} else if (coeff[0] == -1000 && coeff[1] == 1.0) {
 			// looks like an HU calibrated image
 			// convert HU limits to pixel values
-			showDialog("Hounsfield units");
+//			showDialog("Hounsfield units");
 			minT = (int) Math.round(cal.getRawValue(minT));
 			maxT = (int) Math.round(cal.getRawValue(maxT));
 			IJ.log("Image looks like it is HU calibrated. Using " + minT
@@ -102,7 +87,7 @@ public class Moments_3D implements PlugInFilter {
 					.show();
 			minT = (int) ip.getMinThreshold();
 			maxT = (int) ip.getMaxThreshold();
-			showDialog(valueUnit);
+//			showDialog(valueUnit);
 			IJ.log("Image is uncalibrated: using user-determined threshold "
 					+ minT + " to " + maxT);
 		} else {
@@ -111,16 +96,37 @@ public class Moments_3D implements PlugInFilter {
 					.show();
 			minT = (int) ip.getMinThreshold();
 			maxT = (int) ip.getMaxThreshold();
-			showDialog(valueUnit);
+//			showDialog(valueUnit);
 			IJ.log("Image is uncalibrated: using user-determined threshold "
 					+ minT + " to " + maxT);
 			// IJ.error("Unrecognised file type");
 			// return;
 		}
-		ResultsTable rt = ResultsTable.getResultsTable();
-		rt.incrementCounter();
-		rt.addLabel("Label", imp.getTitle());
-		double[] centroid = findCentroid3D(stack, startSlice, endSlice);
+		GenericDialog gd = new GenericDialog("Setup");
+		gd.addNumericField("Start Slice:", startSlice, 0);
+		gd.addNumericField("End Slice:", endSlice, 0);
+		gd.addMessage("Density calibration constants");
+		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + valueUnit);
+		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
+		gd.addMessage("Only use pixels between clip values:");
+		gd.addNumericField("Minimum", minT, 0, 6, valueUnit);
+		gd.addNumericField("Maximum", maxT, 0, 6, valueUnit);
+		gd.addCheckbox("Align result", true);
+		gd.addCheckbox("Show axes", true);
+		gd.showDialog();
+		if (gd.wasCanceled()) {
+			return;
+		}
+		startSlice = (int) gd.getNextNumber();
+		endSlice = (int) gd.getNextNumber();
+		m = gd.getNextNumber();
+		c = gd.getNextNumber();
+		minT = (int) gd.getNextNumber();
+		maxT = (int) gd.getNextNumber();
+		final boolean doAlign = gd.getNextBoolean();
+		final boolean doAxes = gd.getNextBoolean();
+		
+		double[] centroid = findCentroid3D(imp, startSlice, endSlice);
 		if (centroid[0] < 0) {
 			IJ
 					.error(
@@ -129,11 +135,10 @@ public class Moments_3D implements PlugInFilter {
 									+ "vailable for calculation.\nCheck your ROI and threshold.");
 			return;
 		}
-		EigenvalueDecomposition E = calculateMoments(stack, startSlice,
-				endSlice, centroid, rt);
-		rt.show("Results");
+		EigenvalueDecomposition E = calculateMoments(imp, startSlice, endSlice,
+				centroid);
 		if (doAlign)
-			alignToPrincipalAxes(stack, E, centroid);
+			alignToPrincipalAxes(imp, E, centroid, doAxes).show();
 		return;
 	}
 
@@ -159,7 +164,9 @@ public class Moments_3D implements PlugInFilter {
 	 * @return voxelDensity
 	 */
 
-	public double voxelDensity(double pixelValue, double m, double c) {
+	private double voxelDensity(ImagePlus imp, double pixelValue, double m,
+			double c) {
+		String units = imp.getCalibration().getUnits();
 		// density in g / cm^3 but our units are mm
 		// so density is 1000* too high
 		// linear calibration function, y = mx + c
@@ -187,8 +194,12 @@ public class Moments_3D implements PlugInFilter {
 	 * 
 	 */
 
-	public double[] findCentroid3D(ImageStack stack, int startSlice,
-			int endSlice) {
+	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice) {
+		ImageStack stack = imp.getImageStack();
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
 		Rectangle r = stack.getRoi();
 		double voxVol = vW * vH * vD;
 		int offset, i;
@@ -209,9 +220,9 @@ public class Moments_3D implements PlugInFilter {
 				for (int x = r.x; x < (r.x + r.width); x++) {
 					i = offset + x;
 					int testPixel = slicePixels[i] & 0xffff; // convert signed
-																// short to int
+					// short to int
 					if (testPixel >= minT && testPixel <= maxT) {
-						double voxelMass = voxelDensity(testPixel, m, c)
+						double voxelMass = voxelDensity(imp, testPixel, m, c)
 								* voxVol;
 						sumMass += voxelMass;
 						sumx += (double) x * voxelMass;
@@ -238,6 +249,7 @@ public class Moments_3D implements PlugInFilter {
 		 * rt.addValue("Yc ("+units+")", centroid[1]);
 		 * rt.addValue("Zc ("+units+")", centroid[2]);
 		 */
+		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Xc (" + units + ")", centroid[0]);
 		ri.setResultInRow(imp, "Yc (" + units + ")", centroid[1]);
@@ -245,7 +257,7 @@ public class Moments_3D implements PlugInFilter {
 		return centroid;
 	}/* end findCentroid3D */
 
-	public short[] makeWorkArray(ImageStack stack, int startSlice, int endSlice) {
+	private short[] makeWorkArray(ImageStack stack, int startSlice, int endSlice) {
 		Rectangle r = stack.getRoi();
 		int al = stack.getSize() + 1;
 		int w = stack.getWidth();
@@ -268,17 +280,22 @@ public class Moments_3D implements PlugInFilter {
 		return sourceWorkArray;
 	}
 
-	public EigenvalueDecomposition calculateMoments(ImageStack stack,
-			int startSlice, int endSlice, double[] centroid, ResultsTable rt) {
+	public EigenvalueDecomposition calculateMoments(ImagePlus imp,
+			int startSlice, int endSlice, double[] centroid) {
 		// START OF 3D MOMENT CALCULATIONS
 		// Our CT scans are not quantitative as they contain sharpening artefact
 		// so density (g.cm^-3) is left out of this calculation and estimated at
 		// the end
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
-		int w = stack.getWidth();
-		double cX = centroid[0];
-		double cY = centroid[1];
-		double cZ = centroid[2];
+		final int w = stack.getWidth();
+		final double cX = centroid[0];
+		final double cY = centroid[1];
+		final double cZ = centroid[2];
 		double voxVol = vW * vH * vD;
 		double sumVoxVol = 0;
 		double sumVoxMass = 0;
@@ -299,7 +316,8 @@ public class Moments_3D implements PlugInFilter {
 					int testPixel = slicePixels[i] & 0xffff;
 					if (testPixel >= minT && testPixel <= maxT) {
 						sumVoxVol += voxVol;
-						double voxMass = voxelDensity(testPixel, m, c) * voxVol;
+						double voxMass = voxelDensity(imp, testPixel, m, c)
+								* voxVol;
 						sumVoxMass += voxMass;
 						Icxx += ((y * vH - cY) * (y * vH - cY) + (z * vD - cZ)
 								* (z * vD - cZ) + (vH * vH + vD * vD) / 12)
@@ -334,24 +352,30 @@ public class Moments_3D implements PlugInFilter {
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
 				inertiaTensorMatrix);
 
+		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(this.imp, "Vol (" + units + "^3)", sumVoxVol);
-		ri.setResultInRow(this.imp, "Mass (g)", sumVoxMass);
-		ri.setResultInRow(this.imp, "Icxx (kg.m^2)", Icxx);
-		ri.setResultInRow(this.imp, "Icyy (kg.m^2)", Icyy);
-		ri.setResultInRow(this.imp, "Iczz (kg.m^2)", Iczz);
-		ri.setResultInRow(this.imp, "Icxy (kg.m^2)", Icxy);
-		ri.setResultInRow(this.imp, "Icxz (kg.m^2)", Icxz);
-		ri.setResultInRow(this.imp, "Icyz (kg.m^2)", Icyz);
-		ri.setResultInRow(this.imp, "I1 (kg.m^2)", E.getD().get(2, 2));
-		ri.setResultInRow(this.imp, "I2 (kg.m^2)", E.getD().get(1, 1));
-		ri.setResultInRow(this.imp, "I3 (kg.m^2)", E.getD().get(0, 0));
+		ri.setResultInRow(imp, "Vol (" + units + "^3)", sumVoxVol);
+		ri.setResultInRow(imp, "Mass (g)", sumVoxMass);
+		ri.setResultInRow(imp, "Icxx (kg.m^2)", Icxx);
+		ri.setResultInRow(imp, "Icyy (kg.m^2)", Icyy);
+		ri.setResultInRow(imp, "Iczz (kg.m^2)", Iczz);
+		ri.setResultInRow(imp, "Icxy (kg.m^2)", Icxy);
+		ri.setResultInRow(imp, "Icxz (kg.m^2)", Icxz);
+		ri.setResultInRow(imp, "Icyz (kg.m^2)", Icyz);
+		ri.setResultInRow(imp, "I1 (kg.m^2)", E.getD().get(2, 2));
+		ri.setResultInRow(imp, "I2 (kg.m^2)", E.getD().get(1, 1));
+		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
 
 		return E;
 	}
 
-	public void alignToPrincipalAxes(ImageStack stack,
-			EigenvalueDecomposition E, double[] centroid) {
+	public ImagePlus alignToPrincipalAxes(ImagePlus imp, EigenvalueDecomposition E,
+			double[] centroid, boolean doAxes) {
+		ImageStack stack = imp.getImageStack();
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
 		final int al = stack.getSize() + 1;
 		final int h = stack.getHeight();
 		final int w = stack.getWidth();
@@ -359,7 +383,8 @@ public class Moments_3D implements PlugInFilter {
 		final double yC = centroid[1];
 		final double zC = centroid[2];
 		final int sliceSize = w * h;
-		final short[] sourceWorkArray = makeWorkArray(stack, startSlice, endSlice);
+		final short[] sourceWorkArray = makeWorkArray(stack, startSlice,
+				endSlice);
 		short[] targetWorkArray = new short[sourceWorkArray.length];
 		// Matrix eVal = E.getD();
 		Matrix eVec = E.getV();
@@ -448,37 +473,10 @@ public class Moments_3D implements PlugInFilter {
 			int n = z + 1;
 			target.addSlice("slice " + n, sliceArray);
 		}
-		ImagePlus impTarget = new ImagePlus(title + "_aligned", target);
+		ImagePlus impTarget = new ImagePlus("Aligned" + imp.getTitle(), target);
 		impTarget.setCalibration(imp.getCalibration());
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
-		impTarget.show();
-		return;
-	}
-
-	public void showDialog(String valueUnit) {
-		GenericDialog gd = new GenericDialog("Setup");
-		gd.addNumericField("Start Slice:", startSlice, 0);
-		gd.addNumericField("End Slice:", endSlice, 0);
-		gd.addMessage("Density calibration constants");
-		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + valueUnit);
-		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
-		gd.addMessage("Only use pixels between clip values:");
-		gd.addNumericField("Minimum", minT, 0, 6, valueUnit);
-		gd.addNumericField("Maximum", maxT, 0, 6, valueUnit);
-		gd.addCheckbox("Align result", true);
-		gd.addCheckbox("Show axes", true);
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			return;
-		}
-		startSlice = (int) gd.getNextNumber();
-		endSlice = (int) gd.getNextNumber();
-		m = gd.getNextNumber();
-		c = gd.getNextNumber();
-		minT = (int) gd.getNextNumber();
-		maxT = (int) gd.getNextNumber();
-		doAlign = gd.getNextBoolean();
-		doAxes = gd.getNextBoolean();
+		return impTarget;
 	}
 }
