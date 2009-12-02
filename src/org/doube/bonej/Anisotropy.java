@@ -101,6 +101,7 @@ public class Anisotropy implements PlugIn {
 		// number of randomly-positioned vector fields
 		gd.addNumericField("Min_Spheres", 100, 0, 5, "");
 		gd.addNumericField("Max_Spheres", 2000, 0, 5, "");
+		gd.addNumericField("Tolerance", 0.005, 4, 6, "");
 		gd.addCheckbox("Show_Plot", true);
 		gd.addCheckbox("3D_Result", false);
 		gd.showDialog();
@@ -111,16 +112,17 @@ public class Anisotropy implements PlugIn {
 		final int nVectors = (int) gd.getNextNumber();
 		final int minSpheres = (int) gd.getNextNumber();
 		final int maxSpheres = (int) gd.getNextNumber();
+		final double tolerance = gd.getNextNumber();
 		final boolean doPlot = gd.getNextBoolean();
 		final boolean do3DResult = gd.getNextBoolean();
 
 		Object[] result = new Object[2];
 		if (doAutoMode)
 			result = runToStableResult(imp, minSpheres, maxSpheres, nVectors,
-					radius, vectorSampling, doPlot);
+					radius, vectorSampling, tolerance, doPlot);
 		else
 			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
-					radius, vectorSampling, doPlot);
+					radius, vectorSampling, tolerance, doPlot);
 
 		double[] anisotropy = (double[]) result[0];
 		double[][] coOrdinates = (double[][]) result[1];
@@ -160,12 +162,11 @@ public class Anisotropy implements PlugIn {
 	 */
 	public Object[] runToStableResult(ImagePlus imp, int minSpheres,
 			int maxSpheres, int nVectors, double radius, double vectorSampling,
-			boolean doPlot) {
+			double tolerance, boolean doPlot) {
 		final int minIterations = minSpheres;
 		final int maxIterations = maxSpheres;
 		final double[][] vectorList = randomVectors(nVectors);
 		double variance = Double.NaN;
-		final double tolerance = 0.005;
 		double anisotropy = Double.NaN;
 		double[][] centroidList = new double[1][3];
 		double[] centroid = new double[3];
@@ -183,7 +184,6 @@ public class Anisotropy implements PlugIn {
 		}
 		Vector<Double> anisotropyHistory = new Vector<Double>();
 		Vector<Double> errorHistory = new Vector<Double>();
-		ArrayList<double[]> interceptLengths = new ArrayList<double[]>();
 		int s = 0;
 		while (s < minIterations
 				|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
@@ -215,18 +215,6 @@ public class Anisotropy implements PlugIn {
 				meanInterceptLengths[v] = radius * (double) s
 						/ sumInterceptCounts[v];
 			}
-			// divide radius by intercept counts to get intercept lengths
-
-			double[] interceptLength = new double[nVectors];
-			for (int v = 0; v < nVectors; v++) {
-				interceptLength[v] = radius / interceptCounts[v];
-			}
-
-			// work out the current standard deviation of intercept length
-
-			interceptLengths.add(interceptLength);
-
-			standardDeviation(meanInterceptLengths, interceptLengths);
 
 			// work out coordinates of vector cloud
 			for (int v = 0; v < nVectors; v++) {
@@ -241,23 +229,6 @@ public class Anisotropy implements PlugIn {
 			double[][] eVal = eigenValues.getArrayCopy();
 			anisotropy = 1 - eVal[0][0] / eVal[2][2];
 			anisotropyHistory.add(anisotropy);
-
-			// double[] standardDeviations = standardDeviation(
-			// meanInterceptLengths, interceptLengths);
-			//
-			// double[][] errorCoOrdinates = new double[nVectors][3];
-			// for (int v = 0; v < nVectors; v++) {
-			// final double mILsDv = meanInterceptLengths[v]
-			// + standardDeviations[v];
-			// errorCoOrdinates[v][0] = mILsDv * vectorList[v][0];
-			// errorCoOrdinates[v][1] = mILsDv * vectorList[v][1];
-			// errorCoOrdinates[v][2] = mILsDv * vectorList[v][2];
-			// }
-			// EigenvalueDecomposition F =
-			// principalComponents(errorCoOrdinates);
-			// Matrix eigenValuesF = F.getD();
-			// double[][] eValF = eigenValuesF.getArrayCopy();
-			// final double error = 1 - eValF[0][0] / eValF[2][2];
 
 			variance = getVariance(anisotropyHistory, minIterations);
 
@@ -283,40 +254,6 @@ public class Anisotropy implements PlugIn {
 		ImagePlus plotImage = new ImagePlus("Anisotropy", plotIp);
 		plotImage.setProcessor(null, plotIp);
 		return plotImage;
-	}
-
-	/**
-	 * Calculate the standard deviation of intercept length for every vector
-	 * 
-	 * @param mIL
-	 *            mean intercept length of each vector
-	 * @param interceptLengths
-	 *            all intercept lengths for all vectors
-	 * @return
-	 */
-	private double[] standardDeviation(double[] mIL,
-			ArrayList<double[]> interceptLengths) {
-
-		final int nVectors = mIL.length;
-		double[] sumOfSquares = new double[nVectors];
-
-		ListIterator<double[]> iter = interceptLengths.listIterator();
-
-		while (iter.hasNext()) {
-			double[] iL = iter.next();
-			for (int v = 0; v < nVectors; v++) {
-				sumOfSquares[v] += (iL[v] - mIL[v]) * (iL[v] - mIL[v]);
-			}
-		}
-
-		double[] standardDeviations = new double[nVectors];
-
-		final double degFree = interceptLengths.size() - 1;
-
-		for (int v = 0; v < nVectors; v++) {
-			standardDeviations[v] = Math.sqrt(sumOfSquares[v] / degFree);
-		}
-		return standardDeviations;
 	}
 
 	/**
