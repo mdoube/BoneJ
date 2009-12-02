@@ -1,4 +1,5 @@
 package org.doube.bonej;
+
 /**
  *Anisotropy_ plugin for ImageJ
  *Copyright 2009 Michael Doube 
@@ -23,6 +24,7 @@ import ij.ImageStack;
 import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.gui.*;
+import ij.macro.Interpreter;
 import ij.measure.Calibration; //import ij.measure.ResultsTable;
 
 // for 3D plotting of coordinates
@@ -32,6 +34,7 @@ import customnode.CustomPointMesh;
 
 import java.util.Enumeration;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -161,22 +164,26 @@ public class Anisotropy implements PlugIn {
 		final int minIterations = minSpheres;
 		final int maxIterations = maxSpheres;
 		final double[][] vectorList = randomVectors(nVectors);
-		double variance = Double.MAX_VALUE;
-		final double tolerance = 0.0001;
+		double variance = Double.NaN;
+		final double tolerance = 0.005;
 		double anisotropy = Double.NaN;
 		double[][] centroidList = new double[1][3];
 		double[] centroid = new double[3];
 		double[] interceptCounts = new double[nVectors];
 		double[] sumInterceptCounts = new double[nVectors];
-		double previous = 2; // Anisotropy cannot be greater than 1, so 2 gives
-		// a very high variance
 		double[][] coOrdinates = new double[nVectors][3];
 		ImagePlus plotImage = new ImagePlus();
+		// never show a plot if this method is being called from a batch mode
+		// macro
+		if (Interpreter.isBatchMode())
+			doPlot = false;
 		if (doPlot) {
 			plotImage = createGraph();
 			plotImage.show();
 		}
 		Vector<Double> anisotropyHistory = new Vector<Double>();
+		Vector<Double> errorHistory = new Vector<Double>();
+		ArrayList<double[]> interceptLengths = new ArrayList<double[]>();
 		int s = 0;
 		while (s < minIterations
 				|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
@@ -188,7 +195,8 @@ public class Anisotropy implements PlugIn {
 			centroid[1] = centroidList[0][1];
 			centroid[2] = centroidList[0][2];
 			IJ.showStatus("Counting intercepts at site " + s
-					+ ", anisotropy = " + IJ.d2s(anisotropy, 5));
+					+ ", anisotropy = " + IJ.d2s(anisotropy, 5) + ", CV = "
+					+ IJ.d2s(variance, 3));
 			interceptCounts = countIntercepts(imp, centroid, vectorList,
 					nVectors, radius, vectorSampling);
 
@@ -207,6 +215,19 @@ public class Anisotropy implements PlugIn {
 				meanInterceptLengths[v] = radius * (double) s
 						/ sumInterceptCounts[v];
 			}
+			// divide radius by intercept counts to get intercept lengths
+
+			double[] interceptLength = new double[nVectors];
+			for (int v = 0; v < nVectors; v++) {
+				interceptLength[v] = radius / interceptCounts[v];
+			}
+
+			// work out the current standard deviation of intercept length
+
+			interceptLengths.add(interceptLength);
+
+			standardDeviation(meanInterceptLengths, interceptLengths);
+
 			// work out coordinates of vector cloud
 			for (int v = 0; v < nVectors; v++) {
 				final double milV = meanInterceptLengths[v];
@@ -220,10 +241,34 @@ public class Anisotropy implements PlugIn {
 			double[][] eVal = eigenValues.getArrayCopy();
 			anisotropy = 1 - eVal[0][0] / eVal[2][2];
 			anisotropyHistory.add(anisotropy);
+
+			// double[] standardDeviations = standardDeviation(
+			// meanInterceptLengths, interceptLengths);
+			//
+			// double[][] errorCoOrdinates = new double[nVectors][3];
+			// for (int v = 0; v < nVectors; v++) {
+			// final double mILsDv = meanInterceptLengths[v]
+			// + standardDeviations[v];
+			// errorCoOrdinates[v][0] = mILsDv * vectorList[v][0];
+			// errorCoOrdinates[v][1] = mILsDv * vectorList[v][1];
+			// errorCoOrdinates[v][2] = mILsDv * vectorList[v][2];
+			// }
+			// EigenvalueDecomposition F =
+			// principalComponents(errorCoOrdinates);
+			// Matrix eigenValuesF = F.getD();
+			// double[][] eValF = eigenValuesF.getArrayCopy();
+			// final double error = 1 - eValF[0][0] / eValF[2][2];
+
+			variance = getVariance(anisotropyHistory, minIterations);
+
+			if (variance + anisotropy > 1 || anisotropy - variance < 0) {
+				variance = Math.max(Math.min(1 - anisotropy, anisotropy),
+						tolerance);
+			}
+
+			errorHistory.add(variance);
 			if (doPlot)
-				updateGraph(plotImage, anisotropyHistory);
-			variance = Math.abs(previous - anisotropy);
-			previous = anisotropy;
+				updateGraph(plotImage, anisotropyHistory, errorHistory);
 		}
 		double[] da = { anisotropy };
 		Object[] result = { da, coOrdinates };
@@ -238,6 +283,86 @@ public class Anisotropy implements PlugIn {
 		ImagePlus plotImage = new ImagePlus("Anisotropy", plotIp);
 		plotImage.setProcessor(null, plotIp);
 		return plotImage;
+	}
+
+	/**
+	 * Calculate the standard deviation of intercept length for every vector
+	 * 
+	 * @param mIL
+	 *            mean intercept length of each vector
+	 * @param interceptLengths
+	 *            all intercept lengths for all vectors
+	 * @return
+	 */
+	private double[] standardDeviation(double[] mIL,
+			ArrayList<double[]> interceptLengths) {
+
+		final int nVectors = mIL.length;
+		double[] sumOfSquares = new double[nVectors];
+
+		ListIterator<double[]> iter = interceptLengths.listIterator();
+
+		while (iter.hasNext()) {
+			double[] iL = iter.next();
+			for (int v = 0; v < nVectors; v++) {
+				sumOfSquares[v] += (iL[v] - mIL[v]) * (iL[v] - mIL[v]);
+			}
+		}
+
+		double[] standardDeviations = new double[nVectors];
+
+		final double degFree = interceptLengths.size() - 1;
+
+		for (int v = 0; v < nVectors; v++) {
+			standardDeviations[v] = Math.sqrt(sumOfSquares[v] / degFree);
+		}
+		return standardDeviations;
+	}
+
+	/**
+	 * 
+	 * Calculate coefficient of variation of last n results
+	 * 
+	 * @param anisotropyHistory
+	 * 
+	 * @return coefficient of variation, which is standard deviation / mean.
+	 */
+
+	private double getVariance(Vector<Double> anisotropyHistory, final int n) {
+		ListIterator<Double> iter = anisotropyHistory
+				.listIterator(anisotropyHistory.size());
+
+		double sum = 0;
+
+		double sumSquares = 0;
+
+		int count = 0;
+
+		while (iter.hasPrevious()) {
+			double value = iter.previous();
+			sum += value;
+			count++;
+			if (count >= n)
+				break;
+		}
+
+		final double mean = sum / n;
+		ListIterator<Double> itr = anisotropyHistory
+				.listIterator(anisotropyHistory.size());
+
+		count = 0;
+		while (itr.hasPrevious()) {
+			final double value = itr.previous();
+			final double a = value - mean;
+			sumSquares += a * a;
+			count++;
+			if (count >= n)
+				break;
+		}
+
+		double stDev = Math.sqrt(sumSquares / n);
+		double coeffVariation = stDev / mean;
+		return coeffVariation;
 	}
 
 	/**
@@ -579,7 +704,7 @@ public class Anisotropy implements PlugIn {
 	} /* end fitEllipsoid */
 
 	private void updateGraph(ImagePlus plotImage,
-			Vector<Double> anisotropyHistory) {
+			Vector<Double> anisotropyHistory, Vector<Double> errorHistory) {
 		double[] yVariables = new double[anisotropyHistory.size()];
 		double[] xVariables = new double[anisotropyHistory.size()];
 		Enumeration<Double> e = anisotropyHistory.elements();
@@ -589,9 +714,17 @@ public class Anisotropy implements PlugIn {
 			xVariables[i] = (double) i;
 			i++;
 		}
+		Enumeration<Double> f = errorHistory.elements();
+		i = 0;
+		double[] errorBars = new double[errorHistory.size()];
+		while (f.hasMoreElements()) {
+			errorBars[i] = f.nextElement();
+			i++;
+		}
 		Plot plot = new Plot("Anisotropy", "Number of repeats", "Anisotropy",
 				xVariables, yVariables);
 		plot.addPoints(xVariables, yVariables, Plot.X);
+		plot.addErrorBars(errorBars);
 		plot.setLimits(0, anisotropyHistory.size(), 0, 1);
 		ImageProcessor plotIp = plot.getProcessor();
 		plotImage.setProcessor(null, plotIp);
