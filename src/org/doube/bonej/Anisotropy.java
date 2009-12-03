@@ -82,8 +82,8 @@ public class Anisotropy implements PlugIn {
 			IJ.error("8-bit binary (black and white only) image required.");
 			return;
 		}
-		if (!ic.isMultiSlice(imp)) {
-			IJ.error("Stack required");
+		if (!ic.isMultiSlice(imp) || imp.getStackSize() < 5) {
+			IJ.error("Stack with at least 5 slices required");
 			return;
 		}
 
