@@ -40,7 +40,7 @@ import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 
 public class Moments_3D implements PlugIn {
-	
+
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
@@ -54,7 +54,7 @@ public class Moments_3D implements PlugIn {
 
 		Calibration cal = imp.getCalibration();
 		final double[] coeff = cal.getCoefficients();
-//		final float[] CTable = cal.getCTable();
+		// final float[] CTable = cal.getCTable();
 		final String valueUnit = cal.getValueUnit();
 		double min = 0;
 		double max = 4000; // min and maximum bone value in HU
@@ -114,20 +114,41 @@ public class Moments_3D implements PlugIn {
 		max = gd.getNextNumber();
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
-		
-		double[] centroid = findCentroid3D(imp, startSlice, endSlice, min, max, m, c);
+
+		double[] centroid = findCentroid3D(imp, startSlice, endSlice, min, max,
+				m, c);
 		if (centroid[0] < 0) {
-			IJ
-					.error(
-							"Empty Stack",
-							"No voxels are a"
-									+ "vailable for calculation.\nCheck your ROI and threshold.");
+			IJ.error("Empty Stack",
+					"No voxels are available for calculation.\n"
+							+ "Check your ROI and threshold.");
 			return;
 		}
-		EigenvalueDecomposition E = calculateMoments(imp, startSlice, endSlice,
+		Object[] momentResults = calculateMoments(imp, startSlice, endSlice,
 				centroid, min, max, m, c);
+
+		EigenvalueDecomposition E = (EigenvalueDecomposition) momentResults[0];
+		double[] moments = (double[]) momentResults[1];
+
+		String units = imp.getCalibration().getUnits();
+		ResultInserter ri = ResultInserter.getInstance();
+		ri.setResultInRow(imp, "Xc (" + units + ")", centroid[0]);
+		ri.setResultInRow(imp, "Yc (" + units + ")", centroid[1]);
+		ri.setResultInRow(imp, "Zc (" + units + ")", centroid[2]);
+		ri.setResultInRow(imp, "Vol (" + units + "^3)", moments[0]);
+		ri.setResultInRow(imp, "Mass (g)", moments[1]);
+		ri.setResultInRow(imp, "Icxx (kg.m^2)", moments[2]);
+		ri.setResultInRow(imp, "Icyy (kg.m^2)", moments[3]);
+		ri.setResultInRow(imp, "Iczz (kg.m^2)", moments[4]);
+		ri.setResultInRow(imp, "Icxy (kg.m^2)", moments[5]);
+		ri.setResultInRow(imp, "Icxz (kg.m^2)", moments[6]);
+		ri.setResultInRow(imp, "Icyz (kg.m^2)", moments[7]);
+		ri.setResultInRow(imp, "I1 (kg.m^2)", E.getD().get(2, 2));
+		ri.setResultInRow(imp, "I2 (kg.m^2)", E.getD().get(1, 1));
+		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
+
 		if (doAlign)
-			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, doAxes).show();
+			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, doAxes)
+					.show();
 		return;
 	}
 
@@ -137,7 +158,7 @@ public class Moments_3D implements PlugIn {
 	// = 10^-6 m^2
 	// conversion coefficient from mm^5 to kg.m^2 = 1.8*10^-12
 	// double cc = 1.8*Math.pow(10, -12);
-	/*-----------------------------------------------------------------*/
+
 	/**
 	 * Convert a pixel value <i>x</i> to a voxel density <i>y</i> given
 	 * calibration constants <i>m</i>, <i>c</i> for the equation <i>y</i> =
@@ -152,71 +173,110 @@ public class Moments_3D implements PlugIn {
 	 * 
 	 * @return voxelDensity
 	 */
-
-	private double voxelDensity(ImagePlus imp, double pixelValue, double m,
-			double c) {
-		String units = imp.getCalibration().getUnits();
-		// density in g / cm^3 but our units are mm
-		// so density is 1000* too high
-		// linear calibration function, y = mx + c
-		double factor = 1;
-		if (units.contains("mm")) {
-			factor = 1000;
-		} else {
-			factor = 1;
-		}
+	private double voxelDensity(double pixelValue, double m, double c,
+			double factor) {
 		double voxelDensity = (m * pixelValue + c) / factor;
 		if (voxelDensity < 0)
 			voxelDensity = 0;
 		return voxelDensity;
 	}/* end voxelDensity */
 
-	/*------------------------------------------------------------------*/
 	/**
-	 * Find the centroid of an ImageStack using startSlice and endSlice as top
-	 * and bottom limits and a Rectangle as x and y limits.
+	 * Get a scale factor because density is in g / cm^3 but our units are mm so
+	 * density is 1000* too high
 	 * 
-	 * @param stack
-	 * @param startSlice
-	 * @param endSlice
-	 * @return double[3] centroid
-	 * 
+	 * @param imp
+	 * @return
 	 */
+	private double getDensityFactor(ImagePlus imp) {
+		String units = imp.getCalibration().getUnits();
+		double factor = 1;
+		if (units.contains("mm")) {
+			factor = 1000;
+		} else {
+			factor = 1;
+		}
+		return factor;
+	}
 
-	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice, final double min, final double max, double m, double c) {
-		ImageStack stack = imp.getImageStack();
+	/**
+	 * Return an empty pixel array of the type appropriate for the bit depth
+	 * required. Returns an Object, which can be used when adding an empty slice
+	 * to a stack
+	 * 
+	 * @param w
+	 * @param h
+	 * @param bitDepth
+	 * @return Object containing an array of the type needed for an image with
+	 *         bitDepth
+	 */
+	private Object getEmptyPixels(int w, int h, int bitDepth) {
+		byte[] bytePixels = new byte[w * h];
+		short[] shortPixels = new short[w * h];
+		float[] floatPixels = new float[w * h];
+
+		Object emptyPixels = new Object();
+		if (bitDepth == 8) {
+			emptyPixels = bytePixels;
+		} else if (bitDepth == 16) {
+			emptyPixels = shortPixels;
+		} else if (bitDepth == 32) {
+			emptyPixels = floatPixels;
+		}
+		return emptyPixels;
+	}
+
+	/**
+	 * Calculate a density-weighted centroid in an image using z-clip planes,
+	 * threshold clipping and density = m * pixel value + c density equation
+	 * 
+	 * @param imp
+	 *            ImagePlus
+	 * @param startSlice
+	 *            first slice to use
+	 * @param endSlice
+	 *            last slice to use
+	 * @param min
+	 *            minimum threshold value
+	 * @param max
+	 *            maximum threshold value
+	 * @param m
+	 *            slope of density equation (set to 0 if constant density)
+	 * @param c
+	 *            constant in density equation
+	 * @return double[] containing (x,y,z) centroid in scaled units
+	 */
+	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice,
+			final double min, final double max, double m, double c) {
+		final ImageStack stack = imp.getImageStack();
+		final Rectangle r = stack.getRoi();
+		final int rW = r.x + r.width;
+		final int rH = r.y + r.height;
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
-		Rectangle r = stack.getRoi();
-		double voxVol = vW * vH * vD;
-		int offset, i;
-		int w = stack.getWidth();
-		int h = stack.getHeight();
-		int sliceSize = w * h;
+		final double voxVol = vW * vH * vD;
+		final double factor = getDensityFactor(imp);
 		double sumx = 0;
 		double sumy = 0;
 		double sumz = 0;
 		double sumMass = 0;
 		for (int z = startSlice; z <= endSlice; z++) {
-			short[] slicePixels = new short[sliceSize];
 			IJ.showStatus("Calculating centroid...");
-			IJ.showProgress(z, endSlice);
-			slicePixels = (short[]) stack.getPixels(z);
-			for (int y = r.y; y < (r.y + r.height); y++) {
-				offset = y * w;
-				for (int x = r.x; x < (r.x + r.width); x++) {
-					i = offset + x;
-					int testPixel = slicePixels[i] & 0xffff; // convert signed
-					// short to int
+			IJ.showProgress(z - startSlice, endSlice - startSlice);
+			ImageProcessor ip = stack.getProcessor(z);
+			for (int y = r.y; y < rH; y++) {
+				for (int x = r.x; x < rW; x++) {
+					final double testPixel = ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
-						double voxelMass = voxelDensity(imp, testPixel, m, c)
+						final double voxelMass = voxelDensity(testPixel, m, c,
+								factor)
 								* voxVol;
 						sumMass += voxelMass;
-						sumx += (double) x * voxelMass;
-						sumy += (double) y * voxelMass;
-						sumz += (double) z * voxelMass;
+						sumx += x * voxelMass;
+						sumy += y * voxelMass;
+						sumz += z * voxelMass;
 					}
 				}
 			}
@@ -232,60 +292,29 @@ public class Moments_3D implements PlugIn {
 		}
 		// centroid in real units
 		double[] centroid = { centX * vW, centY * vH, centZ * vD };
-		/*
-		 * ResultsTable rt = ResultsTable.getResultsTable();
-		 * rt.addValue("Xc ("+units+")", centroid[0]);
-		 * rt.addValue("Yc ("+units+")", centroid[1]);
-		 * rt.addValue("Zc ("+units+")", centroid[2]);
-		 */
-		String units = imp.getCalibration().getUnits();
-		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "Xc (" + units + ")", centroid[0]);
-		ri.setResultInRow(imp, "Yc (" + units + ")", centroid[1]);
-		ri.setResultInRow(imp, "Zc (" + units + ")", centroid[2]);
 		return centroid;
 	}/* end findCentroid3D */
 
-	private short[] makeWorkArray(ImageStack stack, int startSlice, int endSlice) {
-		Rectangle r = stack.getRoi();
-		int al = stack.getSize() + 1;
-		int w = stack.getWidth();
-		int h = stack.getHeight();
-		int sliceSize = w * h;
-		int sl = w * h * al;
-		short[] sourceWorkArray = new short[sl];
-		// for (int n = 0; n<sourceWorkArray.length; n++) sourceWorkArray[n] =
-		// 0;
-		for (int s = startSlice; s <= endSlice; s++) {
-			short[] slicePixels = (short[]) stack.getPixels(s);
-			for (int y = r.y; y < (r.y + r.height); y++) {
-				int offset = y * w;
-				for (int x = r.x; x < (r.x + r.width); x++) {
-					int i = offset + x;
-					sourceWorkArray[s * sliceSize + y * w + x] = slicePixels[i];
-				}
-			}
-		}
-		return sourceWorkArray;
-	}
-
-	public EigenvalueDecomposition calculateMoments(ImagePlus imp,
-			int startSlice, int endSlice, double[] centroid, final double min, final double max, double m, double c) {
+	public Object[] calculateMoments(ImagePlus imp, int startSlice,
+			int endSlice, double[] centroid, final double min,
+			final double max, double m, double c) {
 		// START OF 3D MOMENT CALCULATIONS
-		// Our CT scans are not quantitative as they contain sharpening artefact
-		// so density (g.cm^-3) is left out of this calculation and estimated at
-		// the end
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
-		ImageStack stack = imp.getImageStack();
-		Rectangle r = stack.getRoi();
-		final int w = stack.getWidth();
+		final ImageStack stack = imp.getImageStack();
+		final Rectangle r = stack.getRoi();
+		final int rH = r.y + r.height;
+		final int rW = r.x + r.width;
 		final double cX = centroid[0];
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
-		double voxVol = vW * vH * vD;
+		final double factor = getDensityFactor(imp);
+		final double voxVol = vW * vH * vD;
+		final double voxVhVd = (vH * vH + vD * vD) / 12;
+		final double voxVwVd = (vW * vW + vD * vD) / 12;
+		final double voxVhVw = (vH * vH + vW * vW) / 12;
 		double sumVoxVol = 0;
 		double sumVoxMass = 0;
 		double Icxx = 0;
@@ -296,30 +325,29 @@ public class Moments_3D implements PlugIn {
 		double Icyz = 0;
 		for (int z = startSlice; z <= endSlice; z++) {
 			IJ.showStatus("Calculating inertia tensor...");
-			IJ.showProgress(z, endSlice);
-			short[] slicePixels = (short[]) stack.getPixels(z);
-			for (int y = r.y; y < (r.y + r.height); y++) {
-				int offset = y * w;
-				for (int x = r.x; x < (r.x + r.width); x++) {
-					int i = offset + x;
-					int testPixel = slicePixels[i] & 0xffff;
+			IJ.showProgress(z - startSlice, endSlice - startSlice);
+			ImageProcessor ip = stack.getProcessor(z);
+			for (int y = r.y; y < rH; y++) {
+				for (int x = r.x; x < rW; x++) {
+					final double testPixel = ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
 						sumVoxVol += voxVol;
-						double voxMass = voxelDensity(imp, testPixel, m, c)
+						final double voxMass = voxelDensity(testPixel, m, c,
+								factor)
 								* voxVol;
 						sumVoxMass += voxMass;
-						Icxx += ((y * vH - cY) * (y * vH - cY) + (z * vD - cZ)
-								* (z * vD - cZ) + (vH * vH + vD * vD) / 12)
+						final double xvWcX = x * vW - cX;
+						final double yvHcY = y * vH - cY;
+						final double zvDcZ = z * vD - cZ;
+						Icxx += (yvHcY * yvHcY + zvDcZ * zvDcZ + voxVhVd)
 								* voxMass;
-						Icyy += ((x * vW - cX) * (x * vW - cX) + (z * vD - cZ)
-								* (z * vD - cZ) + (vW * vW + vD * vD) / 12)
+						Icyy += (xvWcX * xvWcX + zvDcZ * zvDcZ + voxVwVd)
 								* voxMass;
-						Iczz += ((y * vH - cY) * (y * vH - cY) + (x * vW - cX)
-								* (x * vW - cX) + (vH * vH + vW * vW) / 12)
+						Iczz += (yvHcY * yvHcY + xvWcX * xvWcX + voxVhVw)
 								* voxMass;
-						Icxy += (x * vW - cX) * (y * vH - cY) * voxMass;
-						Icxz += (x * vW - cX) * (z * vD - cZ) * voxMass;
-						Icyz += (y * vH - cY) * (z * vD - cZ) * voxMass;
+						Icxy += xvWcX * yvHcY * voxMass;
+						Icxz += xvWcX * zvDcZ * voxMass;
+						Icyz += yvHcY * zvDcZ * voxMass;
 					}
 				}
 			}
@@ -341,43 +369,32 @@ public class Moments_3D implements PlugIn {
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
 				inertiaTensorMatrix);
 
-		String units = imp.getCalibration().getUnits();
-		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "Vol (" + units + "^3)", sumVoxVol);
-		ri.setResultInRow(imp, "Mass (g)", sumVoxMass);
-		ri.setResultInRow(imp, "Icxx (kg.m^2)", Icxx);
-		ri.setResultInRow(imp, "Icyy (kg.m^2)", Icyy);
-		ri.setResultInRow(imp, "Iczz (kg.m^2)", Iczz);
-		ri.setResultInRow(imp, "Icxy (kg.m^2)", Icxy);
-		ri.setResultInRow(imp, "Icxz (kg.m^2)", Icxz);
-		ri.setResultInRow(imp, "Icyz (kg.m^2)", Icyz);
-		ri.setResultInRow(imp, "I1 (kg.m^2)", E.getD().get(2, 2));
-		ri.setResultInRow(imp, "I2 (kg.m^2)", E.getD().get(1, 1));
-		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
+		double[] moments = { sumVoxVol, sumVoxMass, Icxx, Icyy, Iczz, Icxy,
+				Icxz, Icyz };
+		Object[] result = { E, moments };
 
-		return E;
+		return result;
 	}
 
-	public ImagePlus alignToPrincipalAxes(ImagePlus imp, EigenvalueDecomposition E,
-			double[] centroid, int startSlice, int endSlice, boolean doAxes) {
-		ImageStack stack = imp.getImageStack();
+	public ImagePlus alignToPrincipalAxes(ImagePlus imp,
+			EigenvalueDecomposition E, double[] centroid, int startSlice,
+			int endSlice, boolean doAxes) {
+		final ImageStack sourceStack = imp.getImageStack();
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
-		final int al = stack.getSize() + 1;
-		final int h = stack.getHeight();
-		final int w = stack.getWidth();
+		final int w = sourceStack.getWidth();
+		final int h = sourceStack.getHeight();
+		final int d = sourceStack.getSize();
+		// TODO work out targetStack dimensions based on
+		// size of original stack, ROI and eigenvectors
+		ImageStack targetStack = new ImageStack(w, h, d);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 		final double zC = centroid[2];
-		final int sliceSize = w * h;
-		final short[] sourceWorkArray = makeWorkArray(stack, startSlice,
-				endSlice);
-		short[] targetWorkArray = new short[sourceWorkArray.length];
-		// Matrix eVal = E.getD();
+
 		Matrix eVec = E.getV();
-		// double[][] eigenValues = eVal.getArrayCopy();
 		double[][] eigenVectors = eVec.getArrayCopy();
 		// check orientation of eigenvectors and correct them
 		if (eigenVectors[2][0] < 0) {
@@ -396,73 +413,77 @@ public class Moments_3D implements PlugIn {
 		Matrix eVecInv = eVec.inverse();
 		IJ.log("\nInverse Eigenvector matrix");
 		eVecInv.printToIJLog();
-		final double[][] eigenVectorsInverse = eVecInv.getArrayCopy();
+		final double[][] eigenVecInv = eVecInv.getArrayCopy();
+		final double eVI00 = eigenVecInv[0][0];
+		final double eVI10 = eigenVecInv[1][0];
+		final double eVI20 = eigenVecInv[2][0];
+		final double eVI01 = eigenVecInv[0][1];
+		final double eVI11 = eigenVecInv[1][1];
+		final double eVI21 = eigenVecInv[2][1];
+		final double eVI02 = eigenVecInv[0][2];
+		final double eVI12 = eigenVecInv[1][2];
+		final double eVI22 = eigenVecInv[2][2];
 
 		// for each voxel in the target stack, find the corresponding source
 		// voxel
-		for (int z = 1; z < al; z++) {
+		for (int z = 1; z <= d; z++) {
 			IJ.showStatus("Aligning image stack...");
-			IJ.showProgress(z, al);
+			IJ.showProgress(z, d);
+			targetStack.setPixels(getEmptyPixels(w, h, imp.getBitDepth()), z);
+			ImageProcessor targetIP = targetStack.getProcessor(z);
+			final double zD = z * vD - zC;
+			final double zDeVI00 = zD * eVI00;
+			final double zDeVI01 = zD * eVI01;
+			final double zDeVI02 = zD * eVI02;
 			for (int y = 0; y < h; y++) {
+				final double yD = y * vH - yC;
+				final double yDeVI10 = yD * eVI10;
+				final double yDeVI11 = yD * eVI11;
+				final double yDeVI12 = yD * eVI12;
 				for (int x = 0; x < w; x++) {
 					final double xD = x * vW - xC;
-					final double yD = y * vH - yC;
-					final double zD = z * vD - zC;
-					final double xAlign = xD * eigenVectorsInverse[2][0] + yD
-							* eigenVectorsInverse[1][0] + zD
-							* eigenVectorsInverse[0][0] + xC;
-					final double yAlign = xD * eigenVectorsInverse[2][1] + yD
-							* eigenVectorsInverse[1][1] + zD
-							* eigenVectorsInverse[0][1] + yC;
-					final double zAlign = xD * eigenVectorsInverse[2][2] + yD
-							* eigenVectorsInverse[1][2] + zD
-							* eigenVectorsInverse[0][2] + zC;
+					final double xAlign = xD * eVI20 + yDeVI10 + zDeVI00 + xC;
+					final double yAlign = xD * eVI21 + yDeVI11 + zDeVI01 + yC;
+					final double zAlign = xD * eVI22 + yDeVI12 + zDeVI02 + zC;
 					// possibility to do some voxel interpolation instead
 					// of just rounding in next 3 lines
 					final int xA = (int) Math.round(xAlign / vW);
 					final int yA = (int) Math.round(yAlign / vH);
 					final int zA = (int) Math.round(zAlign / vD);
-					if (xA >= 0 && xA < w && yA >= 0 && yA < h && zA >= 0
-							&& zA < al) {
-						final int k = zA * sliceSize + yA * w + xA;
-						// possibility of resizing the target stack depending on
-						// the
-						// dimensions of the aligned image rather than just
-						// clipping
-						targetWorkArray[z * sliceSize + y * w + x] = sourceWorkArray[k];
+
+					if (xA < 0 || xA >= w || yA < 0 || yA >= h || zA <= 0
+							|| zA > d) {
+						continue;
+					} else {
+						targetIP.set(x, y, sourceStack.getProcessor(zA).get(xA,
+								yA));
 					}
 				}
 			}
 		}
 		if (doAxes) {
 			// draw axes on stack
-			int xCent = (int) Math.round(centroid[0] / vW);
-			int yCent = (int) Math.round(centroid[1] / vH);
-			int zCent = (int) Math.round(centroid[2] / vD);
-			int centPos = (int) Math.round(yCent * w + xCent);
-			short axisColour = Short.MAX_VALUE;
-			for (int z = 0; z < al; z++) {
-				int zOffset = z * sliceSize;
-				targetWorkArray[zOffset + centPos] = axisColour;
-				if (z == zCent) {
-					// y axis
-					for (int y = 0; y < h; y++)
-						targetWorkArray[zOffset + y * w + xCent] = axisColour;
-					// x axis
-					for (int x = 0; x < w; x++)
-						targetWorkArray[zOffset + yCent * w + x] = axisColour;
-				}
+			final int xCent = (int) Math.round(centroid[0] / vW);
+			final int yCent = (int) Math.round(centroid[1] / vH);
+			final int zCent = (int) Math.round(centroid[2] / vD);
+			final int axisColour = Integer.MAX_VALUE;
+			for (int z = 1; z <= d; z++) {
+				ImageProcessor axisIP = targetStack.getProcessor(z);
+				// z axis
+				axisIP.set(xCent, yCent, axisColour);
 			}
+			ImageProcessor axisIP = targetStack.getProcessor(zCent);
+			axisIP.setColor(Integer.MAX_VALUE);
+			// x axis
+			axisIP.drawLine(0, yCent, w, yCent);
+
+			// y axis
+			axisIP.drawLine(xCent, 0, xCent, h);
+
 		}
-		ImageStack target = new ImageStack(w, h);
-		for (int z = 0; z < al; z++) {
-			short[] sliceArray = new short[sliceSize];
-			System.arraycopy(targetWorkArray, z * sliceSize, sliceArray, 0,
-					sliceSize);
-			int n = z + 1;
-			target.addSlice("slice " + n, sliceArray);
-		}
-		ImagePlus impTarget = new ImagePlus("Aligned" + imp.getTitle(), target);
+
+		ImagePlus impTarget = new ImagePlus("Aligned" + imp.getTitle(),
+				targetStack);
 		impTarget.setCalibration(imp.getCalibration());
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
