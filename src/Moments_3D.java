@@ -436,8 +436,14 @@ public class Moments_3D implements PlugIn {
 		final double eVI12 = eigenVecInv[1][2];
 		final double eVI22 = eigenVecInv[2][2];
 
-		// for each voxel in the target stack, find the corresponding source
-		// voxel
+		// for each voxel in the target stack,
+		// find the corresponding source voxel
+		
+		//Cache the sourceStack's processors
+		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
+		for (int z = 1; z <= d; z++) {
+			sliceProcessors[z] = sourceStack.getProcessor(z);
+		}
 		for (int z = 1; z <= d; z++) {
 			IJ.showStatus("Aligning image stack...");
 			IJ.showProgress(z, d);
@@ -463,12 +469,11 @@ public class Moments_3D implements PlugIn {
 					final int yA = (int) Math.round(yAlign / vH);
 					final int zA = (int) Math.round(zAlign / vD);
 
-					if (xA < rX || xA >= rW || yA < rY || yA >= rH || zA < startSlice
-							|| zA > endSlice) {
+					if (xA < rX || xA >= rW || yA < rY || yA >= rH
+							|| zA < startSlice || zA > endSlice) {
 						continue;
 					} else {
-						targetIP.set(x, y, sourceStack.getProcessor(zA).get(xA,
-								yA));
+						targetIP.set(x, y, sliceProcessors[zA].get(xA, yA));
 					}
 				}
 			}
