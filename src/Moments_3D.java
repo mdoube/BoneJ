@@ -1,9 +1,7 @@
 /** Moments 3D
  *tool to calculate centroid and principal axes 
- *of a thresholded stack; assumes a 16-bit CT scan 
- *of a bone in air - default thresholds are 0 and 4000 HU
- *Eigen decomposition performed with the Jama package
- *http://math.nist.gov/javanumerics/jama/
+ *of a thresholded stack; originally designed for 16-bit CT scans 
+ *of a bone in air so default thresholds are 0 and 4000 HU, but most greyscale images shoudl be handled
  *Outputs stack data aligned to principal axes
  *
  *Copyright 2008 2009 Michael Doube 
@@ -22,7 +20,6 @@
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *@author Michael Doube
- *@version 0.3
  */
 
 import ij.IJ;
@@ -376,10 +373,25 @@ public class Moments_3D implements PlugIn {
 		return result;
 	}
 
+	/**
+	 * 
+	 * @param imp
+	 * @param E
+	 * @param centroid
+	 * @param startSlice
+	 * @param endSlice
+	 * @param doAxes
+	 * @return
+	 */
 	public ImagePlus alignToPrincipalAxes(ImagePlus imp,
 			EigenvalueDecomposition E, double[] centroid, int startSlice,
 			int endSlice, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
+		final Rectangle r = sourceStack.getRoi();
+		final int rX = r.x;
+		final int rY = r.y;
+		final int rH = r.y + r.height;
+		final int rW = r.x + r.width;
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -451,8 +463,8 @@ public class Moments_3D implements PlugIn {
 					final int yA = (int) Math.round(yAlign / vH);
 					final int zA = (int) Math.round(zAlign / vD);
 
-					if (xA < 0 || xA >= w || yA < 0 || yA >= h || zA <= 0
-							|| zA > d) {
+					if (xA < rX || xA >= rW || yA < rY || yA >= rH || zA < startSlice
+							|| zA > endSlice) {
 						continue;
 					} else {
 						targetIP.set(x, y, sourceStack.getProcessor(zA).get(xA,
