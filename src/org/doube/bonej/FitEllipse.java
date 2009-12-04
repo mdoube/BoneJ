@@ -1,5 +1,245 @@
 package org.doube.bonej;
 
+import org.doube.jama.EigenvalueDecomposition;
+import org.doube.jama.Matrix;
+
 public class FitEllipse {
 
+	public double[] directFit(double[][] points) {
+		final int nPoints = points.length;
+		// %
+		// % This is a fast non-iterative ellipse fit.
+		// %
+		// % It returns ellipses only, even if points are
+		// % better approximated by a hyperbola.
+		// % It is somewhat biased toward smaller ellipses.
+		// %
+
+		// centroid = mean(XY); % the centroid of the data set
+		double[] centroid = getCentroid(points);
+		final double xC = centroid[0];
+		final double yC = centroid[1];
+
+		// D1 = [(XY(:,1)-centroid(1)).^2,
+		// (XY(:,1)-centroid(1)).*(XY(:,2)-centroid(2)),...
+		// (XY(:,2)-centroid(2)).^2];
+		double[][] d1 = new double[nPoints][3];
+		for (int i = 0; i < nPoints; i++) {
+			final double xixC = points[i][0] - xC;
+			final double yiyC = points[i][1] - yC;
+			d1[i][0] = xixC * xixC;
+			d1[i][1] = xixC * yiyC;
+			d1[i][2] = yiyC * yiyC;
+		}
+		Matrix D1 = new Matrix(d1);
+
+		// D2 = [XY(:,1)-centroid(1), XY(:,2)-centroid(2), ones(size(XY,1),1)];
+		double[][] d2 = new double[nPoints][3];
+		for (int i = 0; i < nPoints; i++) {
+			d2[i][0] = points[i][0] - xC;
+			d2[i][1] = points[i][1] - yC;
+			d2[i][2] = 1;
+		}
+		Matrix D2 = new Matrix(d2);
+
+		// S1 = D1'*D1;
+		Matrix S1 = D1.transpose().times(D1);
+
+		// S2 = D1'*D2;
+		Matrix S2 = D1.transpose().times(D2);
+
+		// S3 = D2'*D2;
+		Matrix S3 = D2.transpose().times(D2);
+
+		// T = -inv(S3)*S2';
+		Matrix T = S3.times(S2.transpose()); // !!!! TODO
+
+		// M = S1 + S2*T;
+		Matrix M = S1.plus(S2.times(T));
+
+		// M = [M(3,:)./2; -M(2,:); M(1,:)./2]; //!!!! TODO
+
+		// [evec,eval] = eig(M);
+		EigenvalueDecomposition E = M.eig();
+		Matrix eVec = E.getV();
+		Matrix eVal = E.getD();
+
+		// cond = 4*evec(1,:).*evec(3,:)-evec(2,:).^2;
+
+		// A1 = evec(:,find(cond>0));
+		// A = [A1; T*A1];
+		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
+		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
+		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
+		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
+		// A(4) = A4; A(5) = A5; A(6) = A6;
+		// A = A/norm(A);
+		//
+		// end % EllipseDirectFit
+
+		double[] ellipse = new double[3];
+		return ellipse;
+	}
+
+	/**
+	 * Ellipse fit by Taubin's Method published in G. Taubin, "Estimation Of
+	 * Planar Curves, Surfaces And Nonplanar Space Curves Defined By Implicit
+	 * Equations, With Applications To Edge And Range Image Segmentation", IEEE
+	 * Trans. PAMI, Vol. 13, pages 1115-1138, (1991)
+	 * 
+	 * Ported from Chernov's Matlab script
+	 * 
+	 * Input: points[n][2] is the array of coordinates of n points
+	 * x(i)=points[i][0], y(i)=points[i][1]
+	 * 
+	 * Output: A = [a b c d e f]' is the vector of algebraic parameters of the
+	 * fitting ellipse: ax^2 + bxy + cy^2 +dx + ey + f = 0 the vector A is
+	 * normed, so that ||A||=1
+	 * 
+	 * Among fast non-iterative ellipse fitting methods, this is perhaps the
+	 * most accurate and robust
+	 * 
+	 * Note: this method fits a quadratic curve (conic) to a set of points; if
+	 * points are better approximated by a hyperbola, this fit will return a
+	 * hyperbola. To fit ellipses only, use "Direct Ellipse Fit".
+	 * 
+	 * @author Michael Doube
+	 * @param points
+	 * @return
+	 */
+	public double[] taubinFit(double[][] points) {
+
+		final int nPoints = points.length;
+
+		// centroid = mean(XY); % the centroid of the data set
+		double[] centroid = getCentroid(points);
+		final double xC = centroid[0];
+		final double yC = centroid[1];
+
+		// Z = [(XY(:,1)-centroid(1)).^2,
+		// (XY(:,1)-centroid(1)).*(XY(:,2)-centroid(2)),
+		// (XY(:,2)-centroid(2)).^2,
+		// XY(:,1)-centroid(1),
+		// XY(:,2)-centroid(2),
+		// ones(size(XY,1),1)];
+
+		double[][] z = new double[nPoints][6];
+		for (int i = 0; i < nPoints; i++) {
+			final double xixC = points[i][0] - xC;
+			final double yiyC = points[i][1] - yC;
+			z[i][0] = xixC * xixC;
+			z[i][1] = xixC * yiyC;
+			z[i][2] = yiyC * yiyC;
+			z[i][3] = xixC;
+			z[i][4] = yiyC;
+			z[i][5] = 1;
+		}
+		Matrix Z = new Matrix(z);
+
+		// M = Z'*Z/size(XY,1);
+		Matrix M = Z.transpose().times(Z.times(1 / nPoints));
+
+		double[][] m = M.getArray();
+
+		//
+		// P = [M(1,1)-M(1,6)^2, M(1,2)-M(1,6)*M(2,6), M(1,3)-M(1,6)*M(3,6),
+		// M(1,4), M(1,5);
+
+		// M(1,2)-M(1,6)*M(2,6), M(2,2)-M(2,6)^2, M(2,3)-M(2,6)*M(3,6), M(2,4),
+		// M(2,5);
+
+		// M(1,3)-M(1,6)*M(3,6), M(2,3)-M(2,6)*M(3,6), M(3,3)-M(3,6)^2, M(3,4),
+		// M(3,5);
+
+		// M(1,4), M(2,4), M(3,4), M(4,4), M(4,5);
+
+		// M(1,5), M(2,5), M(3,5), M(4,5), M(5,5)];
+		double[][] p = new double[5][5];
+		p[0][0] = m[0][0] - m[0][5] * m[0][5];
+		p[0][1] = m[0][1] - m[0][5] * m[1][5];
+		p[0][2] = m[0][2] - m[0][5] * m[2][5];
+		p[0][3] = m[0][3];
+		p[0][4] = m[0][4];
+
+		p[1][0] = m[0][1] - m[0][5] * m[1][5];
+		p[1][1] = m[1][1] - m[1][5] * m[1][5];
+		p[1][2] = m[1][2] - m[1][5] * m[2][5];
+		p[1][3] = m[1][3];
+		p[1][4] = m[1][4];
+
+		p[2][0] = m[0][2] - m[0][5] * m[2][5];
+		p[2][1] = m[1][2] - m[1][5] * m[2][5];
+		p[2][2] = m[2][2] - m[2][5] * m[2][5];
+		p[2][3] = m[2][3];
+		p[2][4] = m[2][4];
+
+		p[3][0] = m[0][3];
+		p[3][1] = m[1][3];
+		p[3][2] = m[2][3];
+		p[3][3] = m[3][3];
+		p[3][4] = m[3][4];
+
+		p[4][0] = m[0][4];
+		p[4][1] = m[1][4];
+		p[4][2] = m[2][4];
+		p[4][3] = m[3][4];
+		p[4][4] = m[4][4];
+
+		Matrix P = new Matrix(p);
+
+		// Q = [4*M(1,6), 2*M(2,6), 0, 0, 0;
+		// 2*M(2,6), M(1,6)+M(3,6), 2*M(2,6), 0, 0;
+		// 0, 2*M(2,6), 4*M(3,6), 0, 0;
+		// 0, 0, 0, 1, 0;
+		// 0, 0, 0, 0, 1];
+		double[][] q = { { 4 * m[0][5], 2 * m[2][5], 0, 0, 0 },
+				{ 2 * m[1][5], m[0][5] + m[2][5], 2 * m[1][5], 0, 0 },
+				{ 0, 2 * m[1][5], 4 * m[2][5], 0, 0 }, { 0, 0, 0, 1, 0 },
+				{ 0, 0, 0, 0, 1 } };
+		
+		Matrix Q = new Matrix(q);
+
+		// [V,D] = eig(P,Q); //!!! TODO
+		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q.inverse()));
+		Matrix D = E.getD();
+		Matrix V = E.getV();
+				
+		// [Dsort,ID] = sort(diag(D)); //!!! TODO
+		
+		
+		// A = V(:,ID(1)); //!!! TODO
+		Matrix A = new Matrix(1,6);
+		A.set(0,0, V.get(0, 0));
+		A.set(0,1, V.get(1, 0));
+		A.set(0,2, V.get(2, 0));
+		
+		// A = [A; -A(1:3)'*M(1:3,6)];
+		Matrix B = A.times(-1).transpose().times(M.getMatrix(0, 2, 5, 5));
+		A.setMatrix(3, 5, 0, 0, B);
+		
+		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
+		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
+		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
+		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
+		// A(4) = A4; A(5) = A5; A(6) = A6;
+		// A = A/norm(A);
+		   A = A.times(1/A.norm1());
+		//
+		// end % Taubin
+		return A.getColumnPackedCopy();
+	}
+
+	private double[] getCentroid(double[][] points) {
+		final int nPoints = points.length;
+		double sumX = 0;
+		double sumY = 0;
+		for (int i = 0; i < nPoints; i++) {
+			sumX += points[i][0];
+			sumY += points[i][1];
+		}
+		double xC = sumX / nPoints;
+		double yC = sumY / nPoints;
+		double[] centroid = { xC, yC };
+		return centroid;
+	}
 }
