@@ -144,8 +144,8 @@ public class Moments_3D implements PlugIn {
 		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
 
 		if (doAlign)
-			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, doAxes)
-					.show();
+			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, min,
+					max, doAxes).show();
 		return;
 	}
 
@@ -385,7 +385,7 @@ public class Moments_3D implements PlugIn {
 	 */
 	public ImagePlus alignToPrincipalAxes(ImagePlus imp,
 			EigenvalueDecomposition E, double[] centroid, int startSlice,
-			int endSlice, boolean doAxes) {
+			int endSlice, double min, double max, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
 		final Rectangle r = sourceStack.getRoi();
 		final int rX = r.x;
@@ -401,10 +401,22 @@ public class Moments_3D implements PlugIn {
 		final int d = sourceStack.getSize();
 		// TODO work out targetStack dimensions based on
 		// size of original stack, ROI and eigenvectors
-		ImageStack targetStack = new ImageStack(w, h, d);
+		ImageStack targetStack = getRotatedStack(E, imp, centroid, startSlice,
+				endSlice, min, max);
+		final int wT = targetStack.getWidth();
+		final int hT = targetStack.getHeight();
+		final int dT = targetStack.getSize();
+
+		// ImageStack targetStack = new ImageStack(w, h, d);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 		final double zC = centroid[2];
+		final double xTc = wT * vW / 2;
+		final double yTc = hT * vH / 2;
+		final double zTc = dT * vD / 2;
+		final double dXc = xC - xTc;
+		final double dYc = yC - yTc;
+		final double dZc = zC - zTc;
 
 		Matrix eVec = E.getV();
 		double[][] eigenVectors = eVec.getArrayCopy();
@@ -438,38 +450,38 @@ public class Moments_3D implements PlugIn {
 
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
-		
-		//Cache the sourceStack's processors
+
+		// Cache the sourceStack's processors
 		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
 			sliceProcessors[z] = sourceStack.getProcessor(z);
 		}
-		for (int z = 1; z <= d; z++) {
+		for (int z = 1; z <= dT; z++) {
 			IJ.showStatus("Aligning image stack...");
-			IJ.showProgress(z, d);
-			targetStack.setPixels(getEmptyPixels(w, h, imp.getBitDepth()), z);
+			IJ.showProgress(z, dT);
+			targetStack.setPixels(getEmptyPixels(wT, hT, imp.getBitDepth()), z);
 			ImageProcessor targetIP = targetStack.getProcessor(z);
-			final double zD = z * vD - zC;
+			final double zD = z * vD - zTc;
 			final double zDeVI00 = zD * eVI00;
 			final double zDeVI01 = zD * eVI01;
 			final double zDeVI02 = zD * eVI02;
-			for (int y = 0; y < h; y++) {
-				final double yD = y * vH - yC;
+			for (int y = 0; y < hT; y++) {
+				final double yD = y * vH - yTc;
 				final double yDeVI10 = yD * eVI10;
 				final double yDeVI11 = yD * eVI11;
 				final double yDeVI12 = yD * eVI12;
-				for (int x = 0; x < w; x++) {
-					final double xD = x * vW - xC;
-					final double xAlign = xD * eVI20 + yDeVI10 + zDeVI00 + xC;
-					final double yAlign = xD * eVI21 + yDeVI11 + zDeVI01 + yC;
-					final double zAlign = xD * eVI22 + yDeVI12 + zDeVI02 + zC;
+				for (int x = 0; x < wT; x++) {
+					final double xD = x * vW - xTc;
+					final double xAlign = xD * eVI20 + yDeVI10 + zDeVI00 + xTc;
+					final double yAlign = xD * eVI21 + yDeVI11 + zDeVI01 + yTc;
+					final double zAlign = xD * eVI22 + yDeVI12 + zDeVI02 + zTc;
 					// possibility to do some voxel interpolation instead
 					// of just rounding in next 3 lines
-					final int xA = (int) Math.round(xAlign / vW);
-					final int yA = (int) Math.round(yAlign / vH);
-					final int zA = (int) Math.round(zAlign / vD);
+					final int xA = (int) Math.round((xAlign + dXc) / vW);
+					final int yA = (int) Math.round((yAlign + dYc) / vH);
+					final int zA = (int) Math.round((zAlign + dZc) / vD);
 
-					if (xA < rX || xA >= rW || yA < rY || yA >= rH
+					if (xA < 0 || xA >= w || yA < 0 || yA >= h
 							|| zA < startSlice || zA > endSlice) {
 						continue;
 					} else {
@@ -480,11 +492,11 @@ public class Moments_3D implements PlugIn {
 		}
 		if (doAxes) {
 			// draw axes on stack
-			final int xCent = (int) Math.round(centroid[0] / vW);
-			final int yCent = (int) Math.round(centroid[1] / vH);
-			final int zCent = (int) Math.round(centroid[2] / vD);
+			final int xCent = (int) Math.round(xTc / vW);
+			final int yCent = (int) Math.round(yTc / vH);
+			final int zCent = (int) Math.round(zTc / vD);
 			final int axisColour = Integer.MAX_VALUE;
-			for (int z = 1; z <= d; z++) {
+			for (int z = 1; z <= dT; z++) {
 				ImageProcessor axisIP = targetStack.getProcessor(z);
 				// z axis
 				axisIP.set(xCent, yCent, axisColour);
@@ -492,10 +504,10 @@ public class Moments_3D implements PlugIn {
 			ImageProcessor axisIP = targetStack.getProcessor(zCent);
 			axisIP.setColor(Integer.MAX_VALUE);
 			// x axis
-			axisIP.drawLine(0, yCent, w, yCent);
+			axisIP.drawLine(0, yCent, wT, yCent);
 
 			// y axis
-			axisIP.drawLine(xCent, 0, xCent, h);
+			axisIP.drawLine(xCent, 0, xCent, hT);
 
 		}
 
@@ -505,5 +517,89 @@ public class Moments_3D implements PlugIn {
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
 		return impTarget;
+	}
+
+	private ImageStack getRotatedStack(EigenvalueDecomposition E,
+			ImagePlus imp, double[] centroid, int startSlice, int endSlice,
+			double min, double max) {
+		final ImageStack stack = imp.getImageStack();
+		final Calibration cal = imp.getCalibration();
+		final Rectangle r = imp.getProcessor().getRoi();
+		final double xC = centroid[0];
+		final double yC = centroid[1];
+		final double zC = centroid[2];
+		final int rW = r.x + r.width;
+		final int rH = r.y + r.height;
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+
+		final Matrix V = E.getV();
+		final double[][] v = V.getArrayCopy();
+		final double v00 = v[0][0];
+		final double v10 = v[1][0];
+		final double v20 = v[2][0];
+		final double v01 = v[0][1];
+		final double v11 = v[1][1];
+		final double v21 = v[2][1];
+		final double v02 = v[0][2];
+		final double v12 = v[1][2];
+		final double v22 = v[2][2];
+
+		double xTmax = 0;
+		double yTmax = 0;
+		double zTmax = 0;
+
+		for (int z = startSlice; z <= endSlice; z++) {
+			ImageProcessor ip = stack.getProcessor(z);
+			final double zCz = z * vD - zC;
+			final double zCzv00 = zCz * v00;
+			final double zCzv01 = zCz * v01;
+			final double zCzv02 = zCz * v02;
+			for (int y = r.y; y < rH; y++) {
+				final double yCy = y * vH - yC;
+				final double yCyv10 = yCy * v10;
+				final double yCyv11 = yCy * v11;
+				final double yCyv12 = yCy * v12;
+				for (int x = r.x; x < rW; x++) {
+					final double pixel = ip.get(x, y);
+					if (pixel < min || pixel > max)
+						continue;
+					else {
+						// distance from centroid in original coordinate system
+						// axes
+						// xCx, yCx, zCx
+						final double xCx = x * vW - xC;
+
+						// now transform each coordinate
+						// transformed coordinate is dot product of original
+						// coordinates
+						// and eigenvectors
+						final double yT = xCx * v20 + yCyv10 + zCzv00;
+						final double zT = xCx * v21 + yCyv11 + zCzv01;
+						final double xT = xCx * v22 + yCyv12 + zCzv02;
+
+						// keep the biggest value
+						xTmax = Math.max(xTmax, Math.abs(xT));
+						yTmax = Math.max(yTmax, Math.abs(yT));
+						zTmax = Math.max(zTmax, Math.abs(zT));
+					}
+				}
+			}
+		}
+
+		int tW = (int) Math.round(2 * xTmax / vW);
+		int tH = (int) Math.round(2 * yTmax / vH);
+		int tD = (int) Math.round(2 * zTmax / vD);
+
+		IJ.log("Maximum distance in x = " + xTmax);
+		IJ.log("Maximum distance in y = " + yTmax);
+		IJ.log("Maximum distance in z = " + zTmax);
+
+		ImageStack targetStack = new ImageStack(tW, tH, tD);
+		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
+				+ tD + ")");
+
+		return targetStack;
 	}
 }
