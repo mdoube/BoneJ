@@ -327,7 +327,9 @@ public class Moments_3D implements PlugIn {
 			for (int y = r.y; y < rH; y++) {
 				for (int x = r.x; x < rW; x++) {
 					final double testPixel = ip.get(x, y);
-					if (testPixel >= min && testPixel <= max) {
+					if (testPixel < min || testPixel > max) {
+						continue;
+					} else {
 						sumVoxVol += voxVol;
 						final double voxMass = voxelDensity(testPixel, m, c,
 								factor)
@@ -388,26 +390,18 @@ public class Moments_3D implements PlugIn {
 			int endSlice, double min, double max, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
 		final Rectangle r = sourceStack.getRoi();
-		final int rX = r.x;
-		final int rY = r.y;
 		final int rH = r.y + r.height;
 		final int rW = r.x + r.width;
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
-		final int w = sourceStack.getWidth();
-		final int h = sourceStack.getHeight();
 		final int d = sourceStack.getSize();
-		// TODO work out targetStack dimensions based on
-		// size of original stack, ROI and eigenvectors
 		ImageStack targetStack = getRotatedStack(E, imp, centroid, startSlice,
 				endSlice, min, max);
 		final int wT = targetStack.getWidth();
 		final int hT = targetStack.getHeight();
 		final int dT = targetStack.getSize();
-
-		// ImageStack targetStack = new ImageStack(w, h, d);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 		final double zC = centroid[2];
@@ -481,7 +475,7 @@ public class Moments_3D implements PlugIn {
 					final int yA = (int) Math.round((yAlign + dYc) / vH);
 					final int zA = (int) Math.round((zAlign + dZc) / vD);
 
-					if (xA < 0 || xA >= w || yA < 0 || yA >= h
+					if (xA < r.x || xA >= rW || yA < r.y || yA >= rH
 							|| zA < startSlice || zA > endSlice) {
 						continue;
 					} else {
