@@ -246,9 +246,16 @@ public class Moments_3D implements PlugIn {
 	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice,
 			final double min, final double max, double m, double c) {
 		final ImageStack stack = imp.getImageStack();
-		final Rectangle r = stack.getRoi();
+		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
 		final int rH = r.y + r.height;
+		final int rX = r.x;
+		final int rY = r.y;
+		IJ.log("findCentroid3D()");
+		IJ.log("rX = "+rX);
+		IJ.log("rY = "+rY);
+		IJ.log("rW = "+rW);
+		IJ.log("rH = "+rH);
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -263,8 +270,8 @@ public class Moments_3D implements PlugIn {
 			IJ.showStatus("Calculating centroid...");
 			IJ.showProgress(z - startSlice, endSlice - startSlice);
 			ImageProcessor ip = stack.getProcessor(z);
-			for (int y = r.y; y < rH; y++) {
-				for (int x = r.x; x < rW; x++) {
+			for (int y = rY; y < rH; y++) {
+				for (int x = rX; x < rW; x++) {
 					final double testPixel = ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
 						final double voxelMass = voxelDensity(testPixel, m, c,
@@ -301,9 +308,16 @@ public class Moments_3D implements PlugIn {
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
 		final ImageStack stack = imp.getImageStack();
-		final Rectangle r = stack.getRoi();
-		final int rH = r.y + r.height;
+		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
+		final int rH = r.y + r.height;
+		final int rX = r.x;
+		final int rY = r.y;
+		IJ.log("calculateMoments()");
+		IJ.log("rX = "+rX);
+		IJ.log("rY = "+rY);
+		IJ.log("rW = "+rW);
+		IJ.log("rH = "+rH);
 		final double cX = centroid[0];
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
@@ -324,8 +338,8 @@ public class Moments_3D implements PlugIn {
 			IJ.showStatus("Calculating inertia tensor...");
 			IJ.showProgress(z - startSlice, endSlice - startSlice);
 			ImageProcessor ip = stack.getProcessor(z);
-			for (int y = r.y; y < rH; y++) {
-				for (int x = r.x; x < rW; x++) {
+			for (int y = rY; y < rH; y++) {
+				for (int x = rX; x < rW; x++) {
 					final double testPixel = ip.get(x, y);
 					if (testPixel < min || testPixel > max) {
 						continue;
@@ -389,9 +403,16 @@ public class Moments_3D implements PlugIn {
 			EigenvalueDecomposition E, double[] centroid, int startSlice,
 			int endSlice, double min, double max, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
-		final Rectangle r = sourceStack.getRoi();
-		final int rH = r.y + r.height;
+		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
+		final int rH = r.y + r.height;
+		final int rX = r.x;
+		final int rY = r.y;
+		IJ.log("alignToPricipalAxes()");
+		IJ.log("rX = "+rX);
+		IJ.log("rY = "+rY);
+		IJ.log("rW = "+rW);
+		IJ.log("rH = "+rH);
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -475,7 +496,7 @@ public class Moments_3D implements PlugIn {
 					final int yA = (int) Math.round((yAlign + dYc) / vH);
 					final int zA = (int) Math.round((zAlign + dZc) / vD);
 
-					if (xA < r.x || xA >= rW || yA < r.y || yA >= rH
+					if (xA < rX || xA >= rW || yA < rY || yA >= rH
 							|| zA < startSlice || zA > endSlice) {
 						continue;
 					} else {
@@ -518,12 +539,20 @@ public class Moments_3D implements PlugIn {
 			double min, double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Calibration cal = imp.getCalibration();
-		final Rectangle r = imp.getProcessor().getRoi();
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 		final double zC = centroid[2];
+		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
 		final int rH = r.y + r.height;
+		final int rX = r.x;
+		final int rY = r.y;
+		IJ.log("getRotatedStack()");
+		IJ.log("rX = "+rX);
+		IJ.log("rY = "+rY);
+		IJ.log("rW = "+rW);
+		IJ.log("rH = "+rH);
+		
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -550,12 +579,12 @@ public class Moments_3D implements PlugIn {
 			final double zCzv00 = zCz * v00;
 			final double zCzv01 = zCz * v01;
 			final double zCzv02 = zCz * v02;
-			for (int y = r.y; y < rH; y++) {
+			for (int y = rY; y < rH; y++) {
 				final double yCy = y * vH - yC;
 				final double yCyv10 = yCy * v10;
 				final double yCyv11 = yCy * v11;
 				final double yCyv12 = yCy * v12;
-				for (int x = r.x; x < rW; x++) {
+				for (int x = rX; x < rW; x++) {
 					final double pixel = ip.get(x, y);
 					if (pixel < min || pixel > max)
 						continue;
@@ -569,9 +598,9 @@ public class Moments_3D implements PlugIn {
 						// transformed coordinate is dot product of original
 						// coordinates
 						// and eigenvectors
-						final double yT = xCx * v20 + yCyv10 + zCzv00;
-						final double zT = xCx * v21 + yCyv11 + zCzv01;
-						final double xT = xCx * v22 + yCyv12 + zCzv02;
+						final double yT= xCx * v20 + yCyv10 + zCzv00;
+						final double zT= xCx * v21 + yCyv11 + zCzv01;
+						final double xT= xCx * v22 + yCyv12 + zCzv02;
 
 						// keep the biggest value
 						xTmax = Math.max(xTmax, Math.abs(xT));
