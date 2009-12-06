@@ -30,6 +30,7 @@ import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.gui.*;
 import java.awt.Rectangle;
+import java.util.Arrays;
 
 import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
@@ -142,6 +143,7 @@ public class Moments_3D implements PlugIn {
 		ri.setResultInRow(imp, "I1 (kg.m^2)", E.getD().get(2, 2));
 		ri.setResultInRow(imp, "I2 (kg.m^2)", E.getD().get(1, 1));
 		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
+		ri.updateTable();
 
 		if (doAlign)
 			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, min,
@@ -553,6 +555,12 @@ public class Moments_3D implements PlugIn {
 		IJ.log("rW = "+rW);
 		IJ.log("rH = "+rH);
 		
+		IJ.log("Eigenvectors");
+		E.getV().printToIJLog();
+		IJ.log("Eigenvalues");
+		E.getD().printToIJLog();
+		
+		
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -598,9 +606,9 @@ public class Moments_3D implements PlugIn {
 						// transformed coordinate is dot product of original
 						// coordinates
 						// and eigenvectors
-						final double yT= xCx * v20 + yCyv10 + zCzv00;
-						final double zT= xCx * v21 + yCyv11 + zCzv01;
-						final double xT= xCx * v22 + yCyv12 + zCzv02;
+						final double xT= xCx * v20 + yCyv10 + zCzv00;
+						final double yT= xCx * v21 + yCyv11 + zCzv01;
+						final double zT= xCx * v22 + yCyv12 + zCzv02;
 
 						// keep the biggest value
 						xTmax = Math.max(xTmax, Math.abs(xT));
@@ -611,6 +619,13 @@ public class Moments_3D implements PlugIn {
 			}
 		}
 
+		double[] dimensions = {xTmax, yTmax, zTmax};
+		Arrays.sort(dimensions);
+		
+		xTmax = dimensions[0];
+		yTmax = dimensions[1];
+		zTmax = dimensions[2];
+		
 		int tW = (int) Math.round(2 * xTmax / vW);
 		int tH = (int) Math.round(2 * yTmax / vH);
 		int tD = (int) Math.round(2 * zTmax / vD);
