@@ -253,11 +253,6 @@ public class Moments_3D implements PlugIn {
 		final int rH = r.y + r.height;
 		final int rX = r.x;
 		final int rY = r.y;
-		IJ.log("findCentroid3D()");
-		IJ.log("rX = "+rX);
-		IJ.log("rY = "+rY);
-		IJ.log("rW = "+rW);
-		IJ.log("rH = "+rH);
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -315,11 +310,6 @@ public class Moments_3D implements PlugIn {
 		final int rH = r.y + r.height;
 		final int rX = r.x;
 		final int rY = r.y;
-		IJ.log("calculateMoments()");
-		IJ.log("rX = "+rX);
-		IJ.log("rY = "+rY);
-		IJ.log("rW = "+rW);
-		IJ.log("rH = "+rH);
 		final double cX = centroid[0];
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
@@ -392,14 +382,21 @@ public class Moments_3D implements PlugIn {
 	}
 
 	/**
+	 * Draw a copy of the original image aligned to its pricipal axes
 	 * 
 	 * @param imp
+	 *            Input image
 	 * @param E
+	 *            EigenvalueDecomposition of moments of inertia
 	 * @param centroid
+	 *            3-element array containing centroid coordinates, {x,y,z}
 	 * @param startSlice
+	 *            first slice to copy
 	 * @param endSlice
+	 *            final slice to copy
 	 * @param doAxes
-	 * @return
+	 *            if true, draw axes on the aligned copy
+	 * @return ImagePlus copy of the input image
 	 */
 	public ImagePlus alignToPrincipalAxes(ImagePlus imp,
 			EigenvalueDecomposition E, double[] centroid, int startSlice,
@@ -410,11 +407,6 @@ public class Moments_3D implements PlugIn {
 		final int rH = r.y + r.height;
 		final int rX = r.x;
 		final int rY = r.y;
-		IJ.log("alignToPricipalAxes()");
-		IJ.log("rX = "+rX);
-		IJ.log("rY = "+rY);
-		IJ.log("rW = "+rW);
-		IJ.log("rH = "+rH);
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -525,10 +517,9 @@ public class Moments_3D implements PlugIn {
 
 			// y axis
 			axisIP.drawLine(xCent, 0, xCent, hT);
-
 		}
 
-		ImagePlus impTarget = new ImagePlus("Aligned" + imp.getTitle(),
+		ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(),
 				targetStack);
 		impTarget.setCalibration(imp.getCalibration());
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
@@ -536,6 +527,25 @@ public class Moments_3D implements PlugIn {
 		return impTarget;
 	}
 
+	/**
+	 * Find the smallest stack to fit the aligned image
+	 * 
+	 * @param E
+	 *            EigenvalueDecomposition of source image moments of inertia
+	 * @param imp
+	 *            Source image
+	 * @param centroid
+	 *            3D centroid in 3-element array {x,y,z}
+	 * @param startSlice
+	 *            first slice of source image
+	 * @param endSlice
+	 *            last slice of source image
+	 * @param min
+	 *            minimum threshold
+	 * @param max
+	 *            maximum threshold
+	 * @return ImageStack that will 'just fit' the aligned image
+	 */
 	private ImageStack getRotatedStack(EigenvalueDecomposition E,
 			ImagePlus imp, double[] centroid, int startSlice, int endSlice,
 			double min, double max) {
@@ -549,18 +559,7 @@ public class Moments_3D implements PlugIn {
 		final int rH = r.y + r.height;
 		final int rX = r.x;
 		final int rY = r.y;
-		IJ.log("getRotatedStack()");
-		IJ.log("rX = "+rX);
-		IJ.log("rY = "+rY);
-		IJ.log("rW = "+rW);
-		IJ.log("rH = "+rH);
-		
-		IJ.log("Eigenvectors");
-		E.getV().printToIJLog();
-		IJ.log("Eigenvalues");
-		E.getD().printToIJLog();
-		
-		
+
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -597,8 +596,8 @@ public class Moments_3D implements PlugIn {
 					if (pixel < min || pixel > max)
 						continue;
 					else {
-						// distance from centroid in original coordinate system
-						// axes
+						// distance from centroid in
+						// original coordinate system
 						// xCx, yCx, zCx
 						final double xCx = x * vW - xC;
 
@@ -606,11 +605,12 @@ public class Moments_3D implements PlugIn {
 						// transformed coordinate is dot product of original
 						// coordinates
 						// and eigenvectors
-						final double xT= xCx * v20 + yCyv10 + zCzv00;
-						final double yT= xCx * v21 + yCyv11 + zCzv01;
-						final double zT= xCx * v22 + yCyv12 + zCzv02;
+						final double xT = xCx * v20 + yCyv10 + zCzv00;
+						final double yT = xCx * v21 + yCyv11 + zCzv01;
+						final double zT = xCx * v22 + yCyv12 + zCzv02;
 
-						// keep the biggest value
+						// keep the biggest value to find the greatest distance
+						// in x, y and z
 						xTmax = Math.max(xTmax, Math.abs(xT));
 						yTmax = Math.max(yTmax, Math.abs(yT));
 						zTmax = Math.max(zTmax, Math.abs(zT));
@@ -619,20 +619,16 @@ public class Moments_3D implements PlugIn {
 			}
 		}
 
-		double[] dimensions = {xTmax, yTmax, zTmax};
+		double[] dimensions = { xTmax, yTmax, zTmax };
 		Arrays.sort(dimensions);
-		
+
 		xTmax = dimensions[0];
 		yTmax = dimensions[1];
 		zTmax = dimensions[2];
-		
-		int tW = (int) Math.round(2 * xTmax / vW);
-		int tH = (int) Math.round(2 * yTmax / vH);
-		int tD = (int) Math.round(2 * zTmax / vD);
 
-		IJ.log("Maximum distance in x = " + xTmax);
-		IJ.log("Maximum distance in y = " + yTmax);
-		IJ.log("Maximum distance in z = " + zTmax);
+		int tW = (int) Math.floor(2 * xTmax / vW) + 1;
+		int tH = (int) Math.floor(2 * yTmax / vH) + 1;
+		int tD = (int) Math.floor(2 * zTmax / vD) + 1;
 
 		ImageStack targetStack = new ImageStack(tW, tH, tD);
 		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
