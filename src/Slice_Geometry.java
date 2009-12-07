@@ -20,6 +20,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
@@ -232,7 +233,14 @@ public class Slice_Geometry implements PlugIn {
 		return ann;
 	}
 
-	protected double calculateCentroids(ImagePlus imp) {
+	/**
+	 * Calculate the centroid of each slice
+	 * 
+	 * @param imp
+	 *            Input image
+	 * @return double containing sum of pixel count
+	 */
+	private double calculateCentroids(ImagePlus imp) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
 		// 2D centroids
@@ -454,8 +462,10 @@ public class Slice_Geometry implements PlugIn {
 		ImagePlus binaryImp = convertToBinary(imp);
 
 		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
+		
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			ImageProcessor ip = thickImp.getStack().getProcessor(s);
+			FloatProcessor ip = (FloatProcessor) thickImp.getStack()
+					.getProcessor(s);
 			double sumPix = 0;
 			double sliceMax = 0;
 			double pixCount = 0;
@@ -463,11 +473,12 @@ public class Slice_Geometry implements PlugIn {
 			final int roiYEnd = r.y + r.height;
 			for (int y = r.y; y < roiYEnd; y++) {
 				for (int x = r.x; x < roiXEnd; x++) {
-					final double pixel = (double) ip.get(x, y);
-					if (pixel > 0)
+					final float pixel = Float.intBitsToFloat(ip.get(x, y));
+					if (pixel > 0) {
 						pixCount++;
-					sumPix += pixel;
-					sliceMax = Math.max(sliceMax, pixel);
+						sumPix += pixel;
+						sliceMax = Math.max(sliceMax, pixel);
+					}
 				}
 			}
 			final double sliceMean = sumPix / pixCount;
@@ -480,8 +491,11 @@ public class Slice_Geometry implements PlugIn {
 			double sumSquares = 0;
 			for (int y = r.y; y < roiYEnd; y++) {
 				for (int x = r.x; x < roiXEnd; x++) {
-					final double d = sliceMean - (double) ip.get(x, y);
-					sumSquares += d * d;
+					final float pixel = Float.intBitsToFloat(ip.get(x, y));
+					if (pixel > 0) {
+						final double d = sliceMean - pixel;
+						sumSquares += d * d;
+					}
 				}
 			}
 			this.stdevCortThick3D[s] = Math.sqrt(sumSquares / pixCount);
@@ -520,7 +534,7 @@ public class Slice_Geometry implements PlugIn {
 	class SliceThread extends Thread {
 		final int thread, nThreads, width, height, startSlice, endSlice;
 
-		final double[] meanThick, maxThick, stdevThick;
+		double[] meanThick, maxThick, stdevThick;
 
 		final ImagePlus impT;
 
@@ -551,8 +565,8 @@ public class Slice_Geometry implements PlugIn {
 				// calculate thickness
 				Thickness th = new Thickness();
 				ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
-				ImageProcessor thickIp = thickImp.getImageStack().getProcessor(
-						s);
+				FloatProcessor thickIp = (FloatProcessor) thickImp
+						.getProcessor();
 				double sumPix = 0;
 				double sliceMax = 0;
 				double pixCount = 0;
@@ -560,11 +574,13 @@ public class Slice_Geometry implements PlugIn {
 				final double roiYEnd = r.y + r.height;
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
-						final double pixel = (double) thickIp.get(x, y);
-						if (pixel > 0)
+						final float pixel = Float.intBitsToFloat(thickIp.get(x,
+								y));
+						if (pixel > 0) {
 							pixCount++;
-						sumPix += pixel;
-						sliceMax = Math.max(sliceMax, pixel);
+							sumPix += pixel;
+							sliceMax = Math.max(sliceMax, pixel);
+						}
 					}
 				}
 				final double sliceMean = sumPix / pixCount;
@@ -577,7 +593,8 @@ public class Slice_Geometry implements PlugIn {
 				double sumSquares = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
-						final double pixel = (double) thickIp.get(x, y);
+						final float pixel = Float.intBitsToFloat(thickIp.get(x,
+								y));
 						if (pixel > 0) {
 							final double d = sliceMean - pixel;
 							sumSquares += d * d;
@@ -760,6 +777,7 @@ public class Slice_Geometry implements PlugIn {
 			}
 		}
 		rt.show("Results");
+		return;
 	}
 
 	private void roiMeasurements(ImagePlus imp) {
