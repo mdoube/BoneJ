@@ -20,7 +20,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
-import ij.plugin.filter.PlugInFilter;
+import ij.plugin.PlugIn;
 import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
@@ -37,42 +37,34 @@ import org.doube.geometry.FitSphere;
  * 
  * 
  *@author Michael Doube and Angelo Tardugno
- *@version 0.1
  */
-public class Fit_Sphere implements PlugInFilter {
-	ImagePlus imp;
-	ImageProcessor ip;
-	RoiManager roiMan = RoiManager.getInstance();
-	protected ImageStack sourceStack;
-	public boolean doCopy, doInnerCube, doOuterCube;
-	public int padding;
-	public double cropFactor;
+public class Fit_Sphere implements PlugIn {
 
-	public int setup(String arg, ImagePlus imp) {
-		this.imp = imp;
-		if (imp == null || imp.getNSlices() < 2) {
-			IJ.showMessage("A stack must be open");
-			return DONE;
-		}
-		if (roiMan == null && imp != null) {
-			IJ.run("ROI Manager...");
-			IJ.error("Please populate ROI Manager with point ROIs");
-			return DONE;
-		}
-		sourceStack = imp.getStack();
-		return DOES_ALL + STACK_REQUIRED + NO_CHANGES;
-	}
-
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
-		double[] voxDim = getVoxDim(imp);
-		if (voxDim[2] > voxDim[0] * 20) {
-			if (!IJ
-					.showMessageWithCancel(
-							"Voxel depth problem",
-							"The voxel depth (slice thickness)"
-									+ "is unusually large.\nClick OK if you know it is correct.")) {
+		final ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+		ImageCheck ic = new ImageCheck();
+		if (!ic.isMultiSlice(imp)) {
+			IJ.error("Stack required");
+			return;
+		}
+		RoiManager roiMan = RoiManager.getInstance();
+		if (roiMan == null && imp != null) {
+			IJ.error("Please populate ROI Manager with point ROIs");
+			IJ.run("ROI Manager...");
+			return;
+		}
+		if (!ic.isVoxelIsotropic(imp, 0.05)) {
+			if (!IJ.showMessageWithCancel("Voxel depth problem",
+					"Voxels are anisotropic." + "\nWidth = " + imp.pixelWidth
+							+ "\nHeight = " + imp.pixelWidth + "\nDepth = "
+							+ imp.getCalibration().pixelDepth
+							+ "\nClick OK if voxel dimensions are correct.")) {
 				imp.unlock();
 				IJ.run("Properties...");
 			}
@@ -80,9 +72,24 @@ public class Fit_Sphere implements PlugInFilter {
 		if (!imp.lock())
 			imp.lock(); // if we have unlocked the image to reset properties,
 		// relock it.
-		if (!showDialog()) {
+
+		GenericDialog gd = new GenericDialog("Setup");
+		gd.addMessage("");
+		gd.addCheckbox("Copy Sphere", true);
+		gd.addCheckbox("Inner Cube", true);
+		gd.addCheckbox("Outer Cube", true);
+		gd.addNumericField("Padding", 2, 0, 2, "voxels");
+		gd.addNumericField("Crop Factor", 1.0, 2, 4, "");
+		gd.showDialog();
+		if (gd.wasCanceled()) {
 			return;
 		}
+		final boolean doCopy = gd.getNextBoolean();
+		final boolean doInnerCube = gd.getNextBoolean();
+		final boolean doOuterCube = gd.getNextBoolean();
+		final int padding = (int) gd.getNextNumber();
+		final double cropFactor = gd.getNextNumber();
+				
 		FitSphere fs = new FitSphere();
 		double[][] points = fs.getRoiManPoints(imp, roiMan);
 		double[] sphereDim = fs.fitSphere(points);
@@ -96,31 +103,12 @@ public class Fit_Sphere implements PlugInFilter {
 		ri.updateTable();
 
 		if (doCopy)
-			copySphere(imp, ip, padding, cropFactor, sphereDim);
+			copySphere(imp, padding, cropFactor, sphereDim);
 		if (doInnerCube)
-			copyInnerCube(imp, ip, cropFactor, sphereDim);
+			copyInnerCube(imp, cropFactor, sphereDim);
 		if (doOuterCube)
-			copyOuterCube(imp, ip, cropFactor, sphereDim);
-	}
-
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Setup");
-		gd.addMessage("");
-		gd.addCheckbox("Copy Sphere", true);
-		gd.addCheckbox("Inner Cube", true);
-		gd.addCheckbox("Outer Cube", true);
-		gd.addNumericField("Padding", 2, 0, 2, "voxels");
-		gd.addNumericField("Crop Factor", 1.0, 2, 4, "");
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			return false;
-		}
-		doCopy = gd.getNextBoolean();
-		doInnerCube = gd.getNextBoolean();
-		doOuterCube = gd.getNextBoolean();
-		padding = (int) gd.getNextNumber();
-		cropFactor = gd.getNextNumber();
-		return true;
+			copyOuterCube(imp, cropFactor, sphereDim);
+		return;
 	}
 
 	private static double[] getVoxDim(ImagePlus imp) {
@@ -129,7 +117,7 @@ public class Fit_Sphere implements PlugInFilter {
 		return voxDim;
 	}
 
-	public void copySphere(ImagePlus imp, ImageProcessor ip, int padding,
+	public void copySphere(ImagePlus imp, int padding,
 			double cropFactor, double[] sphereDim) {
 		double[] voxDim = getVoxDim(imp);
 		final double vW = voxDim[0];
@@ -158,7 +146,7 @@ public class Fit_Sphere implements PlugInFilter {
 			roiHeight = imp.getHeight() - startY;
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
-		ImageStack sourceStack = imp.getImageStack();
+		final ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		final int endZ = startZ + roiDepth;
 		final int roiArea = roiWidth * roiHeight;
@@ -170,7 +158,7 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying sphere to new stack");
 			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
-			ip = sourceStack.getProcessor(z);
+			ImageProcessor ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
@@ -199,7 +187,7 @@ public class Fit_Sphere implements PlugInFilter {
 
 	// TODO make this go faster by getting slice pixels and iterating through
 	// its array rather than using setSlice and getPixel
-	public void copyInnerCube(ImagePlus imp, ImageProcessor ip,
+	public void copyInnerCube(ImagePlus imp,
 			double cropFactor, double[] sphereDim) {
 		Calibration cal = imp.getCalibration();
 		double[] voxDim = getVoxDim(imp);
@@ -230,7 +218,7 @@ public class Fit_Sphere implements PlugInFilter {
 			roiHeight = imp.getHeight() - startY;
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
-		ImageStack sourceStack = imp.getStack();
+		final ImageStack sourceStack = imp.getStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		final int endZ = startZ + roiDepth;
 		final int roiArea = roiWidth * roiHeight;
@@ -241,7 +229,7 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying largest enclosed cube");
 			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
-			ip = sourceStack.getProcessor(z);
+			ImageProcessor ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
@@ -261,7 +249,7 @@ public class Fit_Sphere implements PlugInFilter {
 		return;
 	}
 
-	public void copyOuterCube(ImagePlus imp, ImageProcessor ip,
+	public void copyOuterCube(ImagePlus imp,
 			double cropFactor, double[] sphereDim) {
 		Calibration cal = imp.getCalibration();
 		double[] voxDim = getVoxDim(imp);
@@ -292,7 +280,7 @@ public class Fit_Sphere implements PlugInFilter {
 			roiHeight = imp.getHeight() - startY;
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
-		ImageStack sourceStack = imp.getImageStack();
+		final ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight);
 		final int endZ = startZ + roiDepth;
 		final int roiArea = roiWidth * roiHeight;
@@ -303,7 +291,7 @@ public class Fit_Sphere implements PlugInFilter {
 			IJ.showStatus("Copying smallest enclosing cube");
 			short[] targetSlice = new short[roiArea];
 			int nRows = 0;
-			ip = sourceStack.getProcessor(z);
+			ImageProcessor ip = sourceStack.getProcessor(z);
 			for (int y = startY; y < endY; y++) {
 				int index = nRows * roiWidth;
 				int nCols = 0;
