@@ -1,4 +1,5 @@
 package org.doube.bonej;
+
 /** Moments 3D
  *tool to calculate centroid and principal axes 
  *of a thresholded stack; originally designed for 16-bit CT scans 
@@ -112,7 +113,7 @@ public class Moments implements PlugIn {
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
 
-		double[] centroid = findCentroid3D(imp, startSlice, endSlice, min, max,
+		double[] centroid = getCentroid3D(imp, startSlice, endSlice, min, max,
 				m, c);
 		if (centroid[0] < 0) {
 			IJ.error("Empty Stack",
@@ -244,7 +245,7 @@ public class Moments implements PlugIn {
 	 *            constant in density equation
 	 * @return double[] containing (x,y,z) centroid in scaled units
 	 */
-	public double[] findCentroid3D(ImagePlus imp, int startSlice, int endSlice,
+	public double[] getCentroid3D(ImagePlus imp, int startSlice, int endSlice,
 			final double min, final double max, double m, double c) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = imp.getProcessor().getRoi();
@@ -372,6 +373,10 @@ public class Moments implements PlugIn {
 		// do the Eigenvalue decomposition
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
 				inertiaTensorMatrix);
+		IJ.log("Eigenvalues:");
+		E.getD().printToIJLog();
+		IJ.log("Eigenvectors:");
+		E.getV().printToIJLog();
 
 		double[] moments = { sumVoxVol, sumVoxMass, Icxx, Icyy, Iczz, Icxy,
 				Icxz, Icyz };
@@ -634,5 +639,39 @@ public class Moments implements PlugIn {
 				+ tD + ")");
 
 		return targetStack;
+	}
+
+	/**
+	 * Create a copy of the original image aligned to the tensor defined by a
+	 * 3x3 Eigenvector matrix
+	 * 
+	 * @param imp
+	 *            input ImagePlus stack
+	 * @param E
+	 *            Eigenvalue decomposition containing EigenVectors
+	 * @param doAxes
+	 *            if true, draws axes on the aligned image
+	 * @param startSlice
+	 *            first slice to use
+	 * @param endSlice
+	 *            last slice to use
+	 * @param min
+	 *            minimum threshold
+	 * @param max
+	 *            maximum threshold
+	 * @param m
+	 *            slope of pixel to density equation, d = m * p + c
+	 * @param c
+	 *            intercept of density equation, d = m * p + c
+	 * @return aligned ImagePlus
+	 */
+	public ImagePlus alignImage(ImagePlus imp, EigenvalueDecomposition E,
+			boolean doAxes, int startSlice, int endSlice, double min,
+			double max, double m, double c) {
+		final double[] centroid = getCentroid3D(imp, startSlice, endSlice, min,
+				max, m, c);
+		ImagePlus alignedImp = alignToPrincipalAxes(imp, E, centroid,
+				startSlice, endSlice, min, max, doAxes);
+		return alignedImp;
 	}
 }

@@ -107,6 +107,7 @@ public class Anisotropy implements PlugIn {
 		gd.addNumericField("Tolerance", 0.005, 4, 6, "");
 		gd.addCheckbox("Show_Plot", true);
 		gd.addCheckbox("3D_Result", false);
+		gd.addCheckbox("Align to fabric tensor", false);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -118,8 +119,9 @@ public class Anisotropy implements PlugIn {
 		final double tolerance = gd.getNextNumber();
 		final boolean doPlot = gd.getNextBoolean();
 		final boolean do3DResult = gd.getNextBoolean();
+		final boolean doAlign = gd.getNextBoolean();
 
-		Object[] result = new Object[2];
+		Object[] result = new Object[3];
 		if (doAutoMode)
 			result = runToStableResult(imp, minSpheres, maxSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
@@ -137,6 +139,15 @@ public class Anisotropy implements PlugIn {
 		if (do3DResult) {
 			plotPoints3D(coOrdinates, "Intercept Lengths");
 		}
+
+		if (doAlign) {
+			EigenvalueDecomposition E = (EigenvalueDecomposition) result[2];
+			Moments m = new Moments();
+			ImagePlus alignedImp = m.alignImage(imp, E, true, 1,
+					imp.getImageStackSize(), 128, 255, 0, 1);
+			alignedImp.show();
+		}
+
 		return;
 	}
 
@@ -164,8 +175,8 @@ public class Anisotropy implements PlugIn {
 	 * @param doPlot
 	 *            set to true if you want to see a plot of anisotropy versus
 	 *            number of repeats, updated in real time
-	 * @return Object array containing degree of anisotropy and coordinates of
-	 *         rose plot
+	 * @return Object array containing degree of anisotropy, coordinates of rose
+	 *         plot and Eigenvalue decomposition (fabric tensor)
 	 */
 	public Object[] runToStableResult(ImagePlus imp, int minSpheres,
 			int maxSpheres, int nVectors, double radius, double vectorSampling,
@@ -191,6 +202,9 @@ public class Anisotropy implements PlugIn {
 		}
 		Vector<Double> anisotropyHistory = new Vector<Double>();
 		Vector<Double> errorHistory = new Vector<Double>();
+		double[][] emptyArray = new double[3][3];
+		Matrix emptyMatrix = new Matrix(emptyArray);
+		EigenvalueDecomposition E = new EigenvalueDecomposition(emptyMatrix);
 		int s = 0;
 		while (s < minIterations
 				|| (s >= minIterations && s < maxIterations && variance > tolerance)) {
@@ -231,7 +245,7 @@ public class Anisotropy implements PlugIn {
 				coOrdinates[v][2] = milV * vectorList[v][2];
 			}
 			// calculate principal components
-			EigenvalueDecomposition E = principalComponents(coOrdinates);
+			E = principalComponents(coOrdinates);
 			Matrix eigenValues = E.getD();
 			double[][] eVal = eigenValues.getArrayCopy();
 			anisotropy = 1 - eVal[0][0] / eVal[2][2];
@@ -249,7 +263,7 @@ public class Anisotropy implements PlugIn {
 				updateGraph(plotImage, anisotropyHistory, errorHistory);
 		}
 		double[] da = { anisotropy };
-		Object[] result = { da, coOrdinates };
+		Object[] result = { da, coOrdinates, E };
 		return result;
 	}
 
