@@ -1,9 +1,8 @@
-package org.doube.bonej;
+package org.doube.geometry;
 
 import ij.measure.ResultsTable;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
-import org.doube.bonej.FitCircle;
 
 /**
  * Check out how different circle fitting algorithms handle data.

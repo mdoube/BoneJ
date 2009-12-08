@@ -1,4 +1,4 @@
-package org.doube.bonej;
+package org.doube.geometry;
 
 /**
  * FitCircle Java class for fitting circles to 2D coordinate data

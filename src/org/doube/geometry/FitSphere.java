@@ -1,4 +1,4 @@
-package org.doube.bonej;
+package org.doube.geometry;
 
 /**
  * FitSphere class for ImageJ

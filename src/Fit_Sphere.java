@@ -27,7 +27,7 @@ import ij.measure.Calibration;
 
 import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
-import org.doube.bonej.FitSphere;
+import org.doube.geometry.FitSphere;
 
 /**
  *<p>
