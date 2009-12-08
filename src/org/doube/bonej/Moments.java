@@ -36,7 +36,7 @@ import java.util.Arrays;
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 
-public class Moments_3D implements PlugIn {
+public class Moments implements PlugIn {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
