@@ -382,7 +382,7 @@ public class Moments_3D implements PlugIn {
 	}
 
 	/**
-	 * Draw a copy of the original image aligned to its pricipal axes
+	 * Draw a copy of the original image aligned to its principal axes
 	 * 
 	 * @param imp
 	 *            Input image
@@ -486,9 +486,9 @@ public class Moments_3D implements PlugIn {
 					final double zAlign = xD * eVI22 + yDeVI12 + zDeVI02 + zTc;
 					// possibility to do some voxel interpolation instead
 					// of just rounding in next 3 lines
-					final int xA = (int) Math.round((xAlign + dXc) / vW);
-					final int yA = (int) Math.round((yAlign + dYc) / vH);
-					final int zA = (int) Math.round((zAlign + dZc) / vD);
+					final int xA = (int) Math.floor((xAlign + dXc) / vW);
+					final int yA = (int) Math.floor((yAlign + dYc) / vH);
+					final int zA = (int) Math.floor((zAlign + dZc) / vD);
 
 					if (xA < rX || xA >= rW || yA < rY || yA >= rH
 							|| zA < startSlice || zA > endSlice) {
@@ -501,9 +501,9 @@ public class Moments_3D implements PlugIn {
 		}
 		if (doAxes) {
 			// draw axes on stack
-			final int xCent = (int) Math.round(xTc / vW);
-			final int yCent = (int) Math.round(yTc / vH);
-			final int zCent = (int) Math.round(zTc / vD);
+			final int xCent = (int) Math.floor(xTc / vW);
+			final int yCent = (int) Math.floor(yTc / vH);
+			final int zCent = (int) Math.floor(zTc / vD);
 			final int axisColour = Integer.MAX_VALUE;
 			for (int z = 1; z <= dT; z++) {
 				ImageProcessor axisIP = targetStack.getProcessor(z);
@@ -626,9 +626,9 @@ public class Moments_3D implements PlugIn {
 		yTmax = dimensions[1];
 		zTmax = dimensions[2];
 
-		int tW = (int) Math.floor(2 * xTmax / vW) + 1;
-		int tH = (int) Math.floor(2 * yTmax / vH) + 1;
-		int tD = (int) Math.floor(2 * zTmax / vD) + 1;
+		int tW = (int) Math.floor(2 * xTmax / vW) + 3;
+		int tH = (int) Math.floor(2 * yTmax / vH) + 3;
+		int tD = (int) Math.floor(2 * zTmax / vD) + 3;
 
 		ImageStack targetStack = new ImageStack(tW, tH, tD);
 		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
