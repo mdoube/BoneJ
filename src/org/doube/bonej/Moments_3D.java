@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /** Moments 3D
  *tool to calculate centroid and principal axes 
  *of a thresholded stack; originally designed for 16-bit CT scans 
@@ -32,8 +33,6 @@ import ij.gui.*;
 import java.awt.Rectangle;
 import java.util.Arrays;
 
-import org.doube.bonej.ImageCheck;
-import org.doube.bonej.ResultInserter;
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 
