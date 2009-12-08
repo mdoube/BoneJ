@@ -61,26 +61,41 @@ public class ImageCheck {
 	 * placed on a cubic grid)
 	 * 
 	 * @param imp
+	 *            image to test
+	 * @param tolerance
+	 *            tolerated fractional deviation from equal length
 	 * @return true if voxel width == height == depth
 	 */
-	public boolean isVoxelIsotropic(ImagePlus imp) {
+	public boolean isVoxelIsotropic(ImagePlus imp, double tolerance) {
 		if (imp == null) {
 			IJ.noImage();
 			return false;
 		}
 		Calibration cal = imp.getCalibration();
-		double vW = cal.pixelWidth;
-		double vH = cal.pixelHeight;
-		double vD = cal.pixelDepth;
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final double tLow = 1 - tolerance;
+		final double tHigh = 1 + tolerance;
 
-		if (vW != vH)
+		if (vW < vH * tLow || vW > vH * tHigh)
 			return false;
-		if (vW != vD)
+		if (vW < vD * tLow || vW > vD * tHigh)
 			return false;
-		if (vH != vD)
+		if (vH < vD * tLow || vH > vD * tHigh)
 			return false;
 
 		return true;
+	}
+	
+	/**
+	 * Run isVoxelIsotropic() with a default tolerance of 0%
+	 * 
+	 * @param imp input image
+	 * @return false if voxel dimensions are not equal
+	 */
+	public boolean isVoxelIsotropic(ImagePlus imp){
+		return isVoxelIsotropic(imp, 0);
 	}
 
 	/**
@@ -179,8 +194,7 @@ public class ImageCheck {
 					"You are using an old version of ImageJ, v"
 							+ IJ.getVersion() + ".\n"
 							+ "Please update to at least ImageJ v"
-							+ requiredIJVersion
-							+ " using Help-Update ImageJ.");
+							+ requiredIJVersion + " using Help-Update ImageJ.");
 			return false;
 		} else
 			return true;
