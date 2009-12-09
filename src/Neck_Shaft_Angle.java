@@ -33,6 +33,7 @@ import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
 import org.doube.jama.*;
+import org.doube.util.RoiMan;
 
 /*
  * TODO incorporate curvature
@@ -144,9 +145,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 		    + "placed on the boundary of the femoral head");
 	    return;
 	} else {
-	    FitSphere fs = new FitSphere();
-	    double[][] points = fs.getRoiManPoints(imp, roiMan);
-	    this.headCentre = fs.fitSphere(points);
+		double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
+	    this.headCentre = FitSphere.fitSphere(points);
 	}
 	ImageWindow win = this.imp.getWindow();
 	this.canvas = win.getCanvas();

@@ -41,7 +41,7 @@ public class FitSphere {
 	 *            double[n][3] containing n (x, y, z) coordinates
 	 * @return double[4] containing (x, y, z) centre and radius
 	 */
-	public double[] fitSphere(double[][] points) {
+	public static double[] fitSphere(double[][] points) {
 		final int nPoints = points.length;
 		if (nPoints < 5) {
 			IJ.error("Too few points to calculate a sphere");
