@@ -624,9 +624,8 @@ public class Neck_Shaft_Angle implements PlugInFilter, MouseListener {
 	ResultInserter ri = ResultInserter.getInstance();
 	String units = this.cal.getUnits();
 	
-	FitCircle fc = new FitCircle();
-	double[] mLabR = fc.hyperStable(mL);
-	double[] cCabR = fc.hyperStable(cC);
+	double[] mLabR = FitCircle.hyperStable(mL);
+	double[] cCabR = FitCircle.hyperStable(cC);
 	ri.setResultInRow(imp, "M-L radius ("+units+")", mLabR[2]);
 	ri.setResultInRow(imp, "M-L centre X ("+units+")", mLabR[0]);
 	ri.setResultInRow(imp, "M-L centre Y ("+units+")", mLabR[1]);

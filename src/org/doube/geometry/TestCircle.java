@@ -51,67 +51,67 @@ public class TestCircle implements PlugIn {
 	if (!showDialog()) {
 	    return;
 	}
-	FitCircle fc = new FitCircle();
-	double[][] testCircle = fc.getTestCircle(x, y, r, n, sA, eA, noise);
+	
+	double[][] testCircle = FitCircle.getTestCircle(x, y, r, n, sA, eA, noise);
 
 	rt = ResultsTable.getResultsTable();
 
 	if (doKasa) {
-	    double[] circle = fc.kasaFit(testCircle);
+	    double[] circle = FitCircle.kasaFit(testCircle);
 	    addResult(circle, "Kåsa");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	if (doHyperStable) {
-	    double[] circle = fc.hyperStable(testCircle);
+	    double[] circle = FitCircle.hyperStable(testCircle);
 	    addResult(circle, "Hyper Stable");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 
 	if (doHyperSimple) {
-	    double[] circle = fc.hyperSimple(testCircle);
+	    double[] circle = FitCircle.hyperSimple(testCircle);
 	    addResult(circle, "Hyper Simple");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 
 	if (doPrattNTN) {
-	    double[] circle = fc.prattNewton(testCircle);
+	    double[] circle = FitCircle.prattNewton(testCircle);
 	    addResult(circle, "Pratt-Newton");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 
 	if (doPrattSVD) {
-	    double[] circle = fc.prattSVD(testCircle);
+	    double[] circle = FitCircle.prattSVD(testCircle);
 	    addResult(circle, "Pratt-SVD");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	if (doTaubinNTN) {
-	    double[] circle = fc.taubinNewton(testCircle);
+	    double[] circle = FitCircle.taubinNewton(testCircle);
 	    addResult(circle, "Taubin-Newton");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	if (doTaubinSVD) {
-	    double[] circle = fc.taubinSVD(testCircle);
+	    double[] circle = FitCircle.taubinSVD(testCircle);
 	    addResult(circle, "Taubin-SVD");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	if (doLevenMarqFull) {
-	    double[] circle = fc.levenMarqFull(testCircle);
+	    double[] circle = FitCircle.levenMarqFull(testCircle);
 	    addResult(circle, "Levenburg-Marquardt (full)");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	if (doLevenMarqRed) {
-	    double[] circle = fc.levenMarqRed(testCircle);
+	    double[] circle = FitCircle.levenMarqRed(testCircle);
 	    addResult(circle, "Levenburg-Marquardt (reduced)");
 	    if (doErrors)
-		addErrors(fc.getErrors(testCircle, circle));
+		addErrors(FitCircle.getErrors(testCircle, circle));
 	}
 	return;
     }

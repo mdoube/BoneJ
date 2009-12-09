@@ -46,7 +46,7 @@ public class FitCircle {
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      * 
      */
-    public double[] kasaFit(double[][] points) {
+    public static double[] kasaFit(double[][] points) {
 	int nPoints = points.length;
 	double[][] z = new double[nPoints][1];
 	double[][] xy1 = new double[nPoints][3];
@@ -78,7 +78,7 @@ public class FitCircle {
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      * 
      */
-    public double[] prattNewton(double[][] points) {
+    public static double[] prattNewton(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
@@ -155,7 +155,7 @@ public class FitCircle {
      * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      */
-    public double[] prattSVD(double[][] points) {
+    public static double[] prattSVD(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 	double[][] xyXY1 = new double[nPoints][4];
@@ -211,7 +211,7 @@ public class FitCircle {
      * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      */
-    public double[] taubinNewton(double[][] points) {
+    public static double[] taubinNewton(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
@@ -290,7 +290,7 @@ public class FitCircle {
      * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
      * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
      */
-    public double[] taubinSVD(double[][] points) {
+    public static double[] taubinSVD(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 
@@ -347,7 +347,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] hyperSimple(double[][] points) {
+    public static double[] hyperSimple(double[][] points) {
 	int nPoints = points.length;
 
 	double[][] zxy1 = new double[nPoints][4];
@@ -413,7 +413,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] hyperStable(double[][] points) {
+    public static double[] hyperStable(double[][] points) {
 	int nPoints = points.length;
 	double[] centroid = getCentroid(points);
 
@@ -477,7 +477,7 @@ public class FitCircle {
 	return centreRadius;
     }
 
-    private double[] getCentroid(double[][] points) {
+    private static double[] getCentroid(double[][] points) {
 	double[] centroid = new double[2];
 	double sumX = 0;
 	double sumY = 0;
@@ -510,7 +510,7 @@ public class FitCircle {
 	return;
     }
 
-    private double getNorm(Matrix A) {
+    private static double getNorm(Matrix A) {
 	int n = A.getColumnDimension();
 	int m = A.getRowDimension();
 	double sumSquares = 0;
@@ -531,7 +531,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] levenMarqFull(double[][] points, double lambdaIni) {
+    public static double[] levenMarqFull(double[][] points, double lambdaIni) {
 	int nPoints = points.length;
 	double[] guess = hyperStable(points);
 	double x = guess[0];
@@ -622,7 +622,7 @@ public class FitCircle {
      * @param points
      * @return
      */
-    public double[] levenMarqFull(double[][] points){
+    public static double[] levenMarqFull(double[][] points){
 	return levenMarqFull(points, 1);	
     }
 
@@ -634,7 +634,7 @@ public class FitCircle {
      * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
      *         circle radius
      */
-    public double[] levenMarqRed(double[][] points, double lambdaIni) {
+    public static double[] levenMarqRed(double[][] points, double lambdaIni) {
 	int nPoints = points.length;
 	double[] guess = hyperStable(points);
 	double x = guess[0];
@@ -754,7 +754,7 @@ public class FitCircle {
      * @param points
      * @return
      */
-    public double[] levenMarqRed(double[][] points) {
+    public static double[] levenMarqRed(double[][] points) {
 	return levenMarqRed(points, 1);
     }
 
@@ -778,7 +778,7 @@ public class FitCircle {
      * 
      * @return
      */
-    public double[][] getTestCircle(double x, double y, double r, int n,
+    public static double[][] getTestCircle(double x, double y, double r, int n,
 	    double startAngle, double endAngle, double noise) {
 	double[][] testCircle = new double[n][2];
 	double arc = (endAngle - startAngle) / (2 * Math.PI);
@@ -809,7 +809,7 @@ public class FitCircle {
      * 
      * @return
      */
-    public double[][] getTestCircle(double x, double y, double r, int n, double noise) {
+    public static double[][] getTestCircle(double x, double y, double r, int n, double noise) {
 	return getTestCircle(x, y, r, 0, 2*Math.PI, n, noise);
     }
     
@@ -820,7 +820,7 @@ public class FitCircle {
      * @param abR
      * @return double[] containing mean squared errors in x, y, R and sum of (x, y, R)
      */
-    public double[] getErrors(double[][] points, double[] abR){
+    public static double[] getErrors(double[][] points, double[] abR){
 	int nPoints = points.length;
 
 	double a = abR[0];
@@ -861,7 +861,7 @@ public class FitCircle {
      *            second smallest, etc.)
      * @return column index of the nth smallest diagonal in D
      */
-    private int getNthSmallestCol(Matrix D, int n) {
+    private static int getNthSmallestCol(Matrix D, int n) {
 	double[] diagD = new double[D.getColumnDimension()];
 	int[] index = new int[D.getColumnDimension()];
 	for (int i = 0; i < D.getColumnDimension(); i++) {
