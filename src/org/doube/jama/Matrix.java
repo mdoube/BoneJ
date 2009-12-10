@@ -1253,13 +1253,24 @@ public class Matrix implements Cloneable, java.io.Serializable {
 		}
 		output.println(); // end with blank line.
 	}
-	
+
 	/**
 	 * Print Matrix to ImageJ log window
-	 * 
-	 * @param matrix
 	 */
 	public void printToIJLog() {
+		printToIJLog("");
+		return;
+	}
+
+	/**
+	 * Print the Matrix to the ImageJ log
+	 * 
+	 * @param title
+	 *            Title of the Matrix
+	 */
+	public void printToIJLog(String title) {
+		if (!title.isEmpty())
+			IJ.log(title);
 		int nCols = getColumnDimension();
 		int nRows = getRowDimension();
 		double[][] eVal = getArrayCopy();
@@ -1271,8 +1282,8 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			row = row + "|";
 			IJ.log(row);
 		}
+		return;
 	}
-
 
 	/**
 	 * Read a matrix from a stream. The format is the same the print method, so
@@ -1347,5 +1358,4 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			throw new IllegalArgumentException("Matrix dimensions must agree.");
 		}
 	}
-
 }
