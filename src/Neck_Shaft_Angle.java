@@ -33,6 +33,7 @@ import org.doube.bonej.Moments;
 import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
+import org.doube.geometry.Trigonometry;
 import org.doube.jama.*;
 import org.doube.util.RoiMan;
 
@@ -67,33 +68,32 @@ import org.doube.util.RoiMan;
  */
 public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 
-	ImageCanvas canvas;
+	private ImageCanvas canvas;
 
-	private ImageStack stack;
-
-	private double[] coeff = { 0, 1 }, neckPoint = { 78.75, 100.55, 80 },
-			headCentre, centroid;
+	private double[] headCentre;
 
 	private double[][] shaftVector;
+
+	private double[] centroid;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
 		ImagePlus imp = IJ.getImage();
-		if (null == imp){
+		if (null == imp) {
 			IJ.noImage();
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isMultiSlice(imp)){
+		if (!ic.isMultiSlice(imp)) {
 			IJ.error("A stack must be open");
 			return;
 		}
-		
-		ImageProcessor ip  = imp.getProcessor();
-		double minT = ip.getMinThreshold();
-		double maxT = ip.getMaxThreshold();
-		
+
+		ImageProcessor ip = imp.getProcessor();
+		double minT = ip.getAutoThreshold();
+		double maxT = ip.getMax();
+		boolean isHUCalibrated = false;
 		Calibration cal = imp.getCalibration();
 		String valueUnit = "";
 		// set up pixel calibration
@@ -106,11 +106,12 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			maxT = ip.getMaxThreshold();
 			IJ.log("Image is uncalibrated: using user-determined threshold "
 					+ minT + " to " + maxT);
-		} else if (this.coeff[0] == -1000 && this.coeff[1] == 1.0) {
+		} else if (cal.getCoefficients()[0] == -1000
+				&& cal.getCoefficients()[1] == 1.0) {
 			// looks like an HU calibrated image
-			// convert HU limits to pixel values
-			minT = cal.getRawValue(minT);
-			maxT = cal.getRawValue(maxT);
+			minT = 0;
+			maxT = 4000;
+			isHUCalibrated = true;
 			valueUnit = "HU";
 			IJ.log("Image looks like it is HU calibrated. Using " + minT
 					+ " and " + maxT + " " + valueUnit + " as bone cutoffs");
@@ -118,8 +119,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			new WaitForUserDialog(
 					"This image is not density calibrated.\nSet the threshold, then click OK.")
 					.show();
-			minT = (int) ip.getMinThreshold();
-			maxT = (int) ip.getMaxThreshold();
+			minT = ip.getMinThreshold();
+			maxT = ip.getMaxThreshold();
 			IJ.log("Image is uncalibrated: using user-determined threshold "
 					+ minT + " to " + maxT);
 		} else {
@@ -139,11 +140,17 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		}
 		final int startSlice = (int) gd.getNextNumber();
 		final int endSlice = (int) gd.getNextNumber();
-		final double min = gd.getNextNumber();
-		final double max = gd.getNextNumber();
+		minT = gd.getNextNumber();
+		maxT = gd.getNextNumber();
 		final boolean doCurvature = gd.getNextBoolean();
 		
-		
+		if (isHUCalibrated){
+			minT = cal.getRawValue(minT);
+			maxT = cal.getRawValue(maxT);
+		}
+		final double min = minT;
+		final double max = maxT;
+
 		// get coordinates from the ROI manager and fit a sphere
 		RoiManager roiMan = RoiManager.getInstance();
 		if (roiMan == null && imp != null) {
@@ -160,22 +167,22 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 
 		// work out the centroid and regression vector of the bone
 		Moments m = new Moments();
-		this.centroid = m.getCentroid3D(imp, startSlice, endSlice, minT, maxT, 0, 1);
-//		this.centroid = findCentroid3D(this.stack, startSlice, endSlice);
-		if (this.centroid[0] < 0) {
-			IJ
-					.error(
-							"Empty Stack",
-							"No voxels are a"
-									+ "vailable for calculation.\nCheck your ROI and threshold.");
+		final double[] centroid = m.getCentroid3D(imp, startSlice, endSlice,
+				minT, maxT, 0, 1);
+		this.centroid = centroid;
+		// this.centroid = findCentroid3D(this.stack, startSlice, endSlice);
+		if (centroid[0] < 0) {
+			IJ.error("Empty Stack", "No voxels available for calculation."
+					+ "\nCheck your ROI and threshold.");
 			return;
 		}
 
-		this.shaftVector = regression3D(imp, this.centroid, startSlice, endSlice, min, max);
+		this.shaftVector = regression3D(imp, centroid, startSlice, endSlice,
+				min, max);
 
 		if (doCurvature)
 			calculateCurvature(imp, this.shaftVector, this.headCentre,
-					this.centroid, startSlice, endSlice, min, max);
+					centroid, startSlice, endSlice, min, max);
 
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
@@ -192,7 +199,6 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		return;
 	}
 
-
 	/**
 	 * Calculate the vector associated with the projection plane from the
 	 * regression vector and the vector connecting the centroid and the femoral
@@ -206,14 +212,12 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 *            double[][]
 	 * @return double[][] projectionPlane
 	 */
-	public double[][] projectionPlane(double[][] shaftVector,
+	private double[][] getProjectionPlane(double[][] shaftVector,
 			double[] headCentre, double[] centroid) {
-		// have to calculate distance between points so that we find a unit
-		// vector
-		double d = Math.sqrt((headCentre[0] - centroid[0])
-				* (headCentre[0] - centroid[0]) + (headCentre[1] - centroid[1])
-				* (headCentre[1] - centroid[1]) + (headCentre[2] - centroid[2])
-				* (headCentre[2] - centroid[2]));
+		// have to calculate distance between points
+		// so that we find a unit vector
+
+		double d = Trigonometry.distance3D(headCentre, centroid);
 		double[][] cHVec = new double[3][1];
 		cHVec[0][0] = (headCentre[0] - centroid[0]) / d;
 		cHVec[1][0] = (headCentre[1] - centroid[1]) / d;
@@ -223,17 +227,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		cH.printToIJLog("cHVec");
 
 		// projectionPlane is the cross product of cHVec and shaftVector
-		double[][] projectionPlane = new double[3][1];
-		projectionPlane[0][0] = cHVec[1][0] * shaftVector[2][0] - cHVec[2][0]
-				* shaftVector[1][0];
-		projectionPlane[1][0] = cHVec[2][0] * shaftVector[0][0] - cHVec[0][0]
-				* shaftVector[2][0];
-		projectionPlane[2][0] = cHVec[0][0] * shaftVector[1][0] - cHVec[1][0]
-				* shaftVector[0][0];
+		double[][] projectionPlane = crossProduct(cHVec, shaftVector);
 
-		d = Math.sqrt(projectionPlane[0][0] * projectionPlane[0][0]
-				+ projectionPlane[1][0] * projectionPlane[1][0]
-				+ projectionPlane[2][0] * projectionPlane[2][0]);
+		d = Trigonometry.distance3D(projectionPlane[0][0],
+				projectionPlane[1][0], projectionPlane[2][0]);
 		projectionPlane[0][0] /= d;
 		projectionPlane[1][0] /= d;
 		projectionPlane[2][0] /= d;
@@ -252,17 +249,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 *            double[][]
 	 * @return double[][] neckPlane
 	 */
-	public double[][] neckPlane(double[][] projectionPlane,
+	private double[][] neckPlane(double[][] projectionPlane,
 			double[][] neckVector) {
 		// neckPlane is the cross product of neckVector and projectionPlane
-		double[][] neckPlane = new double[3][1];
-		neckPlane[0][0] = projectionPlane[1][0] * neckVector[2][0]
-				- projectionPlane[2][0] * neckVector[1][0];
-		neckPlane[1][0] = projectionPlane[2][0] * neckVector[0][0]
-				- projectionPlane[0][0] * neckVector[2][0];
-		neckPlane[2][0] = projectionPlane[0][0] * neckVector[1][0]
-				- projectionPlane[1][0] * neckVector[0][0];
-		return neckPlane;
+		return crossProduct(projectionPlane, neckVector);
 	}
 
 	/**
@@ -275,15 +265,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	public double[][] testVector(double[][] projectionPlane,
 			double[][] neckPlane) {
 		// testVector is the cross product of neckPlane and projectionPlane
-		double[][] testVector = new double[3][1];
-		testVector[0][0] = projectionPlane[1][0] * neckPlane[2][0]
-				- projectionPlane[2][0] * neckPlane[1][0];
-		testVector[1][0] = projectionPlane[2][0] * neckPlane[0][0]
-				- projectionPlane[0][0] * neckPlane[2][0];
-		testVector[2][0] = projectionPlane[0][0] * neckPlane[1][0]
-				- projectionPlane[1][0] * neckPlane[0][0];
-		return testVector;
-	}/* end testVector */
+		return crossProduct(projectionPlane, neckPlane);
+	}
 
 	/**
 	 * Calculate the orthogonal distance regression plane of a set of points by
@@ -298,49 +281,64 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 *      on Ask Dr Math</a>
 	 * 
 	 */
-	public double[][] regression3D(ImagePlus imp, double[] centroid, int startSlice, int endSlice, double min, double max) {
+	public double[][] regression3D(ImagePlus imp, double[] centroid,
+			int startSlice, int endSlice, double min, double max) {
 		IJ.showStatus("Calculating SVD");
+		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
-		IJ.log("Rectangle r has top left coordinates of (" + r.x + ", " + r.y
-				+ ") and size of " + r.width + " x " + r.height);
-		int offset, i;
-		int w = stack.getWidth();
-		int h = stack.getHeight();
-		int sliceSize = w * h;
+		final double cX = centroid[0];
+		final double cY = centroid[1];
+		final double cZ = centroid[2];
 		Calibration cal = imp.getCalibration();
-		double vW = cal.pixelWidth;
-		double vH = cal.pixelHeight;
-		double vD = cal.pixelDepth;
-		double[][] C = new double[3][3];
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final int rX = r.x;
+		final int rY = r.y;
+		final int rW = r.x + r.width;
+		final int rH = r.y + r.height;
+		double sDxDx = 0;
+		double sDyDy = 0;
+		double sDzDz = 0;
+		double sDxDy = 0;
+		double sDxDz = 0;
+		double sDyDz = 0;
 		double count = 0;
 		for (int z = startSlice; z <= endSlice; z++) {
-			IJ.showStatus("Calculating centroid...");
+			IJ.showStatus("Getting covariance matrix...");
 			IJ.showProgress(z, endSlice);
-			short[] slicePixels = new short[sliceSize];
-			slicePixels = (short[]) stack.getPixels(z);
-			for (int y = r.y; y < (r.y + r.height); y++) {
-				offset = y * w;
-				for (int x = r.x; x < (r.x + r.width); x++) {
-					i = offset + x;
-					int testPixel = slicePixels[i] & 0xffff;
+			final double dz = z * vD - cZ;
+			final double dzdz = dz * dz;
+			final ImageProcessor ip = stack.getProcessor(z);
+			for (int y = rY; y < rH; y++) {
+				final double dy = y * vH - cY;
+				final double dydy = dy * dy;
+				final double dydz = dy * dz;
+				for (int x = rX; x < rW; x++) {
+					final double testPixel = ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
-						double dx = x * vW - centroid[0];
-						double dy = y * vH - centroid[1];
-						double dz = z * vD - centroid[2];
-						C[0][0] += dx * dx;
-						C[1][1] += dy * dy;
-						C[2][2] += dz * dz;
-						C[0][1] += dx * dy;
-						C[0][2] += dx * dz;
-						C[1][0] += dx * dy;
-						C[1][2] += dy * dz;
-						C[2][0] += dx * dz;
-						C[2][1] += dy * dz;
-						count += 1;
+						final double dx = x * vW - cX;
+						sDxDx += dx * dx;
+						sDyDy += dydy;
+						sDzDz += dzdz;
+						sDxDy += dx * dy;
+						sDxDz += dx * dz;
+						sDyDz += dydz;
+						count++;
 					}
 				}
 			}
 		}
+		double[][] C = new double[3][3];
+		C[0][0] = sDxDx;
+		C[1][1] = sDyDy;
+		C[2][2] = sDzDz;
+		C[0][1] = sDxDy;
+		C[0][2] = sDxDz;
+		C[1][0] = sDxDy;
+		C[1][2] = sDyDz;
+		C[2][0] = sDxDz;
+		C[2][1] = sDyDz;
 		double invCount = 1 / count;
 		Matrix covarianceMatrix = new Matrix(C).times(invCount);
 		covarianceMatrix.printToIJLog("Covariance matrix");
@@ -355,14 +353,9 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		return orthogonalDistanceRegression;
 	}/* end Regression3D */
 
-	public double[][] neckVector(double[] headCentre, double[] neckPoint) {
+	private double[][] neckVector(double[] headCentre, double[] neckPoint) {
 		// have to calculate d to make sure that neckVector is a unit vector
-		double d = Math.sqrt((headCentre[0] - neckPoint[0])
-				* (headCentre[0] - neckPoint[0])
-				+ (headCentre[1] - neckPoint[1])
-				* (headCentre[1] - neckPoint[1])
-				+ (headCentre[2] - neckPoint[2])
-				* (headCentre[2] - neckPoint[2]));
+		double d = Trigonometry.distance3D(headCentre, neckPoint);
 
 		double[][] neckVector = new double[3][1];
 		neckVector[0][0] = (headCentre[0] - neckPoint[0]) / d;
@@ -371,16 +364,16 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		return neckVector;
 	}
 
-	private void calculateAngles(ImagePlus imp) {
+	private void calculateAngles(ImagePlus imp, double[] neckPoint) {
 		double[][] neckVector = neckVector(headCentre, neckPoint);
-		double[][] projectionPlane = projectionPlane(shaftVector, headCentre,
-				centroid);
+		double[][] projectionPlane = getProjectionPlane(shaftVector,
+				headCentre, this.centroid);
 		double[][] neckPlane = neckPlane(neckVector, projectionPlane);
 		double[][] testVector = testVector(projectionPlane, neckPlane);
 		// P . Q = ||P|| ||Q|| cos(a) so if P and Q are unit vectors, then P.Q =
 		// cos(a)
-		Matrix pP = new Matrix(projectionPlane);
-		pP.printToIJLog("projectionPlane");
+		Matrix PP = new Matrix(projectionPlane);
+		PP.printToIJLog("projectionPlane");
 
 		Matrix tV = new Matrix(testVector);
 		tV.printToIJLog("testVector");
@@ -421,7 +414,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 * @param headCentre
 	 */
 	private void calculateCurvature(ImagePlus imp, double[][] shaftVector,
-			double[] headCentre, double[] centroid, int startSlice, int endSlice, double min, double max) {
+			double[] headCentre, double[] centroid, int startSlice,
+			int endSlice, double min, double max) {
 		// calculate the eigenvector of the reference plane containing
 		// the shaftVector and the headCentre
 
@@ -430,28 +424,27 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
 		Rectangle r = stack.getRoi();
 		final int rW = r.x + r.width;
 		final int rH = r.y + r.height;
 		// pixel counters
 		double cstack = 0;
-		int w = stack.getWidth();
 
-		boolean[] emptySlices = new boolean[this.stack.getSize()];
-		double[] cortArea = new double[this.stack.getSize()];
-		double[][] sliceCentroids = new double[2][this.stack.getSize()];
+		boolean[] emptySlices = new boolean[stack.getSize() + 1];
+		double[] cortArea = new double[stack.getSize() + 1];
+		double[][] sliceCentroids = new double[2][stack.getSize() + 1];
 
-		double pixelArea = vW * vH;
+		final double pixelArea = vW * vH;
 		for (int s = startSlice; s <= endSlice; s++) {
 			double sumX = 0;
 			double sumY = 0;
 			double cslice = 0;
-			short[] pixels = (short[]) this.stack.getPixels(s);
+			final ImageProcessor ip = stack.getProcessor(s);
 			for (int y = r.y; y < rH; y++) {
-				int offset = y * w;
 				for (int x = r.x; x < rW; x++) {
-					int i = offset + x;
-					if (pixels[i] >= min && pixels[i] <= max) {
+					final double pixel = ip.get(x, y);
+					if (pixel >= min && pixel <= max) {
 						cslice++;
 						cortArea[s] += pixelArea;
 						sumX += x * vW;
@@ -469,18 +462,18 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			}
 		}
 
-		double[][] projPlane = projectionPlane(shaftVector, headCentre,
+		double[][] projPlane = getProjectionPlane(shaftVector, headCentre,
 				centroid);
 		double pPx = projPlane[0][0];
 		double pPy = projPlane[1][0];
 		double pPz = projPlane[2][0];
 
-		double x1x = this.centroid[0];
-		double x1y = this.centroid[1];
-		double x1z = this.centroid[2];
-		double x2x = x1x + shaftVector[0][0];
-		double x2y = x1y + shaftVector[1][0];
-		double x2z = x1z + shaftVector[2][0];
+		final double x1x = centroid[0];
+		final double x1y = centroid[1];
+		final double x1z = centroid[2];
+		final double x2x = x1x + shaftVector[0][0];
+		final double x2y = x1y + shaftVector[1][0];
+		final double x2z = x1z + shaftVector[2][0];
 
 		// for each centroid, calculate the vector to the 3D regression line
 		// using equation 10 from
@@ -492,41 +485,27 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		int i = 0;
 		for (int s = startSlice; s <= endSlice; s++) {
 			if (!emptySlices[s]) {
-				double x0x = sliceCentroids[0][s];
-				double x0y = sliceCentroids[1][s];
-				double x0z = s * cal.pixelDepth;
+				final double x0x = sliceCentroids[0][s];
+				final double x0y = sliceCentroids[1][s];
+				final double x0z = s * vD;
 
 				// distance is magnitude of cross product of (x0 - x1) and (x0 -
 				// x2)
-				double x0x1x = x0x - x1x;
-				double x0x1y = x0y - x1y;
-				double x0x1z = x0z - x1z;
+				double[] a = { x0x - x1x, x0y - x1y, x0z - x1z };
+				double[] b = { x0x - x2x, x0y - x2y, x0z - x2z };
 
-				double x0x2x = x0x - x2x;
-				double x0x2y = x0y - x2y;
-				double x0x2z = x0z - x2z;
+				double[] cp = crossProduct(a, b);
 
-				double cpX = x0x1y * x0x2z - x0x1z * x0x2y;
-				double cpY = x0x1z * x0x2x - x0x1x * x0x2z;
-				double cpZ = x0x1x * x0x2y - x0x1y * x0x2x;
-
-				double distance = Math.sqrt(cpX * cpX + cpY * cpY + cpZ * cpZ);
+				double distance = Trigonometry.distance3D(cp);
 				// IJ.log("distance to regression line is "+ distance +
 				// " "+this.units+" for slice "+s);
 
 				// work out t (number of unit vectors from centroid along
 				// regression)
 				// as per equation 3
-
-				double x1x0x = x1x - x0x;
-				double x1x0y = x1y - x0y;
-				double x1x0z = x1z - x0z;
-
-				double x2x1x = x2x - x1x;
-				double x2x1y = x2y - x1y;
-				double x2x1z = x2z - x1z;
-
-				double t = -1 * (x1x0x * x2x1x + x1x0y * x2x1y + x1x0z * x2x1z);
+				double t = -1
+						* Trigonometry.distance3D(x1x - x0x, x1y - x0y, x1z
+								- x0z, x2x - x1x, x2y - x1y, x2z - x1z);
 
 				// So now the intersection point x3 of the perpendicular is
 				// known
@@ -598,18 +577,52 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		return;
 	}
 
+	/**
+	 * Calculate the cross product of 2 column vectors, both in double[3][1]
+	 * format
+	 * 
+	 * @param a
+	 *            first vector
+	 * @param b
+	 *            second vector
+	 * @return resulting vector in double[3][1] format
+	 */
+	private static double[][] crossProduct(double[][] a, double[][] b) {
+		double[][] c = new double[3][1];
+		c[0][0] = a[1][0] * b[2][0] - a[2][0] * b[1][0];
+		c[1][0] = a[2][0] * b[0][0] - a[0][0] * b[2][0];
+		c[2][0] = a[0][0] * b[1][0] - a[1][0] * b[0][0];
+		return c;
+	}
+
+	/**
+	 * Calculate the cross product of 2 vectors, both in double[3] format
+	 * 
+	 * @param a
+	 *            first vector
+	 * @param b
+	 *            second vector
+	 * @return resulting vector in double[3] format
+	 */
+	private static double[] crossProduct(double[] a, double[] b) {
+		double[] c = new double[3];
+		c[0] = a[1] * b[2] - a[2] * b[1];
+		c[1] = a[2] * b[0] - a[0] * b[2];
+		c[2] = a[0] * b[1] - a[1] * b[0];
+		return c;
+	}
+
 	public void mousePressed(MouseEvent e) {
 		ImagePlus imp = IJ.getImage();
 		Calibration cal = imp.getCalibration();
 		int x = canvas.offScreenX(e.getX());
 		int y = canvas.offScreenY(e.getY());
 		int z = imp.getCurrentSlice();
-		neckPoint[0] = x * cal.pixelWidth;
-		neckPoint[1] = y * cal.pixelHeight;
-		neckPoint[2] = z * cal.pixelDepth;
+		final double[] neckPoint = { x * cal.pixelWidth, y * cal.pixelHeight,
+				z * cal.pixelDepth };
 		IJ.log("neckPoint: (" + neckPoint[0] + "," + neckPoint[1] + ", "
 				+ neckPoint[2] + ")");
-		calculateAngles(imp);
+		calculateAngles(imp, neckPoint);
 	}
 
 	public void mouseReleased(MouseEvent e) {
@@ -627,23 +640,4 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	public void mouseMoved(MouseEvent e) {
 	}
 
-//	public void showDialog(String valueUnit) {
-//		GenericDialog gd = new GenericDialog("Setup");
-//		gd.addNumericField("Shaft Start Slice:", startSlice, 0);
-//		gd.addNumericField("Shaft End Slice:", endSlice, 0);
-//		gd.addMessage("Only use pixels between clip values:");
-//		gd.addNumericField("Clip min.", minT, 0, 6, valueUnit);
-//		gd.addNumericField("Clip max.", maxT, 0, 6, valueUnit);
-//		gd.addCheckbox("Calculate curvature", true);
-//		gd.showDialog();
-//		if (gd.wasCanceled()) {
-//			return;
-//		}
-//		startSlice = (int) gd.getNextNumber();
-//		endSlice = (int) gd.getNextNumber();
-//		minT = (int) gd.getNextNumber();
-//		maxT = (int) gd.getNextNumber();
-//		doCurvature = gd.getNextBoolean();
-//		return;
-//	}
 }
