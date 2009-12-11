@@ -48,16 +48,11 @@ public class FitSphere {
 			double[] error = { -1, -1, -1, -1 };
 			return error;
 		}
-		double xSum = 0, ySum = 0, zSum = 0;
-		for (int i = 0; i < points.length; i++) {
-			xSum += points[i][0];
-			ySum += points[i][1];
-			zSum += points[i][2];
-		}
-
-		double x = xSum / nPoints;
-		double y = ySum / nPoints;
-		double z = zSum / nPoints;
+		final double[] centroid = Centroid.getCentroid(points); 
+		
+		double x = centroid[0];
+		double y = centroid[1];
+		double z = centroid[2];
 
 		double[] radii = new double[nPoints];
 		double g_new = 100.0;

@@ -170,7 +170,6 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		final double[] centroid = m.getCentroid3D(imp, startSlice, endSlice,
 				minT, maxT, 0, 1);
 		this.centroid = centroid;
-		// this.centroid = findCentroid3D(this.stack, startSlice, endSlice);
 		if (centroid[0] < 0) {
 			IJ.error("Empty Stack", "No voxels available for calculation."
 					+ "\nCheck your ROI and threshold.");

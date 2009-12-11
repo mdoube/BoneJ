@@ -80,7 +80,7 @@ public class FitCircle {
      */
     public static double[] prattNewton(double[][] points) {
 	int nPoints = points.length;
-	double[] centroid = getCentroid(points);
+	double[] centroid = Centroid.getCentroid(points);
 	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 
 	for (int i = 0; i < nPoints; i++) {
@@ -157,7 +157,7 @@ public class FitCircle {
      */
     public static double[] prattSVD(double[][] points) {
 	int nPoints = points.length;
-	double[] centroid = getCentroid(points);
+	double[] centroid = Centroid.getCentroid(points);
 	double[][] xyXY1 = new double[nPoints][4];
 	for (int i = 0; i < nPoints; i++) {
 	    double x = points[i][0] - centroid[0];
@@ -213,7 +213,7 @@ public class FitCircle {
      */
     public static double[] taubinNewton(double[][] points) {
 	int nPoints = points.length;
-	double[] centroid = getCentroid(points);
+	double[] centroid = Centroid.getCentroid(points);
 	double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 	for (int i = 0; i < nPoints; i++) {
 	    double Xi = points[i][0] - centroid[0];
@@ -292,7 +292,7 @@ public class FitCircle {
      */
     public static double[] taubinSVD(double[][] points) {
 	int nPoints = points.length;
-	double[] centroid = getCentroid(points);
+	double[] centroid = Centroid.getCentroid(points);
 
 	double[][] zxy = new double[nPoints][3];
 	double[] z = new double[nPoints];
@@ -415,7 +415,7 @@ public class FitCircle {
      */
     public static double[] hyperStable(double[][] points) {
 	int nPoints = points.length;
-	double[] centroid = getCentroid(points);
+	double[] centroid = Centroid.getCentroid(points);
 
 	double sumZ = 0;
 	double[][] zxy1 = new double[nPoints][4];
@@ -475,23 +475,6 @@ public class FitCircle {
 	centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
 		.abs(a0)) / 2;
 	return centreRadius;
-    }
-
-    private static double[] getCentroid(double[][] points) {
-	double[] centroid = new double[2];
-	double sumX = 0;
-	double sumY = 0;
-	int nPoints = points.length;
-
-	for (int n = 0; n < nPoints; n++) {
-	    sumX += points[n][0];
-	    sumY += points[n][1];
-	}
-
-	centroid[0] = sumX / nPoints;
-	centroid[1] = sumY / nPoints;
-
-	return centroid;
     }
 
     public void printMatrix(Matrix matrix, String title) {
