@@ -93,7 +93,6 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		ImageProcessor ip = imp.getProcessor();
 		double minT = ip.getAutoThreshold();
 		double maxT = ip.getMax();
-		boolean isHUCalibrated = false;
 		Calibration cal = imp.getCalibration();
 		String valueUnit = "";
 		// set up pixel calibration
@@ -111,7 +110,6 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			// looks like an HU calibrated image
 			minT = 0;
 			maxT = 4000;
-			isHUCalibrated = true;
 			valueUnit = "HU";
 			IJ.log("Image looks like it is HU calibrated. Using " + minT
 					+ " and " + maxT + " " + valueUnit + " as bone cutoffs");
@@ -143,13 +141,9 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		minT = gd.getNextNumber();
 		maxT = gd.getNextNumber();
 		final boolean doCurvature = gd.getNextBoolean();
-		
-		if (isHUCalibrated){
-			minT = cal.getRawValue(minT);
-			maxT = cal.getRawValue(maxT);
-		}
-		final double min = minT;
-		final double max = maxT;
+			
+		final double min = cal.getRawValue(minT);
+		final double max = cal.getRawValue(maxT);
 
 		// get coordinates from the ROI manager and fit a sphere
 		RoiManager roiMan = RoiManager.getInstance();

@@ -585,6 +585,7 @@ public class Moments implements PlugIn {
 		double zTmax = 0;
 
 		for (int z = startSlice; z <= endSlice; z++) {
+			IJ.showStatus("Getting aligned stack dimensions...");
 			ImageProcessor ip = stack.getProcessor(z);
 			final double zCz = z * vD - zC;
 			final double zCzv00 = zCz * v00;
@@ -622,7 +623,8 @@ public class Moments implements PlugIn {
 				}
 			}
 		}
-
+		//TODO this still doesn't quite work properly
+		//sometimes axes are in the wrong order, or mapping is not quite right
 		double[] dimensions = { xTmax, yTmax, zTmax };
 		Arrays.sort(dimensions);
 

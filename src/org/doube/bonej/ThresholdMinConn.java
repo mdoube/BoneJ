@@ -43,7 +43,7 @@ public class ThresholdMinConn implements PlugIn {
 			return;
 		}
 
-		if (ic.dicomVoxelDepth(imp) != imp.getCalibration().pixelDepth) {
+		if (!ic.isVoxelIsotropic(imp, 0.05)) {
 			if (!Interpreter.isBatchMode())
 			IJ.run("Properties...");
 		}

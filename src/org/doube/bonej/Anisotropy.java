@@ -143,8 +143,8 @@ public class Anisotropy implements PlugIn {
 		if (doAlign) {
 			EigenvalueDecomposition E = (EigenvalueDecomposition) result[2];
 			Moments m = new Moments();
-			ImagePlus alignedImp = m.alignImage(imp, E, true, 1,
-					imp.getImageStackSize(), 128, 255, 0, 1);
+			ImagePlus alignedImp = m.alignImage(imp, E, false, 1, d, 128, 255,
+					0, 1);
 			alignedImp.show();
 		}
 
@@ -197,7 +197,7 @@ public class Anisotropy implements PlugIn {
 		if (Interpreter.isBatchMode())
 			doPlot = false;
 		if (doPlot) {
-			plotImage = createGraph();
+			plotImage = createGraph(imp.getTitle());
 			plotImage.show();
 		}
 		Vector<Double> anisotropyHistory = new Vector<Double>();
@@ -270,14 +270,16 @@ public class Anisotropy implements PlugIn {
 	/**
 	 * Create a graph for plotting anisotropy results
 	 * 
+	 * @param id
+	 *            Identification string for Anisotropy plot
 	 * @return ImagePlus for drawing a plot on
 	 */
-	private ImagePlus createGraph() {
+	private ImagePlus createGraph(String id) {
 		double[] x = { 0 }, y = { 0 };
 		Plot plot = new Plot("Anisotropy", "Repeats", "Anisotropy", x, y);
 		plot.setLimits(0, 1, 0, 1);
 		ImageProcessor plotIp = plot.getProcessor();
-		ImagePlus plotImage = new ImagePlus("Anisotropy", plotIp);
+		ImagePlus plotImage = new ImagePlus("Anisotropy of " + id, plotIp);
 		plotImage.setProcessor(null, plotIp);
 		return plotImage;
 	}
