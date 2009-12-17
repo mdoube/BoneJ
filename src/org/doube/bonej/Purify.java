@@ -24,8 +24,6 @@ import ij.plugin.PlugIn;
 import ij.measure.ResultsTable;
 import ij.gui.GenericDialog;
 
-//import java.util.Arrays;
-
 /**
  * <p>
  * Purify_ plugin for ImageJ
@@ -112,15 +110,16 @@ public class Purify implements PlugIn {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
-		gd.addCheckbox("Make copy", true);
+		gd.addCheckbox("Make_copy", true);
+		gd.addCheckbox("Show_particles", false);
 		gd.showDialog();
 		int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
-		boolean showPerformance = gd.getNextBoolean();
-		boolean doCopy = gd.getNextBoolean();
 		if (gd.wasCanceled()) {
 			return;
 		}
-
+		boolean showPerformance = gd.getNextBoolean();
+		boolean doCopy = gd.getNextBoolean();
+		boolean doParticleImage = gd.getNextBoolean();
 		Object[] result = purify(imp, slicesPerChunk, showPerformance);
 		if (null != result) {
 			ImagePlus purified = (ImagePlus) result[1];
@@ -134,6 +133,9 @@ public class Purify implements PlugIn {
 				imp.setStack(null, stack2);
 				if (!imp.isInvertedLut())
 					IJ.run("Invert LUT");
+			}
+			if (doParticleImage){
+				getParticleLabels((int[][])result[2], imp).show();
 			}
 		}
 		return;
@@ -239,7 +241,7 @@ public class Purify implements PlugIn {
 		}
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
-		Object[] result = { duration, purified };
+		Object[] result = { duration, purified, particleLabels };
 		return result;
 	}
 
@@ -983,4 +985,33 @@ public class Purify implements PlugIn {
 		rt.show("Results");
 		return;
 	}
+
+	/**
+	 * Display the particle labels as an ImagePlus
+	 * 
+	 * @param particleLabels
+	 * @param imp original image, used for image dimensions, calibration and titles
+	 */
+	private ImagePlus getParticleLabels(int[][] particleLabels, ImagePlus imp) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		final int sliceSize = w * h;
+		float[][] particles = new float[d][sliceSize];
+		for (int z = 0; z < d; z++){
+			for (int i = 0; i < sliceSize; i++){
+				particles[z][i] = (float) particleLabels[z][i];
+			}
+		}
+		ImageStack stackParticles = new ImageStack(w, h);
+		for (int z = 1; z <= d; z++) {
+			stackParticles.addSlice(imp.getImageStack().getSliceLabel(z), particles[z-1]);
+		}
+		ImagePlus impParticles = new ImagePlus(imp.getShortTitle() + "_parts",
+				stackParticles);
+		impParticles.setCalibration(imp.getCalibration());
+		return impParticles;
+	}
+
+	
 }
