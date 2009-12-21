@@ -88,9 +88,11 @@ import ij.gui.GenericDialog;
  */
 public class Purify implements PlugIn {
 
-	private final static int foreground = -1, background = 0;
+	public final static int FORE = -1, BACK = 0;
 
-	private int width, height, nSlices, nThreads, nChunks, sliceSize;
+	private int width, height;
+	private int nSlices, nThreads;
+	private int nChunks, sliceSize;
 
 	private int ID;
 
@@ -134,8 +136,8 @@ public class Purify implements PlugIn {
 				if (!imp.isInvertedLut())
 					IJ.run("Invert LUT");
 			}
-			if (doParticleImage){
-				getParticleLabels((int[][])result[2], imp).show();
+			if (doParticleImage) {
+				displayParticleLabels((int[][]) result[2], imp).show();
 			}
 		}
 		return;
@@ -143,94 +145,29 @@ public class Purify implements PlugIn {
 
 	public Object[] purify(ImagePlus imp, int slicesPerChunk,
 			boolean showPerformance) {
-		this.width = imp.getWidth();
-		this.height = imp.getHeight();
-		this.nSlices = imp.getStackSize();
-		this.sliceSize = this.width * this.height;
-		nThreads = Runtime.getRuntime().availableProcessors();
-		nChunks = (int) Math.floor((double) nSlices / (double) slicesPerChunk);
-		if (nChunks == 0)
-			nChunks = 1;
-
-		int remainder = nSlices - nChunks * slicesPerChunk;
-
-		if (remainder > 0) {
-			nChunks += 1 + (int) Math.floor((double) remainder
-					/ (double) slicesPerChunk);
-		}
-
-		// set up the chunks
-		final int[][] chunkRanges = getChunkRanges(nChunks, slicesPerChunk);
-		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
 
 		long startTime = System.currentTimeMillis();
 
-		byte[][] workArray = makeWorkArray(imp);
-
 		sPhase = "foreground";
-		int[][] particleLabels = firstIDAttribution(workArray, foreground);
-
-		// connect foreground particles within chunks
-		ConnectStructuresThread[] cptf = new ConnectStructuresThread[nThreads];
-		for (int thread = 0; thread < nThreads; thread++) {
-			cptf[thread] = new ConnectStructuresThread(thread, nThreads,
-					workArray, particleLabels, foreground, nChunks, chunkRanges);
-			cptf[thread].start();
-		}
-		try {
-			for (int thread = 0; thread < nThreads; thread++) {
-				cptf[thread].join();
-			}
-		} catch (InterruptedException ie) {
-			IJ.error("A thread was interrupted.");
-		}
-
-		// connect foreground particles between chunks
-		if (nChunks > 1) {
-			chunkString = ": stitching...";
-			connectStructures(workArray, particleLabels, foreground,
-					stitchRanges);
-		}
-
-		long[] particleSizes = getParticleSizes(workArray, particleLabels,
-				foreground);
-		removeSmallParticles(workArray, particleLabels, particleSizes,
-				foreground);
+		Object[] foregroundParticles = getParticles(imp, slicesPerChunk, FORE);
+		byte[][] workArray = (byte[][]) foregroundParticles[0];
+		int[][] particleLabels = (int[][]) foregroundParticles[1];
+		long[] particleSizes = (long[]) foregroundParticles[2];
+		removeSmallParticles(workArray, particleLabels, particleSizes, FORE);
 
 		sPhase = "background";
-		particleLabels = firstIDAttribution(workArray, background);
-
-		// connect background particles within chunks
-		ConnectStructuresThread[] cptb = new ConnectStructuresThread[nThreads];
-		for (int thread = 0; thread < nThreads; thread++) {
-			cptb[thread] = new ConnectStructuresThread(thread, nThreads,
-					workArray, particleLabels, background, nChunks, chunkRanges);
-			cptb[thread].start();
-		}
-		try {
-			for (int thread = 0; thread < nThreads; thread++) {
-				cptb[thread].join();
-			}
-		} catch (InterruptedException ie) {
-			IJ.error("A thread was interrupted.");
-		}
-
-		// connect background particles between chunks
-		if (nChunks > 1) {
-			chunkString = ": stitching...";
-			connectStructures(workArray, particleLabels, background,
-					stitchRanges);
-		}
-		particleSizes = getParticleSizes(workArray, particleLabels, background);
-		touchEdges(workArray, particleLabels, particleSizes, background);
-		particleSizes = getParticleSizes(workArray, particleLabels, background);
-		removeSmallParticles(workArray, particleLabels, particleSizes,
-				background);
+		Object[] backgroundParticles = getParticles(imp, workArray,
+				slicesPerChunk, BACK);
+		particleLabels = (int[][]) backgroundParticles[1];
+		particleSizes = (long[]) backgroundParticles[2];
+		touchEdges(workArray, particleLabels, particleSizes, BACK);
+		particleSizes = getParticleSizes(workArray, particleLabels, BACK);
+		removeSmallParticles(workArray, particleLabels, particleSizes, BACK);
 
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
 				/ (double) 1000;
 		if (showPerformance)
-			showResults(chunkRanges, duration, imp, slicesPerChunk);
+			showResults(duration, imp, slicesPerChunk);
 
 		IJ.showStatus("Image Purified");
 
@@ -371,7 +308,7 @@ public class Purify implements PlugIn {
 		int[][] particleLabels = new int[nSlices][sliceSize];
 		ID = 1;
 
-		if (phase == foreground) {
+		if (phase == FORE) {
 			for (int z = 0; z < d; z++) {
 				for (int y = 0; y < h; y++) {
 					final int rowIndex = y * w;
@@ -411,7 +348,7 @@ public class Purify implements PlugIn {
 				IJ.showProgress(z, d);
 			}
 			ID++;
-		} else if (phase == background) {
+		} else if (phase == BACK) {
 			for (int z = 0; z < d; z++) {
 				for (int y = 0; y < h; y++) {
 					final int rowIndex = y * w;
@@ -497,7 +434,7 @@ public class Purify implements PlugIn {
 			final int sR1 = scanRanges[1][c];
 			final int sR2 = scanRanges[2][c];
 			final int sR3 = scanRanges[3][c];
-			if (phase == foreground) {
+			if (phase == FORE) {
 				for (int z = sR0; z < sR1; z++) {
 					for (int y = 0; y < h; y++) {
 						final int rowIndex = y * w;
@@ -556,7 +493,7 @@ public class Purify implements PlugIn {
 							+ chunkString);
 					IJ.showProgress(z, d);
 				}
-			} else if (phase == background) {
+			} else if (phase == BACK) {
 				for (int z = sR0; z < sR1; z++) {
 					for (int y = 0; y < h; y++) {
 						final int rowIndex = y * w;
@@ -872,28 +809,28 @@ public class Purify implements PlugIn {
 			}
 		}
 		final long maxVoxCount = maxVC;
-		if (phase == foreground) {
+		if (phase == FORE) {
 			// go through work array and turn all
 			// smaller foreground particles into background (0)
 			for (int z = 0; z < d; z++) {
 				for (int i = 0; i < s; i++) {
-					if (workArray[z][i] == foreground) {
+					if (workArray[z][i] == FORE) {
 						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
-							workArray[z][i] = background;
+							workArray[z][i] = BACK;
 						}
 					}
 				}
 				IJ.showStatus("Removing foreground particles");
 				IJ.showProgress(z, d);
 			}
-		} else if (phase == background) {
+		} else if (phase == BACK) {
 			// go through work array and turn all
 			// smaller background particles into foreground
 			for (int z = 0; z < d; z++) {
 				for (int i = 0; i < s; i++) {
-					if (workArray[z][i] == background) {
+					if (workArray[z][i] == BACK) {
 						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
-							workArray[z][i] = foreground;
+							workArray[z][i] = FORE;
 						}
 					}
 				}
@@ -970,8 +907,8 @@ public class Purify implements PlugIn {
 	 * @param chunkRanges
 	 * @param duration
 	 */
-	private void showResults(int[][] chunkRanges, double duration,
-			ImagePlus imp, int slicesPerChunk) {
+	private void showResults(double duration, ImagePlus imp, int slicesPerChunk) {
+		int[][] chunkRanges = getChunkRanges(nChunks, slicesPerChunk);
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
 		rt.addLabel(imp.getTitle());
@@ -990,22 +927,19 @@ public class Purify implements PlugIn {
 	 * Display the particle labels as an ImagePlus
 	 * 
 	 * @param particleLabels
-	 * @param imp original image, used for image dimensions, calibration and titles
+	 * @param imp
+	 *            original image, used for image dimensions, calibration and
+	 *            titles
 	 */
-	private ImagePlus getParticleLabels(int[][] particleLabels, ImagePlus imp) {
+	private ImagePlus displayParticleLabels(int[][] particleLabels,
+			ImagePlus imp) {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getImageStackSize();
-		final int sliceSize = w * h;
-		float[][] particles = new float[d][sliceSize];
-		for (int z = 0; z < d; z++){
-			for (int i = 0; i < sliceSize; i++){
-				particles[z][i] = (float) particleLabels[z][i];
-			}
-		}
 		ImageStack stackParticles = new ImageStack(w, h);
 		for (int z = 1; z <= d; z++) {
-			stackParticles.addSlice(imp.getImageStack().getSliceLabel(z), particles[z-1]);
+			stackParticles.addSlice(imp.getImageStack().getSliceLabel(z),
+					particleLabels[z - 1]);
 		}
 		ImagePlus impParticles = new ImagePlus(imp.getShortTitle() + "_parts",
 				stackParticles);
@@ -1013,5 +947,85 @@ public class Purify implements PlugIn {
 		return impParticles;
 	}
 
-	
+	/**
+	 * Get particles, particle labels and particle sizes from a 3D ImagePlus
+	 * 
+	 * @param imp
+	 *            Binary input image
+	 * @param slicesPerChunk
+	 *            number of slices per chunk. 2 is generally good.
+	 * @param phase
+	 *            foreground or background (FORE or BACK)
+	 * @return Object[] {byte[][], int[][], long[]} containing a binary
+	 *         workArray, particle labels and particle sizes indexed by particle
+	 *         label
+	 */
+	public Object[] getParticles(ImagePlus imp, int slicesPerChunk, int phase) {
+		byte[][] workArray = makeWorkArray(imp);
+		return getParticles(imp, workArray, slicesPerChunk, phase);
+	}
+
+	/**
+	 * Get particles, particle labels and sizes from a workArray
+	 * 
+	 * @param imp
+	 *            input binary image
+	 * @param slicesPerChunk
+	 *            number of slices to use for each chunk
+	 * @param phase
+	 *            one of either Purify.foreground or Purify.background
+	 * @return Object[] array containing a binary workArray, particle labels and
+	 *         particle sizes
+	 */
+	private Object[] getParticles(ImagePlus imp, byte[][] workArray,
+			int slicesPerChunk, int phase) {
+		this.width = imp.getWidth();
+		this.height = imp.getHeight();
+		this.nSlices = imp.getStackSize();
+		this.sliceSize = this.width * this.height;
+		nThreads = Runtime.getRuntime().availableProcessors();
+		nChunks = (int) Math.floor((double) nSlices / (double) slicesPerChunk);
+		if (nChunks == 0)
+			nChunks = 1;
+
+		int remainder = nSlices - nChunks * slicesPerChunk;
+
+		if (remainder > 0) {
+			nChunks += 1 + (int) Math.floor((double) remainder
+					/ (double) slicesPerChunk);
+		}
+
+		// set up the chunks
+		final int[][] chunkRanges = getChunkRanges(nChunks, slicesPerChunk);
+		final int[][] stitchRanges = getStitchRanges(nChunks, slicesPerChunk);
+
+		int[][] particleLabels = firstIDAttribution(workArray, phase);
+
+		// connect foreground particles within chunks
+		ConnectStructuresThread[] cptf = new ConnectStructuresThread[nThreads];
+		for (int thread = 0; thread < nThreads; thread++) {
+			cptf[thread] = new ConnectStructuresThread(thread, nThreads,
+					workArray, particleLabels, phase, nChunks, chunkRanges);
+			cptf[thread].start();
+		}
+		try {
+			for (int thread = 0; thread < nThreads; thread++) {
+				cptf[thread].join();
+			}
+		} catch (InterruptedException ie) {
+			IJ.error("A thread was interrupted.");
+		}
+
+		// connect foreground particles between chunks
+		if (nChunks > 1) {
+			chunkString = ": stitching...";
+			connectStructures(workArray, particleLabels, phase, stitchRanges);
+		}
+
+		long[] particleSizes = getParticleSizes(workArray, particleLabels,
+				phase);
+
+		Object[] result = { workArray, particleLabels, particleSizes };
+		return result;
+	}
 }
