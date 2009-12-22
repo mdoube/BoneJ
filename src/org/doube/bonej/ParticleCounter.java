@@ -1,10 +1,5 @@
 package org.doube.bonej;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -14,11 +9,15 @@ import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 
 public class ParticleCounter implements PlugIn {
-	
-	public final static int FORE = -1, BACK = 0;
-	
+
+	/** Foreground value */
+	public final static int FORE = -1;
+
+	/** Background value */
+	public final static int BACK = 0;
+
 	private String sPhase = "";
-	
+
 	private String chunkString = "";
 
 	public void run(String arg) {
@@ -43,15 +42,81 @@ public class ParticleCounter implements PlugIn {
 		final boolean doParticleImage = gd.getNextBoolean();
 
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
+
+		long[] particleSizes = (long[]) result[2];
+		double[] volumes = getVolumes(imp, particleSizes);
 		int[][] particleLabels = (int[][]) result[1];
-		
-		final ArrayList<double[]> particles = analyseParticles(imp, particleLabels);
-		
+		double[][] centroids = getCentroids(imp, particleLabels, particleSizes);
+
+		String units = imp.getCalibration().getUnits();
+		ResultsTable rt = new ResultsTable();
+		for (int i = 1; i < volumes.length; i++) {
+			if (volumes[i] > 0) {
+				rt.incrementCounter();
+				rt.addValue("ID", i);
+				rt.addValue("Vol. (" + units + "^3)", volumes[i]);
+				rt.addValue("x (" + units + ")", centroids[i][0]);
+				rt.addValue("y (" + units + ")", centroids[i][1]);
+				rt.addValue("z (" + units + ")", centroids[i][2]);
+				rt.updateResults();
+			}
+		}
+		rt.show("Results");
+
 		if (doParticleImage) {
 			displayParticleLabels(particleLabels, imp).show();
+			IJ.run("Fire");
 		}
 	}
-	
+
+	/**
+	 * Get the centroids of all the particles in real units
+	 * 
+	 * @param imp
+	 * @param particleLabels
+	 * @param particleSizes
+	 * @return double[][] containing all the particles' centroids
+	 */
+	private double[][] getCentroids(ImagePlus imp, int[][] particleLabels,
+			long[] particleSizes) {
+		final int nParticles = particleSizes.length;
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		double[][] sums = new double[nParticles][3];
+		for (int z = 0; z < d; z++) {
+			for (int y = 0; y < h; y++) {
+				final int index = y * w;
+				for (int x = 0; x < w; x++) {
+					final int particle = particleLabels[z][index + x];
+					sums[particle][0] += x;
+					sums[particle][1] += y;
+					sums[particle][2] += z;
+				}
+			}
+		}
+		Calibration cal = imp.getCalibration();
+		double[][] centroids = new double[nParticles][3];
+		for (int p = 0; p < nParticles; p++) {
+			centroids[p][0] = cal.pixelWidth * sums[p][0] / particleSizes[p];
+			centroids[p][1] = cal.pixelHeight * sums[p][1] / particleSizes[p];
+			centroids[p][2] = cal.pixelDepth * sums[p][2] / particleSizes[p];
+		}
+		return centroids;
+	}
+
+	private double[] getVolumes(ImagePlus imp, long[] particleSizes) {
+		Calibration cal = imp.getCalibration();
+		final double voxelVolume = cal.pixelWidth * cal.pixelHeight
+				* cal.pixelDepth;
+		final int nLabels = particleSizes.length;
+		double[] particleVolumes = new double[nLabels];
+		for (int i = 0; i < nLabels; i++) {
+			particleVolumes[i] = voxelVolume * particleSizes[i];
+		}
+		return particleVolumes;
+	}
+
 	/**
 	 * Get particles, particle labels and particle sizes from a 3D ImagePlus
 	 * 
@@ -84,14 +149,14 @@ public class ParticleCounter implements PlugIn {
 	 */
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
 			int slicesPerChunk, int phase) {
-		if (phase == FORE){
+		if (phase == FORE) {
 			this.sPhase = "foreground";
-		} else if (phase == BACK){
+		} else if (phase == BACK) {
 			this.sPhase = "background";
 		} else {
 			throw new IllegalArgumentException();
 		}
-		if (slicesPerChunk < 1){
+		if (slicesPerChunk < 1) {
 			throw new IllegalArgumentException();
 		}
 		// Set up the chunks
@@ -125,28 +190,60 @@ public class ParticleCounter implements PlugIn {
 					stitchRanges);
 		}
 
-		long[] particleSizes = getParticleSizes(workArray, particleLabels,
-				phase);
+		minimiseLabels(particleLabels);
+		long[] particleSizes = getParticleSizes(particleLabels);
 
 		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
 	}
 
+	/**
+	 * Get rid of redundant particle labels
+	 * 
+	 * @param particleLabels
+	 * @return
+	 */
+	private void minimiseLabels(int[][] particleLabels) {
+		final int d = particleLabels.length;
+		long[] particleSizes = getParticleSizes(particleLabels);
+		final int nLabels = particleSizes.length;
+		int minLabel = 1;
+		for (int i = 1; i < nLabels; i++) {
+			if (particleSizes[i] > 0) {
+				if (i == minLabel) {
+					minLabel++;
+					continue;
+				} else {
+					particleSizes[minLabel] = particleSizes[i];
+					particleSizes[i] = 0;
+					replaceLabel(particleLabels, i, minLabel, 0, d);
+					minLabel++;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get number of chunks needed to divide a stack into evenly-sized sets of
+	 * slices.
+	 * 
+	 * @param imp
+	 *            input image
+	 * @param slicesPerChunk
+	 *            number of slices per chunk
+	 * @return number of chunks
+	 */
 	public int getNChunks(ImagePlus imp, int slicesPerChunk) {
 		final int d = imp.getImageStackSize();
 		int nChunks = (int) Math.floor((double) d / (double) slicesPerChunk);
-		if (nChunks == 0)
-			nChunks = 1;
 
-		int remainder = d - nChunks * slicesPerChunk;
+		int remainder = d % slicesPerChunk;
 
 		if (remainder > 0) {
-			nChunks += 1 + (int) Math.floor((double) remainder
-					/ (double) slicesPerChunk);
+			nChunks++;
 		}
 		return nChunks;
 	}
-
 
 	/**
 	 * Go through all pixels and assign initial particle label
@@ -271,7 +368,7 @@ public class ParticleCounter implements PlugIn {
 		}
 		return particleLabels;
 	}
-	
+
 	/**
 	 * Connect structures = minimisation of IDs
 	 * 
@@ -505,7 +602,7 @@ public class ParticleCounter implements PlugIn {
 		}
 		return workArray;
 	}
-	
+
 	/**
 	 * Get a 2 d array that defines the z-slices to scan within while connecting
 	 * particles within chunkified stacks.
@@ -599,8 +696,6 @@ public class ParticleCounter implements PlugIn {
 		return scanRanges;
 	}
 
-	
-	
 	/**
 	 * Check to see if the pixel at (m,n,o) is within the bounds of the current
 	 * stack
@@ -660,34 +755,17 @@ public class ParticleCounter implements PlugIn {
 				}
 		}
 	}
-	
-	private ArrayList<double[]> analyseParticles(ImagePlus imp,
-			int[][] particleLabels) {
-		Calibration cal = imp.getCalibration();
-		final double voxelVolume = cal.pixelDepth * cal.pixelHeight
-				* cal.pixelWidth;
-		final int w = imp.getWidth();
-		final int h = imp.getHeight();
-		final int d = imp.getImageStackSize();
-		final int sliceSize = w * h;
-		ArrayList<double[]> particles = new ArrayList<double[]>();		
-		return particles;
-	}
-	
+
 	/**
-	 * Get the sizes of all the particles
+	 * Get the sizes of all the particles as a voxel count
 	 * 
-	 * @param workArray
 	 * @param particleLabels
-	 * @param phase
-	 *            foreground = -1, background = 0
 	 * @return particleSizes
 	 */
-	public long[] getParticleSizes(final byte[][] workArray,
-			final int[][] particleLabels, final int phase) {
+	public long[] getParticleSizes(final int[][] particleLabels) {
 		IJ.showStatus("Getting " + sPhase + " particle sizes");
-		final int d = workArray.length;
-		final int wh = workArray[0].length;
+		final int d = particleLabels.length;
+		final int wh = particleLabels[0].length;
 		// find the highest value particleLabel
 		int maxParticle = 0;
 		for (int z = 0; z < d; z++) {
@@ -698,10 +776,8 @@ public class ParticleCounter implements PlugIn {
 
 		long[] particleSizes = new long[maxParticle + 1];
 		for (int z = 0; z < d; z++) {
-			for (int arrayIndex = 0; arrayIndex < wh; arrayIndex++) {
-				if (workArray[z][arrayIndex] == phase) {
-					particleSizes[particleLabels[z][arrayIndex]]++;
-				}
+			for (int i = 0; i < wh; i++) {
+				particleSizes[particleLabels[z][i]]++;
 			}
 			IJ.showProgress(z, d);
 		}
@@ -721,14 +797,22 @@ public class ParticleCounter implements PlugIn {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getImageStackSize();
-		ImageStack stackParticles = new ImageStack(w, h);
-		for (int z = 1; z <= d; z++) {
-			stackParticles.addSlice(imp.getImageStack().getSliceLabel(z),
-					particleLabels[z - 1]);
+		final int wh = w * h;
+		ImageStack stack = new ImageStack(w, h);
+		double max = 0;
+		for (int z = 0; z < d; z++) {
+			float[] slicePixels = new float[wh];
+			for (int i = 0; i < wh; i++) {
+				slicePixels[i] = (float) particleLabels[z][i];
+				max = Math.max(max, slicePixels[i]);
+			}
+			stack.addSlice(imp.getImageStack().getSliceLabel(z + 1),
+					slicePixels);
 		}
 		ImagePlus impParticles = new ImagePlus(imp.getShortTitle() + "_parts",
-				stackParticles);
+				stack);
 		impParticles.setCalibration(imp.getCalibration());
+		impParticles.getProcessor().setMinAndMax(0, max);
 		return impParticles;
 	}
 }

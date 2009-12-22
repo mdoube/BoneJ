@@ -88,10 +88,6 @@ import ij.gui.GenericDialog;
  */
 public class Purify implements PlugIn {
 
-	// private String chunkString = "";
-
-	// private String sPhase = "";
-
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
@@ -130,6 +126,13 @@ public class Purify implements PlugIn {
 		return;
 	}
 
+	/**
+	 * 
+	 * @param imp
+	 * @param slicesPerChunk
+	 * @param showPerformance
+	 * @return
+	 */
 	public Object[] purify(ImagePlus imp, int slicesPerChunk,
 			boolean showPerformance) {
 
@@ -142,14 +145,14 @@ public class Purify implements PlugIn {
 		int[][] particleLabels = (int[][]) foregroundParticles[1];
 		long[] particleSizes = (long[]) foregroundParticles[2];
 		removeSmallParticles(workArray, particleLabels, particleSizes, fg);
-
+		
 		final int bg = ParticleCounter.BACK;
 		Object[] backgroundParticles = pc.getParticles(imp, workArray,
 				slicesPerChunk, bg);
 		particleLabels = (int[][]) backgroundParticles[1];
 		particleSizes = (long[]) backgroundParticles[2];
 		touchEdges(imp, workArray, particleLabels, particleSizes, bg);
-		particleSizes = pc.getParticleSizes(workArray, particleLabels, bg);
+		particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, bg);
 
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
