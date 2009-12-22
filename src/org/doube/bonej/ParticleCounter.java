@@ -34,12 +34,14 @@ public class ParticleCounter implements PlugIn {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addCheckbox("Show_particles", true);
+		gd.addCheckbox("Show_sizes", true);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 		final boolean doParticleImage = gd.getNextBoolean();
+		final boolean doParticleSizeImage = gd.getNextBoolean();
 
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
 
@@ -67,6 +69,50 @@ public class ParticleCounter implements PlugIn {
 			displayParticleLabels(particleLabels, imp).show();
 			IJ.run("Fire");
 		}
+		if (doParticleSizeImage) {
+			displayParticleValues(imp, particleLabels, volumes, "volume").show();
+			IJ.run("Fire");
+		}
+	}
+
+	/**
+	 * Create an image showing some particle measurement
+	 * 
+	 * @param imp
+	 * @param particleLabels
+	 * @param values
+	 *            list of values whose array indices correspond to
+	 *            particlelabels
+	 * @param title
+	 *            tag stating what we are displaying
+	 * @return ImagePlus with particle labels substituted with some value
+	 */
+	private ImagePlus displayParticleValues(ImagePlus imp,
+			int[][] particleLabels, double[] values, String title) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		final int wh = w * h;
+		float[][] pL = new float[d][wh];
+		values[0] = 0; // don't colour the background
+		ImageStack stack = new ImageStack(w, h);
+		for (int z = 0; z < d; z++) {
+			for (int i = 0; i < wh; i++) {
+				final int p = particleLabels[z][i];
+				pL[z][i] = (float) values[p];
+			}
+			stack.addSlice(imp.getImageStack().getSliceLabel(z + 1), pL[z]);
+		}
+		final int nValues = values.length;
+		double max = 0;
+		for (int i = 0; i < nValues; i++) {
+			max = Math.max(max, values[i]);
+		}
+		ImagePlus impOut = new ImagePlus(imp.getShortTitle() + "_" + title,
+				stack);
+		impOut.setCalibration(imp.getCalibration());
+		impOut.getProcessor().setMinAndMax(0, max);
+		return impOut;
 	}
 
 	/**
