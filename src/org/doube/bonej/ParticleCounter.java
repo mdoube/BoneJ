@@ -1,5 +1,16 @@
 package org.doube.bonej;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
+
+import customnode.CustomTriangleMesh;
+
+import marchingcubes.MCTriangulator;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -7,6 +18,8 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 public class ParticleCounter implements PlugIn {
 
@@ -35,6 +48,9 @@ public class ParticleCounter implements PlugIn {
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addCheckbox("Show_particles", true);
 		gd.addCheckbox("Show_sizes", true);
+		gd.addCheckbox("Surface_area", true);
+		gd.addNumericField("Surface_resampling", 2, 0);
+		gd.addCheckbox("Show_surfaces", true);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -42,14 +58,30 @@ public class ParticleCounter implements PlugIn {
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
+		final boolean doSurfaceArea = gd.getNextBoolean();
+		final int resampling = (int) Math.floor(gd.getNextNumber());
+		final boolean doSurfaceImage = gd.getNextBoolean();
 
+		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
-
 		long[] particleSizes = (long[]) result[2];
+		final int nParticles = particleSizes.length;
 		double[] volumes = getVolumes(imp, particleSizes);
 		int[][] particleLabels = (int[][]) result[1];
 		double[][] centroids = getCentroids(imp, particleLabels, particleSizes);
+		ArrayList<List<Point3f>> volumePoints = new ArrayList<List<Point3f>>();
 
+		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
+		if (doSurfaceArea || doSurfaceImage) {
+			surfacePoints = getSurfacePoints(imp, particleLabels, resampling,
+					nParticles);
+		}
+		double[] surfaceAreas = new double[nParticles];
+		if (doSurfaceArea) {
+			surfaceAreas = getSurfaceArea(surfacePoints);
+		}
+
+		// Show numerical results
 		String units = imp.getCalibration().getUnits();
 		ResultsTable rt = new ResultsTable();
 		for (int i = 1; i < volumes.length; i++) {
@@ -60,19 +92,102 @@ public class ParticleCounter implements PlugIn {
 				rt.addValue("x (" + units + ")", centroids[i][0]);
 				rt.addValue("y (" + units + ")", centroids[i][1]);
 				rt.addValue("z (" + units + ")", centroids[i][2]);
+				if (doSurfaceArea) {
+					rt.addValue("SA (" + units + "^2)", surfaceAreas[i]);
+				}
 				rt.updateResults();
 			}
 		}
 		rt.show("Results");
 
+		// Show result images
 		if (doParticleImage) {
 			displayParticleLabels(particleLabels, imp).show();
 			IJ.run("Fire");
 		}
 		if (doParticleSizeImage) {
-			displayParticleValues(imp, particleLabels, volumes, "volume").show();
+			displayParticleValues(imp, particleLabels, volumes, "volume")
+					.show();
 			IJ.run("Fire");
 		}
+		if (doSurfaceImage) {
+			displayParticleSurfaces(surfacePoints);
+		}
+	}
+
+	private void displayParticleSurfaces(ArrayList<List<Point3f>> surfacePoints) {
+		// Create a universe and show it
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		int p = 0;
+		final int nPoints = surfacePoints.size();
+		Iterator<List<Point3f>> iter = surfacePoints.iterator();
+		while (iter.hasNext()) {
+			IJ.showStatus("Rendering surfaces...");
+			IJ.showProgress(p, nPoints);
+			List<Point3f> points = iter.next();
+			if (p > 0) {
+				float red = p / nPoints;
+				float green = 1 - red;
+				float blue = p / (2 * nPoints);
+				Color3f pColour = new Color3f(red, green, blue);
+				// Add the mesh
+				univ.addTriangleMesh(points, pColour, "Particle " + p);
+			}
+			p++;
+		}
+	}
+
+	private double[] getSurfaceArea(ArrayList<List<Point3f>> surfacePoints) {
+		Iterator<List<Point3f>> iter = surfacePoints.iterator();
+		double[] surfaceAreas = new double[surfacePoints.size()];
+		int p = 0;
+		while (iter.hasNext()) {
+			List<Point3f> points = iter.next();
+			if (null != points) {
+				double surfaceArea = MeasureSurface.getSurfaceArea(points);
+				surfaceAreas[p] = surfaceArea;
+			}
+			p++;
+		}
+		return surfaceAreas;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<List<Point3f>> getSurfacePoints(ImagePlus imp,
+			int[][] particleLabels, int resampling, int nParticles) {
+		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
+		final boolean[] channels = { true, false, false };
+		for (int p = 0; p < nParticles; p++) {
+			if (p > 0) {
+				// create a binary ImagePlus containing a single particle
+				final int w = imp.getWidth();
+				final int h = imp.getHeight();
+				final int d = imp.getImageStackSize();
+				final int wh = w * h;
+				ImageStack stack = new ImageStack(w, h);
+				for (int z = 0; z < d; z++) {
+					byte[] slice = new byte[wh];
+					for (int i = 0; i < wh; i++) {
+						if (particleLabels[z][i] == p)
+							slice[i] = (byte) (255 & 0xFF);
+					}
+					stack.addSlice(imp.getStack().getSliceLabel(z + 1), slice);
+				}
+				ImagePlus binaryImp = new ImagePlus("Particle_" + p, stack);
+
+				MCTriangulator mct = new MCTriangulator();
+				List<Point3f> points = mct.getTriangles(binaryImp, 128,
+						channels, resampling);
+				surfacePoints.add(points);
+				if (points.size() == 0) {
+					IJ.log("Particle " + p + " resulted in 0 surface points");
+				}
+			} else {
+				surfacePoints.add(null);
+			}
+		}
+		return surfacePoints;
 	}
 
 	/**

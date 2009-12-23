@@ -110,7 +110,7 @@ public class MeasureSurface implements PlugIn {
 	 * @param points in 3D triangle mesh
 	 * @return surface area
 	 */
-	private double getSurfaceArea(List<Point3f> points) {
+	public static double getSurfaceArea(List<Point3f> points) {
 		double sumArea = 0;
 		final int nPoints = points.size();
 		for (int n = 0; n < nPoints; n += 3) {
