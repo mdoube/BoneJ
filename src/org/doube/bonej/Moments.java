@@ -357,7 +357,7 @@ public class Moments implements PlugIn {
 				}
 			}
 		}
-		// create the intertia tensor matrix
+		// create the inertia tensor matrix
 		double[][] inertiaTensor = new double[3][3];
 		inertiaTensor[0][0] = Icxx;
 		inertiaTensor[1][1] = Icyy;
