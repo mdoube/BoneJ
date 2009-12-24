@@ -65,6 +65,9 @@ public class ResultInserter {
 		// search for the first row that contains the image title
 		// and contains no value for the heading
 		for (int row = 0; row < rt.getCounter(); row++) {
+			if (rt.getLabel(row) == null){
+				rt.setLabel(title, row);
+			}
 			if (rt.getLabel(row).equals(title)) {
 				// there could be no column called colHeading
 				if (!rt.columnExists(rt.getColumnIndex(colHeading))) {
