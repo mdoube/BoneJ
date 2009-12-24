@@ -79,18 +79,14 @@ public class ParticleCounter implements PlugIn {
 			surfacePoints = getSurfacePoints(imp, particleLabels, resampling,
 					nParticles);
 		}
-		ArrayList<List<Point3f>> volumePoints = new ArrayList<List<Point3f>>();
-		if (doMoments) { // or anything else that will need volume points
-			volumePoints = getVolumePoints(imp, particleLabels, nParticles);
-		}
-
+		// calculate dimensions
 		double[] surfaceAreas = new double[nParticles];
 		if (doSurfaceArea) {
 			surfaceAreas = getSurfaceArea(surfacePoints);
 		}
 		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
 		if (doMoments) {
-			eigens = getEigens(imp, volumePoints);
+			eigens = getEigens(imp, particleLabels, centroids);
 		}
 
 		// Show numerical results
@@ -131,10 +127,11 @@ public class ParticleCounter implements PlugIn {
 		if (doSurfaceImage) {
 			displayParticleSurfaces(surfacePoints);
 		}
+		return;
 	}
 
 	private EigenvalueDecomposition[] getEigens(ImagePlus imp,
-			ArrayList<List<Point3f>> volumePoints) {
+			int[][] particleLabels, double[][] centroids) {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -142,108 +139,51 @@ public class ParticleCounter implements PlugIn {
 		final double voxVhVd = (vH * vH + vD * vD) / 12;
 		final double voxVwVd = (vW * vW + vD * vD) / 12;
 		final double voxVhVw = (vH * vH + vW * vW) / 12;
-		Iterator<List<Point3f>> partIter = volumePoints.iterator();
-		int p = 1;
-		partIter.next(); // skip the zeroth particle (background)
-		final int nParticles = volumePoints.size();
-		Point3f point = new Point3f();
-		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
-		while (partIter.hasNext()) {
-			List<Point3f> particle = partIter.next();
-			double sumX = 0;
-			double sumY = 0;
-			double sumZ = 0;
-			final int nPoints = particle.size();
-			Iterator<Point3f> pointIter = particle.iterator();
-			while (pointIter.hasNext()) {
-				point = pointIter.next();
-				sumX += point.x;
-				sumY += point.y;
-				sumZ += point.z;
-			}
-			final double centX = sumX / nPoints;
-			final double centY = sumY / nPoints;
-			final double centZ = sumZ / nPoints;
-			IJ.log("nPoints "+p+" = "+nPoints);
-			IJ.log("Centroid "+p+"("+centX+", "+centY+", "+centZ+")");
-
-			double Ixx = 0;
-			double Iyy = 0;
-			double Izz = 0;
-			double Ixy = 0;
-			double Ixz = 0;
-			double Iyz = 0;
-			Iterator<Point3f> pointIter2 = particle.iterator(); // reset the iterator
-			while (pointIter2.hasNext()) {
-				point = pointIter2.next();
-				final double x = point.x - centX;
-				final double y = point.y - centY;
-				final double z = point.z - centZ;
-				final double xx = x * x;
-				final double yy = y * y;
-				final double zz = z * z;
-				Ixx += yy + zz + voxVhVd;
-				Iyy += xx + zz + voxVwVd;
-				Izz += yy + xx + voxVhVw;
-				Ixy += x * y;
-				Ixz += x * z;
-				Iyz += y * z;
-			}
-			double[][] inertiaTensor = new double[3][3];
-			inertiaTensor[0][0] = Ixx;
-			inertiaTensor[1][1] = Iyy;
-			inertiaTensor[2][2] = Izz;
-			inertiaTensor[0][1] = -Ixy;
-			inertiaTensor[0][2] = -Ixz;
-			inertiaTensor[1][0] = -Ixy;
-			inertiaTensor[1][2] = -Iyz;
-			inertiaTensor[2][0] = -Ixz;
-			inertiaTensor[2][1] = -Iyz;
-			Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
-			inertiaTensorMatrix.printToIJLog("Inertia Tensor "+p);
-			EigenvalueDecomposition E = new EigenvalueDecomposition(
-					inertiaTensorMatrix);
-			eigens[p] = E;
-			p++;
-		}
-		return eigens;
-	}
-
-	private ArrayList<List<Point3f>> getVolumePoints(ImagePlus imp,
-			int[][] particleLabels, int nParticles) {
-		ArrayList<List<Point3f>> volumePoints = new ArrayList<List<Point3f>>();
-		List<Point3f> particle = new ArrayList<Point3f>();
-		for (int i = 0; i < nParticles; i++) {
-			volumePoints.add(particle);
-		}
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getImageStackSize();
-		Calibration cal = imp.getCalibration();
-		final double vW = cal.pixelWidth;
-		final double vH = cal.pixelHeight;
-		final double vD = cal.pixelDepth;
-
-		Point3f point = new Point3f();
+		final int nParticles = centroids.length;
+		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
+		double[][] momentTensors = new double[nParticles][6];
 		for (int z = 0; z < d; z++) {
-			final float zVd = (float) (z * vD);
+			final double zVd = z * vD;
 			for (int y = 0; y < h; y++) {
-				final float yVh = (float) (y * vH);
+				final double yVh = y * vH;
 				final int index = y * w;
 				for (int x = 0; x < w; x++) {
-					final float xVw = (float) (x * vW);
-					point.x = xVw;
-					point.y = yVh;
-					point.z = zVd;
 					final int p = particleLabels[z][index + x];
 					if (p > 0) {
-						particle = volumePoints.get(p);
-						particle.add(point);
+						final double xVw = x * vW;
+						final double dx = xVw - centroids[p][0];
+						final double dy = yVh - centroids[p][1];
+						final double dz = zVd - centroids[p][2];
+						momentTensors[p][0] += dy * dy + dz * dz + voxVhVd; // Ixx
+						momentTensors[p][1] += dx * dx + dz * dz + voxVwVd; // Iyy
+						momentTensors[p][2] += dy * dy + dx * dx + voxVhVw; // Izz
+						momentTensors[p][3] += dx * dy; // Ixy
+						momentTensors[p][4] += dx * dz; // Ixz
+						momentTensors[p][5] += dy * dz; // Iyz
 					}
 				}
 			}
+			for (int p = 1; p < nParticles; p++) {
+				double[][] inertiaTensor = new double[3][3];
+				inertiaTensor[0][0] = momentTensors[p][0];
+				inertiaTensor[1][1] = momentTensors[p][1];
+				inertiaTensor[2][2] = momentTensors[p][2];
+				inertiaTensor[0][1] = -momentTensors[p][3];
+				inertiaTensor[0][2] = -momentTensors[p][4];
+				inertiaTensor[1][0] = -momentTensors[p][3];
+				inertiaTensor[1][2] = -momentTensors[p][5];
+				inertiaTensor[2][0] = -momentTensors[p][4];
+				inertiaTensor[2][1] = -momentTensors[p][5];
+				Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
+				EigenvalueDecomposition E = new EigenvalueDecomposition(
+						inertiaTensorMatrix);
+				eigens[p] = E;
+			}
 		}
-		return volumePoints;
+		return eigens;
 	}
 
 	private void displayParticleSurfaces(ArrayList<List<Point3f>> surfacePoints) {
