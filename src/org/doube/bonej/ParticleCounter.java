@@ -52,6 +52,8 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Moments", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Show_surfaces", true);
+		gd.addCheckbox("Show_centroids", true);
+		gd.addCheckbox("Show_axes", true);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -63,6 +65,8 @@ public class ParticleCounter implements PlugIn {
 		final boolean doMoments = gd.getNextBoolean();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doSurfaceImage = gd.getNextBoolean();
+		final boolean doCentroidImage = gd.getNextBoolean();
+		final boolean doAxesImage = gd.getNextBoolean();
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
@@ -127,7 +131,25 @@ public class ParticleCounter implements PlugIn {
 		if (doSurfaceImage) {
 			displayParticleSurfaces(surfacePoints);
 		}
+		if (doCentroidImage){
+			displayCentroids(centroids);
+		}
+		if (doAxesImage){
+			displayAxes(eigens, centroids);
+		}
+		IJ.showStatus("Particle Analysis Complete");
 		return;
+	}
+
+	private void displayAxes(EigenvalueDecomposition[] eigens,
+			double[][] centroids) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void displayCentroids(double[][] centroids) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private EigenvalueDecomposition[] getEigens(ImagePlus imp,
@@ -146,6 +168,8 @@ public class ParticleCounter implements PlugIn {
 		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
 		double[][] momentTensors = new double[nParticles][6];
 		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Calculating particle moments...");
+			IJ.showProgress(z, d);
 			final double zVd = z * vD;
 			for (int y = 0; y < h; y++) {
 				final double yVh = y * vH;
@@ -191,21 +215,28 @@ public class ParticleCounter implements PlugIn {
 		Image3DUniverse univ = new Image3DUniverse();
 		univ.show();
 		int p = 0;
-		final int nPoints = surfacePoints.size();
+		final int nParticles = surfacePoints.size();
 		Iterator<List<Point3f>> iter = surfacePoints.iterator();
 		while (iter.hasNext()) {
 			IJ.showStatus("Rendering surfaces...");
-			IJ.showProgress(p, nPoints);
+			IJ.showProgress(p, nParticles);
 			List<Point3f> points = iter.next();
 			if (p > 0) {
-				float red = p / nPoints;
+				float red = p / nParticles;
 				float green = 1 - red;
-				float blue = p / (2 * nPoints);
+				float blue = p / (2 * nParticles);
 				Color3f pColour = new Color3f(red, green, blue);
 				// Add the mesh
 				univ.addTriangleMesh(points, pColour, "Particle " + p);
 			}
 			p++;
+		}
+		for (int q = 1; q <= nParticles; q++) {
+			String red = IJ.d2s(255 * q / nParticles, 0);
+			String green = IJ.d2s(255 * q / (1.5 * nParticles), 0);
+			String blue = IJ.d2s(255 * q / (2 * nParticles), 0);
+			ij3d.ImageJ3DViewer.select("Particle " + q);
+			ij3d.ImageJ3DViewer.setColor(red, green, blue);
 		}
 	}
 
