@@ -21,7 +21,6 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
-import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 public class ParticleCounter implements PlugIn {
@@ -58,6 +57,8 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Show_surfaces", true);
 		gd.addCheckbox("Show_centroids", true);
 		gd.addCheckbox("Show_axes", true);
+		gd.addCheckbox("Show_3D_original", true);
+		gd.addNumericField("Volume_resampling", 2, 0);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -72,6 +73,8 @@ public class ParticleCounter implements PlugIn {
 		final boolean doSurfaceImage = gd.getNextBoolean();
 		final boolean doCentroidImage = gd.getNextBoolean();
 		final boolean doAxesImage = gd.getNextBoolean();
+		final boolean do3DOriginal = gd.getNextBoolean();
+		final int origResampling = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
@@ -89,14 +92,14 @@ public class ParticleCounter implements PlugIn {
 			surfacePoints = getSurfacePoints(imp, particleLabels, limits,
 					resampling, nParticles);
 		}
+		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
+		if (doMoments || doAxesImage) {
+			eigens = getEigens(imp, particleLabels, centroids);
+		}
 		// calculate dimensions
 		double[] surfaceAreas = new double[nParticles];
 		if (doSurfaceArea) {
 			surfaceAreas = getSurfaceArea(surfacePoints);
-		}
-		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
-		if (doMoments) {
-			eigens = getEigens(imp, particleLabels, centroids);
 		}
 		double[][] eulerCharacters = new double[nParticles][3];
 		if (doEulerCharacters) {
@@ -125,9 +128,9 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("I3", E.getD().get(0, 0));
 				}
 				if (doEulerCharacters) {
-					rt.addValue("Euler", eulerCharacters[i][0]);
-					rt.addValue("Holes", eulerCharacters[i][1]);
-					rt.addValue("Cavities", eulerCharacters[i][2]);
+					rt.addValue("Euler (χ)", eulerCharacters[i][0]);
+					rt.addValue("Holes (β1)", eulerCharacters[i][1]);
+					rt.addValue("Cavities (β2)", eulerCharacters[i][2]);
 				}
 				rt.updateResults();
 			}
@@ -152,6 +155,9 @@ public class ParticleCounter implements PlugIn {
 		}
 		if (doAxesImage) {
 			displayAxes(eigens, centroids);
+		}
+		if (do3DOriginal) {
+			display3DOriginal(imp, origResampling);
 		}
 		IJ.showStatus("Particle Analysis Complete");
 		return;
@@ -293,12 +299,22 @@ public class ParticleCounter implements PlugIn {
 		return eigens;
 	}
 
+	private void display3DOriginal(ImagePlus imp, int resampling) {
+		ij3d.ImageJ3DViewer.add(imp.getTitle(), "None", imp.getTitle(), "0",
+				"true", "true", "true", IJ.d2s(resampling, 0), "0");
+		ij3d.ImageJ3DViewer.select(imp.getTitle());
+		ij3d.ImageJ3DViewer.lock();
+		return;
+	}
+
 	private void displayAxes(EigenvalueDecomposition[] eigens,
 			double[][] centroids) {
 		final int nEigens = eigens.length;
 		Image3DUniverse univ = new Image3DUniverse();
 		univ.show();
 		for (int p = 1; p < nEigens; p++) {
+			IJ.showStatus("Rendering principal axes...");
+			IJ.showProgress(p, nEigens);
 			final double cX = centroids[p][0];
 			final double cY = centroids[p][1];
 			final double cZ = centroids[p][2];
@@ -379,6 +395,8 @@ public class ParticleCounter implements PlugIn {
 		univ.show();
 		int nCentroids = centroids.length;
 		for (int p = 1; p < nCentroids; p++) {
+			IJ.showStatus("Rendering centroids...");
+			IJ.showProgress(p, nCentroids);
 			Point3f centroid = new Point3f();
 			centroid.x = (float) centroids[p][0];
 			centroid.y = (float) centroids[p][1];
@@ -475,9 +493,9 @@ public class ParticleCounter implements PlugIn {
 				MCTriangulator mct = new MCTriangulator();
 				List<Point3f> points = mct.getTriangles(binaryImp, 128,
 						channels, resampling);
-				final double xOffset = limits[p][0] * cal.pixelWidth;
-				final double yOffset = limits[p][2] * cal.pixelHeight;
-				final double zOffset = limits[p][4] * cal.pixelDepth;
+				final double xOffset = (limits[p][0] - 1) * cal.pixelWidth;
+				final double yOffset = (limits[p][2] - 1) * cal.pixelHeight;
+				final double zOffset = (limits[p][4] - 1) * cal.pixelDepth;
 				Iterator<Point3f> iter = points.iterator();
 				while (iter.hasNext()) {
 					Point3f point = iter.next();
