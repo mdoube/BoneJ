@@ -75,13 +75,14 @@ public class ParticleCounter implements PlugIn {
 		double[] volumes = getVolumes(imp, particleSizes);
 		int[][] particleLabels = (int[][]) result[1];
 		double[][] centroids = getCentroids(imp, particleLabels, particleSizes);
+		int[][] limits = getParticleLimits(imp, particleLabels, nParticles);
 
 		// set up resources for analysis
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
 		if (doSurfaceArea || doSurfaceImage) { // or anything else that needs
 			// surface points
-			surfacePoints = getSurfacePoints(imp, particleLabels, resampling,
-					nParticles);
+			surfacePoints = getSurfacePoints(imp, particleLabels, limits,
+					resampling, nParticles);
 		}
 		// calculate dimensions
 		double[] surfaceAreas = new double[nParticles];
@@ -101,9 +102,15 @@ public class ParticleCounter implements PlugIn {
 				rt.incrementCounter();
 				rt.addValue("ID", i);
 				rt.addValue("Vol. (" + units + "^3)", volumes[i]);
-				rt.addValue("x (" + units + ")", centroids[i][0]);
-				rt.addValue("y (" + units + ")", centroids[i][1]);
-				rt.addValue("z (" + units + ")", centroids[i][2]);
+				rt.addValue("x Cent (" + units + ")", centroids[i][0]);
+				rt.addValue("y Cent (" + units + ")", centroids[i][1]);
+				rt.addValue("z Cent (" + units + ")", centroids[i][2]);
+				rt.addValue("x Min", limits[i][0]);
+				rt.addValue("x Max", limits[i][1]);
+				rt.addValue("y Min", limits[i][2]);
+				rt.addValue("y Max", limits[i][3]);
+				rt.addValue("z Min", limits[i][4]);
+				rt.addValue("z Max", limits[i][5]);
 				if (doSurfaceArea) {
 					rt.addValue("SA (" + units + "^2)", surfaceAreas[i]);
 				}
@@ -131,25 +138,67 @@ public class ParticleCounter implements PlugIn {
 		if (doSurfaceImage) {
 			displayParticleSurfaces(surfacePoints);
 		}
-		if (doCentroidImage){
+		if (doCentroidImage) {
 			displayCentroids(centroids);
 		}
-		if (doAxesImage){
+		if (doAxesImage) {
 			displayAxes(eigens, centroids);
 		}
 		IJ.showStatus("Particle Analysis Complete");
 		return;
 	}
 
+	/**
+	 * Get the minimum and maximum x, y and z coordinates of each particle
+	 * 
+	 * @param imp
+	 *            ImagePlus (used for stack size)
+	 * @param particleLabels
+	 *            work array containing labelled particles
+	 * @param nParticles
+	 *            number of particles in the stack
+	 * @return int[][] containing x, y and z minima and maxima.
+	 */
+	private int[][] getParticleLimits(ImagePlus imp, int[][] particleLabels,
+			int nParticles) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		int[][] limits = new int[nParticles][6];
+		for (int i = 0; i < nParticles; i++) {
+			limits[i][0] = Integer.MAX_VALUE; // x min
+			limits[i][1] = 0; // x max
+			limits[i][2] = Integer.MAX_VALUE; // y min
+			limits[i][3] = 0; // y max
+			limits[i][4] = Integer.MAX_VALUE; // z min
+			limits[i][5] = 0; // z max
+		}
+		for (int z = 0; z < d; z++) {
+			for (int y = 0; y < h; y++) {
+				final int index = y * w;
+				for (int x = 0; x < w; x++) {
+					final int i = particleLabels[z][index + x];
+					limits[i][0] = Math.min(limits[i][0], x);
+					limits[i][1] = Math.max(limits[i][1], x);
+					limits[i][2] = Math.min(limits[i][2], y);
+					limits[i][3] = Math.max(limits[i][3], y);
+					limits[i][4] = Math.min(limits[i][4], z);
+					limits[i][5] = Math.max(limits[i][5], z);
+				}
+			}
+		}
+		return limits;
+	}
+
 	private void displayAxes(EigenvalueDecomposition[] eigens,
 			double[][] centroids) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private void displayCentroids(double[][] centroids) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private EigenvalueDecomposition[] getEigens(ImagePlus imp,
@@ -221,7 +270,7 @@ public class ParticleCounter implements PlugIn {
 			IJ.showStatus("Rendering surfaces...");
 			IJ.showProgress(p, nParticles);
 			List<Point3f> points = iter.next();
-			if (p > 0) {
+			if (p > 0 && points.size() > 0) {
 				float red = p / nParticles;
 				float green = 1 - red;
 				float blue = p / (2 * nParticles);
@@ -232,11 +281,15 @@ public class ParticleCounter implements PlugIn {
 			p++;
 		}
 		for (int q = 1; q <= nParticles; q++) {
-			String red = IJ.d2s(255 * q / nParticles, 0);
+			String particle = "Particle " + q;
+			if (!univ.contains(particle))
+				continue;
+			String red = IJ.d2s(255 * (1 - (q / nParticles)), 0);
 			String green = IJ.d2s(255 * q / (1.5 * nParticles), 0);
 			String blue = IJ.d2s(255 * q / (2 * nParticles), 0);
-			ij3d.ImageJ3DViewer.select("Particle " + q);
+			ij3d.ImageJ3DViewer.select(particle);
 			ij3d.ImageJ3DViewer.setColor(red, green, blue);
+			ij3d.ImageJ3DViewer.lock();
 		}
 	}
 
@@ -257,30 +310,57 @@ public class ParticleCounter implements PlugIn {
 
 	@SuppressWarnings("unchecked")
 	private ArrayList<List<Point3f>> getSurfacePoints(ImagePlus imp,
-			int[][] particleLabels, int resampling, int nParticles) {
+			int[][] particleLabels, int[][] limits, int resampling,
+			int nParticles) {
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
 		final boolean[] channels = { true, false, false };
 		for (int p = 0; p < nParticles; p++) {
 			if (p > 0) {
 				// create a binary ImagePlus containing a single particle
+				// and which 'just fits' the particle
 				final int w = imp.getWidth();
 				final int h = imp.getHeight();
 				final int d = imp.getImageStackSize();
-				final int wh = w * h;
-				ImageStack stack = new ImageStack(w, h);
-				for (int z = 0; z < d; z++) {
-					byte[] slice = new byte[wh];
-					for (int i = 0; i < wh; i++) {
-						if (particleLabels[z][i] == p)
-							slice[i] = (byte) (255 & 0xFF);
+				final int xMin = Math.max(0, limits[p][0] - resampling);
+				final int xMax = Math.min(w - 1, limits[p][1] + resampling);
+				final int yMin = Math.max(0, limits[p][2] - resampling);
+				final int yMax = Math.min(h - 1, limits[p][3] + resampling);
+				final int zMin = Math.max(0, limits[p][4] - resampling);
+				final int zMax = Math.min(d - 1, limits[p][5] + resampling);
+				final int stackWidth = xMax - xMin + 1;
+				final int stackHeight = yMax - yMin + 1;
+				final int stackSize = stackWidth * stackHeight;
+				ImageStack stack = new ImageStack(stackWidth, stackHeight);
+				for (int z = zMin; z <= zMax; z++) {
+					byte[] slice = new byte[stackSize];
+					int i = 0;
+					for (int y = yMin; y <= yMax; y++) {
+						final int sourceIndex = y * w;
+						for (int x = xMin; x <= xMax; x++) {
+							if (particleLabels[z][sourceIndex + x] == p) {
+								slice[i] = (byte) (255 & 0xFF);
+							}
+							i++;
+						}
 					}
 					stack.addSlice(imp.getStack().getSliceLabel(z + 1), slice);
 				}
 				ImagePlus binaryImp = new ImagePlus("Particle_" + p, stack);
-
+				Calibration cal = imp.getCalibration();
+				binaryImp.setCalibration(cal);
 				MCTriangulator mct = new MCTriangulator();
 				List<Point3f> points = mct.getTriangles(binaryImp, 128,
 						channels, resampling);
+				final double xOffset = xMin * cal.pixelWidth;
+				final double yOffset = yMin * cal.pixelHeight;
+				final double zOffset = zMin * cal.pixelDepth;
+				Iterator<Point3f> iter = points.iterator();
+				while (iter.hasNext()) {
+					Point3f point = iter.next();
+					point.x += xOffset;
+					point.y += yOffset;
+					point.z += zOffset;
+				}
 				surfacePoints.add(points);
 				if (points.size() == 0) {
 					IJ.log("Particle " + p + " resulted in 0 surface points");
