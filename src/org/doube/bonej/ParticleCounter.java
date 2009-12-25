@@ -21,11 +21,12 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
+import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 public class ParticleCounter implements PlugIn {
-	
-	/** 3D viewer where output is rendered */
+
+	/** 3D viewer for rendering graphical output */
 	private Image3DUniverse univ = new Image3DUniverse();
 
 	/** Foreground value */
@@ -50,34 +51,37 @@ public class ParticleCounter implements PlugIn {
 			return;
 		}
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addNumericField("Slices per chunk", 2, 0);
-		gd.addCheckbox("Show_particles", true);
-		gd.addCheckbox("Show_sizes", true);
+		gd.addMessage("Measurement Options");
 		gd.addCheckbox("Surface_area", true);
-		gd.addCheckbox("Moments", true);
-		gd.addCheckbox("Euler characteristics", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
-		gd.addCheckbox("Show_surfaces", true);
-		gd.addCheckbox("Show_centroids", true);
-		gd.addCheckbox("Show_axes", true);
-		gd.addCheckbox("Show_3D_original", true);
+		gd.addCheckbox("Moments of inertia", true);
+		gd.addCheckbox("Euler characteristic", true);
+		gd.addMessage("Graphical Results");
+		gd.addCheckbox("Show_particle stack", true);
+		gd.addCheckbox("Show_size stack", false);
+		gd.addCheckbox("Show_surfaces (3D)", true);
+		gd.addCheckbox("Show_centroids (3D)", true);
+		gd.addCheckbox("Show_axes (3D)", true);
+		gd.addCheckbox("Show_stack (3D)", true);
 		gd.addNumericField("Volume_resampling", 2, 0);
+		gd.addMessage("Slice size for particle counting");
+		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
-		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
-		final boolean doParticleImage = gd.getNextBoolean();
-		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doSurfaceArea = gd.getNextBoolean();
+		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doMoments = gd.getNextBoolean();
 		final boolean doEulerCharacters = gd.getNextBoolean();
-		final int resampling = (int) Math.floor(gd.getNextNumber());
+		final boolean doParticleImage = gd.getNextBoolean();
+		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doSurfaceImage = gd.getNextBoolean();
 		final boolean doCentroidImage = gd.getNextBoolean();
 		final boolean doAxesImage = gd.getNextBoolean();
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
+		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, FORE);
@@ -140,7 +144,7 @@ public class ParticleCounter implements PlugIn {
 		}
 		rt.show("Results");
 
-		// Show result images
+		// Show resulting image stacks
 		if (doParticleImage) {
 			displayParticleLabels(particleLabels, imp).show();
 			IJ.run("Fire");
@@ -150,7 +154,9 @@ public class ParticleCounter implements PlugIn {
 					.show();
 			IJ.run("Fire");
 		}
-		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal){
+
+		// show 3D renderings
+		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal) {
 			univ.show();
 		}
 		if (doSurfaceImage) {
@@ -165,6 +171,12 @@ public class ParticleCounter implements PlugIn {
 		if (do3DOriginal) {
 			display3DOriginal(imp, origResampling);
 		}
+		univ.clearSelection();
+		if (univ.contains(imp.getTitle())) {
+			Content c = univ.getContent(imp.getTitle());
+			univ.adjustView(c);
+		}
+
 		IJ.showStatus("Particle Analysis Complete");
 		return;
 	}
@@ -407,8 +419,8 @@ public class ParticleCounter implements PlugIn {
 			List<Point3f> point = new ArrayList<Point3f>();
 			point.add(centroid);
 			CustomPointMesh mesh = new CustomPointMesh(point);
-			mesh.setPointSize(3.0f);
-			Color3f cColour = new Color3f(0.5f, 0.0f, 0.75f);
+			mesh.setPointSize(5.0f);
+			Color3f cColour = new Color3f(0.0f, 0.0f, 1.0f);
 			mesh.setColor(cColour);
 			univ.addCustomMesh(mesh, "Centroid " + p);
 		}
@@ -416,9 +428,9 @@ public class ParticleCounter implements PlugIn {
 			String particle = "Centroid " + q;
 			if (!univ.contains(particle))
 				continue;
-			String red = IJ.d2s(255 * (1 - (q / nCentroids)), 0);
-			String green = IJ.d2s(255 * q / (1.5 * nCentroids), 0);
-			String blue = IJ.d2s(255 * q / (2 * nCentroids), 0);
+			String red = IJ.d2s(0, 0);
+			String green = IJ.d2s(0.5 * 255 * q / nCentroids, 0);
+			String blue = IJ.d2s(255, 0);
 			ij3d.ImageJ3DViewer.select(particle);
 			ij3d.ImageJ3DViewer.setColor(red, green, blue);
 			ij3d.ImageJ3DViewer.lock();
