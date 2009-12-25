@@ -24,6 +24,9 @@ import ij.plugin.PlugIn;
 import ij3d.Image3DUniverse;
 
 public class ParticleCounter implements PlugIn {
+	
+	/** 3D viewer where output is rendered */
+	private Image3DUniverse univ = new Image3DUniverse();
 
 	/** Foreground value */
 	public final static int FORE = -1;
@@ -146,6 +149,9 @@ public class ParticleCounter implements PlugIn {
 			displayParticleValues(imp, particleLabels, volumes, "volume")
 					.show();
 			IJ.run("Fire");
+		}
+		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal){
+			univ.show();
 		}
 		if (doSurfaceImage) {
 			displayParticleSurfaces(surfacePoints);
@@ -300,8 +306,9 @@ public class ParticleCounter implements PlugIn {
 	}
 
 	private void display3DOriginal(ImagePlus imp, int resampling) {
-		ij3d.ImageJ3DViewer.add(imp.getTitle(), "None", imp.getTitle(), "0",
-				"true", "true", "true", IJ.d2s(resampling, 0), "0");
+		Color3f colour = new Color3f(1.0f, 1.0f, 1.0f);
+		boolean[] channels = { true, true, true };
+		univ.addVoltex(imp, colour, imp.getTitle(), 0, channels, resampling);
 		ij3d.ImageJ3DViewer.select(imp.getTitle());
 		ij3d.ImageJ3DViewer.lock();
 		return;
@@ -310,8 +317,6 @@ public class ParticleCounter implements PlugIn {
 	private void displayAxes(EigenvalueDecomposition[] eigens,
 			double[][] centroids) {
 		final int nEigens = eigens.length;
-		Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
 		for (int p = 1; p < nEigens; p++) {
 			IJ.showStatus("Rendering principal axes...");
 			IJ.showProgress(p, nEigens);
@@ -391,8 +396,6 @@ public class ParticleCounter implements PlugIn {
 	 * @param centroids
 	 */
 	private void displayCentroids(double[][] centroids) {
-		Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
 		int nCentroids = centroids.length;
 		for (int p = 1; p < nCentroids; p++) {
 			IJ.showStatus("Rendering centroids...");
@@ -429,9 +432,6 @@ public class ParticleCounter implements PlugIn {
 	 * @param surfacePoints
 	 */
 	private void displayParticleSurfaces(ArrayList<List<Point3f>> surfacePoints) {
-		// Create a universe and show it
-		Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
 		int p = 0;
 		int drawnParticles = 0;
 		final int nParticles = surfacePoints.size();
@@ -446,13 +446,13 @@ public class ParticleCounter implements PlugIn {
 				float blue = p / (2 * nParticles);
 				Color3f pColour = new Color3f(red, green, blue);
 				// Add the mesh
-				univ.addTriangleMesh(points, pColour, "Particle " + p);
+				univ.addTriangleMesh(points, pColour, "Surface " + p);
 				drawnParticles++;
 			}
 			p++;
 		}
 		for (int q = 1; q <= nParticles; q++) {
-			String particle = "Particle " + q;
+			String particle = "Surface " + q;
 			if (!univ.contains(particle))
 				continue;
 			String red = IJ.d2s(255 * (1 - (q / drawnParticles)), 0);
