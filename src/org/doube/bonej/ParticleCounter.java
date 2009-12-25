@@ -10,6 +10,8 @@ import javax.vecmath.Point3f;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
+import customnode.CustomPointMesh;
+
 import marchingcubes.MCTriangulator;
 
 import ij.IJ;
@@ -19,6 +21,7 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
+import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 public class ParticleCounter implements PlugIn {
@@ -50,6 +53,7 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Show_sizes", true);
 		gd.addCheckbox("Surface_area", true);
 		gd.addCheckbox("Moments", true);
+		gd.addCheckbox("Euler characteristics", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Show_surfaces", true);
 		gd.addCheckbox("Show_centroids", true);
@@ -63,6 +67,7 @@ public class ParticleCounter implements PlugIn {
 		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doSurfaceArea = gd.getNextBoolean();
 		final boolean doMoments = gd.getNextBoolean();
+		final boolean doEulerCharacters = gd.getNextBoolean();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doSurfaceImage = gd.getNextBoolean();
 		final boolean doCentroidImage = gd.getNextBoolean();
@@ -93,6 +98,11 @@ public class ParticleCounter implements PlugIn {
 		if (doMoments) {
 			eigens = getEigens(imp, particleLabels, centroids);
 		}
+		double[][] eulerCharacters = new double[nParticles][3];
+		if (doEulerCharacters) {
+			eulerCharacters = getEulerCharacter(imp, particleLabels, limits,
+					nParticles);
+		}
 
 		// Show numerical results
 		String units = imp.getCalibration().getUnits();
@@ -105,12 +115,6 @@ public class ParticleCounter implements PlugIn {
 				rt.addValue("x Cent (" + units + ")", centroids[i][0]);
 				rt.addValue("y Cent (" + units + ")", centroids[i][1]);
 				rt.addValue("z Cent (" + units + ")", centroids[i][2]);
-				rt.addValue("x Min", limits[i][0]);
-				rt.addValue("x Max", limits[i][1]);
-				rt.addValue("y Min", limits[i][2]);
-				rt.addValue("y Max", limits[i][3]);
-				rt.addValue("z Min", limits[i][4]);
-				rt.addValue("z Max", limits[i][5]);
 				if (doSurfaceArea) {
 					rt.addValue("SA (" + units + "^2)", surfaceAreas[i]);
 				}
@@ -119,6 +123,11 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("I1", E.getD().get(2, 2));
 					rt.addValue("I2", E.getD().get(1, 1));
 					rt.addValue("I3", E.getD().get(0, 0));
+				}
+				if (doEulerCharacters) {
+					rt.addValue("Euler", eulerCharacters[i][0]);
+					rt.addValue("Holes", eulerCharacters[i][1]);
+					rt.addValue("Cavities", eulerCharacters[i][2]);
 				}
 				rt.updateResults();
 			}
@@ -146,6 +155,42 @@ public class ParticleCounter implements PlugIn {
 		}
 		IJ.showStatus("Particle Analysis Complete");
 		return;
+	}
+
+	/**
+	 * Get the Euler characteristic of each particle
+	 * 
+	 * @param imp
+	 * @param particleLabels
+	 * @param limits
+	 * @param nParticles
+	 * @return
+	 */
+	private double[][] getEulerCharacter(ImagePlus imp, int[][] particleLabels,
+			int[][] limits, int nParticles) {
+		Connectivity con = new Connectivity();
+		double[][] eulerCharacters = new double[nParticles][3];
+		for (int p = 1; p < nParticles; p++) {
+			ImagePlus particleImp = getBinaryParticle(p, imp, particleLabels,
+					limits, 1);
+			double euler = con.getSumEuler(particleImp);
+			double cavities = getNCavities(particleImp);
+			// Calculate number of holes and cavities using
+			// Euler = particles - holes + cavities
+			// where particles = 1
+			double holes = cavities - euler + 1;
+			double[] bettis = { euler, holes, cavities };
+			eulerCharacters[p] = bettis;
+		}
+		return eulerCharacters;
+	}
+
+	private int getNCavities(ImagePlus imp) {
+		Object[] result = getParticles(imp, 4, BACK);
+		long[] particleSizes = (long[]) result[2];
+		final int nParticles = particleSizes.length;
+		final int nCavities = nParticles - 2; // 1 particle is the background
+		return nCavities;
 	}
 
 	/**
@@ -188,17 +233,6 @@ public class ParticleCounter implements PlugIn {
 			}
 		}
 		return limits;
-	}
-
-	private void displayAxes(EigenvalueDecomposition[] eigens,
-			double[][] centroids) {
-		// TODO Auto-generated method stub
-
-	}
-
-	private void displayCentroids(double[][] centroids) {
-		// TODO Auto-generated method stub
-
 	}
 
 	private EigenvalueDecomposition[] getEigens(ImagePlus imp,
@@ -259,11 +293,129 @@ public class ParticleCounter implements PlugIn {
 		return eigens;
 	}
 
+	private void displayAxes(EigenvalueDecomposition[] eigens,
+			double[][] centroids) {
+		final int nEigens = eigens.length;
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		for (int p = 1; p < nEigens; p++) {
+			final double cX = centroids[p][0];
+			final double cY = centroids[p][1];
+			final double cZ = centroids[p][2];
+			final double eV1 = Math.pow(eigens[p].getD().get(0, 0), 0.25) / 2;
+			final double eV2 = Math.pow(eigens[p].getD().get(1, 1), 0.25) / 2;
+			final double eV3 = Math.pow(eigens[p].getD().get(2, 2), 0.25) / 2;
+			final Matrix eVec = eigens[p].getV();
+			final double eVec1x = eVec.get(0, 0);
+			final double eVec1y = eVec.get(1, 0);
+			final double eVec1z = eVec.get(2, 0);
+			final double eVec2x = eVec.get(0, 1);
+			final double eVec2y = eVec.get(1, 1);
+			final double eVec2z = eVec.get(2, 1);
+			final double eVec3x = eVec.get(0, 2);
+			final double eVec3y = eVec.get(1, 2);
+			final double eVec3z = eVec.get(2, 2);
+			List<Point3f> mesh = new ArrayList<Point3f>();
+			Point3f start1 = new Point3f();
+			start1.x = (float) (cX - eVec1x * eV1);
+			start1.y = (float) (cY - eVec1y * eV1);
+			start1.z = (float) (cZ - eVec1z * eV1);
+			mesh.add(start1);
+
+			Point3f end1 = new Point3f();
+			end1.x = (float) (cX + eVec1x * eV1);
+			end1.y = (float) (cY + eVec1y * eV1);
+			end1.z = (float) (cZ + eVec1z * eV1);
+			mesh.add(end1);
+
+			Point3f start2 = new Point3f();
+			start2.x = (float) (cX - eVec2x * eV2);
+			start2.y = (float) (cY - eVec2y * eV2);
+			start2.z = (float) (cZ - eVec2z * eV2);
+			mesh.add(start2);
+
+			Point3f end2 = new Point3f();
+			end2.x = (float) (cX + eVec2x * eV2);
+			end2.y = (float) (cY + eVec2y * eV2);
+			end2.z = (float) (cZ + eVec2z * eV2);
+			mesh.add(end2);
+
+			Point3f start3 = new Point3f();
+			start3.x = (float) (cX - eVec3x * eV3);
+			start3.y = (float) (cY - eVec3y * eV3);
+			start3.z = (float) (cZ - eVec3z * eV3);
+			mesh.add(start3);
+
+			Point3f end3 = new Point3f();
+			end3.x = (float) (cX + eVec3x * eV3);
+			end3.y = (float) (cY + eVec3y * eV3);
+			end3.z = (float) (cZ + eVec3z * eV3);
+			mesh.add(end3);
+
+			Color3f aColour = new Color3f(0.2f, 0.8f, 0.4f);
+			univ.addLineMesh(mesh, aColour, "Axes " + p, false);
+		}
+		for (int q = 1; q <= nEigens; q++) {
+			String particle = "Axes " + q;
+			if (!univ.contains(particle))
+				continue;
+			String red = IJ.d2s(255 * (1 - (q / nEigens)), 0);
+			String green = IJ.d2s(255 * q / (1.5 * nEigens), 0);
+			String blue = IJ.d2s(255 * q / (2 * nEigens), 0);
+			ij3d.ImageJ3DViewer.select(particle);
+			ij3d.ImageJ3DViewer.setColor(red, green, blue);
+			ij3d.ImageJ3DViewer.lock();
+		}
+		return;
+	}
+
+	/**
+	 * Draw the particle centroids in a 3D viewer
+	 * 
+	 * @param centroids
+	 */
+	private void displayCentroids(double[][] centroids) {
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		int nCentroids = centroids.length;
+		for (int p = 1; p < nCentroids; p++) {
+			Point3f centroid = new Point3f();
+			centroid.x = (float) centroids[p][0];
+			centroid.y = (float) centroids[p][1];
+			centroid.z = (float) centroids[p][2];
+			List<Point3f> point = new ArrayList<Point3f>();
+			point.add(centroid);
+			CustomPointMesh mesh = new CustomPointMesh(point);
+			mesh.setPointSize(3.0f);
+			Color3f cColour = new Color3f(0.5f, 0.0f, 0.75f);
+			mesh.setColor(cColour);
+			univ.addCustomMesh(mesh, "Centroid " + p);
+		}
+		for (int q = 1; q <= nCentroids; q++) {
+			String particle = "Centroid " + q;
+			if (!univ.contains(particle))
+				continue;
+			String red = IJ.d2s(255 * (1 - (q / nCentroids)), 0);
+			String green = IJ.d2s(255 * q / (1.5 * nCentroids), 0);
+			String blue = IJ.d2s(255 * q / (2 * nCentroids), 0);
+			ij3d.ImageJ3DViewer.select(particle);
+			ij3d.ImageJ3DViewer.setColor(red, green, blue);
+			ij3d.ImageJ3DViewer.lock();
+		}
+		return;
+	}
+
+	/**
+	 * Draw the particle surfaces in a 3D viewer
+	 * 
+	 * @param surfacePoints
+	 */
 	private void displayParticleSurfaces(ArrayList<List<Point3f>> surfacePoints) {
 		// Create a universe and show it
 		Image3DUniverse univ = new Image3DUniverse();
 		univ.show();
 		int p = 0;
+		int drawnParticles = 0;
 		final int nParticles = surfacePoints.size();
 		Iterator<List<Point3f>> iter = surfacePoints.iterator();
 		while (iter.hasNext()) {
@@ -277,6 +429,7 @@ public class ParticleCounter implements PlugIn {
 				Color3f pColour = new Color3f(red, green, blue);
 				// Add the mesh
 				univ.addTriangleMesh(points, pColour, "Particle " + p);
+				drawnParticles++;
 			}
 			p++;
 		}
@@ -284,9 +437,9 @@ public class ParticleCounter implements PlugIn {
 			String particle = "Particle " + q;
 			if (!univ.contains(particle))
 				continue;
-			String red = IJ.d2s(255 * (1 - (q / nParticles)), 0);
-			String green = IJ.d2s(255 * q / (1.5 * nParticles), 0);
-			String blue = IJ.d2s(255 * q / (2 * nParticles), 0);
+			String red = IJ.d2s(255 * (1 - (q / drawnParticles)), 0);
+			String green = IJ.d2s(255 * q / (1.5 * drawnParticles), 0);
+			String blue = IJ.d2s(255 * q / (2 * drawnParticles), 0);
 			ij3d.ImageJ3DViewer.select(particle);
 			ij3d.ImageJ3DViewer.setColor(red, green, blue);
 			ij3d.ImageJ3DViewer.lock();
@@ -312,48 +465,19 @@ public class ParticleCounter implements PlugIn {
 	private ArrayList<List<Point3f>> getSurfacePoints(ImagePlus imp,
 			int[][] particleLabels, int[][] limits, int resampling,
 			int nParticles) {
+		Calibration cal = imp.getCalibration();
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
 		final boolean[] channels = { true, false, false };
 		for (int p = 0; p < nParticles; p++) {
 			if (p > 0) {
-				// create a binary ImagePlus containing a single particle
-				// and which 'just fits' the particle
-				final int w = imp.getWidth();
-				final int h = imp.getHeight();
-				final int d = imp.getImageStackSize();
-				final int xMin = Math.max(0, limits[p][0] - resampling);
-				final int xMax = Math.min(w - 1, limits[p][1] + resampling);
-				final int yMin = Math.max(0, limits[p][2] - resampling);
-				final int yMax = Math.min(h - 1, limits[p][3] + resampling);
-				final int zMin = Math.max(0, limits[p][4] - resampling);
-				final int zMax = Math.min(d - 1, limits[p][5] + resampling);
-				final int stackWidth = xMax - xMin + 1;
-				final int stackHeight = yMax - yMin + 1;
-				final int stackSize = stackWidth * stackHeight;
-				ImageStack stack = new ImageStack(stackWidth, stackHeight);
-				for (int z = zMin; z <= zMax; z++) {
-					byte[] slice = new byte[stackSize];
-					int i = 0;
-					for (int y = yMin; y <= yMax; y++) {
-						final int sourceIndex = y * w;
-						for (int x = xMin; x <= xMax; x++) {
-							if (particleLabels[z][sourceIndex + x] == p) {
-								slice[i] = (byte) (255 & 0xFF);
-							}
-							i++;
-						}
-					}
-					stack.addSlice(imp.getStack().getSliceLabel(z + 1), slice);
-				}
-				ImagePlus binaryImp = new ImagePlus("Particle_" + p, stack);
-				Calibration cal = imp.getCalibration();
-				binaryImp.setCalibration(cal);
+				ImagePlus binaryImp = getBinaryParticle(p, imp, particleLabels,
+						limits, resampling);
 				MCTriangulator mct = new MCTriangulator();
 				List<Point3f> points = mct.getTriangles(binaryImp, 128,
 						channels, resampling);
-				final double xOffset = xMin * cal.pixelWidth;
-				final double yOffset = yMin * cal.pixelHeight;
-				final double zOffset = zMin * cal.pixelDepth;
+				final double xOffset = limits[p][0] * cal.pixelWidth;
+				final double yOffset = limits[p][2] * cal.pixelHeight;
+				final double zOffset = limits[p][4] * cal.pixelDepth;
 				Iterator<Point3f> iter = points.iterator();
 				while (iter.hasNext()) {
 					Point3f point = iter.next();
@@ -370,6 +494,58 @@ public class ParticleCounter implements PlugIn {
 			}
 		}
 		return surfacePoints;
+	}
+
+	/**
+	 * create a binary ImagePlus containing a single particle and which 'just
+	 * fits' the particle
+	 * 
+	 * @param p
+	 *            The particle ID to get
+	 * @param imp
+	 *            original image, used for calibration
+	 * @param particleLabels
+	 *            work array of particle labels
+	 * @param limits
+	 *            x,y and z limits of each particle
+	 * @param padding
+	 *            amount of empty space to pad around each particle
+	 * @return
+	 */
+	private static ImagePlus getBinaryParticle(int p, ImagePlus imp,
+			int[][] particleLabels, int[][] limits, int padding) {
+
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		final int xMin = Math.max(0, limits[p][0] - padding);
+		final int xMax = Math.min(w - 1, limits[p][1] + padding);
+		final int yMin = Math.max(0, limits[p][2] - padding);
+		final int yMax = Math.min(h - 1, limits[p][3] + padding);
+		final int zMin = Math.max(0, limits[p][4] - padding);
+		final int zMax = Math.min(d - 1, limits[p][5] + padding);
+		final int stackWidth = xMax - xMin + 1;
+		final int stackHeight = yMax - yMin + 1;
+		final int stackSize = stackWidth * stackHeight;
+		ImageStack stack = new ImageStack(stackWidth, stackHeight);
+		for (int z = zMin; z <= zMax; z++) {
+			byte[] slice = new byte[stackSize];
+			int i = 0;
+			for (int y = yMin; y <= yMax; y++) {
+				final int sourceIndex = y * w;
+				for (int x = xMin; x <= xMax; x++) {
+					if (particleLabels[z][sourceIndex + x] == p) {
+						slice[i] = (byte) (255 & 0xFF);
+					}
+					i++;
+				}
+			}
+			stack.addSlice(imp.getStack().getSliceLabel(z + 1), slice);
+		}
+		ImagePlus binaryImp = new ImagePlus("Particle_" + p, stack);
+		Calibration cal = imp.getCalibration();
+		binaryImp.setCalibration(cal);
+		return binaryImp;
 	}
 
 	/**
