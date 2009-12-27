@@ -7,6 +7,7 @@ import java.util.List;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
@@ -57,6 +58,7 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Moments of inertia", true);
 		gd.addCheckbox("Euler characteristic", true);
 		gd.addCheckbox("Thickness", true);
+		gd.addCheckbox("Ellipsoids", true);
 		gd.addMessage("Graphical Results");
 		gd.addCheckbox("Show_particle stack", true);
 		gd.addCheckbox("Show_size stack", false);
@@ -77,6 +79,7 @@ public class ParticleCounter implements PlugIn {
 		final boolean doMoments = gd.getNextBoolean();
 		final boolean doEulerCharacters = gd.getNextBoolean();
 		final boolean doThickness = gd.getNextBoolean();
+		final boolean doEllipsoids = gd.getNextBoolean();
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doThickImage = gd.getNextBoolean();
@@ -98,8 +101,8 @@ public class ParticleCounter implements PlugIn {
 
 		// set up resources for analysis
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
-		if (doSurfaceArea || doSurfaceImage) { // or anything else that needs
-			// surface points
+		if (doSurfaceArea || doSurfaceImage || doEllipsoids) {
+			// or anything else that needs surface points
 			surfacePoints = getSurfacePoints(imp, particleLabels, limits,
 					resampling, nParticles);
 		}
@@ -124,14 +127,18 @@ public class ParticleCounter implements PlugIn {
 			thick = getMeanStdDev(thickImp, particleLabels, particleSizes, 0);
 			if (doThickImage) {
 				double max = 0;
-				for (int i = 1; i < nParticles; i++){
+				for (int i = 1; i < nParticles; i++) {
 					max = Math.max(max, thick[i][2]);
 				}
 				thickImp.getProcessor().setMinAndMax(0, max);
-				thickImp.setTitle(imp.getShortTitle()+"_thickness");
+				thickImp.setTitle(imp.getShortTitle() + "_thickness");
 				thickImp.show();
 				IJ.run("Fire");
 			}
+		}
+		double[][] ellipsoids = new double[nParticles][10];
+		if (doEllipsoids) {
+			ellipsoids = getEllipsoids(surfacePoints);
 		}
 
 		// Show numerical results
@@ -163,7 +170,7 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("Thickness (" + units + ")", thick[i][0]);
 					rt.addValue("SD Thickness (" + units + ")", thick[i][1]);
 					rt.addValue("Max Thickness (" + units + ")", thick[i][2]);
-					
+
 				}
 				rt.updateResults();
 			}
@@ -207,6 +214,35 @@ public class ParticleCounter implements PlugIn {
 		return;
 	}
 
+	private double[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
+		FitEllipsoid fe = new FitEllipsoid();
+		fe.maxPoints = 1000;
+		double[][] ellipsoids = new double[surfacePoints.size()][10];
+		int p = 0;
+		Iterator<List<Point3f>> partIter = surfacePoints.iterator();
+		while (partIter.hasNext()) {
+			List<Point3f> points = partIter.next();
+			if (points == null){
+				p++;
+				continue;
+			}
+			Iterator<Point3f> pointIter = points.iterator();
+			double[][] coOrdinates = new double[points.size()][3];
+			int i = 0;
+			while (pointIter.hasNext()) {
+				Point3f point = pointIter.next();
+				coOrdinates[i][0] = point.x;
+				coOrdinates[i][1] = point.y;
+				coOrdinates[i][2] = point.z;
+				i++;
+			}
+			ellipsoids[p] = fe.fitLiGriffiths(coOrdinates);
+			p++;
+		}
+
+		return ellipsoids;
+	}
+
 	/**
 	 * Get the mean and standard deviation of pixel values above a minimum value
 	 * for each particle in a particle label work array
@@ -219,7 +255,8 @@ public class ParticleCounter implements PlugIn {
 	 *            array of particle sizes as pixel counts
 	 * @param threshold
 	 *            restrict calculation to values > i
-	 * @return array containing mean, std dev and max pixel values for each particle
+	 * @return array containing mean, std dev and max pixel values for each
+	 *         particle
 	 */
 	private double[][] getMeanStdDev(ImagePlus imp, int[][] particleLabels,
 			long[] particleSizes, final int threshold) {
