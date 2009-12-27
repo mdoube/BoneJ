@@ -163,18 +163,7 @@ public class FitEllipsoid {
 					.print("Too few points; need at least 9 to a unique ellipsoid");
 			return null;
 		}
-		// if length( x ) < 6 && flag == 1
-		// error( 'Must have at least 6 points to fit a unique oriented
-		// ellipsoid' );
-		// end
-		// if length( x ) < 5 && flag == 2
-		// error( 'Must have at least 5 points to fit a unique oriented
-		// ellipsoid with two axes equal' );
-		// end
-		// if length( x ) < 3 && flag == 3
-		// error( 'Must have at least 4 points to fit a unique sphere' );
-		// end
-		//
+
 		// if flag == 0
 		// % fit ellipsoid in the form Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz +
 		// 2Gx + 2Hy + 2Iz = 1
@@ -186,7 +175,24 @@ public class FitEllipsoid {
 		// 2 * y .* z, ...
 		// 2 * x, ...
 		// 2 * y, ...
-		// 2 * z ]; % ndatapoints x 9 ellipsoid parameters
+		// 2 * z ];
+		double[][] d = new double[nPoints][9];
+		for (int i = 0; i < nPoints; i++) {
+			final double x = coOrdinates[i][0];
+			final double y = coOrdinates[i][1];
+			final double z = coOrdinates[i][2];
+			d[i][0] = x * x;
+			d[i][1] = y * y;
+			d[i][2] = z * z;
+			d[i][3] = 2 * x * y;
+			d[i][4] = 2 * x * z;
+			d[i][5] = 2 * y * z;
+			d[i][6] = 2 * x;
+			d[i][7] = 2 * y;
+			d[i][8] = 2 * z;
+		}
+
+		// % ndatapoints x 9 ellipsoid parameters
 		// elseif flag == 1
 		// % fit ellipsoid in the form Ax^2 + By^2 + Cz^2 + 2Gx + 2Hy + 2Iz = 1
 		// D = [ x .* x, ...
@@ -227,6 +233,12 @@ public class FitEllipsoid {
 		//
 		// % solve the normal system of equations
 		// v = ( D' * D ) \ ( D' * ones( size( x, 1 ), 1 ) );
+		Matrix D = new Matrix(d);
+		Matrix ones = Matrix.ones(nPoints, 1);
+		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
+				.times(ones));
+		double[] v = V.getColumnPackedCopy();
+		
 		//
 		// % find the ellipsoid parameters
 		// if flag == 0
@@ -235,15 +247,27 @@ public class FitEllipsoid {
 		// v(4) v(2) v(6) v(8); ...
 		// v(5) v(6) v(3) v(9); ...
 		// v(7) v(8) v(9) -1 ];
+		double[][] a = { { v[1], v[4], v[5], v[7] },
+				{ v[4], v[2], v[6], v[8] }, { v[5], v[6], v[3], v[9] },
+				{ v[7], v[8], v[9], -1 }, };
+		Matrix A = new Matrix(a);
 		// % find the center of the ellipsoid
 		// center = -A( 1:3, 1:3 ) \ [ v(7); v(8); v(9) ];
+		Matrix centre = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V.getMatrix(6, 8, 0, 0));
 		// % form the corresponding translation matrix
 		// T = eye( 4 );
+		Matrix T = Matrix.eye(4);
 		// T( 4, 1:3 ) = center';
+		T.setMatrix(3, 3, 0, 2, centre.transpose());
 		// % translate to the center
 		// R = T * A * T';
+		Matrix R = T.times(A.times(T.transpose()));
 		// % solve the eigenproblem
+		double r33 = R.get(3, 3);
+		Matrix R02 = R.getMatrix(0, 2, 0, 2);
 		// [ evecs evals ] = eig( R( 1:3, 1:3 ) / -R( 4, 4 ) );
+		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1/r33));
+		Matrix eVal = E.getD();
 		// radii = sqrt( 1 ./ diag( evals ) );
 		// else
 		// if flag == 1

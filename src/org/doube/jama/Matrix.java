@@ -1379,7 +1379,8 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	}
 
 	/**
-	 * Create an m * n identity matrix 
+	 * Create an m * n identity matrix
+	 * 
 	 * @param m
 	 * @param n
 	 * @return
@@ -1388,11 +1389,23 @@ public class Matrix implements Cloneable, java.io.Serializable {
 		double[][] eye = new double[m][n];
 		final int min = Math.min(m, n);
 		for (int i = 0; i < min; i++) {
-			for (int j = 0; j < min; j++) {
-				eye[i][j] = 1;
-			}
+			eye[i][i] = 1;
 		}
 		return new Matrix(eye);
+	}
+
+	/**
+	 * Get the diagonal of the matrix as a column vector
+	 * 
+	 * @return Column vector containing diagonal
+	 */
+	public Matrix diag() {
+		final int min = Math.min(m, n);
+		double[][] diag = new double[min][0];
+		for (int i = 0; i < min; i++){
+			diag[i][0] = get(i, i);
+		}
+		return new Matrix(diag);
 	}
 
 	/*
