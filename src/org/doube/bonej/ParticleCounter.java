@@ -56,9 +56,11 @@ public class ParticleCounter implements PlugIn {
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
 		gd.addCheckbox("Euler characteristic", true);
+		gd.addCheckbox("Thickness", true);
 		gd.addMessage("Graphical Results");
 		gd.addCheckbox("Show_particle stack", true);
 		gd.addCheckbox("Show_size stack", false);
+		gd.addCheckbox("Show_thickness stack", false);
 		gd.addCheckbox("Show_surfaces (3D)", true);
 		gd.addCheckbox("Show_centroids (3D)", true);
 		gd.addCheckbox("Show_axes (3D)", true);
@@ -74,8 +76,10 @@ public class ParticleCounter implements PlugIn {
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doMoments = gd.getNextBoolean();
 		final boolean doEulerCharacters = gd.getNextBoolean();
+		final boolean doThickness = gd.getNextBoolean();
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
+		final boolean doThickImage = gd.getNextBoolean();
 		final boolean doSurfaceImage = gd.getNextBoolean();
 		final boolean doCentroidImage = gd.getNextBoolean();
 		final boolean doAxesImage = gd.getNextBoolean();
@@ -113,6 +117,22 @@ public class ParticleCounter implements PlugIn {
 			eulerCharacters = getEulerCharacter(imp, particleLabels, limits,
 					nParticles);
 		}
+		double[][] thick = new double[nParticles][2];
+		if (doThickness) {
+			Thickness th = new Thickness();
+			ImagePlus thickImp = th.getLocalThickness(imp, false);
+			thick = getMeanStdDev(thickImp, particleLabels, particleSizes, 0);
+			if (doThickImage) {
+				double max = 0;
+				for (int i = 1; i < nParticles; i++){
+					max = Math.max(max, thick[i][2]);
+				}
+				thickImp.getProcessor().setMinAndMax(0, max);
+				thickImp.setTitle(imp.getShortTitle()+"_thickness");
+				thickImp.show();
+				IJ.run("Fire");
+			}
+		}
 
 		// Show numerical results
 		String units = imp.getCalibration().getUnits();
@@ -138,6 +158,12 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("Euler (χ)", eulerCharacters[i][0]);
 					rt.addValue("Holes (β1)", eulerCharacters[i][1]);
 					rt.addValue("Cavities (β2)", eulerCharacters[i][2]);
+				}
+				if (doThickness) {
+					rt.addValue("Thickness (" + units + ")", thick[i][0]);
+					rt.addValue("SD Thickness (" + units + ")", thick[i][1]);
+					rt.addValue("Max Thickness (" + units + ")", thick[i][2]);
+					
 				}
 				rt.updateResults();
 			}
@@ -179,6 +205,62 @@ public class ParticleCounter implements PlugIn {
 
 		IJ.showStatus("Particle Analysis Complete");
 		return;
+	}
+
+	/**
+	 * Get the mean and standard deviation of pixel values above a minimum value
+	 * for each particle in a particle label work array
+	 * 
+	 * @param imp
+	 *            Input image containing pixel values
+	 * @param particleLabels
+	 *            workArray containing particle labels
+	 * @param particleSizes
+	 *            array of particle sizes as pixel counts
+	 * @param threshold
+	 *            restrict calculation to values > i
+	 * @return array containing mean, std dev and max pixel values for each particle
+	 */
+	private double[][] getMeanStdDev(ImagePlus imp, int[][] particleLabels,
+			long[] particleSizes, final int threshold) {
+		final int nParticles = particleSizes.length;
+		final int d = imp.getImageStackSize();
+		final int wh = imp.getWidth() * imp.getHeight();
+		ImageStack stack = imp.getImageStack();
+		double[] sums = new double[nParticles];
+		for (int z = 0; z < d; z++) {
+			float[] pixels = (float[]) stack.getPixels(z + 1);
+			int[] labelPixels = particleLabels[z];
+			for (int i = 0; i < wh; i++) {
+				final double value = pixels[i];
+				if (value > threshold) {
+					sums[labelPixels[i]] += value;
+				}
+			}
+		}
+		double[][] meanStdDev = new double[nParticles][3];
+		for (int p = 1; p < nParticles; p++) {
+			meanStdDev[p][0] = sums[p] / particleSizes[p];
+		}
+
+		double[] sumSquares = new double[nParticles];
+		for (int z = 0; z < d; z++) {
+			float[] pixels = (float[]) stack.getPixels(z + 1);
+			int[] labelPixels = particleLabels[z];
+			for (int i = 0; i < wh; i++) {
+				final double value = pixels[i];
+				if (value > threshold) {
+					final int p = labelPixels[i];
+					final double residual = value - meanStdDev[p][0];
+					sumSquares[p] += residual * residual;
+					meanStdDev[p][2] = Math.max(meanStdDev[p][2], value);
+				}
+			}
+		}
+		for (int p = 1; p < nParticles; p++) {
+			meanStdDev[p][1] = Math.sqrt(sumSquares[p] / particleSizes[p]);
+		}
+		return meanStdDev;
 	}
 
 	/**
