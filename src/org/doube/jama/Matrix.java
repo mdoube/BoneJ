@@ -1347,6 +1347,26 @@ public class Matrix implements Cloneable, java.io.Serializable {
 		return new Matrix(A);
 	}
 
+	/**
+	 * Create an m * n Matrix filled with 1
+	 * 
+	 * @param m
+	 *            number of rows
+	 * @param n
+	 *            number of columns
+	 * @return m * n Matrix filled with 1
+	 */
+	public static Matrix ones(final int m, final int n) {
+		double[][] one = new double[m][n];
+		for (int i = 0; i < m; i++) {
+			for (int j = 0; j < n; j++) {
+				one[i][j] = 1;
+			}
+		}
+		Matrix ones = new Matrix(one);
+		return ones;
+	}
+
 	/*
 	 * ------------------------ Private Methods ------------------------
 	 */
