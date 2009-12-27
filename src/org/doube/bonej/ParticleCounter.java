@@ -216,7 +216,6 @@ public class ParticleCounter implements PlugIn {
 
 	private double[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
 		FitEllipsoid fe = new FitEllipsoid();
-		fe.maxPoints = 1000;
 		double[][] ellipsoids = new double[surfacePoints.size()][10];
 		int p = 0;
 		Iterator<List<Point3f>> partIter = surfacePoints.iterator();
@@ -236,10 +235,10 @@ public class ParticleCounter implements PlugIn {
 				coOrdinates[i][2] = point.z;
 				i++;
 			}
-			ellipsoids[p] = fe.fitLiGriffiths(coOrdinates);
+			Object[] result = fe.yuryPetrov(coOrdinates);
+			ellipsoids[p] = fe.liGriffiths(coOrdinates, 1000);
 			p++;
 		}
-
 		return ellipsoids;
 	}
 

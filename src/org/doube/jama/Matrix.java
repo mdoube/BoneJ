@@ -1401,7 +1401,7 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	 */
 	public Matrix diag() {
 		final int min = Math.min(m, n);
-		double[][] diag = new double[min][0];
+		double[][] diag = new double[min][1];
 		for (int i = 0; i < min; i++){
 			diag[i][0] = get(i, i);
 		}
