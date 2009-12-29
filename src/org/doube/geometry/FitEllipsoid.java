@@ -269,7 +269,7 @@ public class FitEllipsoid {
 			double angle, double xCentre, double yCentre, double zCentre,
 			double noise, int nPoints) {
 
-		final double increment = Math.PI / nPoints;
+		final double increment = Math.PI / (nPoints + 0.5);
 		final int h = 2 * nPoints + 1;
 		final int w = nPoints + 1;
 		double[][] s = new double[h][w];
