@@ -213,7 +213,6 @@ public class ParticleCounter implements PlugIn {
 	}
 
 	private Object[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
-		FitEllipsoid fe = new FitEllipsoid();
 		Object[][] ellipsoids = new Object[surfacePoints.size()][10];
 		int p = 0;
 		Iterator<List<Point3f>> partIter = surfacePoints.iterator();
