@@ -115,7 +115,7 @@ public class FitEllipsoid {
 	 * @param coOrdinates
 	 * @return
 	 */
-	public Object[] yuryPetrov(double[][] coOrdinates) {
+	public static Object[] yuryPetrov(double[][] coOrdinates) {
 		// function [ center, radii, evecs, v ] = ellipsoid_fit( X, flag, equals
 		// )
 		// %

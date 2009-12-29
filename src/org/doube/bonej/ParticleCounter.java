@@ -136,7 +136,7 @@ public class ParticleCounter implements PlugIn {
 				IJ.run("Fire");
 			}
 		}
-		double[][] ellipsoids = new double[nParticles][10];
+		Object[][] ellipsoids = new Object[nParticles][10];
 		if (doEllipsoids) {
 			ellipsoids = getEllipsoids(surfacePoints);
 		}
@@ -191,37 +191,35 @@ public class ParticleCounter implements PlugIn {
 		// show 3D renderings
 		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal) {
 			univ.show();
+			if (doSurfaceImage) {
+				displayParticleSurfaces(surfacePoints);
+			}
+			if (doCentroidImage) {
+				displayCentroids(centroids);
+			}
+			if (doAxesImage) {
+				displayAxes(eigens, centroids);
+			}
+			if (do3DOriginal) {
+				display3DOriginal(imp, origResampling);
+			}
+			if (univ.contains(imp.getTitle())) {
+				Content c = univ.getContent(imp.getTitle());
+				univ.adjustView(c);
+			}
 		}
-		if (doSurfaceImage) {
-			displayParticleSurfaces(surfacePoints);
-		}
-		if (doCentroidImage) {
-			displayCentroids(centroids);
-		}
-		if (doAxesImage) {
-			displayAxes(eigens, centroids);
-		}
-		if (do3DOriginal) {
-			display3DOriginal(imp, origResampling);
-		}
-		univ.clearSelection();
-		if (univ.contains(imp.getTitle())) {
-			Content c = univ.getContent(imp.getTitle());
-			univ.adjustView(c);
-		}
-
 		IJ.showStatus("Particle Analysis Complete");
 		return;
 	}
 
-	private double[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
+	private Object[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
 		FitEllipsoid fe = new FitEllipsoid();
-		double[][] ellipsoids = new double[surfacePoints.size()][10];
+		Object[][] ellipsoids = new Object[surfacePoints.size()][10];
 		int p = 0;
 		Iterator<List<Point3f>> partIter = surfacePoints.iterator();
 		while (partIter.hasNext()) {
 			List<Point3f> points = partIter.next();
-			if (points == null){
+			if (points == null) {
 				p++;
 				continue;
 			}
@@ -235,8 +233,7 @@ public class ParticleCounter implements PlugIn {
 				coOrdinates[i][2] = point.z;
 				i++;
 			}
-			Object[] result = fe.yuryPetrov(coOrdinates);
-			ellipsoids[p] = fe.liGriffiths(coOrdinates, 1000);
+			ellipsoids[p] = FitEllipsoid.yuryPetrov(coOrdinates);
 			p++;
 		}
 		return ellipsoids;
@@ -438,9 +435,8 @@ public class ParticleCounter implements PlugIn {
 	private void display3DOriginal(ImagePlus imp, int resampling) {
 		Color3f colour = new Color3f(1.0f, 1.0f, 1.0f);
 		boolean[] channels = { true, true, true };
-		univ.addVoltex(imp, colour, imp.getTitle(), 0, channels, resampling);
-		ij3d.ImageJ3DViewer.select(imp.getTitle());
-		ij3d.ImageJ3DViewer.lock();
+		univ.addVoltex(imp, colour, imp.getTitle(), 0, channels, resampling)
+				.setLocked(true);
 		return;
 	}
 
@@ -503,19 +499,11 @@ public class ParticleCounter implements PlugIn {
 			end3.z = (float) (cZ + eVec3z * eV3);
 			mesh.add(end3);
 
-			Color3f aColour = new Color3f(0.2f, 0.8f, 0.4f);
-			univ.addLineMesh(mesh, aColour, "Axes " + p, false);
-		}
-		for (int q = 1; q <= nEigens; q++) {
-			String particle = "Axes " + q;
-			if (!univ.contains(particle))
-				continue;
-			String red = IJ.d2s(255 * (1 - (q / nEigens)), 0);
-			String green = IJ.d2s(255 * q / (1.5 * nEigens), 0);
-			String blue = IJ.d2s(255 * q / (2 * nEigens), 0);
-			ij3d.ImageJ3DViewer.select(particle);
-			ij3d.ImageJ3DViewer.setColor(red, green, blue);
-			ij3d.ImageJ3DViewer.lock();
+			float red = 1.0f - ((float) p / (float) nEigens);
+			float green = (float) p / (1.5f * (float) nEigens);
+			float blue = (float) p / (2.0f * (float) nEigens);
+			Color3f aColour = new Color3f(red, green, blue);
+			univ.addLineMesh(mesh, aColour, "Axes " + p, false).setLocked(true);
 		}
 		return;
 	}
@@ -538,20 +526,12 @@ public class ParticleCounter implements PlugIn {
 			point.add(centroid);
 			CustomPointMesh mesh = new CustomPointMesh(point);
 			mesh.setPointSize(5.0f);
-			Color3f cColour = new Color3f(0.0f, 0.0f, 1.0f);
+			float red = 0.0f;
+			float green = 0.5f * (float) p / (float) nCentroids;
+			float blue = 1.0f;
+			Color3f cColour = new Color3f(red, green, blue);
 			mesh.setColor(cColour);
-			univ.addCustomMesh(mesh, "Centroid " + p);
-		}
-		for (int q = 1; q <= nCentroids; q++) {
-			String particle = "Centroid " + q;
-			if (!univ.contains(particle))
-				continue;
-			String red = IJ.d2s(0, 0);
-			String green = IJ.d2s(0.5 * 255 * q / nCentroids, 0);
-			String blue = IJ.d2s(255, 0);
-			ij3d.ImageJ3DViewer.select(particle);
-			ij3d.ImageJ3DViewer.setColor(red, green, blue);
-			ij3d.ImageJ3DViewer.lock();
+			univ.addCustomMesh(mesh, "Centroid " + p).setLocked(true);
 		}
 		return;
 	}
@@ -565,32 +545,27 @@ public class ParticleCounter implements PlugIn {
 		int p = 0;
 		int drawnParticles = 0;
 		final int nParticles = surfacePoints.size();
+		Iterator<List<Point3f>> i = surfacePoints.iterator();
+		while (i.hasNext()) {
+			List<Point3f> points = i.next();
+			if (p > 0 && points.size() > 0)
+				drawnParticles++;
+		}
 		Iterator<List<Point3f>> iter = surfacePoints.iterator();
 		while (iter.hasNext()) {
 			IJ.showStatus("Rendering surfaces...");
 			IJ.showProgress(p, nParticles);
 			List<Point3f> points = iter.next();
 			if (p > 0 && points.size() > 0) {
-				float red = p / nParticles;
-				float green = 1 - red;
-				float blue = p / (2 * nParticles);
+				float red = 1.0f - (float) p / (float) nParticles;
+				float green = 1.0f - red;
+				float blue = (float) p / (2.0f * (float) nParticles);
 				Color3f pColour = new Color3f(red, green, blue);
 				// Add the mesh
-				univ.addTriangleMesh(points, pColour, "Surface " + p);
-				drawnParticles++;
+				univ.addTriangleMesh(points, pColour, "Surface " + p)
+						.setLocked(true);
 			}
 			p++;
-		}
-		for (int q = 1; q <= nParticles; q++) {
-			String particle = "Surface " + q;
-			if (!univ.contains(particle))
-				continue;
-			String red = IJ.d2s(255 * (1 - (q / drawnParticles)), 0);
-			String green = IJ.d2s(255 * q / (1.5 * drawnParticles), 0);
-			String blue = IJ.d2s(255 * q / (2 * drawnParticles), 0);
-			ij3d.ImageJ3DViewer.select(particle);
-			ij3d.ImageJ3DViewer.setColor(red, green, blue);
-			ij3d.ImageJ3DViewer.lock();
 		}
 	}
 
