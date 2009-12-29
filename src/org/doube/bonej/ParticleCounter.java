@@ -66,6 +66,7 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Show_surfaces (3D)", true);
 		gd.addCheckbox("Show_centroids (3D)", true);
 		gd.addCheckbox("Show_axes (3D)", true);
+		gd.addCheckbox("Show_ellipsoids", true);
 		gd.addCheckbox("Show_stack (3D)", true);
 		gd.addNumericField("Volume_resampling", 2, 0);
 		gd.addMessage("Slice size for particle counting");
@@ -86,6 +87,7 @@ public class ParticleCounter implements PlugIn {
 		final boolean doSurfaceImage = gd.getNextBoolean();
 		final boolean doCentroidImage = gd.getNextBoolean();
 		final boolean doAxesImage = gd.getNextBoolean();
+		final boolean doEllipsoidImage = gd.getNextBoolean();
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
@@ -137,7 +139,7 @@ public class ParticleCounter implements PlugIn {
 			}
 		}
 		Object[][] ellipsoids = new Object[nParticles][10];
-		if (doEllipsoids) {
+		if (doEllipsoids || doEllipsoidImage) {
 			ellipsoids = getEllipsoids(surfacePoints);
 		}
 
@@ -189,7 +191,8 @@ public class ParticleCounter implements PlugIn {
 		}
 
 		// show 3D renderings
-		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal) {
+		if (doSurfaceImage || doCentroidImage || doAxesImage || do3DOriginal
+				|| doEllipsoidImage) {
 			univ.show();
 			if (doSurfaceImage) {
 				displayParticleSurfaces(surfacePoints);
@@ -199,6 +202,9 @@ public class ParticleCounter implements PlugIn {
 			}
 			if (doAxesImage) {
 				displayAxes(eigens, centroids);
+			}
+			if (doEllipsoidImage) {
+				displayEllipsoids(ellipsoids);
 			}
 			if (do3DOriginal) {
 				display3DOriginal(imp, origResampling);
@@ -210,6 +216,29 @@ public class ParticleCounter implements PlugIn {
 		}
 		IJ.showStatus("Particle Analysis Complete");
 		return;
+	}
+
+	private void displayEllipsoids(Object[][] ellipsoids) {
+		double[][] ellipsoid = FitEllipsoid.testEllipsoid(3, 4, 8, 100, 100, 100, 0,
+				0, 100);
+		final int nPoints = ellipsoid.length;
+		List<Point3f> points = new ArrayList<Point3f>();
+		for (int p = 0; p < nPoints; p++) {
+			Point3f e = new Point3f();
+			e.x = (float) ellipsoid[p][0];
+			e.y = (float) ellipsoid[p][1];
+			e.z = (float) ellipsoid[p][2];
+			points.add(e);
+		}
+		CustomPointMesh mesh = new CustomPointMesh(points);
+		mesh.setPointSize(1.0f);
+		float red = 0.0f;
+		float green = 0.5f;
+		float blue = 1.0f;
+		Color3f cColour = new Color3f(red, green, blue);
+		mesh.setColor(cColour);
+		mesh.setTransparency(0.6f);
+		univ.addCustomMesh(mesh, "Ellipsoid").setLocked(true);
 	}
 
 	private Object[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {

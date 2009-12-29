@@ -136,7 +136,7 @@ public class FitEllipsoid {
 		// % Author:
 		// % Yury Petrov, Northeastern University, Boston, MA
 		// %
-		
+
 		// % need nine or more data points
 		// if length( x ) < 9 && flag == 0
 		// error( 'Must have at least 9 points to fit a unique ellipsoid' );
@@ -176,7 +176,6 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
-		
 		// % solve the normal system of equations
 		// v = ( D' * D ) \ ( D' * ones( size( x, 1 ), 1 ) );
 		Matrix D = new Matrix(d);
@@ -216,7 +215,7 @@ public class FitEllipsoid {
 		// [ evecs evals ] = eig( R( 1:3, 1:3 ) / -R( 4, 4 ) );
 		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
 				/ r33));
-		
+
 		// radii = sqrt( 1 ./ diag( evals ) );
 		Matrix eVal = E.getD();
 		eVal.printToIJLog("eVal");
@@ -226,7 +225,7 @@ public class FitEllipsoid {
 		IJ.log("Radii");
 		for (int i = 0; i < nEvals; i++) {
 			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
-			IJ.log(""+radii[i]);
+			IJ.log("" + radii[i]);
 		}
 		// else
 		// v = [ v(1) v(1) v(1) 0 0 0 v(2) v(3) v(4) ];
@@ -239,7 +238,100 @@ public class FitEllipsoid {
 		double[] centre = C.getColumnPackedCopy();
 		double[][] eigenVectors = E.getV().getArrayCopy();
 		double[] equation = v;
-		Object[] ellipsoid = {centre, radii, eigenVectors, equation};
+		Object[] ellipsoid = { centre, radii, eigenVectors, equation };
 		return ellipsoid;
+	}
+
+	/**
+	 * Return points on an ellipsoid with optional noise
+	 * 
+	 * @param a
+	 *            First axis length
+	 * @param b
+	 *            Second axis length
+	 * @param c
+	 *            Third axis length
+	 * @param angle
+	 *            angle of axis (rad)
+	 * @param xCentre
+	 *            x coordinate of centre
+	 * @param yCentre
+	 *            y coordinate of centre
+	 * @param zCentre
+	 *            z coordinate of centre
+	 * @param noise
+	 *            Intensity of noise to add to the points
+	 * @param nPoints
+	 *            number of points to generate
+	 * @return array of (x,y,z) coordinates
+	 */
+	public static double[][] testEllipsoid(double a, double b, double c,
+			double angle, double xCentre, double yCentre, double zCentre,
+			double noise, int nPoints) {
+
+		final double increment = Math.PI / nPoints;
+		final int h = 2 * nPoints + 1;
+		final int w = nPoints + 1;
+		double[][] s = new double[h][w];
+		double[][] t = new double[h][w];
+		double value = -Math.PI / 2;
+		for (int j = 0; j < w; j++) {
+			for (int i = 0; i < h; i++) {
+				s[i][j] = value;
+			}
+			value += increment;
+		}
+		value = -Math.PI / 2;
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				t[i][j] = value;
+			}
+			value += increment;
+		}
+		double[][] x = new double[h][w];
+		double[][] y = new double[h][w];
+		double[][] z = new double[h][w];
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				x[i][j] = a * Math.cos(s[i][j]) * Math.cos(t[i][j]);
+				y[i][j] = b * Math.cos(s[i][j]) * Math.sin(t[i][j]);
+				z[i][j] = c * Math.sin(s[i][j]);
+			}
+		}
+		double[][] xt = new double[h][w];
+		double[][] yt = new double[h][w];
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				xt[i][j] = x[i][j] * Math.cos(angle) - y[i][j]
+						* Math.sin(angle);
+				yt[i][j] = x[i][j] * Math.sin(angle) + y[i][j]
+						* Math.cos(angle);
+			}
+		}
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				x[i][j] = xt[i][j] + xCentre;
+				y[i][j] = yt[i][j] + yCentre;
+				z[i][j] = z[i][j] + zCentre;
+			}
+		}
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				x[i][j] = x[i][j] + Math.random() * noise;
+				y[i][j] = y[i][j] + Math.random() * noise;
+				z[i][j] = z[i][j] + Math.random() * noise;
+			}
+		}
+		double[][] ellipsoidPoints = new double[w * h][3];
+		int p = 0;
+		for (int i = 0; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				ellipsoidPoints[p][0] = x[i][j];
+				ellipsoidPoints[p][1] = y[i][j];
+				ellipsoidPoints[p][2] = z[i][j];
+				p++;
+			}
+		}
+		return ellipsoidPoints;
 	}
 }
