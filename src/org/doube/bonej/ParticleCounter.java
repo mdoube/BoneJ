@@ -293,8 +293,7 @@ public class ParticleCounter implements PlugIn {
 
 	private void displayEllipsoids(Object[][] ellipsoids) {
 		final int nEllipsoids = ellipsoids.length;
-		ellipsoidLoop:
-		for (int el = 1; el < nEllipsoids; el++) {
+		ellipsoidLoop: for (int el = 1; el < nEllipsoids; el++) {
 			IJ.showStatus("Rendering ellipsoids...");
 			IJ.showProgress(el, nEllipsoids);
 			if (ellipsoids[el] == null)
@@ -598,50 +597,36 @@ public class ParticleCounter implements PlugIn {
 				for (int x = 0; x < w; x++) {
 					final int p = particleLabels[z][index + x];
 					if (p > 0) {
-						final double dX = Math.abs(x * vW - centroids[p][0]);
-						final double dY = Math.abs(y * vH - centroids[p][1]);
-						final double dZ = Math.abs(z * vD - centroids[p][2]);
-						maxD[p][0] = Math.max(maxD[p][0], dX);
-						maxD[p][1] = Math.max(maxD[p][1], dY);
-						maxD[p][2] = Math.max(maxD[p][2], dZ);
+						final double dX = x * vW - centroids[p][0];
+						final double dY = y * vH - centroids[p][1];
+						final double dZ = z * vD - centroids[p][2];
+						maxD[p][0] = Math.max(maxD[p][0], Math.abs(dX));
+						maxD[p][1] = Math.max(maxD[p][1], Math.abs(dY));
+						maxD[p][2] = Math.max(maxD[p][2], Math.abs(dZ));
 						final double[][] eV = E[p].getV().getArray();
-						final double eV00 = eV[0][0];
-						final double eV10 = eV[1][0];
-						final double eV20 = eV[2][0];
-						final double eV01 = eV[0][1];
-						final double eV11 = eV[1][1];
-						final double eV21 = eV[2][1];
-						final double eV02 = eV[0][2];
-						final double eV12 = eV[1][2];
-						final double eV22 = eV[2][2];
-						final double dXt = dX * eV00 + dY * eV01 + dZ * eV02;
-						final double dYt = dX * eV10 + dY * eV11 + dZ * eV12;
-						final double dZt = dX * eV20 + dY * eV21 + dZ * eV22;
-						maxDt[p][0] = Math.max(maxDt[p][0], dXt);
-						maxDt[p][1] = Math.max(maxDt[p][1], dYt);
-						maxDt[p][2] = Math.max(maxDt[p][2], dZt);
+						final double dXt = dX * eV[0][0] + dY * eV[0][1] + dZ
+								* eV[0][2];
+						final double dYt = dX * eV[1][0] + dY * eV[1][1] + dZ
+								* eV[1][2];
+						final double dZt = dX * eV[2][0] + dY * eV[2][1] + dZ
+								* eV[2][2];
+						maxDt[p][0] = Math.max(maxDt[p][0], Math.abs(dXt));
+						maxDt[p][1] = Math.max(maxDt[p][1], Math.abs(dYt));
+						maxDt[p][2] = Math.max(maxDt[p][2], Math.abs(dZt));
 					}
 				}
 			}
 		}
 		for (int p = 0; p < nParticles; p++) {
-			Arrays.sort(maxD[p]);
 			Arrays.sort(maxDt[p]);
-			reverse(maxD[p]);
-			reverse(maxDt[p]);
+			double[] temp = new double[3];
+			for (int i = 0; i < 3; i++) {
+				temp[i] = maxDt[p][2 - i];
+			}
+			maxDt[p] = temp.clone();
 		}
 		final Object[] maxDistances = { maxD, maxDt };
 		return maxDistances;
-	}
-
-	private void reverse(double[] array) {
-		final int n = array.length;
-		double[] temp = new double[n];
-		for (int i = 0; i < n; i++) {
-			temp[i] = array[n - i - 1];
-		}
-		array = temp.clone();
-		return;
 	}
 
 	private void display3DOriginal(ImagePlus imp, int resampling) {
