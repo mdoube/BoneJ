@@ -341,12 +341,12 @@ public class Anisotropy implements PlugIn {
 	private double[][] randomVectors(int nVectors) {
 		double[][] randomVectors = new double[nVectors][3];
 		for (int n = 0; n < nVectors; n++) {
-			randomVectors[n][2] = 2 * Math.random() - 1;
-			final double rho = Math.sqrt(1 - randomVectors[n][2]
-					* randomVectors[n][2]);
+			final double z = 2 * Math.random() - 1;
+			final double rho = Math.sqrt(1 - z * z);
 			final double phi = Math.PI * (2 * Math.random() - 1);
 			randomVectors[n][0] = rho * Math.cos(phi);
 			randomVectors[n][1] = rho * Math.sin(phi);
+			randomVectors[n][2] = z;
 		}
 		return randomVectors;
 	} /* end randomVectors */
