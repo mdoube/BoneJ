@@ -122,7 +122,7 @@ public class FitEllipsoid {
 	 * 
 	 * @param coOrdinates
 	 * @return result Object[] array containing the centre, radii, eigenvectors
-	 *         of the axes and the 9 variables of the elipsoid equation
+	 *         of the axes, the 9 variables of the ellipsoid equation and the EVD
 	 */
 	public static Object[] yuryPetrov(double[][] coOrdinates) {
 
@@ -161,7 +161,6 @@ public class FitEllipsoid {
 		Matrix A = new Matrix(a);
 		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
 				.getMatrix(6, 8, 0, 0));
-		C.printToIJLog("centre");
 		Matrix T = Matrix.eye(4);
 		T.setMatrix(3, 3, 0, 2, C.transpose());
 		Matrix R = T.times(A.times(T.transpose()));
@@ -170,21 +169,17 @@ public class FitEllipsoid {
 		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
 				/ r33));
 		Matrix eVal = E.getD();
-		eVal.printToIJLog("eigenvalues");
 		Matrix eVec = E.getV();
-		eVec.printToIJLog("eigenvectors");
 		Matrix diagonal = eVal.diag();
 		final int nEvals = diagonal.getRowDimension();
 		double[] radii = new double[nEvals];
-		IJ.log("Radii");
 		for (int i = 0; i < nEvals; i++) {
 			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
-			IJ.log("" + radii[i]);
 		}
 		double[] centre = C.getColumnPackedCopy();
 		double[][] eigenVectors = eVec.getArrayCopy();
 		double[] equation = v;
-		Object[] ellipsoid = { centre, radii, eigenVectors, equation };
+		Object[] ellipsoid = { centre, radii, eigenVectors, equation, E };
 		return ellipsoid;
 	}
 

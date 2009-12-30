@@ -1,6 +1,7 @@
 package org.doube.bonej;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -174,6 +175,17 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("Max Thickness (" + units + ")", thick[i][2]);
 
 				}
+				if (doEllipsoids) {
+					if (ellipsoids[i] == null)
+						continue;
+					Object[] el = ellipsoids[i];
+					double[] radii = (double[]) el[1];
+					double[] rad = radii.clone();
+					Arrays.sort(rad);
+					rt.addValue("Major radius (" + units + ")", rad[2]);
+					rt.addValue("Int. radius (" + units + ")", rad[1]);
+					rt.addValue("Minor radius (" + units + ")", rad[0]);
+				}
 				rt.updateResults();
 			}
 		}
@@ -201,7 +213,9 @@ public class ParticleCounter implements PlugIn {
 				displayCentroids(centroids);
 			}
 			if (doAxesImage) {
-				displayAxes(eigens, centroids);
+				double[][] lengths = (double[][]) getMaxDistances(imp,
+						particleLabels, centroids, eigens)[1];
+				displayPrincipalAxes(eigens, centroids, lengths);
 			}
 			if (doEllipsoidImage) {
 				displayEllipsoids(ellipsoids);
@@ -221,9 +235,18 @@ public class ParticleCounter implements PlugIn {
 	private void displayEllipsoids(Object[][] ellipsoids) {
 		final int nEllipsoids = ellipsoids.length;
 		for (int el = 1; el < nEllipsoids; el++) {
+			IJ.showStatus("Rendering ellipsoids...");
+			IJ.showProgress(el, nEllipsoids);
+			if (ellipsoids[el] == null)
+				continue;
 			final double[] centre = (double[]) ellipsoids[el][0];
 			final double[] radii = (double[]) ellipsoids[el][1];
 			final double[][] eV = (double[][]) ellipsoids[el][2];
+			for (int r = 0; r < 3; r++) {
+				Double s = radii[r];
+				if (s.equals(Double.NaN))
+					radii[r] = Double.MIN_VALUE;
+			}
 			final double a = radii[0];
 			final double b = radii[1];
 			final double c = radii[2];
@@ -259,8 +282,10 @@ public class ParticleCounter implements PlugIn {
 			float blue = 1.0f;
 			Color3f cColour = new Color3f(red, green, blue);
 			mesh.setColor(cColour);
-			mesh.setTransparency(0.6f);
-			univ.addCustomMesh(mesh, "Ellipsoid "+el).setLocked(true);
+			univ.addCustomMesh(mesh, "Ellipsoid " + el).setLocked(true);
+			// Add some axes
+			displayAxes(centre, eV, radii, 1.0f, 1.0f, 0.0f, "Ellipsoid Axes "
+					+ el);
 		}
 	}
 
@@ -483,6 +508,82 @@ public class ParticleCounter implements PlugIn {
 		return eigens;
 	}
 
+	/**
+	 * Get the maximum distances from the centroid in x, y, and z axes, and
+	 * transformed x, y and z axes
+	 * 
+	 * @param imp
+	 * @param particleLabels
+	 * @param centroids
+	 * @param E
+	 * @return array containing two nPoints * 3 arrays with max and max
+	 *         transformed distances respectively
+	 * 
+	 */
+	private Object[] getMaxDistances(ImagePlus imp, int[][] particleLabels,
+			double[][] centroids, EigenvalueDecomposition[] E) {
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		final int nParticles = centroids.length;
+		double[][] maxD = new double[nParticles][3];
+		double[][] maxDt = new double[nParticles][3];
+		for (int z = 0; z < d; z++) {
+			for (int y = 0; y < h; y++) {
+				final int index = y * w;
+				for (int x = 0; x < w; x++) {
+					final int p = particleLabels[z][index + x];
+					if (p > 0) {
+						final double dX = Math.abs(x * vW - centroids[p][0]);
+						final double dY = Math.abs(y * vH - centroids[p][1]);
+						final double dZ = Math.abs(z * vD - centroids[p][2]);
+						maxD[p][0] = Math.max(maxD[p][0], dX);
+						maxD[p][1] = Math.max(maxD[p][1], dY);
+						maxD[p][2] = Math.max(maxD[p][2], dZ);
+						final double[][] eV = E[p].getV().getArray();
+						final double eV00 = eV[0][0];
+						final double eV10 = eV[1][0];
+						final double eV20 = eV[2][0];
+						final double eV01 = eV[0][1];
+						final double eV11 = eV[1][1];
+						final double eV21 = eV[2][1];
+						final double eV02 = eV[0][2];
+						final double eV12 = eV[1][2];
+						final double eV22 = eV[2][2];
+						final double dXt = dX * eV00 + dY * eV01 + dZ * eV02;
+						final double dYt = dX * eV10 + dY * eV11 + dZ * eV12;
+						final double dZt = dX * eV20 + dY * eV21 + dZ * eV22;
+						maxDt[p][0] = Math.max(maxDt[p][0], dXt);
+						maxDt[p][1] = Math.max(maxDt[p][1], dYt);
+						maxDt[p][2] = Math.max(maxDt[p][2], dZt);
+					}
+				}
+			}
+		}
+		for (int p = 0; p < nParticles; p++) {
+			Arrays.sort(maxD[p]);
+			Arrays.sort(maxDt[p]);
+			reverse(maxD[p]);
+			reverse(maxDt[p]);
+		}
+		final Object[] maxDistances = { maxD, maxDt };
+		return maxDistances;
+	}
+
+	private void reverse(double[] array) {
+		final int n = array.length;
+		double[] temp = new double[n];
+		for (int i = 0; i < n; i++) {
+			temp[i] = array[n - i - 1];
+		}
+		array = temp.clone();
+		return;
+	}
+
 	private void display3DOriginal(ImagePlus imp, int resampling) {
 		Color3f colour = new Color3f(1.0f, 1.0f, 1.0f);
 		boolean[] channels = { true, true, true };
@@ -491,72 +592,88 @@ public class ParticleCounter implements PlugIn {
 		return;
 	}
 
-	private void displayAxes(EigenvalueDecomposition[] eigens,
-			double[][] centroids) {
+	private void displayPrincipalAxes(EigenvalueDecomposition[] eigens,
+			double[][] centroids, double[][] lengths) {
 		final int nEigens = eigens.length;
 		for (int p = 1; p < nEigens; p++) {
 			IJ.showStatus("Rendering principal axes...");
 			IJ.showProgress(p, nEigens);
-			final double cX = centroids[p][0];
-			final double cY = centroids[p][1];
-			final double cZ = centroids[p][2];
-			final double eV1 = Math.pow(eigens[p].getD().get(0, 0), 0.25) / 2;
-			final double eV2 = Math.pow(eigens[p].getD().get(1, 1), 0.25) / 2;
-			final double eV3 = Math.pow(eigens[p].getD().get(2, 2), 0.25) / 2;
 			final Matrix eVec = eigens[p].getV();
-			final double eVec1x = eVec.get(0, 0);
-			final double eVec1y = eVec.get(1, 0);
-			final double eVec1z = eVec.get(2, 0);
-			final double eVec2x = eVec.get(0, 1);
-			final double eVec2y = eVec.get(1, 1);
-			final double eVec2z = eVec.get(2, 1);
-			final double eVec3x = eVec.get(0, 2);
-			final double eVec3y = eVec.get(1, 2);
-			final double eVec3z = eVec.get(2, 2);
-			List<Point3f> mesh = new ArrayList<Point3f>();
-			Point3f start1 = new Point3f();
-			start1.x = (float) (cX - eVec1x * eV1);
-			start1.y = (float) (cY - eVec1y * eV1);
-			start1.z = (float) (cZ - eVec1z * eV1);
-			mesh.add(start1);
-
-			Point3f end1 = new Point3f();
-			end1.x = (float) (cX + eVec1x * eV1);
-			end1.y = (float) (cY + eVec1y * eV1);
-			end1.z = (float) (cZ + eVec1z * eV1);
-			mesh.add(end1);
-
-			Point3f start2 = new Point3f();
-			start2.x = (float) (cX - eVec2x * eV2);
-			start2.y = (float) (cY - eVec2y * eV2);
-			start2.z = (float) (cZ - eVec2z * eV2);
-			mesh.add(start2);
-
-			Point3f end2 = new Point3f();
-			end2.x = (float) (cX + eVec2x * eV2);
-			end2.y = (float) (cY + eVec2y * eV2);
-			end2.z = (float) (cZ + eVec2z * eV2);
-			mesh.add(end2);
-
-			Point3f start3 = new Point3f();
-			start3.x = (float) (cX - eVec3x * eV3);
-			start3.y = (float) (cY - eVec3y * eV3);
-			start3.z = (float) (cZ - eVec3z * eV3);
-			mesh.add(start3);
-
-			Point3f end3 = new Point3f();
-			end3.x = (float) (cX + eVec3x * eV3);
-			end3.y = (float) (cY + eVec3y * eV3);
-			end3.z = (float) (cZ + eVec3z * eV3);
-			mesh.add(end3);
-
-			float red = 1.0f - ((float) p / (float) nEigens);
-			float green = (float) p / (1.5f * (float) nEigens);
-			float blue = (float) p / (2.0f * (float) nEigens);
-			Color3f aColour = new Color3f(red, green, blue);
-			univ.addLineMesh(mesh, aColour, "Axes " + p, false).setLocked(true);
+			displayAxes(centroids[p], eVec.getArray(), lengths[p], 1.0f, 0.0f,
+					0.0f, "Principal Axes " + p);
 		}
 		return;
+	}
+
+	/**
+	 * Draws 3 orthogonal axes defined by the centroid, unitvector and axis
+	 * length.
+	 * 
+	 * @param centroid
+	 * @param unitVector
+	 * @param lengths
+	 * @param red
+	 * @param green
+	 * @param blue
+	 * @param title
+	 */
+	private void displayAxes(double[] centroid, double[][] unitVector,
+			double[] lengths, float red, float green, float blue, String title) {
+		final double cX = centroid[0];
+		final double cY = centroid[1];
+		final double cZ = centroid[2];
+		final double eVec1x = unitVector[0][0];
+		final double eVec1y = unitVector[1][0];
+		final double eVec1z = unitVector[2][0];
+		final double eVec2x = unitVector[0][1];
+		final double eVec2y = unitVector[1][1];
+		final double eVec2z = unitVector[2][1];
+		final double eVec3x = unitVector[0][2];
+		final double eVec3y = unitVector[1][2];
+		final double eVec3z = unitVector[2][2];
+		final double l1 = lengths[0];
+		final double l2 = lengths[1];
+		final double l3 = lengths[2];
+
+		List<Point3f> mesh = new ArrayList<Point3f>();
+		Point3f start1 = new Point3f();
+		start1.x = (float) (cX - eVec1x * l1);
+		start1.y = (float) (cY - eVec1y * l1);
+		start1.z = (float) (cZ - eVec1z * l1);
+		mesh.add(start1);
+
+		Point3f end1 = new Point3f();
+		end1.x = (float) (cX + eVec1x * l1);
+		end1.y = (float) (cY + eVec1y * l1);
+		end1.z = (float) (cZ + eVec1z * l1);
+		mesh.add(end1);
+
+		Point3f start2 = new Point3f();
+		start2.x = (float) (cX - eVec2x * l2);
+		start2.y = (float) (cY - eVec2y * l2);
+		start2.z = (float) (cZ - eVec2z * l2);
+		mesh.add(start2);
+
+		Point3f end2 = new Point3f();
+		end2.x = (float) (cX + eVec2x * l2);
+		end2.y = (float) (cY + eVec2y * l2);
+		end2.z = (float) (cZ + eVec2z * l2);
+		mesh.add(end2);
+
+		Point3f start3 = new Point3f();
+		start3.x = (float) (cX - eVec3x * l3);
+		start3.y = (float) (cY - eVec3y * l3);
+		start3.z = (float) (cZ - eVec3z * l3);
+		mesh.add(start3);
+
+		Point3f end3 = new Point3f();
+		end3.x = (float) (cX + eVec3x * l3);
+		end3.y = (float) (cY + eVec3y * l3);
+		end3.z = (float) (cZ + eVec3z * l3);
+		mesh.add(end3);
+
+		Color3f aColour = new Color3f(red, green, blue);
+		univ.addLineMesh(mesh, aColour, title, false).setLocked(true);
 	}
 
 	/**
