@@ -40,35 +40,6 @@ import ij.gui.GenericDialog;
  * Foreground is 26-connected and background is 6-connected.
  * </p>
  * 
- * <p>
- * This plugin is based on Object_Counter3D by Fabrice P Cordelires and Jonathan
- * Jackson, but with significant speed increases through reduction of recursion
- * and multi-threading. Thanks to Robert Barbour for the suggestion to 'chunk'
- * the stack. Chunking works as follows:
- * </p>
- * <ol>
- * <li>Perform initial labelling on the whole stack in a single thread</li>
- * <li>for <i>n</i> discrete, contiguous chunks within the labelling array,
- * connectStructures()
- * <ol type="a">
- * <li>connectStructures() can run in a separate thread for each chunk</li>
- * <li>chunks are approximately equal-sized sets of slices</li>
- * </ol>
- * <li>stitchChunks() for the pixels on the first slice of each chunk, except
- * for the first chunk, restricting replaceLabels() to the current and all
- * previous chunks.
- * <ol type="a">
- * <li>stitchChunks() iterates through the slice being stitched in a single
- * thread</li>
- * </ol>
- * </li>
- * 
- * </ol>
- * <p>
- * The performance improvement should be in the region of a factor of <i>n</i>
- * if run linearly, and if multithreaded over <i>c</i> processors, speed
- * increase should be in the region of <i>n</i> * <i>c</i>, minus overhead.
- * </p>
  * 
  * @author Michael Doube
  * @version 1.0
@@ -78,11 +49,6 @@ import ij.gui.GenericDialog;
  *      173-182. <a
  *      href="http://dx.doi.org/10.1016/8756-3282(93)90245-6">doi:10.1016
  *      /8756-3282(93)90245-6</a>
- *      </p>
- *      <p>
- *      Object counter 3D <a
- *      href="http://rsbweb.nih.gov/ij/plugins/track/objects.html">home page at
- *      the NIH</a>
  *      </p>
  * 
  */

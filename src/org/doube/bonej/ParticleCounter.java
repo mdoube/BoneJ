@@ -1,5 +1,22 @@
 package org.doube.bonej;
 
+/**
+ * ParticleCounter Copyright 2009 Michael Doube
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -26,6 +43,49 @@ import ij.plugin.PlugIn;
 import ij3d.Content;
 import ij3d.Image3DUniverse;
 
+/**
+ * <p>
+ * This class implements multithreaded 3D particle identification and shape
+ * analysis. Surface meshing and 3D visualisation are provided by Bene Schmid's
+ * ImageJ 3D Viewer.
+ * </p>
+ * <p>
+ * This plugin is based on Object_Counter3D by Fabrice P Cordelires and Jonathan
+ * Jackson, but with significant speed increases through reduction of recursion
+ * and multi-threading. Thanks to Robert Barbour for the suggestion to 'chunk'
+ * the stack. Chunking works as follows:
+ * </p>
+ * <ol>
+ * <li>Perform initial labelling on the whole stack in a single thread</li>
+ * <li>for <i>n</i> discrete, contiguous chunks within the labelling array,
+ * connectStructures()
+ * <ol type="a">
+ * <li>connectStructures() can run in a separate thread for each chunk</li>
+ * <li>chunks are approximately equal-sized sets of slices</li>
+ * </ol>
+ * <li>stitchChunks() for the pixels on the first slice of each chunk, except
+ * for the first chunk, restricting replaceLabels() to the current and all
+ * previous chunks.
+ * <ol type="a">
+ * <li>stitchChunks() iterates through the slice being stitched in a single
+ * thread</li>
+ * </ol>
+ * </li>
+ * 
+ * </ol>
+ * <p>
+ * The performance improvement should be in the region of a factor of <i>n</i>
+ * if run linearly, and if multithreaded over <i>c</i> processors, speed
+ * increase should be in the region of <i>n</i> * <i>c</i>, minus overhead.
+ * </p>
+ * 
+ * @author Michael Doube, Jonathan Jackson, Fabrice Cordelires
+ * @see <p>
+ *      <a href="http://rsbweb.nih.gov/ij/plugins/track/objects.html">3D Object
+ *      Counter</a>
+ *      </p>
+ * 
+ */
 public class ParticleCounter implements PlugIn {
 
 	/** 3D viewer for rendering graphical output */
@@ -173,7 +233,6 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("Thickness (" + units + ")", thick[i][0]);
 					rt.addValue("SD Thickness (" + units + ")", thick[i][1]);
 					rt.addValue("Max Thickness (" + units + ")", thick[i][2]);
-
 				}
 				if (doEllipsoids) {
 					if (ellipsoids[i] == null)
