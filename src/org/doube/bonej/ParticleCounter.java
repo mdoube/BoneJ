@@ -293,18 +293,19 @@ public class ParticleCounter implements PlugIn {
 
 	private void displayEllipsoids(Object[][] ellipsoids) {
 		final int nEllipsoids = ellipsoids.length;
+		ellipsoidLoop:
 		for (int el = 1; el < nEllipsoids; el++) {
 			IJ.showStatus("Rendering ellipsoids...");
 			IJ.showProgress(el, nEllipsoids);
 			if (ellipsoids[el] == null)
-				continue;
+				continue ellipsoidLoop;
 			final double[] centre = (double[]) ellipsoids[el][0];
 			final double[] radii = (double[]) ellipsoids[el][1];
 			final double[][] eV = (double[][]) ellipsoids[el][2];
 			for (int r = 0; r < 3; r++) {
 				Double s = radii[r];
 				if (s.equals(Double.NaN))
-					radii[r] = Double.MIN_VALUE;
+					continue ellipsoidLoop;
 			}
 			final double a = radii[0];
 			final double b = radii[1];
