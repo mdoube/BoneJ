@@ -7,7 +7,9 @@ import org.doube.jama.Matrix;
 
 public class FitEllipsoid {
 	/**
-	 * Calculate the best-fit ellipsoid by least squares
+	 * Calculate the best-fit ellipsoid by least squares. Currently broken;
+	 * doesn't handle large numbers of points and often returns a singular
+	 * matrix for EVD.
 	 * 
 	 * @param coOrdinates
 	 *            n x 3 array containing 3D coordinates
@@ -104,7 +106,13 @@ public class FitEllipsoid {
 	}
 
 	/**
-	 * Implement the ellipsoid fitting method by Yury Petrov
+	 * <p>
+	 * Ellipsoid fitting method by Yury Petrov.<br />
+	 * Fits an ellipsoid in the form <i>Ax</i><sup>2</sup> +
+	 * <i>By</i><sup>2</sup> + <i>Cz</i><sup>2</sup> + 2<i>Dxy</i> + 2<i>Exz</i>
+	 * + 2<i>Fyz</i> + 2<i>Gx</i> + 2<i>Hy</i> + 2<i>Iz</i> = 1 <br />
+	 * To an n * 3 array of coordinates.
+	 * </p>
 	 * 
 	 * @see <p>
 	 *      <a href=
@@ -113,34 +121,11 @@ public class FitEllipsoid {
 	 *      </p>
 	 * 
 	 * @param coOrdinates
-	 * @return
+	 * @return result Object[] array containing the centre, radii, eigenvectors
+	 *         of the axes and the 9 variables of the elipsoid equation
 	 */
 	public static Object[] yuryPetrov(double[][] coOrdinates) {
-		// function [ center, radii, evecs, v ] = ellipsoid_fit( X, flag, equals
-		// )
-		// %
-		// % Fit an ellispoid/sphere to a set of xyz data points:
-		// %
-		// % [center, radii, evecs, pars ] = ellipsoid_fit( X )
-		// %
-		// % Parameters:
-		// % * X, [x y z] - Cartesian data, n x 3 matrix
-		// %
-		// % Output:
-		// % * center - ellispoid center coordinates [xc; yc; zc]
-		// % * ax - ellipsoid radii [a; b; c]
-		// % * evecs - ellipsoid radii directions as columns of the 3x3 matrix
-		// % * v - the 9 parameters describing the ellipsoid algebraically:
-		// % Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz + 2Gx + 2Hy + 2Iz = 1
-		// %
-		// % Author:
-		// % Yury Petrov, Northeastern University, Boston, MA
-		// %
 
-		// % need nine or more data points
-		// if length( x ) < 9 && flag == 0
-		// error( 'Must have at least 9 points to fit a unique ellipsoid' );
-		// end
 		final int nPoints = coOrdinates.length;
 		if (nPoints < 9) {
 			System.out
@@ -148,18 +133,6 @@ public class FitEllipsoid {
 			return null;
 		}
 
-		// if flag == 0
-		// % fit ellipsoid in the form Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz +
-		// 2Gx + 2Hy + 2Iz = 1
-		// D = [ x .* x, ...
-		// y .* y, ...
-		// z .* z, ...
-		// 2 * x .* y, ...
-		// 2 * x .* z, ...
-		// 2 * y .* z, ...
-		// 2 * x, ...
-		// 2 * y, ...
-		// 2 * z ];
 		double[][] d = new double[nPoints][9];
 		for (int i = 0; i < nPoints; i++) {
 			final double x = coOrdinates[i][0];
@@ -176,49 +149,30 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
-		// % solve the normal system of equations
-		// v = ( D' * D ) \ ( D' * ones( size( x, 1 ), 1 ) );
 		Matrix D = new Matrix(d);
 		Matrix ones = Matrix.ones(nPoints, 1);
 		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
 				.times(ones));
 		double[] v = V.getColumnPackedCopy();
 
-		//
-		// % find the ellipsoid parameters
-		// if flag == 0
-		// % form the algebraic form of the ellipsoid
-		// A = [ v(1) v(4) v(5) v(7); ...
-		// v(4) v(2) v(6) v(8); ...
-		// v(5) v(6) v(3) v(9); ...
-		// v(7) v(8) v(9) -1 ];
 		double[][] a = { { v[0], v[3], v[4], v[6] },
 				{ v[3], v[1], v[5], v[7] }, { v[4], v[5], v[2], v[8] },
 				{ v[6], v[7], v[8], -1 }, };
 		Matrix A = new Matrix(a);
-		// % find the center of the ellipsoid
-		// center = -A( 1:3, 1:3 ) \ [ v(7); v(8); v(9) ];
 		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
 				.getMatrix(6, 8, 0, 0));
-		C.printToIJLog("C");
-		// % form the corresponding translation matrix
-		// T = eye( 4 );
+		C.printToIJLog("centre");
 		Matrix T = Matrix.eye(4);
-		// T( 4, 1:3 ) = center';
 		T.setMatrix(3, 3, 0, 2, C.transpose());
-		// % translate to the center
-		// R = T * A * T';
 		Matrix R = T.times(A.times(T.transpose()));
-		// % solve the eigenproblem
 		double r33 = R.get(3, 3);
 		Matrix R02 = R.getMatrix(0, 2, 0, 2);
-		// [ evecs evals ] = eig( R( 1:3, 1:3 ) / -R( 4, 4 ) );
 		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
 				/ r33));
-
-		// radii = sqrt( 1 ./ diag( evals ) );
 		Matrix eVal = E.getD();
-		eVal.printToIJLog("eVal");
+		eVal.printToIJLog("eigenvalues");
+		Matrix eVec = E.getV();
+		eVec.printToIJLog("eigenvectors");
 		Matrix diagonal = eVal.diag();
 		final int nEvals = diagonal.getRowDimension();
 		double[] radii = new double[nEvals];
@@ -227,23 +181,16 @@ public class FitEllipsoid {
 			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
 			IJ.log("" + radii[i]);
 		}
-		// else
-		// v = [ v(1) v(1) v(1) 0 0 0 v(2) v(3) v(4) ];
-		// end
-		// center = ( -v( 7:9 ) ./ v( 1:3 ) )';
-		// gam = 1 + ( v(7)^2 / v(1) + v(8)^2 / v(2) + v(9)^2 / v(3) );
-		// radii = ( sqrt( gam ./ v( 1:3 ) ) )';
-		// evecs = eye( 3 );
-		// end
 		double[] centre = C.getColumnPackedCopy();
-		double[][] eigenVectors = E.getV().getArrayCopy();
+		double[][] eigenVectors = eVec.getArrayCopy();
 		double[] equation = v;
 		Object[] ellipsoid = { centre, radii, eigenVectors, equation };
 		return ellipsoid;
 	}
 
 	/**
-	 * Return points on an ellipsoid with optional noise
+	 * Return points on an ellipsoid with optional noise. Point density is not
+	 * uniform, becoming more dense at the poles.
 	 * 
 	 * @param a
 	 *            First axis length
@@ -263,30 +210,49 @@ public class FitEllipsoid {
 	 *            Intensity of noise to add to the points
 	 * @param nPoints
 	 *            number of points to generate
+	 * @param random
+	 *            if true, use a random grid to generate points, else use a
+	 *            regular grid
 	 * @return array of (x,y,z) coordinates
 	 */
 	public static double[][] testEllipsoid(double a, double b, double c,
 			double angle, double xCentre, double yCentre, double zCentre,
-			double noise, int nPoints) {
+			double noise, int nPoints, boolean random) {
 
-		final double increment = Math.PI / (nPoints + 0.5);
-		final int h = 2 * nPoints + 1;
-		final int w = nPoints + 1;
+		final int n = (int) Math.floor(-3 / 4 + Math.sqrt(1 + 8 * nPoints) / 4);
+		final int h = 2 * n + 1;
+		final int w = n + 1;
 		double[][] s = new double[h][w];
 		double[][] t = new double[h][w];
 		double value = -Math.PI / 2;
-		for (int j = 0; j < w; j++) {
-			for (int i = 0; i < h; i++) {
-				s[i][j] = value;
-			}
-			value += increment;
-		}
-		value = -Math.PI / 2;
-		for (int i = 0; i < h; i++) {
+		if (random) {
 			for (int j = 0; j < w; j++) {
-				t[i][j] = value;
+				for (int i = 0; i < h; i++) {
+					s[i][j] = value + Math.random() * 2 * Math.PI;
+				}
 			}
-			value += increment;
+			for (int i = 0; i < h; i++) {
+				for (int j = 0; j < w; j++) {
+					t[i][j] = value + Math.random() * 2 * Math.PI;
+				}
+			}
+		} else {
+			final double increment = Math.PI / (n + 0.5);
+
+			for (int j = 0; j < w; j++) {
+				for (int i = 0; i < h; i++) {
+					s[i][j] = value + increment;
+				}
+				value += increment;
+			}
+			value = -Math.PI / 2;
+			for (int i = 0; i < h; i++) {
+				for (int j = 0; j < w; j++) {
+					t[i][j] = value + increment;
+				}
+				value += increment;
+			}
+
 		}
 		double[][] x = new double[h][w];
 		double[][] y = new double[h][w];

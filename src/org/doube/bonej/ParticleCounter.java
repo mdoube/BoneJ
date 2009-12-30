@@ -219,30 +219,53 @@ public class ParticleCounter implements PlugIn {
 	}
 
 	private void displayEllipsoids(Object[][] ellipsoids) {
-		double[][] ellipsoid = FitEllipsoid.testEllipsoid(3, 4, 8, 100, 100, 100, 0,
-				0, 100);
-		final int nPoints = ellipsoid.length;
-		List<Point3f> points = new ArrayList<Point3f>();
-		for (int p = 0; p < nPoints; p++) {
-			Point3f e = new Point3f();
-			e.x = (float) ellipsoid[p][0];
-			e.y = (float) ellipsoid[p][1];
-			e.z = (float) ellipsoid[p][2];
-			points.add(e);
+		final int nEllipsoids = ellipsoids.length;
+		for (int el = 1; el < nEllipsoids; el++) {
+			final double[] centre = (double[]) ellipsoids[el][0];
+			final double[] radii = (double[]) ellipsoids[el][1];
+			final double[][] eV = (double[][]) ellipsoids[el][2];
+			final double a = radii[0];
+			final double b = radii[1];
+			final double c = radii[2];
+			double[][] ellipsoid = FitEllipsoid.testEllipsoid(a, b, c, 0, 0, 0,
+					0, 0, 1000, false);
+			final int nPoints = ellipsoid.length;
+			// rotate points by eigenvector matrix
+			// and add transformation for centre
+			for (int p = 0; p < nPoints; p++) {
+				final double x = ellipsoid[p][0];
+				final double y = ellipsoid[p][1];
+				final double z = ellipsoid[p][2];
+				ellipsoid[p][0] = x * eV[0][0] + y * eV[0][1] + z * eV[0][2]
+						+ centre[0];
+				ellipsoid[p][1] = x * eV[1][0] + y * eV[1][1] + z * eV[1][2]
+						+ centre[1];
+				ellipsoid[p][2] = x * eV[2][0] + y * eV[2][1] + z * eV[2][2]
+						+ centre[2];
+			}
+
+			List<Point3f> points = new ArrayList<Point3f>();
+			for (int p = 0; p < nPoints; p++) {
+				Point3f e = new Point3f();
+				e.x = (float) ellipsoid[p][0];
+				e.y = (float) ellipsoid[p][1];
+				e.z = (float) ellipsoid[p][2];
+				points.add(e);
+			}
+			CustomPointMesh mesh = new CustomPointMesh(points);
+			mesh.setPointSize(1.0f);
+			float red = 0.0f;
+			float green = 0.5f;
+			float blue = 1.0f;
+			Color3f cColour = new Color3f(red, green, blue);
+			mesh.setColor(cColour);
+			mesh.setTransparency(0.6f);
+			univ.addCustomMesh(mesh, "Ellipsoid "+el).setLocked(true);
 		}
-		CustomPointMesh mesh = new CustomPointMesh(points);
-		mesh.setPointSize(1.0f);
-		float red = 0.0f;
-		float green = 0.5f;
-		float blue = 1.0f;
-		Color3f cColour = new Color3f(red, green, blue);
-		mesh.setColor(cColour);
-		mesh.setTransparency(0.6f);
-		univ.addCustomMesh(mesh, "Ellipsoid").setLocked(true);
 	}
 
 	private Object[][] getEllipsoids(ArrayList<List<Point3f>> surfacePoints) {
-		Object[][] ellipsoids = new Object[surfacePoints.size()][10];
+		Object[][] ellipsoids = new Object[surfacePoints.size()][];
 		int p = 0;
 		Iterator<List<Point3f>> partIter = surfacePoints.iterator();
 		while (partIter.hasNext()) {
