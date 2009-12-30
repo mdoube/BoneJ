@@ -235,12 +235,16 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("Max Thickness (" + units + ")", thick[i][2]);
 				}
 				if (doEllipsoids) {
-					if (ellipsoids[i] == null)
-						continue;
-					Object[] el = ellipsoids[i];
-					double[] radii = (double[]) el[1];
-					double[] rad = radii.clone();
-					Arrays.sort(rad);
+					double[] rad = new double[3];
+					if (ellipsoids[i] == null) {
+						double[] r = { Double.NaN, Double.NaN, Double.NaN };
+						rad = r;
+					} else {
+						Object[] el = ellipsoids[i];
+						double[] radii = (double[]) el[1];
+						rad = radii.clone();
+						Arrays.sort(rad);
+					}
 					rt.addValue("Major radius (" + units + ")", rad[2]);
 					rt.addValue("Int. radius (" + units + ")", rad[1]);
 					rt.addValue("Minor radius (" + units + ")", rad[0]);
@@ -368,7 +372,12 @@ public class ParticleCounter implements PlugIn {
 				coOrdinates[i][2] = point.z;
 				i++;
 			}
-			ellipsoids[p] = FitEllipsoid.yuryPetrov(coOrdinates);
+			try {
+				ellipsoids[p] = FitEllipsoid.yuryPetrov(coOrdinates);
+			} catch (RuntimeException re) {
+				IJ.log("Could not fit ellipsoid to surface " + p);
+				ellipsoids[p] = null;
+			}
 			p++;
 		}
 		return ellipsoids;
@@ -805,6 +814,8 @@ public class ParticleCounter implements PlugIn {
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
 		final boolean[] channels = { true, false, false };
 		for (int p = 0; p < nParticles; p++) {
+			IJ.showStatus("Getting surface meshes...");
+			IJ.showProgress(p, nParticles);
 			if (p > 0) {
 				ImagePlus binaryImp = getBinaryParticle(p, imp, particleLabels,
 						limits, resampling);
