@@ -1,11 +1,31 @@
 package org.doube.bonej;
 
+import ij.IJ;
+
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
 public class FitEllipse {
 
-	public double[] directFit(double[][] points) {
+	/**
+	 * Java port of Chernov's MATLAB implementation of the direct ellipse fit
+	 * 
+	 * @param points
+	 *            n * 2 array of 2D coordinates.
+	 * @return <p>
+	 *         6-element array, {a b c d e f}, which are the algebraic
+	 *         parameters of the fitting ellipse: <i>ax</i><sup>2</sup> +
+	 *         <i>bxy</i> + <i>cy</i><sup>2</sup> +<i>dx</i> + <i>ey</i> +
+	 *         <i>f</i> = 0. The vector <b>A</b> represented in the array is
+	 *         normed, so that ||<b>A</b>||=1.
+	 *         </p>
+	 * 
+	 * @see <p>
+	 *      <a href="http://www.mathworks.co.uk/matlabcentral/fileexchange/22684-ellipse-fit-direct-method"
+	 *      >MATLAB script</a>
+	 *      </p>
+	 */
+	public static double[] direct(double[][] points) {
 		final int nPoints = points.length;
 		// %
 		// % This is a fast non-iterative ellipse fit.
@@ -52,33 +72,70 @@ public class FitEllipse {
 		Matrix S3 = D2.transpose().times(D2);
 
 		// T = -inv(S3)*S2';
-		Matrix T = S3.times(S2.transpose()); // !!!! TODO
+		Matrix T = (S3.inverse().times(-1)).times(S2.transpose());
 
 		// M = S1 + S2*T;
 		Matrix M = S1.plus(S2.times(T));
 
-		// M = [M(3,:)./2; -M(2,:); M(1,:)./2]; //!!!! TODO
+		// M = [M(3,:)./2; -M(2,:); M(1,:)./2];
+		double[][] m = M.getArray();
+		double[][] n = { { m[2][0] / 2, m[2][1] / 2, m[2][2] / 2 },
+				{ -m[1][0], -m[1][1], -m[1][2] },
+				{ m[0][0] / 2, m[0][1] / 2, m[0][2] / 2 } };
+
+		Matrix N = new Matrix(n);
 
 		// [evec,eval] = eig(M);
-		EigenvalueDecomposition E = M.eig();
+		EigenvalueDecomposition E = N.eig();
 		Matrix eVec = E.getV();
 		Matrix eVal = E.getD();
 
 		// cond = 4*evec(1,:).*evec(3,:)-evec(2,:).^2;
+		Matrix R1 = eVec.getMatrix(0, 0, 0, 3);
+		Matrix R2 = eVec.getMatrix(1, 1, 0, 3);
+		Matrix R3 = eVec.getMatrix(2, 2, 0, 3);
 
+		Matrix cond = (R1.times(4)).arrayTimes(R3).minus(R2.arrayTimes(R2));
+		IJ.log("cond");
+		cond.printToIJLog();
+
+		int f = 0;
+		for (int i = 0; i < 3; i++) {
+			if (cond.get(0, i) > 0) {
+				f = i;
+				break;
+			}
+		}
 		// A1 = evec(:,find(cond>0));
+		Matrix A1 = eVec.getMatrix(0, 3, f, f);
+
 		// A = [A1; T*A1];
+		Matrix A = new Matrix(6, 1);
+		A.setMatrix(0, 2, 0, 0, A1);
+		A.setMatrix(3, 5, 0, 0, T.times(A1));
+
 		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
+		double[] a = A.getColumnPackedCopy();
+		double a4 = a[3] - 2 * a[0] * xC - a[1] * yC;
+
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
+		double a5 = a[4] - 2 * a[2] * yC - a[1] * xC;
+
 		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
 		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
-		// A(4) = A4; A(5) = A5; A(6) = A6;
-		// A = A/norm(A);
-		//
-		// end % EllipseDirectFit
+		double a6 = a[5] + a[0] * xC * xC + a[2] * yC * yC + a[1] * xC * yC
+				- a[3] * xC - a[4] * yC;
 
-		double[] ellipse = new double[3];
-		return ellipse;
+		// A(4) = A4; A(5) = A5; A(6) = A6;
+		A.set(3, 0, a4);
+		A.set(4, 0, a5);
+		A.set(5, 0, a6);
+
+		// A = A/norm(A);
+		A = A.times(1 / A.normF());
+
+		// end % EllipseDirectFit
+		return A.getColumnPackedCopy();
 	}
 
 	/**
@@ -86,6 +143,8 @@ public class FitEllipse {
 	 * Planar Curves, Surfaces And Nonplanar Space Curves Defined By Implicit
 	 * Equations, With Applications To Edge And Range Image Segmentation", IEEE
 	 * Trans. PAMI, Vol. 13, pages 1115-1138, (1991)
+	 * 
+	 * CURRENTLY BROKEN: NO JAVA IMPLEMENTATION OF eig(a,b)
 	 * 
 	 * Ported from Chernov's Matlab script
 	 * 
@@ -106,8 +165,12 @@ public class FitEllipse {
 	 * @author Michael Doube
 	 * @param points
 	 * @return
+	 * @see <p>
+	 *      <a href="http://www.mathworks.co.uk/matlabcentral/fileexchange/22683-ellipse-fit-taubin-method"
+	 *      >MATLAB script</a>
+	 *      </p>
 	 */
-	public double[] taubinFit(double[][] points) {
+	private static double[] taubin(double[][] points) {
 
 		final int nPoints = points.length;
 
@@ -137,7 +200,7 @@ public class FitEllipse {
 		Matrix Z = new Matrix(z);
 
 		// M = Z'*Z/size(XY,1);
-		Matrix M = Z.transpose().times(Z.times(1 / nPoints));
+		Matrix M = Z.transpose().times(Z.times(1 / (double) nPoints));
 
 		double[][] m = M.getArray();
 
@@ -196,40 +259,40 @@ public class FitEllipse {
 				{ 2 * m[1][5], m[0][5] + m[2][5], 2 * m[1][5], 0, 0 },
 				{ 0, 2 * m[1][5], 4 * m[2][5], 0, 0 }, { 0, 0, 0, 1, 0 },
 				{ 0, 0, 0, 0, 1 } };
-		
+
 		Matrix Q = new Matrix(q);
 
 		// [V,D] = eig(P,Q); //!!! TODO
-		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q.inverse()));
+		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q
+				.inverse()));
 		Matrix D = E.getD();
 		Matrix V = E.getV();
-				
+
 		// [Dsort,ID] = sort(diag(D)); //!!! TODO
-		
-		
+
 		// A = V(:,ID(1)); //!!! TODO
-		Matrix A = new Matrix(1,6);
-		A.set(0,0, V.get(0, 0));
-		A.set(0,1, V.get(1, 0));
-		A.set(0,2, V.get(2, 0));
-		
+		Matrix A = new Matrix(1, 6);
+		A.set(0, 0, V.get(0, 0));
+		A.set(0, 1, V.get(1, 0));
+		A.set(0, 2, V.get(2, 0));
+
 		// A = [A; -A(1:3)'*M(1:3,6)];
 		Matrix B = A.times(-1).transpose().times(M.getMatrix(0, 2, 5, 5));
 		A.setMatrix(3, 5, 0, 0, B);
-		
+
 		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
 		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
 		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
 		// A(4) = A4; A(5) = A5; A(6) = A6;
 		// A = A/norm(A);
-		   A = A.times(1/A.norm1());
+		A = A.times(1 / A.norm1());
 		//
 		// end % Taubin
 		return A.getColumnPackedCopy();
 	}
 
-	private double[] getCentroid(double[][] points) {
+	private static double[] getCentroid(double[][] points) {
 		final int nPoints = points.length;
 		double sumX = 0;
 		double sumY = 0;
