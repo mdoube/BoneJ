@@ -33,7 +33,7 @@ import org.doube.bonej.Moments;
 import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
-import org.doube.geometry.Trigonometry;
+import org.doube.geometry.Trig;
 import org.doube.jama.*;
 import org.doube.util.RoiMan;
 
@@ -210,7 +210,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		// have to calculate distance between points
 		// so that we find a unit vector
 
-		double d = Trigonometry.distance3D(headCentre, centroid);
+		double d = Trig.distance3D(headCentre, centroid);
 		double[][] cHVec = new double[3][1];
 		cHVec[0][0] = (headCentre[0] - centroid[0]) / d;
 		cHVec[1][0] = (headCentre[1] - centroid[1]) / d;
@@ -222,7 +222,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		// projectionPlane is the cross product of cHVec and shaftVector
 		double[][] projectionPlane = crossProduct(cHVec, shaftVector);
 
-		d = Trigonometry.distance3D(projectionPlane[0][0],
+		d = Trig.distance3D(projectionPlane[0][0],
 				projectionPlane[1][0], projectionPlane[2][0]);
 		projectionPlane[0][0] /= d;
 		projectionPlane[1][0] /= d;
@@ -348,7 +348,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 
 	private double[][] neckVector(double[] headCentre, double[] neckPoint) {
 		// have to calculate d to make sure that neckVector is a unit vector
-		double d = Trigonometry.distance3D(headCentre, neckPoint);
+		double d = Trig.distance3D(headCentre, neckPoint);
 
 		double[][] neckVector = new double[3][1];
 		neckVector[0][0] = (headCentre[0] - neckPoint[0]) / d;
@@ -489,7 +489,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 
 				double[] cp = crossProduct(a, b);
 
-				double distance = Trigonometry.distance3D(cp);
+				double distance = Trig.distance3D(cp);
 				// IJ.log("distance to regression line is "+ distance +
 				// " "+this.units+" for slice "+s);
 
@@ -497,7 +497,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 				// regression)
 				// as per equation 3
 				double t = -1
-						* Trigonometry.distance3D(x1x - x0x, x1y - x0y, x1z
+						* Trig.distance3D(x1x - x0x, x1y - x0y, x1z
 								- x0z, x2x - x1x, x2y - x1y, x2z - x1z);
 
 				// So now the intersection point x3 of the perpendicular is

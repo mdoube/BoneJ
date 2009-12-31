@@ -1,6 +1,6 @@
 package org.doube.geometry;
 
-public class Trigonometry {
+public class Trig {
 
 	/**
 	 * <p>
