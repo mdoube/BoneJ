@@ -31,9 +31,9 @@ import java.awt.Color;
 import java.awt.Rectangle;
 
 import org.doube.bonej.BoneList;
-import org.doube.bonej.ImageCheck;
 import org.doube.bonej.Thickness;
 import org.doube.bonej.ThresholdMinConn;
+import org.doube.util.ImageCheck;
 
 /**
  * <p>

@@ -36,6 +36,7 @@ import java.util.Arrays;
 
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
+import org.doube.util.ImageCheck;
 
 public class Moments implements PlugIn {
 

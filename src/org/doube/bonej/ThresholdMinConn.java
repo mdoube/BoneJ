@@ -1,5 +1,7 @@
 package org.doube.bonej;
 
+import org.doube.util.ImageCheck;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;

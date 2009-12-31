@@ -12,8 +12,8 @@ import ij.util.Tools;
 
 import java.util.ArrayList;
 
-import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
+import org.doube.util.ImageCheck;
 
 /**
  * <p>FractalCount_.java,v 1.42 2005/05/30 07:52:59</p>

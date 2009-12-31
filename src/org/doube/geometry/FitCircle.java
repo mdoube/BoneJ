@@ -501,7 +501,7 @@ public class FitCircle {
 	 *         circle radius
 	 */
 	public static double[] levenMarqFull(double[][] points, double lambdaIni) {
-		int nPoints = points.length;
+		final int nPoints = points.length;
 		double[] guess = hyperStable(points);
 		double x = guess[0];
 		double y = guess[1];

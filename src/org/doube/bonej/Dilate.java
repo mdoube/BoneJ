@@ -2,6 +2,8 @@ package org.doube.bonej;
 
 import java.awt.image.ColorModel;
 
+import org.doube.util.ImageCheck;
+
 import ij.plugin.PlugIn;
 
 import ij.gui.GenericDialog;

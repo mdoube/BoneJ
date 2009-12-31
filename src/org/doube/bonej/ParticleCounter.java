@@ -28,6 +28,7 @@ import javax.vecmath.Point3f;
 import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
+import org.doube.util.ImageCheck;
 
 import customnode.CustomPointMesh;
 

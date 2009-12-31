@@ -19,6 +19,8 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.doube.util.ImageCheck;
+
 import ij.*;
 import ij.plugin.PlugIn;
 import ij.measure.ResultsTable;

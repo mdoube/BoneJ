@@ -9,9 +9,9 @@ import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
-import org.doube.bonej.ImageCheck;
 import org.doube.bonej.ResultInserter;
 import org.doube.jama.*;
+import org.doube.util.ImageCheck;
 
 /**
  * <p>

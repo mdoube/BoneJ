@@ -7,6 +7,7 @@ import ij.plugin.PlugIn;
 import ij.process.*;
 
 import org.doube.bonej.ResultInserter;
+import org.doube.util.ImageCheck;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation

@@ -25,10 +25,10 @@ import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
 
-import org.doube.bonej.ImageCheck;
 import org.doube.bonej.Moments;
 import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitSphere;
+import org.doube.util.ImageCheck;
 import org.doube.util.RoiMan;
 
 /**
