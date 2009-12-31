@@ -88,7 +88,6 @@ public class FitEllipse {
 		// [evec,eval] = eig(M);
 		EigenvalueDecomposition E = N.eig();
 		Matrix eVec = E.getV();
-		Matrix eVal = E.getD();
 
 		// cond = 4*evec(1,:).*evec(3,:)-evec(2,:).^2;
 		Matrix R1 = eVec.getMatrix(0, 0, 0, 3);
@@ -170,6 +169,7 @@ public class FitEllipse {
 	 *      >MATLAB script</a>
 	 *      </p>
 	 */
+	@SuppressWarnings("unused")
 	private static double[] taubin(double[][] points) {
 
 		final int nPoints = points.length;
@@ -265,7 +265,6 @@ public class FitEllipse {
 		// [V,D] = eig(P,Q); //!!! TODO
 		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q
 				.inverse()));
-		Matrix D = E.getD();
 		Matrix V = E.getV();
 
 		// [Dsort,ID] = sort(diag(D)); //!!! TODO
