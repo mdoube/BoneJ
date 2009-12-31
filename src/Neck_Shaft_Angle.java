@@ -29,12 +29,12 @@ import java.awt.Rectangle;
 import java.awt.event.*;
 
 import org.doube.bonej.Moments;
-import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
 import org.doube.geometry.Trig;
 import org.doube.jama.*;
 import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 
 /*

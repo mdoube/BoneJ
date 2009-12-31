@@ -19,6 +19,7 @@ package org.doube.bonej;
  */
 
 import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
 
 import ij.IJ;
 import ij.ImagePlus;

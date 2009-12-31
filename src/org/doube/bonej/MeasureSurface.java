@@ -6,6 +6,7 @@ import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
 import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
 
 import ij.IJ;
 import ij.ImagePlus;

@@ -26,9 +26,9 @@ import ij.plugin.frame.*;
 import ij.measure.Calibration;
 
 import org.doube.bonej.Moments;
-import org.doube.bonej.ResultInserter;
 import org.doube.geometry.FitSphere;
 import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 
 /**

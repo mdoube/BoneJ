@@ -1,7 +1,7 @@
 import java.awt.Rectangle;
 
-import org.doube.bonej.ResultInserter;
 import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
 
 import ij.IJ;
 import ij.ImagePlus;
