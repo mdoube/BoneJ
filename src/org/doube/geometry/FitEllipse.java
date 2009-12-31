@@ -36,7 +36,7 @@ public class FitEllipse {
 		// %
 
 		// centroid = mean(XY); % the centroid of the data set
-		double[] centroid = getCentroid(points);
+		double[] centroid = Centroid.getCentroid(points);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 
@@ -175,7 +175,7 @@ public class FitEllipse {
 		final int nPoints = points.length;
 
 		// centroid = mean(XY); % the centroid of the data set
-		double[] centroid = getCentroid(points);
+		double[] centroid = Centroid.getCentroid(points);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 
@@ -285,23 +285,9 @@ public class FitEllipse {
 		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
 		// A(4) = A4; A(5) = A5; A(6) = A6;
 		// A = A/norm(A);
-		A = A.times(1 / A.norm1());
+		A = A.times(1 / A.normF());
 		//
 		// end % Taubin
 		return A.getColumnPackedCopy();
-	}
-
-	private static double[] getCentroid(double[][] points) {
-		final int nPoints = points.length;
-		double sumX = 0;
-		double sumY = 0;
-		for (int i = 0; i < nPoints; i++) {
-			sumX += points[i][0];
-			sumY += points[i][1];
-		}
-		double xC = sumX / nPoints;
-		double yC = sumY / nPoints;
-		double[] centroid = { xC, yC };
-		return centroid;
 	}
 }
