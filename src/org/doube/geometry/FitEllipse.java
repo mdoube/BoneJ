@@ -1,7 +1,5 @@
 package org.doube.geometry;
 
-import java.util.Arrays;
-
 import ij.IJ;
 
 import org.doube.jama.EigenvalueDecomposition;
@@ -290,7 +288,7 @@ public class FitEllipse {
 		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
 		double[] a = A.getColumnPackedCopy();
 		double a4 = a[3] - 2 * a[0] * xC - a[1] * yC;
-		
+
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
 		double a5 = a[4] - 2 * a[2] * yC - a[1] * xC;
 
@@ -309,5 +307,55 @@ public class FitEllipse {
 
 		// end % Taubin
 		return A.getColumnPackedCopy();
+	}
+
+	/**
+	 * Create an array of (x,y) coordinates on an ellipse of radii (a,b) and
+	 * rotated r radians. Random noise is added if noise > 0.
+	 * 
+	 * @param a
+	 *            One radius
+	 * @param b
+	 *            The other radius
+	 * @param r
+	 *            Angle of rotation
+	 * @param c
+	 *            centroid x
+	 * @param d
+	 *            centroid y
+	 * @param noise
+	 * @param n
+	 *            Number of points
+	 * @return
+	 */
+	public static double[][] testEllipse(double a, double b, double r,
+			double c, double d, double noise, int n) {
+		double[][] points = new double[n][2];
+		// alpha=linspace(0,2*pi,200);
+		double increment = 2 * Math.PI / (n + 1);
+		double alpha = 0;
+		for (int i = 0; i < n; i++) {
+			// x=5*cos(alpha);
+			// y=2*sin(alpha);
+			points[i][0] = a * Math.cos(alpha) + Math.random() * noise;
+			points[i][1] = b * Math.sin(alpha) + Math.random() * noise;
+			alpha += increment;
+		}
+
+		// xyr=[cos(phi) -sin(phi);sin(phi) cos(phi)]*[x(:) y(:)];
+		final double sinR = Math.sin(r);
+		final double cosR = Math.cos(r);
+		for (int i = 0; i < n; i++) {
+			final double x = points[i][0];
+			final double y = points[i][1];
+			points[i][0] = x * cosR - y * sinR;
+			points[i][1] = x * sinR + y * cosR;
+		}
+		// transform to centre
+		for (int i = 0; i < n; i++) {
+			points[i][0] += c;
+			points[i][1] += d;
+		}
+		return points;
 	}
 }
