@@ -1,5 +1,7 @@
 package org.doube.geometry;
 
+import java.util.Arrays;
+
 import ij.IJ;
 
 import org.doube.jama.EigenvalueDecomposition;
@@ -143,8 +145,6 @@ public class FitEllipse {
 	 * Equations, With Applications To Edge And Range Image Segmentation", IEEE
 	 * Trans. PAMI, Vol. 13, pages 1115-1138, (1991)
 	 * 
-	 * CURRENTLY BROKEN: NO JAVA IMPLEMENTATION OF eig(a,b)
-	 * 
 	 * Ported from Chernov's Matlab script
 	 * 
 	 * Input: points[n][2] is the array of coordinates of n points
@@ -169,8 +169,7 @@ public class FitEllipse {
 	 *      >MATLAB script</a>
 	 *      </p>
 	 */
-	@SuppressWarnings("unused")
-	private static double[] taubin(double[][] points) {
+	public static double[] taubin(double[][] points) {
 
 		final int nPoints = points.length;
 
@@ -262,31 +261,52 @@ public class FitEllipse {
 
 		Matrix Q = new Matrix(q);
 
-		// [V,D] = eig(P,Q); //!!! TODO
+		// [V,D] = eig(P,Q);
 		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q
 				.inverse()));
 		Matrix V = E.getV();
+		Matrix D = E.getD();
 
-		// [Dsort,ID] = sort(diag(D)); //!!! TODO
+		// [Dsort,ID] = sort(diag(D));
+		double[] ds = D.diag().getColumnPackedCopy();
+		int j = 0;
+		for (int i = 0; i < ds.length; i++) {
+			if (ds[i] < ds[j]) {
+				j = i;
+			}
+		}
 
-		// A = V(:,ID(1)); //!!! TODO
-		Matrix A = new Matrix(1, 6);
-		A.set(0, 0, V.get(0, 0));
-		A.set(0, 1, V.get(1, 0));
-		A.set(0, 2, V.get(2, 0));
+		// A = V(:,ID(1));
+		Matrix A = V.getMatrix(0, 4, j, j);
 
 		// A = [A; -A(1:3)'*M(1:3,6)];
-		Matrix B = A.times(-1).transpose().times(M.getMatrix(0, 2, 5, 5));
-		A.setMatrix(3, 5, 0, 0, B);
+		Matrix A13 = A.getMatrix(0, 2, 0, 0).times(-1);
+		Matrix M136 = M.getMatrix(0, 2, 5, 5);
+		Matrix AM = A13.inverse().times(M136);
+		Matrix AA = new Matrix(6, 1);
+		AA.setMatrix(0, 4, 0, 0, A);
+		AA.setMatrix(5, 5, 0, 0, AM);
 
 		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
+		double[] a = A.getColumnPackedCopy();
+		double a4 = a[3] - 2 * a[0] * xC - a[1] * yC;
+		
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
+		double a5 = a[4] - 2 * a[2] * yC - a[1] * xC;
+
 		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
 		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
+		double a6 = a[5] + a[0] * xC * xC + a[2] * yC * yC + a[1] * xC * yC
+				- a[3] * xC - a[4] * yC;
+
 		// A(4) = A4; A(5) = A5; A(6) = A6;
+		A.set(3, 0, a4);
+		A.set(4, 0, a5);
+		A.set(5, 0, a6);
+
 		// A = A/norm(A);
 		A = A.times(1 / A.normF());
-		//
+
 		// end % Taubin
 		return A.getColumnPackedCopy();
 	}
