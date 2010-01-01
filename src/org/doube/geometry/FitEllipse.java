@@ -348,13 +348,8 @@ public class FitEllipse {
 		for (int i = 0; i < n; i++) {
 			final double x = points[i][0];
 			final double y = points[i][1];
-			points[i][0] = x * cosR - y * sinR;
-			points[i][1] = x * sinR + y * cosR;
-		}
-		// transform to centre
-		for (int i = 0; i < n; i++) {
-			points[i][0] += c;
-			points[i][1] += d;
+			points[i][0] = x * cosR - y * sinR + c;
+			points[i][1] = x * sinR + y * cosR + d;
 		}
 		return points;
 	}
