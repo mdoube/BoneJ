@@ -298,9 +298,9 @@ public class FitEllipse {
 	 * rotated r radians. Random noise is added if noise > 0.
 	 * 
 	 * @param a
-	 *            One radius
+	 *            One semi-axis length
 	 * @param b
-	 *            The other radius
+	 *            The other semi-axis length
 	 * @param r
 	 *            Angle of rotation
 	 * @param c
@@ -316,18 +316,13 @@ public class FitEllipse {
 	public static double[][] testEllipse(double a, double b, double r,
 			double c, double d, double noise, int n) {
 		double[][] points = new double[n][2];
-		// alpha=linspace(0,2*pi,200);
 		double increment = 2 * Math.PI / (n + 1);
 		double alpha = 0;
 		for (int i = 0; i < n; i++) {
-			// x=5*cos(alpha);
-			// y=2*sin(alpha);
 			points[i][0] = a * Math.cos(alpha) + Math.random() * noise;
 			points[i][1] = b * Math.sin(alpha) + Math.random() * noise;
 			alpha += increment;
 		}
-
-		// xyr=[cos(phi) -sin(phi);sin(phi) cos(phi)]*[x(:) y(:)];
 		final double sinR = Math.sin(r);
 		final double cosR = Math.cos(r);
 		for (int i = 0; i < n; i++) {
