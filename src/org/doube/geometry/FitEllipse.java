@@ -1,10 +1,14 @@
 package org.doube.geometry;
 
-import ij.IJ;
-
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
+/**
+ * Ellipse-fitting methods.
+ * 
+ * @author Michael Doube
+ * 
+ */
 public class FitEllipse {
 
 	/**
@@ -27,22 +31,9 @@ public class FitEllipse {
 	 */
 	public static double[] direct(double[][] points) {
 		final int nPoints = points.length;
-		// %
-		// % This is a fast non-iterative ellipse fit.
-		// %
-		// % It returns ellipses only, even if points are
-		// % better approximated by a hyperbola.
-		// % It is somewhat biased toward smaller ellipses.
-		// %
-
-		// centroid = mean(XY); % the centroid of the data set
 		double[] centroid = Centroid.getCentroid(points);
 		final double xC = centroid[0];
 		final double yC = centroid[1];
-
-		// D1 = [(XY(:,1)-centroid(1)).^2,
-		// (XY(:,1)-centroid(1)).*(XY(:,2)-centroid(2)),...
-		// (XY(:,2)-centroid(2)).^2];
 		double[][] d1 = new double[nPoints][3];
 		for (int i = 0; i < nPoints; i++) {
 			final double xixC = points[i][0] - xC;
@@ -52,8 +43,6 @@ public class FitEllipse {
 			d1[i][2] = yiyC * yiyC;
 		}
 		Matrix D1 = new Matrix(d1);
-
-		// D2 = [XY(:,1)-centroid(1), XY(:,2)-centroid(2), ones(size(XY,1),1)];
 		double[][] d2 = new double[nPoints][3];
 		for (int i = 0; i < nPoints; i++) {
 			d2[i][0] = points[i][0] - xC;
@@ -62,22 +51,16 @@ public class FitEllipse {
 		}
 		Matrix D2 = new Matrix(d2);
 
-		// S1 = D1'*D1;
 		Matrix S1 = D1.transpose().times(D1);
 
-		// S2 = D1'*D2;
 		Matrix S2 = D1.transpose().times(D2);
 
-		// S3 = D2'*D2;
 		Matrix S3 = D2.transpose().times(D2);
 
-		// T = -inv(S3)*S2';
 		Matrix T = (S3.inverse().times(-1)).times(S2.transpose());
 
-		// M = S1 + S2*T;
 		Matrix M = S1.plus(S2.times(T));
 
-		// M = [M(3,:)./2; -M(2,:); M(1,:)./2];
 		double[][] m = M.getArray();
 		double[][] n = { { m[2][0] / 2, m[2][1] / 2, m[2][2] / 2 },
 				{ -m[1][0], -m[1][1], -m[1][2] },
@@ -85,18 +68,14 @@ public class FitEllipse {
 
 		Matrix N = new Matrix(n);
 
-		// [evec,eval] = eig(M);
 		EigenvalueDecomposition E = N.eig();
 		Matrix eVec = E.getV();
 
-		// cond = 4*evec(1,:).*evec(3,:)-evec(2,:).^2;
-		Matrix R1 = eVec.getMatrix(0, 0, 0, 3);
-		Matrix R2 = eVec.getMatrix(1, 1, 0, 3);
-		Matrix R3 = eVec.getMatrix(2, 2, 0, 3);
+		Matrix R1 = eVec.getMatrix(0, 0, 0, 2);
+		Matrix R2 = eVec.getMatrix(1, 1, 0, 2);
+		Matrix R3 = eVec.getMatrix(2, 2, 0, 2);
 
 		Matrix cond = (R1.times(4)).arrayTimes(R3).minus(R2.arrayTimes(R2));
-		IJ.log("cond");
-		cond.printToIJLog();
 
 		int f = 0;
 		for (int i = 0; i < 3; i++) {
@@ -105,35 +84,21 @@ public class FitEllipse {
 				break;
 			}
 		}
-		// A1 = evec(:,find(cond>0));
-		Matrix A1 = eVec.getMatrix(0, 3, f, f);
+		Matrix A1 = eVec.getMatrix(0, 2, f, f);
 
-		// A = [A1; T*A1];
 		Matrix A = new Matrix(6, 1);
 		A.setMatrix(0, 2, 0, 0, A1);
 		A.setMatrix(3, 5, 0, 0, T.times(A1));
 
-		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
 		double[] a = A.getColumnPackedCopy();
 		double a4 = a[3] - 2 * a[0] * xC - a[1] * yC;
-
-		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
 		double a5 = a[4] - 2 * a[2] * yC - a[1] * xC;
-
-		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
-		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
 		double a6 = a[5] + a[0] * xC * xC + a[2] * yC * yC + a[1] * xC * yC
 				- a[3] * xC - a[4] * yC;
-
-		// A(4) = A4; A(5) = A5; A(6) = A6;
 		A.set(3, 0, a4);
 		A.set(4, 0, a5);
 		A.set(5, 0, a6);
-
-		// A = A/norm(A);
 		A = A.times(1 / A.normF());
-
-		// end % EllipseDirectFit
 		return A.getColumnPackedCopy();
 	}
 
@@ -143,7 +108,9 @@ public class FitEllipse {
 	 * Equations, With Applications To Edge And Range Image Segmentation", IEEE
 	 * Trans. PAMI, Vol. 13, pages 1115-1138, (1991)
 	 * 
-	 * Ported from Chernov's Matlab script
+	 * CURRENTLY NOT WORKING - USE FitEllipse.direct(double[]) INSTEAD
+	 * 
+	 * Ported from Chernov's Matlab script.
 	 * 
 	 * Input: points[n][2] is the array of coordinates of n points
 	 * x(i)=points[i][0], y(i)=points[i][1]
@@ -286,7 +253,7 @@ public class FitEllipse {
 		AA.setMatrix(5, 5, 0, 0, AM);
 
 		// A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
-		double[] a = A.getColumnPackedCopy();
+		double[] a = AA.getColumnPackedCopy();
 		double a4 = a[3] - 2 * a[0] * xC - a[1] * yC;
 
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
@@ -298,15 +265,15 @@ public class FitEllipse {
 				- a[3] * xC - a[4] * yC;
 
 		// A(4) = A4; A(5) = A5; A(6) = A6;
-		A.set(3, 0, a4);
-		A.set(4, 0, a5);
-		A.set(5, 0, a6);
+		AA.set(3, 0, a4);
+		AA.set(4, 0, a5);
+		AA.set(5, 0, a6);
 
 		// A = A/norm(A);
-		A = A.times(1 / A.normF());
+		AA = AA.times(1 / AA.normF());
 
 		// end % Taubin
-		return A.getColumnPackedCopy();
+		return AA.getColumnPackedCopy();
 	}
 
 	/**
@@ -324,6 +291,7 @@ public class FitEllipse {
 	 * @param d
 	 *            centroid y
 	 * @param noise
+	 *            intensity of random noise
 	 * @param n
 	 *            Number of points
 	 * @return
@@ -352,5 +320,66 @@ public class FitEllipse {
 			points[i][1] = x * sinR + y * cosR + d;
 		}
 		return points;
+	}
+
+	/**
+	 * <p>
+	 * Convert variables a, b, c, d, f, g from the general ellipse equation ax^2
+	 * + bxy + cy^2 +dx + fy + g = 0 into useful geometric parameters semi-axis
+	 * lengths, centre and angle of rotation.
+	 * </p>
+	 * 
+	 * @see <p>
+	 *      Eq. 19-23 at <a
+	 *      href="http://mathworld.wolfram.com/Ellipse.html">Wolfram Mathworld
+	 *      Ellipse</a>.
+	 *      </p>
+	 * 
+	 * @param ellipse
+	 *            <p>
+	 *            array containing a, b, c, d, f, g of the ellipse equation.
+	 *            </p>
+	 * @return <p>
+	 *         array containing centroid coordinates, axis lengths and angle of
+	 *         rotation of the ellipse specified by the input variables.
+	 *         </p>
+	 */
+	public static double[] varToDimensions(double[] ellipse) {
+		final double a = ellipse[0];
+		final double b = ellipse[1] / 2;
+		final double c = ellipse[2];
+		final double d = ellipse[3] / 2;
+		final double f = ellipse[4];
+		final double g = ellipse[5];
+
+		// centre
+		final double cX = (c * d - b * f) / (b * b - a * c);
+		final double cY = (a * f - b * d) / (b * b - a * c);
+
+		// semiaxis length
+		final double af = 2 * (a * f * f + c * d * d + g * b * b - 2 * b * d
+				* f - a * c * g);
+
+		final double aL = Math.sqrt((af)
+				/ ((b * b - a * c) * (Math.sqrt((a - c) * (a - c) + 4 * b * b)
+						- a - c)));
+
+		final double bL = Math.sqrt((af)
+				/ ((b * b - a * c) * (-Math.sqrt((a - c) * (a - c) + 4 * b * b)
+						- a - c)));
+		double phi = 0;
+		if (b == 0) {
+			if (a <= c)
+				phi = 0;
+			else if (a > c)
+				phi = Math.PI / 2;
+		} else {
+			if (a < c)
+				phi = Math.atan(2 * b / (a - c)) / 2;
+			else if (a > c)
+				phi = Math.atan(2 * b / (a - c)) / 2 + Math.PI / 2;
+		}
+		double[] dimensions = { cX, cY, aL, bL, phi };
+		return dimensions;
 	}
 }
