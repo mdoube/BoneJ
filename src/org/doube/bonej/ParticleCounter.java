@@ -113,8 +113,12 @@ public class ParticleCounter implements PlugIn {
 			IJ.error("Binary image required");
 			return;
 		}
+		Calibration cal = imp.getCalibration();
+		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addMessage("Measurement Options");
+		gd.addNumericField("Min Volume", 0, 3, 7, units+"³");
+		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units+"³");
 		gd.addCheckbox("Surface_area", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
@@ -206,18 +210,17 @@ public class ParticleCounter implements PlugIn {
 		}
 
 		// Show numerical results
-		String units = imp.getCalibration().getUnits();
 		ResultsTable rt = new ResultsTable();
 		for (int i = 1; i < volumes.length; i++) {
 			if (volumes[i] > 0) {
 				rt.incrementCounter();
 				rt.addValue("ID", i);
-				rt.addValue("Vol. (" + units + "^3)", volumes[i]);
+				rt.addValue("Vol. (" + units + "³)", volumes[i]);
 				rt.addValue("x Cent (" + units + ")", centroids[i][0]);
 				rt.addValue("y Cent (" + units + ")", centroids[i][1]);
 				rt.addValue("z Cent (" + units + ")", centroids[i][2]);
 				if (doSurfaceArea) {
-					rt.addValue("SA (" + units + "^2)", surfaceAreas[i]);
+					rt.addValue("SA (" + units + "²)", surfaceAreas[i]);
 				}
 				if (doMoments) {
 					EigenvalueDecomposition E = eigens[i];
@@ -1534,7 +1537,7 @@ public class ParticleCounter implements PlugIn {
 			scanRanges[1][c] = (c + 1) * slicesPerChunk + 1;
 			scanRanges[2][c] = c * slicesPerChunk; // forward and reverse
 			// algorithm
-			// scanRanges[2][c] = 0; //cumulative algorithm - reliable but O^2
+			// scanRanges[2][c] = 0; //cumulative algorithm - reliable but O²
 			// hard
 			scanRanges[3][c] = (c + 2) * slicesPerChunk;
 		}

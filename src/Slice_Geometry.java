@@ -743,7 +743,7 @@ public class Slice_Geometry implements PlugIn {
 			rt.addLabel(title);
 			rt.addValue("Bone Code", this.boneID);
 			rt.addValue("Slice", s);
-			rt.addValue("CSA (" + units + "^2)", this.cortArea[s]);
+			rt.addValue("CSA (" + units + "²)", this.cortArea[s]);
 			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
 			rt.addValue("Y cent. (" + units + ")", this.sliceCentroids[1][s]);
 			rt.addValue("Theta (rad)", this.theta[s]);
@@ -754,8 +754,8 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("Imax (" + units + "^4)", this.Imax[s] * unit4);
 			rt.addValue("ImaxFast (" + units + "^4)", this.ImaxFast[s] * unit4);
 			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
-			rt.addValue("Zmax (" + units + "^3)", this.Zmax[s] * unit3);
-			rt.addValue("Zmin (" + units + "^3)", this.Zmin[s] * unit3);
+			rt.addValue("Zmax (" + units + "³)", this.Zmax[s] * unit3);
+			rt.addValue("Zmin (" + units + "³)", this.Zmin[s] * unit3);
 			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
 			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
 			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);

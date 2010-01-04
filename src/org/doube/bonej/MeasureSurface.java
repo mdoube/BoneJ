@@ -69,7 +69,7 @@ public class MeasureSurface implements PlugIn {
 		ResultInserter ri = ResultInserter.getInstance();
 		double area = getSurfaceArea(points);
 		ri.setResultInRow(imp,
-				"BS (" + imp.getCalibration().getUnits() + "^2)", area);
+				"BS (" + imp.getCalibration().getUnits() + "²)", area);
 		ri.updateTable();
 
 		if (points.size() == 0) {

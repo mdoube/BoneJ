@@ -56,9 +56,9 @@ public class Volume_Fraction implements PlugIn {
 		Calibration cal = imp.getCalibration();
 		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "^3)", volBone
+		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "³)", volBone
 				* voxelVol);
-		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "^3)", volTotal
+		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "³)", volTotal
 				* voxelVol);
 		ri.setResultInRow(imp, "BV/TV", p);
 		ri.updateTable();

@@ -97,8 +97,8 @@ public class FitEllipsoid {
 		v.setMatrix(0, 5, c, v1);
 		v.setMatrix(6, 9, c, v2);
 		double[] ellipsoid = v.getColumnPackedCopy();
-		IJ.log("Ellipsoid equation: " + ellipsoid[0] + " x^2 + " + ellipsoid[1]
-				+ " y^2 + " + ellipsoid[2] + " z^2 + " + ellipsoid[3]
+		IJ.log("Ellipsoid equation: " + ellipsoid[0] + " x² + " + ellipsoid[1]
+				+ " y² + " + ellipsoid[2] + " z² + " + ellipsoid[3]
 				+ " 2yz + " + ellipsoid[4] + " 2xz + " + ellipsoid[5]
 				+ " 2xy + " + ellipsoid[6] + " 2x + " + ellipsoid[7] + " 2y + "
 				+ ellipsoid[8] + " 2z + " + ellipsoid[9] + " = 0");

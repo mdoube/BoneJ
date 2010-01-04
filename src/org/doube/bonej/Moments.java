@@ -134,17 +134,17 @@ public class Moments implements PlugIn {
 		ri.setResultInRow(imp, "Xc (" + units + ")", centroid[0]);
 		ri.setResultInRow(imp, "Yc (" + units + ")", centroid[1]);
 		ri.setResultInRow(imp, "Zc (" + units + ")", centroid[2]);
-		ri.setResultInRow(imp, "Vol (" + units + "^3)", moments[0]);
+		ri.setResultInRow(imp, "Vol (" + units + "³)", moments[0]);
 		ri.setResultInRow(imp, "Mass (g)", moments[1]);
-		ri.setResultInRow(imp, "Icxx (kg.m^2)", moments[2]);
-		ri.setResultInRow(imp, "Icyy (kg.m^2)", moments[3]);
-		ri.setResultInRow(imp, "Iczz (kg.m^2)", moments[4]);
-		ri.setResultInRow(imp, "Icxy (kg.m^2)", moments[5]);
-		ri.setResultInRow(imp, "Icxz (kg.m^2)", moments[6]);
-		ri.setResultInRow(imp, "Icyz (kg.m^2)", moments[7]);
-		ri.setResultInRow(imp, "I1 (kg.m^2)", E.getD().get(2, 2));
-		ri.setResultInRow(imp, "I2 (kg.m^2)", E.getD().get(1, 1));
-		ri.setResultInRow(imp, "I3 (kg.m^2)", E.getD().get(0, 0));
+		ri.setResultInRow(imp, "Icxx (kg.m²)", moments[2]);
+		ri.setResultInRow(imp, "Icyy (kg.m²)", moments[3]);
+		ri.setResultInRow(imp, "Iczz (kg.m²)", moments[4]);
+		ri.setResultInRow(imp, "Icxy (kg.m²)", moments[5]);
+		ri.setResultInRow(imp, "Icxz (kg.m²)", moments[6]);
+		ri.setResultInRow(imp, "Icyz (kg.m²)", moments[7]);
+		ri.setResultInRow(imp, "I1 (kg.m²)", E.getD().get(2, 2));
+		ri.setResultInRow(imp, "I2 (kg.m²)", E.getD().get(1, 1));
+		ri.setResultInRow(imp, "I3 (kg.m²)", E.getD().get(0, 0));
 		ri.updateTable();
 
 		if (doAlign)
@@ -155,9 +155,9 @@ public class Moments implements PlugIn {
 
 	// cortical bone apparent density (material density * volume fraction) from
 	// Mow & Huiskes (2005) p.140
-	// using 1.8 g.cm^-3: 1mm^3 = 0.0018 g = 0.0000018 kg = 1.8*10^-6 kg; 1mm^2
-	// = 10^-6 m^2
-	// conversion coefficient from mm^5 to kg.m^2 = 1.8*10^-12
+	// using 1.8 g.cm^-3: 1mm³ = 0.0018 g = 0.0000018 kg = 1.8*10^-6 kg; 1mm²
+	// = 10^-6 m²
+	// conversion coefficient from mm^5 to kg.m² = 1.8*10^-12
 	// double cc = 1.8*Math.pow(10, -12);
 
 	/**
@@ -183,7 +183,7 @@ public class Moments implements PlugIn {
 	}/* end voxelDensity */
 
 	/**
-	 * Get a scale factor because density is in g / cm^3 but our units are mm so
+	 * Get a scale factor because density is in g / cm³ but our units are mm so
 	 * density is 1000* too high
 	 * 
 	 * @param imp

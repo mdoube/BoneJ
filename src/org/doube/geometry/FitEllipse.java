@@ -133,7 +133,7 @@ public class FitEllipse {
 	 * x(i)=points[i][0], y(i)=points[i][1]
 	 * 
 	 * Output: A = [a b c d e f]' is the vector of algebraic parameters of the
-	 * fitting ellipse: ax^2 + bxy + cy^2 +dx + ey + f = 0 the vector A is
+	 * fitting ellipse: ax² + bxy + cy² +dx + ey + f = 0 the vector A is
 	 * normed, so that ||A||=1
 	 * 
 	 * Among fast non-iterative ellipse fitting methods, this is perhaps the
@@ -160,9 +160,9 @@ public class FitEllipse {
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 
-		// Z = [(XY(:,1)-centroid(1)).^2,
+		// Z = [(XY(:,1)-centroid(1)).²,
 		// (XY(:,1)-centroid(1)).*(XY(:,2)-centroid(2)),
-		// (XY(:,2)-centroid(2)).^2,
+		// (XY(:,2)-centroid(2)).²,
 		// XY(:,1)-centroid(1),
 		// XY(:,2)-centroid(2),
 		// ones(size(XY,1),1)];
@@ -186,13 +186,13 @@ public class FitEllipse {
 		double[][] m = M.getArray();
 
 		//
-		// P = [M(1,1)-M(1,6)^2, M(1,2)-M(1,6)*M(2,6), M(1,3)-M(1,6)*M(3,6),
+		// P = [M(1,1)-M(1,6)², M(1,2)-M(1,6)*M(2,6), M(1,3)-M(1,6)*M(3,6),
 		// M(1,4), M(1,5);
 
-		// M(1,2)-M(1,6)*M(2,6), M(2,2)-M(2,6)^2, M(2,3)-M(2,6)*M(3,6), M(2,4),
+		// M(1,2)-M(1,6)*M(2,6), M(2,2)-M(2,6)², M(2,3)-M(2,6)*M(3,6), M(2,4),
 		// M(2,5);
 
-		// M(1,3)-M(1,6)*M(3,6), M(2,3)-M(2,6)*M(3,6), M(3,3)-M(3,6)^2, M(3,4),
+		// M(1,3)-M(1,6)*M(3,6), M(2,3)-M(2,6)*M(3,6), M(3,3)-M(3,6)², M(3,4),
 		// M(3,5);
 
 		// M(1,4), M(2,4), M(3,4), M(4,4), M(4,5);
@@ -276,7 +276,7 @@ public class FitEllipse {
 		// A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);
 		double a5 = a[4] - 2 * a[2] * yC - a[1] * xC;
 
-		// A6 = A(6)+A(1)*centroid(1)^2+A(3)*centroid(2)^2+...
+		// A6 = A(6)+A(1)*centroid(1)²+A(3)*centroid(2)²+...
 		// A(2)*centroid(1)*centroid(2)-A(4)*centroid(1)-A(5)*centroid(2);
 		double a6 = a[5] + a[0] * xC * xC + a[2] * yC * yC + a[1] * xC * yC
 				- a[3] * xC - a[4] * yC;
@@ -336,8 +336,8 @@ public class FitEllipse {
 
 	/**
 	 * <p>
-	 * Convert variables a, b, c, d, f, g from the general ellipse equation ax^2
-	 * + bxy + cy^2 +dx + fy + g = 0 into useful geometric parameters semi-axis
+	 * Convert variables a, b, c, d, f, g from the general ellipse equation ax²
+	 * + bxy + cy² +dx + fy + g = 0 into useful geometric parameters semi-axis
 	 * lengths, centre and angle of rotation.
 	 * </p>
 	 * 

@@ -651,7 +651,7 @@ public class Thickness implements PlugIn {
 		return t;
 	}
 
-	// For a list of r^2 values, find the smallest r1^2 values such
+	// For a list of r² values, find the smallest r1² values such
 	// that a "ball" of radius r1 centered at (dx,dy,dz) includes a "ball"
 	// of radius r centered at the origin. "Ball" refers to a 3D integer grid.
 	int[] scanCube(int dx, int dy, int dz, int[] distSqValues) {
