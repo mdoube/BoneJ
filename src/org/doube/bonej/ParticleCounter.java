@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- * ParticleCounter Copyright 2009 Michael Doube
+ * ParticleCounter Copyright 2009 2010 Michael Doube
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
