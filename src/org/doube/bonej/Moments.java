@@ -6,7 +6,7 @@ package org.doube.bonej;
  *of a bone in air so default thresholds are 0 and 4000 HU, but most greyscale images shoudl be handled
  *Outputs stack data aligned to principal axes
  *
- *Copyright 2008 2009 Michael Doube 
+ *Copyright 2008 2009 2010 Michael Doube 
  *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by

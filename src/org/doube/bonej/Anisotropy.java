@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  *Anisotropy_ plugin for ImageJ
- *Copyright 2009 Michael Doube 
+ *Copyright 2009 2010 Michael Doube 
  *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
