@@ -117,8 +117,9 @@ public class ParticleCounter implements PlugIn {
 		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addMessage("Measurement Options");
-		gd.addNumericField("Min Volume", 0, 3, 7, units+"³");
-		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units+"³");
+		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
+		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
+				+ "³");
 		gd.addCheckbox("Surface_area", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
@@ -141,6 +142,8 @@ public class ParticleCounter implements PlugIn {
 		if (gd.wasCanceled()) {
 			return;
 		}
+		final double minVol = gd.getNextNumber();
+		final double maxVol = gd.getNextNumber();
 		final boolean doSurfaceArea = gd.getNextBoolean();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doMoments = gd.getNextBoolean();
@@ -159,7 +162,8 @@ public class ParticleCounter implements PlugIn {
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
-		Object[] result = getParticles(imp, slicesPerChunk, FORE);
+		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
+				FORE);
 		long[] particleSizes = (long[]) result[2];
 		final int nParticles = particleSizes.length;
 		double[] volumes = getVolumes(imp, particleSizes);
@@ -214,6 +218,7 @@ public class ParticleCounter implements PlugIn {
 		for (int i = 1; i < volumes.length; i++) {
 			if (volumes[i] > 0) {
 				rt.incrementCounter();
+				rt.addLabel(imp.getTitle());
 				rt.addValue("ID", i);
 				rt.addValue("Vol. (" + units + "³)", volumes[i]);
 				rt.addValue("x Cent (" + units + ")", centroids[i][0]);
@@ -994,31 +999,60 @@ public class ParticleCounter implements PlugIn {
 	 *            Binary input image
 	 * @param slicesPerChunk
 	 *            number of slices per chunk. 2 is generally good.
+	 * @param minVol
+	 *            minimum volume particle to include
+	 * @param maxVol
+	 *            maximum volume particle to include
 	 * @param phase
 	 *            foreground or background (FORE or BACK)
 	 * @return Object[] {byte[][], int[][], long[]} containing a binary
 	 *         workArray, particle labels and particle sizes indexed by particle
 	 *         label
 	 */
+	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
+			double minVol, double maxVol, int phase) {
+		byte[][] workArray = makeWorkArray(imp);
+		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
+				phase);
+	}
+
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk, int phase) {
 		byte[][] workArray = makeWorkArray(imp);
-		return getParticles(imp, workArray, slicesPerChunk, phase);
+		double minVol = 0;
+		double maxVol = Double.POSITIVE_INFINITY;
+		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
+				phase);
+	}
+
+	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
+			int slicesPerChunk, int phase) {
+		double minVol = 0;
+		double maxVol = Double.POSITIVE_INFINITY;
+		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
+				phase);
 	}
 
 	/**
-	 * Get particles, particle labels and sizes from a workArray
+	 * Get particles, particle labels and sizes from a workArray using an
+	 * ImagePlus for scale information
 	 * 
 	 * @param imp
 	 *            input binary image
+	 * @param binary
+	 *            work array
 	 * @param slicesPerChunk
 	 *            number of slices to use for each chunk
+	 * @param minVol
+	 *            minimum volume particle to include
+	 * @param maxVol
+	 *            maximum volume particle to include
 	 * @param phase
-	 *            one of either Purify.foreground or Purify.background
+	 *            FORE or BACK for foreground or background respectively
 	 * @return Object[] array containing a binary workArray, particle labels and
 	 *         particle sizes
 	 */
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
-			int slicesPerChunk, int phase) {
+			int slicesPerChunk, double minVol, double maxVol, int phase) {
 		if (phase == FORE) {
 			this.sPhase = "foreground";
 		} else if (phase == BACK) {
@@ -1060,11 +1094,52 @@ public class ParticleCounter implements PlugIn {
 					stitchRanges);
 		}
 
+		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		minimiseLabels(particleLabels);
 		long[] particleSizes = getParticleSizes(particleLabels);
 
 		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
+	}
+
+	/**
+	 * Remove particles outside user-specified volume thresholds
+	 * 
+	 * @param imp
+	 *            ImagePlus, used for calibration
+	 * @param workArray
+	 *            binary foreground and background information
+	 * @param particleLabels
+	 *            Packed 3D array of particle labels
+	 * @param minVol
+	 *            minimum (inclusive) particle volume
+	 * @param maxVol
+	 *            maximum (inclusive) particle volume
+	 * @param phase
+	 *            phase we are interested in
+	 */
+	private void filterParticles(ImagePlus imp, byte[][] workArray,
+			int[][] particleLabels, double minVol, double maxVol, int phase) {
+		final int d = imp.getImageStackSize();
+		final int wh = workArray[0].length;
+		long[] particleSizes = getParticleSizes(particleLabels);
+		double[] particleVolumes = getVolumes(imp, particleSizes);
+		byte flip = 0;
+		if (phase == FORE) {
+			flip = (byte) 0;
+		} else {
+			flip = (byte) 255;
+		}
+		for (int z = 0; z < d; z++) {
+			for (int i = 0; i < wh; i++) {
+				final int p = particleLabels[z][i];
+				final double v = particleVolumes[p];
+				if (v <= minVol || v >= maxVol) {
+					workArray[z][i] = flip;
+					particleLabels[z][i] = 0;
+				}
+			}
+		}
 	}
 
 	/**
@@ -1121,7 +1196,7 @@ public class ParticleCounter implements PlugIn {
 	 * @param workArray
 	 *            byte[] array containing pixel values
 	 * @param phase
-	 *            foreground = -1, background = 0
+	 *            FORE or BACK for foreground of background respectively
 	 * @return particleLabels int[] array containing label associating every
 	 *         pixel with a particle
 	 */
