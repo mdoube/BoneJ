@@ -31,6 +31,7 @@ import org.doube.jama.Matrix;
 import org.doube.util.ImageCheck;
 
 import customnode.CustomPointMesh;
+import customnode.CustomTriangleMesh;
 
 import marchingcubes.MCTriangulator;
 
@@ -121,6 +122,7 @@ public class ParticleCounter implements PlugIn {
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
 		gd.addCheckbox("Surface_area", true);
+		gd.addCheckbox("Enclosed_volume", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
 		gd.addCheckbox("Euler characteristic", true);
@@ -145,6 +147,7 @@ public class ParticleCounter implements PlugIn {
 		final double minVol = gd.getNextNumber();
 		final double maxVol = gd.getNextNumber();
 		final boolean doSurfaceArea = gd.getNextBoolean();
+		final boolean doSurfaceVolume = gd.getNextBoolean();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doMoments = gd.getNextBoolean();
 		final boolean doEulerCharacters = gd.getNextBoolean();
@@ -173,7 +176,7 @@ public class ParticleCounter implements PlugIn {
 
 		// set up resources for analysis
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
-		if (doSurfaceArea || doSurfaceImage || doEllipsoids) {
+		if (doSurfaceArea || doSurfaceVolume || doSurfaceImage || doEllipsoids) {
 			// or anything else that needs surface points
 			surfacePoints = getSurfacePoints(imp, particleLabels, limits,
 					resampling, nParticles);
@@ -186,6 +189,10 @@ public class ParticleCounter implements PlugIn {
 		double[] surfaceAreas = new double[nParticles];
 		if (doSurfaceArea) {
 			surfaceAreas = getSurfaceArea(surfacePoints);
+		}
+		double[] surfaceVolumes = new double[nParticles];
+		if (doSurfaceVolume) {
+			surfaceVolumes = getSurfaceVolume(surfacePoints);
 		}
 		double[][] eulerCharacters = new double[nParticles][3];
 		if (doEulerCharacters) {
@@ -226,6 +233,9 @@ public class ParticleCounter implements PlugIn {
 				rt.addValue("z Cent (" + units + ")", centroids[i][2]);
 				if (doSurfaceArea) {
 					rt.addValue("SA (" + units + "²)", surfaceAreas[i]);
+				}
+				if (doSurfaceVolume) {
+					rt.addValue("Encl. Vol. (" + units + "³)", surfaceVolumes[i]);
 				}
 				if (doMoments) {
 					EigenvalueDecomposition E = eigens[i];
@@ -813,6 +823,24 @@ public class ParticleCounter implements PlugIn {
 			p++;
 		}
 		return surfaceAreas;
+	}
+
+	private double[] getSurfaceVolume(ArrayList<List<Point3f>> surfacePoints) {
+		Iterator<List<Point3f>> iter = surfacePoints.iterator();
+		double[] surfaceVolumes = new double[surfacePoints.size()];
+		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
+		int p = 0;
+		while (iter.hasNext()) {
+			IJ.showStatus("Calculating enclosed volume...");
+			List<Point3f> points = iter.next();
+			if (null != points) {
+				CustomTriangleMesh surface = new CustomTriangleMesh(points,
+						colour, 0.0f);
+				surfaceVolumes[p] = surface.getVolume();
+			}
+			p++;
+		}
+		return surfaceVolumes;
 	}
 
 	@SuppressWarnings("unchecked")
