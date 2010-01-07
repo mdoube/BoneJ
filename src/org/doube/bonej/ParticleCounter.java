@@ -42,6 +42,7 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
 import ij3d.Content;
 import ij3d.Image3DUniverse;
 
@@ -167,10 +168,10 @@ public class ParticleCounter implements PlugIn {
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
 				FORE);
-		long[] particleSizes = (long[]) result[2];
+		int[][] particleLabels = (int[][]) result[1];
+		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
 		double[] volumes = getVolumes(imp, particleSizes);
-		int[][] particleLabels = (int[][]) result[1];
 		double[][] centroids = getCentroids(imp, particleLabels, particleSizes);
 		int[][] limits = getParticleLimits(imp, particleLabels, nParticles);
 
@@ -235,7 +236,8 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("SA (" + units + "²)", surfaceAreas[i]);
 				}
 				if (doSurfaceVolume) {
-					rt.addValue("Encl. Vol. (" + units + "³)", surfaceVolumes[i]);
+					rt.addValue("Encl. Vol. (" + units + "³)",
+							surfaceVolumes[i]);
 				}
 				if (doMoments) {
 					EigenvalueDecomposition E = eigens[i];
@@ -1033,9 +1035,8 @@ public class ParticleCounter implements PlugIn {
 	 *            maximum volume particle to include
 	 * @param phase
 	 *            foreground or background (FORE or BACK)
-	 * @return Object[] {byte[][], int[][], long[]} containing a binary
-	 *         workArray, particle labels and particle sizes indexed by particle
-	 *         label
+	 * @return Object[] {byte[][], int[][]} containing a binary workArray and
+	 *         particle labels.
 	 */
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
 			double minVol, double maxVol, int phase) {
@@ -1099,7 +1100,7 @@ public class ParticleCounter implements PlugIn {
 
 		int[][] particleLabels = firstIDAttribution(imp, workArray, phase);
 
-		// connect foreground particles within chunks
+		// connect particles within chunks
 		final int nThreads = Runtime.getRuntime().availableProcessors();
 		ConnectStructuresThread[] cptf = new ConnectStructuresThread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
@@ -1115,18 +1116,15 @@ public class ParticleCounter implements PlugIn {
 			IJ.error("A thread was interrupted.");
 		}
 
-		// connect foreground particles between chunks
+		// connect particles between chunks
 		if (nChunks > 1) {
 			chunkString = ": stitching...";
 			connectStructures(imp, workArray, particleLabels, phase,
 					stitchRanges);
 		}
-
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		minimiseLabels(particleLabels);
-		long[] particleSizes = getParticleSizes(particleLabels);
-
-		Object[] result = { workArray, particleLabels, particleSizes };
+		Object[] result = { workArray, particleLabels };
 		return result;
 	}
 
@@ -1148,6 +1146,8 @@ public class ParticleCounter implements PlugIn {
 	 */
 	private void filterParticles(ImagePlus imp, byte[][] workArray,
 			int[][] particleLabels, double minVol, double maxVol, int phase) {
+		if (minVol == 0 && maxVol == Double.POSITIVE_INFINITY)
+			return;
 		final int d = imp.getImageStackSize();
 		final int wh = workArray[0].length;
 		long[] particleSizes = getParticleSizes(particleLabels);
@@ -1162,7 +1162,7 @@ public class ParticleCounter implements PlugIn {
 			for (int i = 0; i < wh; i++) {
 				final int p = particleLabels[z][i];
 				final double v = particleVolumes[p];
-				if (v <= minVol || v >= maxVol) {
+				if (v < minVol || v > maxVol) {
 					workArray[z][i] = flip;
 					particleLabels[z][i] = 0;
 				}
@@ -1570,8 +1570,10 @@ public class ParticleCounter implements PlugIn {
 		byte[][] workArray = new byte[s][p];
 		ImageStack stack = imp.getStack();
 		for (int z = 0; z < s; z++) {
-			byte[] slicePixels = (byte[]) stack.getPixels(z + 1);
-			System.arraycopy(slicePixels, 0, workArray[z], 0, p);
+			ImageProcessor ip = stack.getProcessor(z + 1);
+			for (int i = 0; i < p; i++) {
+				workArray[z][i] = (byte) ip.get(i);
+			}
 		}
 		return workArray;
 	}

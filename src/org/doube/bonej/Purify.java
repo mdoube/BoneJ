@@ -108,17 +108,19 @@ public class Purify implements PlugIn {
 		ParticleCounter pc = new ParticleCounter();
 
 		final int fg = ParticleCounter.FORE;
-		Object[] foregroundParticles = pc.getParticles(imp, slicesPerChunk, fg);
+		Object[] foregroundParticles = pc.getParticles(imp,
+				slicesPerChunk, 0, Double.POSITIVE_INFINITY, fg);
 		byte[][] workArray = (byte[][]) foregroundParticles[0];
 		int[][] particleLabels = (int[][]) foregroundParticles[1];
-		long[] particleSizes = (long[]) foregroundParticles[2];
+		//index 0 is background particle's size...
+		long[] particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, fg);
 		
 		final int bg = ParticleCounter.BACK;
 		Object[] backgroundParticles = pc.getParticles(imp, workArray,
-				slicesPerChunk, bg);
+				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg);
 		particleLabels = (int[][]) backgroundParticles[1];
-		particleSizes = (long[]) backgroundParticles[2];
+		particleSizes = pc.getParticleSizes(particleLabels);
 		touchEdges(imp, workArray, particleLabels, particleSizes, bg);
 		particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, bg);
@@ -294,7 +296,7 @@ public class Purify implements PlugIn {
 		final int bg = ParticleCounter.BACK;
 		long maxVC = 0;
 		final int nPartSizes = particleSizes.length;
-		for (int i = 0; i < nPartSizes; i++) {
+		for (int i = 1; i < nPartSizes; i++) {
 			if (particleSizes[i] > maxVC) {
 				maxVC = particleSizes[i];
 			}
