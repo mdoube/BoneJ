@@ -22,6 +22,16 @@ import ij.IJ;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
+/**
+ * Ellipsoid fitting methods. Both rely on eigenvalue decomposition, which fails
+ * if the input matrix is singular. It is worth enclosing calls to yuryPetrov
+ * and liGriffiths in a try{FitEllipsoid.yuryPetrov} catch(RuntimeException
+ * re){} to gracefully handle cases where the methods cannot find a best-fit
+ * ellipsoid.
+ * 
+ * @author Michael Doube
+ * 
+ */
 public class FitEllipsoid {
 	/**
 	 * Calculate the best-fit ellipsoid by least squares. Currently broken;
@@ -115,9 +125,9 @@ public class FitEllipsoid {
 		v.setMatrix(6, 9, c, v2);
 		double[] ellipsoid = v.getColumnPackedCopy();
 		IJ.log("Ellipsoid equation: " + ellipsoid[0] + " x² + " + ellipsoid[1]
-				+ " y² + " + ellipsoid[2] + " z² + " + ellipsoid[3]
-				+ " 2yz + " + ellipsoid[4] + " 2xz + " + ellipsoid[5]
-				+ " 2xy + " + ellipsoid[6] + " 2x + " + ellipsoid[7] + " 2y + "
+				+ " y² + " + ellipsoid[2] + " z² + " + ellipsoid[3] + " 2yz + "
+				+ ellipsoid[4] + " 2xz + " + ellipsoid[5] + " 2xy + "
+				+ ellipsoid[6] + " 2x + " + ellipsoid[7] + " 2y + "
 				+ ellipsoid[8] + " 2z + " + ellipsoid[9] + " = 0");
 		return ellipsoid;
 	}
@@ -139,7 +149,8 @@ public class FitEllipsoid {
 	 * 
 	 * @param coOrdinates
 	 * @return result Object[] array containing the centre, radii, eigenvectors
-	 *         of the axes, the 9 variables of the ellipsoid equation and the EVD
+	 *         of the axes, the 9 variables of the ellipsoid equation and the
+	 *         EVD
 	 */
 	public static Object[] yuryPetrov(double[][] coOrdinates) {
 
