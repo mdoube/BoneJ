@@ -1218,7 +1218,7 @@ public class ParticleCounter implements PlugIn {
 		int[] newLabel = new int[nLabels];
 		int minLabel = 0;
 		// find the minimised labels
-		for (int i = 1; i < nLabels; i++) {
+		for (int i = 0; i < nLabels; i++) {
 			if (particleSizes[i] > 0) {
 				if (i == minLabel) {
 					newLabel[i] = i;
