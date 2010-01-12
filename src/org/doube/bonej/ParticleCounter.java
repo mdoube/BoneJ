@@ -244,6 +244,9 @@ public class ParticleCounter implements PlugIn {
 					rt.addValue("I1", E.getD().get(2, 2));
 					rt.addValue("I2", E.getD().get(1, 1));
 					rt.addValue("I3", E.getD().get(0, 0));
+					rt.addValue("vX", E.getV().get(0, 2));
+					rt.addValue("vY", E.getV().get(1, 2));
+					rt.addValue("vZ", E.getV().get(2, 2));
 				}
 				if (doEulerCharacters) {
 					rt.addValue("Euler (χ)", eulerCharacters[i][0]);
