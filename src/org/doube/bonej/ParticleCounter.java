@@ -1174,33 +1174,49 @@ public class ParticleCounter implements PlugIn {
 	}
 
 	/**
-	 * Get rid of redundant particle labels
+	 * Gets rid of redundant particle labels
 	 * 
 	 * @param particleLabels
 	 * @return
 	 */
 	private void minimiseLabels(int[][] particleLabels) {
+		IJ.showStatus("Minimising labels...");
 		final int d = particleLabels.length;
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nLabels = particleSizes.length;
-		int minLabel = 1;
+		int[] newLabel = new int[nLabels];
+		int minLabel = 0;
+		//find the minimised labels
 		for (int i = 1; i < nLabels; i++) {
 			if (particleSizes[i] > 0) {
 				if (i == minLabel) {
+					newLabel[i] = i;
 					minLabel++;
 					continue;
 				} else {
+					newLabel[i] = minLabel;
 					particleSizes[minLabel] = particleSizes[i];
 					particleSizes[i] = 0;
-					replaceLabel(particleLabels, i, minLabel, 0, d);
 					minLabel++;
 				}
 			}
 		}
+		//now replace labels
+		final int wh = particleLabels[0].length;
+		for (int z = 0; z < d; z++){
+			IJ.showProgress(z, d);
+			for (int i = 0; i < wh; i++){
+				final int p = particleLabels[z][i];
+				if (p > 0){
+					particleLabels[z][i] = newLabel[p];
+				}
+			}
+		}
+		return;
 	}
 
 	/**
-	 * Get number of chunks needed to divide a stack into evenly-sized sets of
+	 * Gets number of chunks needed to divide a stack into evenly-sized sets of
 	 * slices.
 	 * 
 	 * @param imp
