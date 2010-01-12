@@ -310,11 +310,16 @@ public class ParticleCounter implements PlugIn {
 			if (do3DOriginal) {
 				display3DOriginal(imp, origResampling);
 			}
-			if (univ.contains(imp.getTitle())) {
-				Content c = univ.getContent(imp.getTitle());
-				univ.adjustView(c);
+			try {
+				if (univ.contains(imp.getTitle())) {
+					Content c = univ.getContent(imp.getTitle());
+					univ.adjustView(c);
+				}
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
 			}
 		}
+		IJ.showProgress(1.0);
 		IJ.showStatus("Particle Analysis Complete");
 		return;
 	}
@@ -369,7 +374,12 @@ public class ParticleCounter implements PlugIn {
 			float blue = 1.0f;
 			Color3f cColour = new Color3f(red, green, blue);
 			mesh.setColor(cColour);
-			univ.addCustomMesh(mesh, "Ellipsoid " + el).setLocked(true);
+			try {
+				univ.addCustomMesh(mesh, "Ellipsoid " + el).setLocked(true);
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
+				return;
+			}
 			// Add some axes
 			displayAxes(centre, eV, radii, 1.0f, 1.0f, 0.0f, "Ellipsoid Axes "
 					+ el);
@@ -665,8 +675,13 @@ public class ParticleCounter implements PlugIn {
 	private void display3DOriginal(ImagePlus imp, int resampling) {
 		Color3f colour = new Color3f(1.0f, 1.0f, 1.0f);
 		boolean[] channels = { true, true, true };
-		univ.addVoltex(imp, colour, imp.getTitle(), 0, channels, resampling)
-				.setLocked(true);
+		try {
+			univ
+					.addVoltex(imp, colour, imp.getTitle(), 0, channels,
+							resampling).setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+		}
 		return;
 	}
 
@@ -751,7 +766,12 @@ public class ParticleCounter implements PlugIn {
 		mesh.add(end3);
 
 		Color3f aColour = new Color3f(red, green, blue);
-		univ.addLineMesh(mesh, aColour, title, false).setLocked(true);
+		try {
+			univ.addLineMesh(mesh, aColour, title, false).setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
 	}
 
 	/**
@@ -777,7 +797,12 @@ public class ParticleCounter implements PlugIn {
 			float blue = 1.0f;
 			Color3f cColour = new Color3f(red, green, blue);
 			mesh.setColor(cColour);
-			univ.addCustomMesh(mesh, "Centroid " + p).setLocked(true);
+			try {
+				univ.addCustomMesh(mesh, "Centroid " + p).setLocked(true);
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
+				return;
+			}
 		}
 		return;
 	}
@@ -808,8 +833,13 @@ public class ParticleCounter implements PlugIn {
 				float blue = (float) p / (2.0f * (float) nParticles);
 				Color3f pColour = new Color3f(red, green, blue);
 				// Add the mesh
-				univ.addTriangleMesh(points, pColour, "Surface " + p)
-						.setLocked(true);
+				try {
+					univ.addTriangleMesh(points, pColour, "Surface " + p)
+							.setLocked(true);
+				} catch (NullPointerException npe) {
+					IJ.log("3D Viewer was closed before rendering completed.");
+					return;
+				}
 			}
 			p++;
 		}
@@ -1127,7 +1157,8 @@ public class ParticleCounter implements PlugIn {
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		minimiseLabels(particleLabels);
-		Object[] result = { workArray, particleLabels };
+		long[] particleSizes = getParticleSizes(particleLabels);
+		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
 	}
 
@@ -1186,7 +1217,7 @@ public class ParticleCounter implements PlugIn {
 		final int nLabels = particleSizes.length;
 		int[] newLabel = new int[nLabels];
 		int minLabel = 0;
-		//find the minimised labels
+		// find the minimised labels
 		for (int i = 1; i < nLabels; i++) {
 			if (particleSizes[i] > 0) {
 				if (i == minLabel) {
@@ -1201,13 +1232,13 @@ public class ParticleCounter implements PlugIn {
 				}
 			}
 		}
-		//now replace labels
+		// now replace labels
 		final int wh = particleLabels[0].length;
-		for (int z = 0; z < d; z++){
+		for (int z = 0; z < d; z++) {
 			IJ.showProgress(z, d);
-			for (int i = 0; i < wh; i++){
+			for (int i = 0; i < wh; i++) {
 				final int p = particleLabels[z][i];
-				if (p > 0){
+				if (p > 0) {
 					particleLabels[z][i] = newLabel[p];
 				}
 			}
