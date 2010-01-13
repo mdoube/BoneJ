@@ -93,7 +93,17 @@ public class Fit_Sphere implements PlugIn {
 		final double cropFactor = gd.getNextNumber();
 
 		final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
-		double[] sphereDim = FitSphere.fitSphere(points);
+		double[] sphereDim = new double[4];
+		try {
+			sphereDim = FitSphere.fitSphere(points);
+		} catch (IllegalArgumentException ia) {
+			IJ.showMessage(ia.getMessage());
+			return;
+		} catch (RuntimeException re) {
+			IJ.showMessage("Can't fit sphere to points.\n"
+					+ "Add more point ROI's to the ROI Manager and try again.");
+			return;
+		}
 
 		String units = imp.getCalibration().getUnits();
 		ResultInserter ri = ResultInserter.getInstance();

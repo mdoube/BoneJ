@@ -18,8 +18,6 @@ package org.doube.geometry;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import ij.IJ;
-
 import org.doube.jama.Matrix;
 
 /**
@@ -45,12 +43,11 @@ public class FitSphere {
 	public static double[] fitSphere(double[][] points) {
 		final int nPoints = points.length;
 		if (nPoints < 5) {
-			IJ.error("Too few points to calculate a sphere");
-			double[] error = { -1, -1, -1, -1 };
-			return error;
+			throw new IllegalArgumentException(
+					"Too few points to fit sphere; n = " + nPoints);
 		}
-		final double[] centroid = Centroid.getCentroid(points); 
-		
+		final double[] centroid = Centroid.getCentroid(points);
+
 		double x = centroid[0];
 		double y = centroid[1];
 		double z = centroid[2];

@@ -141,7 +141,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		minT = gd.getNextNumber();
 		maxT = gd.getNextNumber();
 		final boolean doCurvature = gd.getNextBoolean();
-			
+
 		final double min = cal.getRawValue(minT);
 		final double max = cal.getRawValue(maxT);
 
@@ -154,7 +154,17 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			return;
 		} else {
 			double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
-			this.headCentre = FitSphere.fitSphere(points);
+			try {
+				this.headCentre = FitSphere.fitSphere(points);
+			} catch (IllegalArgumentException ia) {
+				IJ.showMessage(ia.getMessage());
+				return;
+			} catch (RuntimeException re) {
+				IJ
+						.showMessage("Can't fit sphere to points.\n"
+								+ "Add more point ROI's to the ROI Manager and try again.");
+				return;
+			}
 		}
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
@@ -222,8 +232,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		// projectionPlane is the cross product of cHVec and shaftVector
 		double[][] projectionPlane = crossProduct(cHVec, shaftVector);
 
-		d = Trig.distance3D(projectionPlane[0][0],
-				projectionPlane[1][0], projectionPlane[2][0]);
+		d = Trig.distance3D(projectionPlane[0][0], projectionPlane[1][0],
+				projectionPlane[2][0]);
 		projectionPlane[0][0] /= d;
 		projectionPlane[1][0] /= d;
 		projectionPlane[2][0] /= d;
@@ -497,8 +507,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 				// regression)
 				// as per equation 3
 				double t = -1
-						* Trig.distance3D(x1x - x0x, x1y - x0y, x1z
-								- x0z, x2x - x1x, x2y - x1y, x2z - x1z);
+						* Trig.distance3D(x1x - x0x, x1y - x0y, x1z - x0z, x2x
+								- x1x, x2y - x1y, x2z - x1z);
 
 				// So now the intersection point x3 of the perpendicular is
 				// known
