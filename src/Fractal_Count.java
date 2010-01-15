@@ -1,6 +1,5 @@
 import ij.IJ;
 import ij.ImagePlus;
-import ij.gui.Plot;
 import ij.gui.PlotWindow;
 import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
@@ -34,7 +33,6 @@ import org.doube.util.ResultInserter;
 
 public class Fractal_Count implements PlugIn {
 
-	ImagePlus imRef;
 	boolean noGo = false;
 	final int autoDiv = 4;
 
@@ -52,13 +50,13 @@ public class Fractal_Count implements PlugIn {
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
-		this.imRef = IJ.getImage();
-		if (null == this.imRef) {
+		ImagePlus imp = IJ.getImage();
+		if (null == imp) {
 			IJ.noImage();
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(this.imRef)) {
+		if (!ic.isBinary(imp)) {
 			IJ.showMessage("Fractal Count requires a binary image.");
 			return;
 		}
@@ -66,16 +64,9 @@ public class Fractal_Count implements PlugIn {
 			return;
 		try {
 			// Fetch data
-			final int width = this.imRef.getWidth();
-			final int height = this.imRef.getHeight();
-			final int depth = imRef.getStackSize();
-
-			if (width <= 0 || height <= 0 || depth <= 0) {
-				IJ.log("\nNo black pixels in image. Dimension not defined."
-						+ "\nThis can be caused by an empty image or a"
-						+ "\n wrong threshold value.");
-				return;
-			}
+			final int width = imp.getWidth();
+			final int height = imp.getHeight();
+			final int depth = imp.getStackSize();
 
 			if (autoParam) {
 				maxBox = Math.max(width, Math.max(height, depth)) / autoDiv;
@@ -175,7 +166,7 @@ public class Fractal_Count implements PlugIn {
 													// If pixel inside region,
 													// count it
 
-													if ((0xff & ((byte[]) imRef
+													if ((0xff & ((byte[]) imp
 															.getStack()
 															.getPixels(zPos + 1))[xPos
 															+ yPart]) >= threshold) {
@@ -234,15 +225,15 @@ public class Fractal_Count implements PlugIn {
 			double RSq = cf.getRSquared();
 
 			if (verboseOutput) {
-				IJ.log(imRef.getTitle() + ": Dimension estimate: "
+				IJ.log(imp.getTitle() + ": Dimension estimate: "
 						+ IJ.d2s(p[1], 4) + ": R²: " + RSq
 						+ ": Settings: " + maxBox + ":" + minBox + ":" + divBox
 						+ ":" + numOffsets);
 			}
 
 			ResultInserter ri = ResultInserter.getInstance();
-			ri.setResultInRow(this.imRef, "Fractal Dimension", p[1]);
-			ri.setResultInRow(this.imRef, "R²", RSq);
+			ri.setResultInRow(imp, "Fractal Dimension", p[1]);
+			ri.setResultInRow(imp, "R²", RSq);
 			ri.updateTable();
 
 			if (plotGraph && !Interpreter.isBatchMode()) {
@@ -252,9 +243,6 @@ public class Fractal_Count implements PlugIn {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		if (imRef != null)
-			imRef.unlock();
 	}
 
 	public void drawGraph(double[] params, double[] boxSizes,
