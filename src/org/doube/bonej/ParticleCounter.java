@@ -21,11 +21,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
 import org.doube.geometry.FitEllipsoid;
+import org.doube.geometry.Trig;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 import org.doube.util.ImageCheck;
@@ -123,6 +125,7 @@ public class ParticleCounter implements PlugIn {
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
 		gd.addCheckbox("Surface_area", true);
+		gd.addCheckbox("Feret diameter", true);
 		gd.addCheckbox("Enclosed_volume", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
@@ -148,6 +151,7 @@ public class ParticleCounter implements PlugIn {
 		final double minVol = gd.getNextNumber();
 		final double maxVol = gd.getNextNumber();
 		final boolean doSurfaceArea = gd.getNextBoolean();
+		final boolean doFeret = gd.getNextBoolean();
 		final boolean doSurfaceVolume = gd.getNextBoolean();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean doMoments = gd.getNextBoolean();
@@ -177,8 +181,8 @@ public class ParticleCounter implements PlugIn {
 
 		// set up resources for analysis
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
-		if (doSurfaceArea || doSurfaceVolume || doSurfaceImage || doEllipsoids) {
-			// or anything else that needs surface points
+		if (doSurfaceArea || doSurfaceVolume || doSurfaceImage || doEllipsoids
+				|| doFeret) {
 			surfacePoints = getSurfacePoints(imp, particleLabels, limits,
 					resampling, nParticles);
 		}
@@ -190,6 +194,10 @@ public class ParticleCounter implements PlugIn {
 		double[] surfaceAreas = new double[nParticles];
 		if (doSurfaceArea) {
 			surfaceAreas = getSurfaceArea(surfacePoints);
+		}
+		double[] ferets = new double[nParticles];
+		if (doFeret) {
+			ferets = getFerets(surfacePoints);
 		}
 		double[] surfaceVolumes = new double[nParticles];
 		if (doSurfaceVolume) {
@@ -234,6 +242,9 @@ public class ParticleCounter implements PlugIn {
 				rt.addValue("z Cent (" + units + ")", centroids[i][2]);
 				if (doSurfaceArea) {
 					rt.addValue("SA (" + units + "²)", surfaceAreas[i]);
+				}
+				if (doFeret) {
+					rt.addValue("Feret (" + units + ")", ferets[i]);
 				}
 				if (doSurfaceVolume) {
 					rt.addValue("Encl. Vol. (" + units + "³)",
@@ -913,6 +924,46 @@ public class ParticleCounter implements PlugIn {
 			}
 		}
 		return surfacePoints;
+	}
+
+	/**
+	 * Get the Feret diameter of a surface. Uses an inefficient brute-force
+	 * algorithm.
+	 * 
+	 * @param particleSurfaces
+	 * @return
+	 */
+	private double[] getFerets(ArrayList<List<Point3f>> particleSurfaces) {
+		int nParticles = particleSurfaces.size();
+		double[] ferets = new double[nParticles];
+		ListIterator<List<Point3f>> it = particleSurfaces.listIterator();
+		int i = 0;
+		Point3f a;
+		Point3f b;
+		List<Point3f> surface;
+		ListIterator<Point3f> ita;
+		ListIterator<Point3f> itb;
+		while (it.hasNext()) {
+			IJ.showStatus("Finding Feret diameter...");
+			IJ.showProgress(it.nextIndex(), nParticles);
+			surface = it.next();
+			if (surface == null) {
+				ferets[i] = Double.NaN;
+				i++;
+				continue;
+			}
+			ita = surface.listIterator();
+			while (ita.hasNext()) {
+				a = ita.next();
+				itb = surface.listIterator(ita.nextIndex());
+				while (itb.hasNext()) {
+					b = itb.next();
+					ferets[i] = Math.max(ferets[i], Trig.distance3D(a, b));
+				}
+			}
+			i++;
+		}
+		return ferets;
 	}
 
 	/**
