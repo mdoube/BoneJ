@@ -1,5 +1,7 @@
 package org.doube.geometry;
 
+import javax.vecmath.Point3f;
+
 public class Trig {
 
 	/**
@@ -61,8 +63,21 @@ public class Trig {
 	public static double distance3D(double x, double y, double z) {
 		return distance3D(x, y, z, 0, 0, 0);
 	}
-	
-	public static double distance3D(double[] v){
+
+	public static double distance3D(double[] v) {
 		return distance3D(v[0], v[1], v[2], 0, 0, 0);
+	}
+
+	/**
+	 * Calculate the distance between two Point3f 3D points.
+	 * 
+	 * @param p
+	 *            First point
+	 * @param q
+	 *            Second point
+	 * @return distance between the points
+	 */
+	public static double distance3D(Point3f p, Point3f q) {
+		return distance3D(p.x, p.y, p.z, q.x, q.y, q.z);
 	}
 }
