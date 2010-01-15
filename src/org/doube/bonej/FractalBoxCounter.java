@@ -1,3 +1,4 @@
+package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.PlotWindow;
@@ -31,7 +32,7 @@ import org.doube.util.ResultInserter;
  * 
  */
 
-public class Fractal_Count implements PlugIn {
+public class FractalBoxCounter implements PlugIn {
 
 	boolean noGo = false;
 	final int autoDiv = 4;
