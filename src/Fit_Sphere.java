@@ -63,8 +63,9 @@ public class Fit_Sphere implements PlugIn {
 		}
 		if (!ic.isVoxelIsotropic(imp, 0.05)) {
 			if (!IJ.showMessageWithCancel("Voxel depth problem",
-					"Voxels are anisotropic." + "\nWidth = " + imp.pixelWidth
-							+ "\nHeight = " + imp.pixelWidth + "\nDepth = "
+					"Voxels are anisotropic." + "\nWidth = "
+							+ imp.getCalibration().pixelWidth + "\nHeight = "
+							+ imp.getCalibration().pixelWidth + "\nDepth = "
 							+ imp.getCalibration().pixelDepth
 							+ "\nClick OK if voxel dimensions are correct.")) {
 				imp.unlock();
