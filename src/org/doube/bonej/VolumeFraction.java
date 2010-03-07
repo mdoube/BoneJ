@@ -1,3 +1,4 @@
+package org.doube.bonej;
 import java.awt.Rectangle;
 
 import org.doube.util.ImageCheck;
@@ -11,7 +12,7 @@ import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.gui.*;
 
-public class Volume_Fraction implements PlugIn {
+public class VolumeFraction implements PlugIn {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -21,6 +22,37 @@ public class Volume_Fraction implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+
+		final double[] thresholds = setThreshold(imp);
+		final double minT = thresholds[0];
+		final double maxT = thresholds[1];
+		double[] volumes = getVolumes(imp, minT, maxT);
+		double volBone = volumes[0];
+		double volTotal = volumes[1];
+		double p = volBone / volTotal;
+		Calibration cal = imp.getCalibration();
+
+		ResultInserter ri = ResultInserter.getInstance();
+		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "³)", volBone);
+		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "³)", volTotal);
+		ri.setResultInRow(imp, "BV/TV", p);
+		ri.updateTable();
+		return;
+	}
+
+	/**
+	 * Get the total and thresholded volumes of a masked area
+	 * 
+	 * @param imp
+	 *            Image
+	 * @param minT
+	 *            minimum threshold (inclusive)
+	 * @param maxT
+	 *            maximum threshold (inclusive)
+	 * @return double[2] containing the foreground and total volumes
+	 * 
+	 */
+	public double[] getVolumes(ImagePlus imp, double minT, double maxT) {
 		ImageProcessor ip = imp.getProcessor();
 		final ImageStack stack = imp.getImageStack();
 		final ImageProcessor mask = ip.getMask();
@@ -34,9 +66,6 @@ public class Volume_Fraction implements PlugIn {
 
 		long volTotal = 0;
 		long volBone = 0;
-		final double[] thresholds = setThreshold(imp);
-		final double minT = thresholds[0];
-		final double maxT = thresholds[1];
 		for (int s = 1; s <= nSlices; s++) {
 			ImageProcessor ipSlice = stack.getProcessor(s);
 			for (int v = rTop; v < rBottom; v++) {
@@ -52,17 +81,10 @@ public class Volume_Fraction implements PlugIn {
 				}
 			}
 		}
-		double p = (double) volBone / (double) volTotal;
 		Calibration cal = imp.getCalibration();
 		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
-		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "³)", volBone
-				* voxelVol);
-		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "³)", volTotal
-				* voxelVol);
-		ri.setResultInRow(imp, "BV/TV", p);
-		ri.updateTable();
-		return;
+		double[] volumes = { volBone * voxelVol, volTotal * voxelVol };
+		return volumes;
 	}
 
 	private double[] setThreshold(ImagePlus imp) {
