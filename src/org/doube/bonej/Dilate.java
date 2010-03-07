@@ -93,8 +93,10 @@ public class Dilate implements PlugIn {
 			stack.addSlice(image.getImageStack().getSliceLabel(z + 1),
 					new ByteProcessor(w, h, this.pixels_out[z], cm));
 		}
-		image.setStack(null, stack);
-		return image;
+		ImagePlus imp = new ImagePlus();
+		imp.setCalibration(image.getCalibration());
+		imp.setStack(null, stack);
+		return imp;
 	}
 
 	public int get(int x, int y, int z) {
