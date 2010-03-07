@@ -52,11 +52,12 @@ public class StructureModelIndex implements PlugIn {
 	}
 
 	/**
-	 * <p>Calculate the SMI according to the SkyScan technical manual:
-	 * Take the voxel volume (v), make a surface mesh,
-	 * get the surface area (s<sub>1</sub>), dilate the voxel model,
-	 * get the new surface area (s<sub>2</sub>), calculate SMI as <br/>
-	 * smi = (s<sub>2</sub>-s<sub>1</sub>)*v / s<sub>1<sup>2</sup>
+	 * <p>
+	 * Calculate the SMI according to the SkyScan technical manual: make a
+	 * surface mesh, get the surface area (s<sub>1</sub>) and volume (v), dilate
+	 * the voxel model, get the new surface area (s<sub>2</sub>), calculate SMI
+	 * as <br/>
+	 * smi = 6 * (s<sub>2</sub>-s<sub>1</sub>)*v / s<sub>1</sub><sup>2</sup>
 	 * </p>
 	 * 
 	 * @param imp
@@ -70,8 +71,8 @@ public class StructureModelIndex implements PlugIn {
 		List<Point3f> points = mct.getTriangles(imp, threshold, channels,
 				resamplingF);
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
-		CustomTriangleMesh surface = new CustomTriangleMesh(points,
-				colour, 0.0f);
+		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
+				0.0f);
 		double v = surface.getVolume();
 
 		double s1 = MeasureSurface.getSurfaceArea(points);
