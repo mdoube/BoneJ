@@ -88,23 +88,29 @@ public class StructureModelIndex implements PlugIn {
 	public static double skyScan(ImagePlus imp) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
-		int resamplingF = 2;
+		int resamplingF = 6;
 		MCTriangulator mct = new MCTriangulator();
+		IJ.showStatus("Finding surface points...");
 		List<Point3f> points = mct.getTriangles(imp, threshold, channels,
 				resamplingF);
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
+		IJ.showStatus("Creating surface mesh...");
 		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
 				0.0f);
+		IJ.showStatus("Calculating volume...");
 		double v = surface.getVolume();
 
 		double s1 = MeasureSurface.getSurfaceArea(points);
 
+		IJ.showStatus("Dilating voxel model...");
 		Dilate d = new Dilate();
 		ImagePlus imp2 = d.dilate(imp, 255);
 
+		IJ.showStatus("Finding surface points...");
 		points = mct.getTriangles(imp2, threshold, channels, resamplingF);
 		double s2 = MeasureSurface.getSurfaceArea(points);
 		double smi = 6 * ((s2 - s1) * v / (s1 * s1));
+		IJ.showStatus("SMI calculated.");
 		return smi;
 	}
 }
