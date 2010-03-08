@@ -1,5 +1,22 @@
 package org.doube.bonej;
 
+/**
+ *  StructureModelIndex Copyright 2010 Michael Doube
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.util.List;
 
 import javax.vecmath.Color3f;
@@ -61,8 +78,13 @@ public class StructureModelIndex implements PlugIn {
 	 * </p>
 	 * 
 	 * @param imp
-	 * @return
+	 *            binary ImagePlus
+	 * @return SMI. This is 0 for a plate, 3 for a rod and 4 for a sphere. SMI
+	 *         can be negative if the structure contains many concave surfaces.
+	 * @see <a href="http://www.skyscan.be/products/downloads.htm">The
+	 *      description of measured parameters</a>
 	 */
+	@SuppressWarnings("unchecked")
 	public static double skyScan(ImagePlus imp) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
