@@ -121,10 +121,6 @@ public class Slice_Geometry implements PlugIn {
 	private double[] Zmax;
 	/** Section modulus around minimum principal axis */
 	private double[] Zmin;
-	/** Alternative calculation of Imax */
-	private double[] ImaxFast;
-	/** Alternative calculation of Imin */
-	private double[] IminFast;
 	/** Maximum diameter */
 	private double[] feretMax;
 	/** Angle of maximum diameter */
@@ -367,8 +363,6 @@ public class Slice_Geometry implements PlugIn {
 		this.maxRadMax = new double[this.al];
 		this.Zmax = new double[this.al];
 		this.Zmin = new double[this.al];
-		this.ImaxFast = new double[this.al];
-		this.IminFast = new double[this.al];
 		for (int s = 1; s <= d; s++) {
 			IJ.showStatus("Calculating Imin and Imax...");
 			IJ.showProgress(s, d);
@@ -423,12 +417,6 @@ public class Slice_Geometry implements PlugIn {
 				this.R2[s] = Math.sqrt(this.Imax[s] / cS);
 				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];
 				this.Zmin[s] = this.Imin[s] / this.maxRadMax[s];
-				final double a = (this.Mxx[s] + this.Myy[s]) / 2;
-				final double b = Math.sqrt((this.Mxx[s] - this.Myy[s])
-						* (this.Mxx[s] - this.Myy[s]) / 4 + this.Mxy[s]
-						* this.Mxy[s]);
-				this.ImaxFast[s] = a + b;
-				this.IminFast[s] = a - b;
 			} else {
 				this.Imax[s] = Double.NaN;
 				this.Imin[s] = Double.NaN;
@@ -439,8 +427,6 @@ public class Slice_Geometry implements PlugIn {
 				this.maxRadMax[s] = Double.NaN;
 				this.Zmax[s] = Double.NaN;
 				this.Zmin[s] = Double.NaN;
-				this.ImaxFast[s] = Double.NaN;
-				this.IminFast[s] = Double.NaN;
 			}
 		}
 		return;
@@ -462,7 +448,7 @@ public class Slice_Geometry implements PlugIn {
 		ImagePlus binaryImp = convertToBinary(imp);
 
 		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
-		
+
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			FloatProcessor ip = (FloatProcessor) thickImp.getStack()
 					.getProcessor(s);
@@ -645,7 +631,8 @@ public class Slice_Geometry implements PlugIn {
 
 		double[] coeff = this.cal.getCoefficients();
 		if (!this.cal.calibrated() || this.cal == null
-				|| (this.cal.getCValue(0) == 0 && coeff[1] == 1)) {
+				|| (this.cal.getCValue(0) == 0 && coeff[1] == 1)
+				|| (this.cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1)) {
 			this.isHUCalibrated = false;
 			this.calString = "Image is uncalibrated\nEnter bone threshold values";
 			// set some sensible thresholding defaults
@@ -661,7 +648,7 @@ public class Slice_Geometry implements PlugIn {
 			}
 			this.min = imp.getProcessor().getAutoThreshold(histogram);
 			this.max = histoMax;
-			if (this.cal.isSigned16Bit()) {
+			if (this.cal.isSigned16Bit() && this.cal.getCValue(0) == 0) {
 				this.min += Short.MIN_VALUE;
 				this.max += Short.MIN_VALUE;
 			}
@@ -669,7 +656,7 @@ public class Slice_Geometry implements PlugIn {
 		} else {
 			this.isHUCalibrated = true;
 			this.calString = "Image has Hounsfield calibration.\nEnter bone HU below:";
-			// default bone thresholds are 0- and 4000 HU
+			// default bone thresholds are 0 and 4000 HU
 			this.min = Slice_Geometry.airHU + 1000;
 			this.max = Slice_Geometry.airHU + 5000;
 		}
@@ -750,9 +737,7 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("R1 (" + units + ")", this.R1[s]);
 			rt.addValue("R2 (" + units + ")", this.R2[s]);
 			rt.addValue("Imin (" + units + "^4)", this.Imin[s] * unit4);
-			rt.addValue("IminFast (" + units + "^4)", this.IminFast[s] * unit4);
 			rt.addValue("Imax (" + units + "^4)", this.Imax[s] * unit4);
-			rt.addValue("ImaxFast (" + units + "^4)", this.ImaxFast[s] * unit4);
 			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
 			rt.addValue("Zmax (" + units + "³)", this.Zmax[s] * unit3);
 			rt.addValue("Zmin (" + units + "³)", this.Zmin[s] * unit3);
