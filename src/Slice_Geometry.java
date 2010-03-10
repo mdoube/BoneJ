@@ -450,6 +450,12 @@ public class Slice_Geometry implements PlugIn {
 		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
 
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			if (this.emptySlices[s]) {
+				this.maxCortThick3D[s] = Double.NaN;
+				this.meanCortThick3D[s] = Double.NaN;
+				this.stdevCortThick3D[s] = Double.NaN;
+				continue;
+			}
 			FloatProcessor ip = (FloatProcessor) thickImp.getStack()
 					.getProcessor(s);
 			double sumPix = 0;
@@ -469,10 +475,7 @@ public class Slice_Geometry implements PlugIn {
 			}
 			final double sliceMean = sumPix / pixCount;
 			this.meanCortThick3D[s] = sliceMean;
-			if (pixCount > 0)
-				this.maxCortThick3D[s] = sliceMax;
-			else
-				this.maxCortThick3D[s] = Double.NaN;
+			this.maxCortThick3D[s] = sliceMax;
 
 			double sumSquares = 0;
 			for (int y = r.y; y < roiYEnd; y++) {
@@ -504,7 +507,8 @@ public class Slice_Geometry implements PlugIn {
 		for (int thread = 0; thread < nThreads; thread++) {
 			sliceThread[thread] = new SliceThread(thread, nThreads, imp,
 					this.meanCortThick2D, this.maxCortThick2D,
-					this.stdevCortThick2D, this.startSlice, this.endSlice);
+					this.stdevCortThick2D, this.startSlice, this.endSlice,
+					this.emptySlices);
 			sliceThread[thread].start();
 		}
 		try {
@@ -522,11 +526,13 @@ public class Slice_Geometry implements PlugIn {
 
 		double[] meanThick, maxThick, stdevThick;
 
+		boolean[] emptySlices;
+
 		final ImagePlus impT;
 
 		public SliceThread(int thread, int nThreads, ImagePlus imp,
 				double[] meanThick, double[] maxThick, double[] stdevThick,
-				int startSlice, int endSlice) {
+				int startSlice, int endSlice, boolean[] emptySlices) {
 			this.impT = imp;
 			this.width = this.impT.getWidth();
 			this.height = this.impT.getHeight();
@@ -537,10 +543,17 @@ public class Slice_Geometry implements PlugIn {
 			this.stdevThick = stdevThick;
 			this.startSlice = startSlice;
 			this.endSlice = endSlice;
+			this.emptySlices = emptySlices;
 		}
 
 		public void run() {
 			for (int s = this.thread + this.startSlice; s <= this.endSlice; s += this.nThreads) {
+				if (this.emptySlices[s]) {
+					this.meanThick[s] = Double.NaN;
+					this.maxThick[s] = Double.NaN;
+					this.stdevThick[s] = Double.NaN;
+					continue;
+				}
 				ImageProcessor ip = impT.getImageStack().getProcessor(s);
 				ImagePlus sliceImp = new ImagePlus(" " + s, ip);
 				Rectangle r = ip.getRoi();
@@ -571,10 +584,7 @@ public class Slice_Geometry implements PlugIn {
 				}
 				final double sliceMean = sumPix / pixCount;
 				this.meanThick[s] = sliceMean;
-				if (pixCount > 0)
-					this.maxThick[s] = sliceMax;
-				else
-					this.maxThick[s] = Double.NaN;
+				this.maxThick[s] = sliceMax;
 
 				double sumSquares = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
