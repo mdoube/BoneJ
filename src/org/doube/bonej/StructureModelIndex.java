@@ -28,7 +28,6 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
-import ij3d.Image3DUniverse;
 import isosurface.MeshEditor;
 
 import marchingcubes.MCTriangulator;
@@ -148,12 +147,31 @@ public class StructureModelIndex implements PlugIn {
 		return smi;
 	}
 
+	/**
+	 * Calculate the structure model index according to the description by
+	 * Hildebrand and Rugsegger. Creates a surface model, dilates it by a small
+	 * increment and compares the areas before and after dilation.
+	 * 
+	 * @see <p>
+	 *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
+	 *      with the Structure Model Index. Comput Methods Biomech Biomed Engin
+	 *      1997;1(1):15-23. <a
+	 *      href="http://dx.doi.org/10.1080/01495739708936692">doi:
+	 *      10.1080/01495739708936692</a>
+	 *      </p>
+	 * 
+	 * @param imp
+	 * @param voxelResampling
+	 * @param meshSmoothing
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	public static double hildRug(ImagePlus imp, int voxelResampling,
 			float meshSmoothing) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
 		final double r = imp.getCalibration().pixelWidth / 100;
+		IJ.log("Dilation increment r is " + r);
 		MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
 		List<Point3f> triangles = mct.getTriangles(imp, threshold, channels,
@@ -166,11 +184,13 @@ public class StructureModelIndex implements PlugIn {
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
 		double v = surface.getVolume();
+		IJ.log("Original volume is " + v);
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 		IJ.log("Original surface area is " + s1);
 
 		// get all the unique vertices
+		IJ.showStatus("Finding unique vertices...");
 		ArrayList<Point3f> vertices = new ArrayList<Point3f>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
@@ -187,24 +207,19 @@ public class StructureModelIndex implements PlugIn {
 				vertices.add(testPoint);
 			}
 		}
+
 		// associate each unique vertex with the triangles around it
+		IJ.showStatus("Associating vertices with triangles...");
 		final int nVertices = vertices.size();
 		final int nTriangles = nPoints / 3;
-		IJ.log("nTriangles = " + nTriangles);
-		IJ.log("number of vertices = " + nVertices);
 		ArrayList<ArrayList<Integer>> trianglesAtVertex = new ArrayList<ArrayList<Integer>>(
 				nVertices);
 		for (int i = 0; i < nVertices; i++) {
 			Point3f vertex = vertices.get(i);
-			IJ.log("Vertex " + i + " at " + vertex.x + " : " + vertex.y + " : "
-					+ vertex.z);
 			ArrayList<Integer> tr = new ArrayList<Integer>();
 			for (int p = 0; p < nPoints; p++) {
 				Point3f testPoint = triangles.get(p);
 				if (vertex.equals(testPoint)) {
-					IJ.log("Matched vertex " + i + " to point " + p + " at "
-							+ testPoint.x + " : " + testPoint.y + " : "
-							+ testPoint.z);
 					tr.add(p);
 				}
 			}
@@ -213,6 +228,7 @@ public class StructureModelIndex implements PlugIn {
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
+		IJ.showStatus("Calculating vertex normals...");
 		Point3f[] triangleCentroids = new Point3f[nTriangles];
 		Point3f[] triangleNormals = new Point3f[nTriangles];
 		Hashtable hash = new Hashtable();
@@ -222,7 +238,6 @@ public class StructureModelIndex implements PlugIn {
 		}
 		for (int i = 0; i < nVertices; i++) {
 			final int vT = trianglesAtVertex.get(i).size();
-			IJ.log("Vertex: " + i + " with " + vT + " neighbouring triangles");
 			Point3f sumNormals = new Point3f();
 			for (int j = 0; j < vT; j++) {
 				final int pointIndex = trianglesAtVertex.get(i).get(j);
@@ -251,18 +266,6 @@ public class StructureModelIndex implements PlugIn {
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
 				sumNormals.z += surfaceNormal.z;
-
-				IJ.log("Triangle: " + j + " Normal: " + surfaceNormal.x + " : "
-						+ surfaceNormal.y + " : " + surfaceNormal.z);
-
-				// used for drawing graphical debug output
-				final int t = (int) Math.floor(pointIndex / 3);
-				triangleCentroids[t].x = (point0.x + point1.x + point2.x) / 3;
-				triangleCentroids[t].y = (point0.y + point1.y + point2.y) / 3;
-				triangleCentroids[t].z = (point0.z + point1.z + point2.z) / 3;
-				triangleNormals[t].x = surfaceNormal.x;
-				triangleNormals[t].y = surfaceNormal.y;
-				triangleNormals[t].z = surfaceNormal.z;
 			}
 
 			Point3f vertex = vertices.get(i);
@@ -282,6 +285,7 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		// move all the points by the unit normal * small increment r
+		IJ.showStatus("Dilating surface mesh...");
 		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
 			Point3f point = triangles.get(t);
@@ -292,67 +296,19 @@ public class StructureModelIndex implements PlugIn {
 			newPoint.z += normal.z * r;
 			movedTriangles.add(newPoint);
 		}
+
 		CustomTriangleMesh surface2 = new CustomTriangleMesh(movedTriangles,
 				colour, 0.0f);
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
-		IJ.showStatus("Calculating volume...");
 
 		double s2 = MeasureSurface.getSurfaceArea(surface2.getMesh());
 		IJ.log("Dilated surface area is " + s2);
 
-		// Add the mesh
-		Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
-		Color3f red = new Color3f(1.0f, 0.0f, 0.0f);
-		Color3f green = new Color3f(0.0f, 1.0f, 0.0f);
-		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
-		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
-		try {
-			univ.addTriangleMesh(triangles, green, "Original").setLocked(true);
-		} catch (NullPointerException npe) {
-			IJ.log("3D Viewer was closed before rendering completed.");
-		}
-		try {
-			univ.addTriangleMesh(movedTriangles, red, "Dilated")
-					.setLocked(true);
-		} catch (NullPointerException npe) {
-			IJ.log("3D Viewer was closed before rendering completed.");
-		}
-		for (int t = 0; t < nTriangles; t++) {
-			ArrayList<Point3f> mesh = new ArrayList<Point3f>(2);
-			mesh.add(triangleCentroids[t]);
-			Point3f tV = new Point3f();
-			tV.x = triangleCentroids[t].x + triangleNormals[t].x;
-			tV.y = triangleCentroids[t].y + triangleNormals[t].y;
-			tV.z = triangleCentroids[t].z + triangleNormals[t].z;
-			mesh.add(tV);
-			try {
-				univ.addLineMesh(mesh, blue, "Vector " + t, false).setLocked(
-						true);
-			} catch (NullPointerException npe) {
-				IJ.log("3D Viewer was closed before rendering completed.");
-			}
-		}
-		for (int i = 0; i < nVertices; i++) {
-			ArrayList<Point3f> mesh = new ArrayList<Point3f>(2);
-			Point3f vertex = vertices.get(i);
-			mesh.add(vertex);
-			Point3f vertexNormal = new Point3f();
-			Point3f normal = (Point3f) hash.get(vertex);
-			vertexNormal.x = vertex.x + normal.x;
-			vertexNormal.y = vertex.y + normal.y;
-			vertexNormal.z = vertex.z + normal.z;
-			mesh.add(vertexNormal);
-			try {
-				univ.addLineMesh(mesh, yellow, "Normal " + i, false).setLocked(
-						true);
-			} catch (NullPointerException npe) {
-				IJ.log("3D Viewer was closed before rendering completed.");
-			}
-		}
 		double sR = (s2 - s1) / r;
-		double smi = sR * v / (s1 * s1);
+		IJ.log("Approximate derivative is "+sR);
+		double smi = 6 * sR * v / (s1 * s1);
+		IJ.showStatus("SMI calculated.");
 		return smi;
 	}
 
