@@ -80,4 +80,16 @@ public class Trig {
 	public static double distance3D(Point3f p, Point3f q) {
 		return distance3D(p.x, p.y, p.z, q.x, q.y, q.z);
 	}
+
+	/**
+	 * Calculate the length of a Point3f vector, i.e. the distance from the
+	 * origin (0, 0, 0) to the point.
+	 * 
+	 * @param p
+	 *            A point in 3D
+	 * @return distance from the origina to the point
+	 */
+	public static double distance3D(Point3f p) {
+		return distance3D(0, 0, 0, p.x, p.y, p.z);
+	}
 }
