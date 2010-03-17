@@ -5,6 +5,8 @@ import java.util.List;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.Trig;
+import org.doube.geometry.VectorProducts;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -19,8 +21,8 @@ import marchingcubes.MCTriangulator;
 import customnode.CustomTriangleMesh;
 
 /**
- * Make a mesh from a binary or 8-bit image
- * and get surface area measurements from it.
+ * Make a mesh from a binary or 8-bit image and get surface area measurements
+ * from it.
  * 
  * @author Michael Doube
  * 
@@ -68,8 +70,8 @@ public class MeasureSurface implements PlugIn {
 
 		ResultInserter ri = ResultInserter.getInstance();
 		double area = getSurfaceArea(points);
-		ri.setResultInRow(imp,
-				"BS (" + imp.getCalibration().getUnits() + "²)", area);
+		ri.setResultInRow(imp, "BS (" + imp.getCalibration().getUnits() + "²)",
+				area);
 		ri.updateTable();
 
 		if (points.size() == 0) {
@@ -110,7 +112,8 @@ public class MeasureSurface implements PlugIn {
 	/**
 	 * Calculate surface area of the isosurface
 	 * 
-	 * @param points in 3D triangle mesh
+	 * @param points
+	 *            in 3D triangle mesh
 	 * @return surface area
 	 */
 	public static double getSurfaceArea(List<Point3f> points) {
@@ -125,22 +128,11 @@ public class MeasureSurface implements PlugIn {
 			// TODO reject triangle and continue if it is flush
 			// with a cut face / image side
 
-			final float x1 = point1.x - point0.x;
-			final float y1 = point1.y - point0.y;
-			final float z1 = point1.z - point0.z;
-
-			final float x2 = point2.x - point0.x;
-			final float y2 = point2.y - point0.y;
-			final float z2 = point2.z - point0.z;
-
 			// area of triangle is half magnitude
 			// of cross product of 2 edge vectors
+			Point3f cp = VectorProducts.crossProduct(point0, point1, point2);
 
-			final double x = y1 * z2 - z1 * y2;
-			final double y = z1 * x2 - x1 * z2;
-			final double z = x1 * y2 - y1 * x2;
-
-			final double deltaArea = 0.5 * Math.sqrt(x * x + y * y + z * z);
+			final double deltaArea = 0.5 * Trig.distance3D(cp);
 
 			sumArea += deltaArea;
 		}
