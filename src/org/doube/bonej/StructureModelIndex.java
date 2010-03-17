@@ -34,6 +34,7 @@ import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
 import org.doube.geometry.Trig;
+import org.doube.geometry.VectorProducts;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -56,6 +57,9 @@ import customnode.CustomTriangleMesh;
 public class StructureModelIndex implements PlugIn {
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion()) {
+			return;
+		}
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
@@ -68,6 +72,8 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		GenericDialog gd = new GenericDialog("Mesh Parameters");
+		String[] smiMethods = { "Hildebrand & Rüegsegger", "SkyScan" };
+		gd.addChoice("SMI Method", smiMethods, "Hildebrand & Rüegsegger");
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
 		gd.showDialog();
@@ -75,11 +81,16 @@ public class StructureModelIndex implements PlugIn {
 			return;
 		}
 
+		String smiMethod = gd.getNextChoice();
 		int voxelResampling = (int) Math.floor(gd.getNextNumber());
 		float meshSmoothing = (float) gd.getNextNumber();
 
-		// double smi = skyScan(imp, voxelResampling, meshSmoothing);
-		double smi = hildRug(imp, voxelResampling, meshSmoothing);
+		double smi = 0;
+		if (smiMethod.equals(smiMethods[0])) {
+			smi = hildRueg(imp, voxelResampling, meshSmoothing);
+		} else {
+			smi = skyScan(imp, voxelResampling, meshSmoothing);
+		}
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
@@ -148,9 +159,16 @@ public class StructureModelIndex implements PlugIn {
 	}
 
 	/**
+	 * <p>
 	 * Calculate the structure model index according to the description by
 	 * Hildebrand and Rugsegger. Creates a surface model, dilates it by a small
 	 * increment and compares the areas before and after dilation.
+	 * </p>
+	 * 
+	 * <p>
+	 * This method is preferred to voxel-dilating methods, like skyScan() in
+	 * this class
+	 * </p>
 	 * 
 	 * @see <p>
 	 *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
@@ -161,17 +179,19 @@ public class StructureModelIndex implements PlugIn {
 	 *      </p>
 	 * 
 	 * @param imp
+	 *            binary 3D image
 	 * @param voxelResampling
+	 *            how much to resample voxels while creatign surface mesh
 	 * @param meshSmoothing
-	 * @return
+	 *            how much smoothign to apply to the mesh
+	 * @return SMI
 	 */
 	@SuppressWarnings("unchecked")
-	public static double hildRug(ImagePlus imp, int voxelResampling,
+	public static double hildRueg(ImagePlus imp, int voxelResampling,
 			float meshSmoothing) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
 		final double r = imp.getCalibration().pixelWidth / 100;
-		IJ.log("Dilation increment r is " + r);
 		MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
 		List<Point3f> triangles = mct.getTriangles(imp, threshold, channels,
@@ -184,16 +204,15 @@ public class StructureModelIndex implements PlugIn {
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
 		double v = surface.getVolume();
-		IJ.log("Original volume is " + v);
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
-		IJ.log("Original surface area is " + s1);
 
 		// get all the unique vertices
-		IJ.showStatus("Finding unique vertices...");
 		ArrayList<Point3f> vertices = new ArrayList<Point3f>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
+			IJ.showStatus("Finding unique vertices...");
+			IJ.showProgress(p, nPoints);
 			Point3f testPoint = triangles.get(p);
 			final int uniquePoints = vertices.size();
 			boolean unique = true;
@@ -209,12 +228,13 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		// associate each unique vertex with the triangles around it
-		IJ.showStatus("Associating vertices with triangles...");
 		final int nVertices = vertices.size();
 		final int nTriangles = nPoints / 3;
 		ArrayList<ArrayList<Integer>> trianglesAtVertex = new ArrayList<ArrayList<Integer>>(
 				nVertices);
 		for (int i = 0; i < nVertices; i++) {
+			IJ.showStatus("Associating vertices with triangles...");
+			IJ.showProgress(i, nVertices);
 			Point3f vertex = vertices.get(i);
 			ArrayList<Integer> tr = new ArrayList<Integer>();
 			for (int p = 0; p < nPoints; p++) {
@@ -262,7 +282,8 @@ public class StructureModelIndex implements PlugIn {
 					point2 = triangles.get(pointIndex);
 					break;
 				}
-				Point3f surfaceNormal = crossProduct(point0, point1, point2);
+				Point3f surfaceNormal = VectorProducts.crossProduct(point0,
+						point1, point2);
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
 				sumNormals.z += surfaceNormal.z;
@@ -285,9 +306,10 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		// move all the points by the unit normal * small increment r
-		IJ.showStatus("Dilating surface mesh...");
 		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
+			IJ.showStatus("Dilating surface mesh...");
+			IJ.showProgress(t, nPoints);
 			Point3f point = triangles.get(t);
 			Point3f newPoint = (Point3f) point.clone();
 			Point3f normal = (Point3f) hash.get(point);
@@ -303,30 +325,9 @@ public class StructureModelIndex implements PlugIn {
 		MeshEditor.smooth(surface, meshSmoothing);
 
 		double s2 = MeasureSurface.getSurfaceArea(surface2.getMesh());
-		IJ.log("Dilated surface area is " + s2);
-
 		double sR = (s2 - s1) / r;
-		IJ.log("Approximate derivative is "+sR);
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
 		return smi;
-	}
-
-	private static Point3f crossProduct(Point3f point0, Point3f point1,
-			Point3f point2) {
-		final float x1 = point1.x - point0.x;
-		final float y1 = point1.y - point0.y;
-		final float z1 = point1.z - point0.z;
-
-		final float x2 = point2.x - point0.x;
-		final float y2 = point2.y - point0.y;
-		final float z2 = point2.z - point0.z;
-
-		Point3f crossVector = new Point3f();
-		crossVector.x = y1 * z2 - z1 * y2;
-		crossVector.y = z1 * x2 - x1 * z2;
-		crossVector.z = x1 * y2 - y1 * x2;
-
-		return crossVector;
 	}
 }
