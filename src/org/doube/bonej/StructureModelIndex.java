@@ -18,6 +18,7 @@ package org.doube.bonej;
  */
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -208,59 +209,39 @@ public class StructureModelIndex implements PlugIn {
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 
 		// get all the unique vertices
-		ArrayList<Point3f> vertices = new ArrayList<Point3f>();
+		// associate each unique vertex with the triangles around it
+		Hashtable vertexHash = new Hashtable();
+		ArrayList<Integer> locations = new ArrayList<Integer>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
 			IJ.showStatus("Finding unique vertices...");
 			IJ.showProgress(p, nPoints);
 			Point3f testPoint = triangles.get(p);
-			final int uniquePoints = vertices.size();
-			boolean unique = true;
-			for (int u = 0; u < uniquePoints; u++) {
-				if (testPoint.equals(vertices.get(u))) {
-					unique = false;
-					break;
-				}
+			if (vertexHash.get(testPoint) == null) {
+				ArrayList<Integer> points = new ArrayList<Integer>();
+				points.add(p);
+				vertexHash.put(testPoint, points);
+			} else {
+				locations = (ArrayList<Integer>) vertexHash.get(testPoint);
+				locations.add(p);
+				vertexHash.put(testPoint, locations);
 			}
-			if (unique) {
-				vertices.add(testPoint);
-			}
-		}
-
-		// associate each unique vertex with the triangles around it
-		final int nVertices = vertices.size();
-		final int nTriangles = nPoints / 3;
-		ArrayList<ArrayList<Integer>> trianglesAtVertex = new ArrayList<ArrayList<Integer>>(
-				nVertices);
-		for (int i = 0; i < nVertices; i++) {
-			IJ.showStatus("Associating vertices with triangles...");
-			IJ.showProgress(i, nVertices);
-			Point3f vertex = vertices.get(i);
-			ArrayList<Integer> tr = new ArrayList<Integer>();
-			for (int p = 0; p < nPoints; p++) {
-				Point3f testPoint = triangles.get(p);
-				if (vertex.equals(testPoint)) {
-					tr.add(p);
-				}
-			}
-			trianglesAtVertex.add(tr);
 		}
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
 		IJ.showStatus("Calculating vertex normals...");
-		Point3f[] triangleCentroids = new Point3f[nTriangles];
-		Point3f[] triangleNormals = new Point3f[nTriangles];
-		Hashtable hash = new Hashtable();
-		for (int i = 0; i < nTriangles; i++) {
-			triangleCentroids[i] = new Point3f();
-			triangleNormals[i] = new Point3f();
-		}
-		for (int i = 0; i < nVertices; i++) {
-			final int vT = trianglesAtVertex.get(i).size();
+		Hashtable normalsHash = new Hashtable();
+
+		Point3f vert = new Point3f();
+		Enumeration e = vertexHash.keys();
+		while (e.hasMoreElements()) {
+			vert = (Point3f) e.nextElement();
+			locations = (ArrayList<Integer>) vertexHash.get(vert);
 			Point3f sumNormals = new Point3f();
-			for (int j = 0; j < vT; j++) {
-				final int pointIndex = trianglesAtVertex.get(i).get(j);
+			final int vT = locations.size();
+			for (int i = 0; i < vT; i++) {
+				final int pointIndex = locations.get(i);
 				final int corner = pointIndex % 3;
 				Point3f point0 = new Point3f();
 				Point3f point1 = new Point3f();
@@ -289,8 +270,6 @@ public class StructureModelIndex implements PlugIn {
 				sumNormals.z += surfaceNormal.z;
 			}
 
-			Point3f vertex = vertices.get(i);
-
 			Point3f normal = new Point3f();
 			normal.x = sumNormals.x / vT;
 			normal.y = sumNormals.y / vT;
@@ -302,7 +281,7 @@ public class StructureModelIndex implements PlugIn {
 			normal.y /= length;
 			normal.z /= length;
 
-			hash.put(vertex, normal);
+			normalsHash.put(vert, normal);
 		}
 
 		// move all the points by the unit normal * small increment r
@@ -312,7 +291,7 @@ public class StructureModelIndex implements PlugIn {
 			IJ.showProgress(t, nPoints);
 			Point3f point = triangles.get(t);
 			Point3f newPoint = (Point3f) point.clone();
-			Point3f normal = (Point3f) hash.get(point);
+			Point3f normal = (Point3f) normalsHash.get(point);
 			newPoint.x += normal.x * r;
 			newPoint.y += normal.y * r;
 			newPoint.z += normal.z * r;
