@@ -34,7 +34,7 @@ import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
 import org.doube.geometry.Trig;
-import org.doube.geometry.VectorProducts;
+import org.doube.geometry.VectorProduct;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -282,7 +282,7 @@ public class StructureModelIndex implements PlugIn {
 					point2 = triangles.get(pointIndex);
 					break;
 				}
-				Point3f surfaceNormal = VectorProducts.crossProduct(point0,
+				Point3f surfaceNormal = VectorProduct.crossProduct(point0,
 						point1, point2);
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;

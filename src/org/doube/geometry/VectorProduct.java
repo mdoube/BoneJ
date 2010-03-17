@@ -2,7 +2,7 @@ package org.doube.geometry;
 
 import javax.vecmath.Point3f;
 
-public class VectorProducts {
+public class VectorProduct {
 	/**
 	 * Calculate the cross product of 3 Point3f's, which describe two vectors
 	 * joined at the tails. Can be used to find the plane / surface normal of a
