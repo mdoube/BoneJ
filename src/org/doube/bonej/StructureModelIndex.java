@@ -18,10 +18,9 @@ package org.doube.bonej;
  */
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
-import javax.media.j3d.Geometry;
-import javax.media.j3d.GeometryArray;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
@@ -35,6 +34,7 @@ import isosurface.MeshEditor;
 import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
+import org.doube.geometry.Trig;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -153,6 +153,7 @@ public class StructureModelIndex implements PlugIn {
 			float meshSmoothing) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
+		final double r = imp.getCalibration().pixelWidth / 100;
 		MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
 		List<Point3f> triangles = mct.getTriangles(imp, threshold, channels,
@@ -167,10 +168,7 @@ public class StructureModelIndex implements PlugIn {
 		double v = surface.getVolume();
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
-		IJ.log("Original surface area is "+s1);
-		GeometryArray ga = (GeometryArray) surface.getGeometry();
-		float[] normals = new float[ga.getVertexCount()];
-		ga.getNormals(0, normals);
+		IJ.log("Original surface area is " + s1);
 
 		// get all the unique vertices
 		ArrayList<Point3f> vertices = new ArrayList<Point3f>();
@@ -189,32 +187,42 @@ public class StructureModelIndex implements PlugIn {
 				vertices.add(testPoint);
 			}
 		}
-		IJ.log("number of vertices = " + vertices.size());
-
 		// associate each unique vertex with the triangles around it
 		final int nVertices = vertices.size();
-		ArrayList<ArrayList<Integer>> trianglesAtVertex = new ArrayList<ArrayList<Integer>>(nVertices);
-		ArrayList<Integer> emptyArrayList = new ArrayList<Integer>();
-		for (int i = 0; i < nVertices; i++){
-			trianglesAtVertex.add(emptyArrayList);
-		}
 		final int nTriangles = nPoints / 3;
 		IJ.log("nTriangles = " + nTriangles);
+		IJ.log("number of vertices = " + nVertices);
+		ArrayList<ArrayList<Integer>> trianglesAtVertex = new ArrayList<ArrayList<Integer>>(
+				nVertices);
 		for (int i = 0; i < nVertices; i++) {
 			Point3f vertex = vertices.get(i);
+			IJ.log("Vertex " + i + " at " + vertex.x + " : " + vertex.y + " : "
+					+ vertex.z);
+			ArrayList<Integer> tr = new ArrayList<Integer>();
 			for (int p = 0; p < nPoints; p++) {
 				Point3f testPoint = triangles.get(p);
 				if (vertex.equals(testPoint)) {
-					trianglesAtVertex.get(i).add(p);
+					IJ.log("Matched vertex " + i + " to point " + p + " at "
+							+ testPoint.x + " : " + testPoint.y + " : "
+							+ testPoint.z);
+					tr.add(p);
 				}
 			}
+			trianglesAtVertex.add(tr);
 		}
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
-		Point3f[] vertexNormals = new Point3f[nVertices];
+		Point3f[] triangleCentroids = new Point3f[nTriangles];
+		Point3f[] triangleNormals = new Point3f[nTriangles];
+		Hashtable hash = new Hashtable();
+		for (int i = 0; i < nTriangles; i++) {
+			triangleCentroids[i] = new Point3f();
+			triangleNormals[i] = new Point3f();
+		}
 		for (int i = 0; i < nVertices; i++) {
 			final int vT = trianglesAtVertex.get(i).size();
+			IJ.log("Vertex: " + i + " with " + vT + " neighbouring triangles");
 			Point3f sumNormals = new Point3f();
 			for (int j = 0; j < vT; j++) {
 				final int pointIndex = trianglesAtVertex.get(i).get(j);
@@ -243,55 +251,109 @@ public class StructureModelIndex implements PlugIn {
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
 				sumNormals.z += surfaceNormal.z;
+
+				IJ.log("Triangle: " + j + " Normal: " + surfaceNormal.x + " : "
+						+ surfaceNormal.y + " : " + surfaceNormal.z);
+
+				// used for drawing graphical debug output
+				final int t = (int) Math.floor(pointIndex / 3);
+				triangleCentroids[t].x = (point0.x + point1.x + point2.x) / 3;
+				triangleCentroids[t].y = (point0.y + point1.y + point2.y) / 3;
+				triangleCentroids[t].z = (point0.z + point1.z + point2.z) / 3;
+				triangleNormals[t].x = surfaceNormal.x;
+				triangleNormals[t].y = surfaceNormal.y;
+				triangleNormals[t].z = surfaceNormal.z;
 			}
-			vertexNormals[i] = new Point3f();
-			vertexNormals[i].x = 100 * sumNormals.x / vT;
-			vertexNormals[i].y = 100 * sumNormals.y / vT;
-			vertexNormals[i].z = 100 * sumNormals.z / vT;
+
+			Point3f vertex = vertices.get(i);
+
+			Point3f normal = new Point3f();
+			normal.x = sumNormals.x / vT;
+			normal.y = sumNormals.y / vT;
+			normal.z = sumNormals.z / vT;
+
+			// Turn normal into a unit vector
+			final double length = Trig.distance3D(normal);
+			normal.x /= length;
+			normal.y /= length;
+			normal.z /= length;
+
+			hash.put(vertex, normal);
 		}
 
-		// move all the points by their normal
+		// move all the points by the unit normal * small increment r
 		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
 			Point3f point = triangles.get(t);
 			Point3f newPoint = (Point3f) point.clone();
-			for (int i = 0; i < nVertices; i++) {
-				if (point.equals(vertices.get(i))) {
-					newPoint.x += vertexNormals[i].x;
-					newPoint.y += vertexNormals[i].y;
-					newPoint.z += vertexNormals[i].z;
-					movedTriangles.add(newPoint);
-					break;
-				}
-			}
+			Point3f normal = (Point3f) hash.get(point);
+			newPoint.x += normal.x * r;
+			newPoint.y += normal.y * r;
+			newPoint.z += normal.z * r;
+			movedTriangles.add(newPoint);
 		}
-		CustomTriangleMesh surface2 = new CustomTriangleMesh(triangles, colour,
-				0.0f);
+		CustomTriangleMesh surface2 = new CustomTriangleMesh(movedTriangles,
+				colour, 0.0f);
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
 
 		double s2 = MeasureSurface.getSurfaceArea(surface2.getMesh());
-		IJ.log("Dilated surface area is "+s2);
+		IJ.log("Dilated surface area is " + s2);
 
 		// Add the mesh
 		Image3DUniverse univ = new Image3DUniverse();
 		univ.show();
 		Color3f red = new Color3f(1.0f, 0.0f, 0.0f);
 		Color3f green = new Color3f(0.0f, 1.0f, 0.0f);
+		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
+		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
 		try {
 			univ.addTriangleMesh(triangles, green, "Original").setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 		}
 		try {
-			univ.addTriangleMesh(movedTriangles, red, "Dilated").setLocked(
-					true);
+			univ.addTriangleMesh(movedTriangles, red, "Dilated")
+					.setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 		}
-
-		return 0;
+		for (int t = 0; t < nTriangles; t++) {
+			ArrayList<Point3f> mesh = new ArrayList<Point3f>(2);
+			mesh.add(triangleCentroids[t]);
+			Point3f tV = new Point3f();
+			tV.x = triangleCentroids[t].x + triangleNormals[t].x;
+			tV.y = triangleCentroids[t].y + triangleNormals[t].y;
+			tV.z = triangleCentroids[t].z + triangleNormals[t].z;
+			mesh.add(tV);
+			try {
+				univ.addLineMesh(mesh, blue, "Vector " + t, false).setLocked(
+						true);
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
+			}
+		}
+		for (int i = 0; i < nVertices; i++) {
+			ArrayList<Point3f> mesh = new ArrayList<Point3f>(2);
+			Point3f vertex = vertices.get(i);
+			mesh.add(vertex);
+			Point3f vertexNormal = new Point3f();
+			Point3f normal = (Point3f) hash.get(vertex);
+			vertexNormal.x = vertex.x + normal.x;
+			vertexNormal.y = vertex.y + normal.y;
+			vertexNormal.z = vertex.z + normal.z;
+			mesh.add(vertexNormal);
+			try {
+				univ.addLineMesh(mesh, yellow, "Normal " + i, false).setLocked(
+						true);
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
+			}
+		}
+		double sR = (s2 - s1) / r;
+		double smi = sR * v / (s1 * s1);
+		return smi;
 	}
 
 	private static Point3f crossProduct(Point3f point0, Point3f point1,
