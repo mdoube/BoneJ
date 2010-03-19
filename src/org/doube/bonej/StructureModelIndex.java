@@ -34,7 +34,6 @@ import isosurface.MeshEditor;
 import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
-import org.doube.geometry.Trig;
 import org.doube.geometry.VectorProduct;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
@@ -193,6 +192,7 @@ public class StructureModelIndex implements PlugIn {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
 		final double r = imp.getCalibration().pixelWidth / 100;
+		final Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
 		MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
 		List<Point3f> triangles = mct.getTriangles(imp, threshold, channels,
@@ -275,7 +275,7 @@ public class StructureModelIndex implements PlugIn {
 			normal.z = sumNormals.z / vT;
 
 			// Turn normal into a unit vector
-			final double length = Trig.distance3D(normal);
+			final double length = normal.distance(origin);
 			normal.x /= length;
 			normal.y /= length;
 			normal.z /= length;
@@ -303,7 +303,6 @@ public class StructureModelIndex implements PlugIn {
 		double concaveArea = 0;
 
 		// find the sums of the +ve and -ve changes in area
-		Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
 		for (int i = 0; i < nPoints; i += 3) {
 			Point3f point0 = triangles.get(i);
 			Point3f point1 = triangles.get(i + 1);

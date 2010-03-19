@@ -5,7 +5,6 @@ import java.util.List;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
-import org.doube.geometry.Trig;
 import org.doube.geometry.VectorProduct;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
@@ -119,6 +118,7 @@ public class MeasureSurface implements PlugIn {
 	public static double getSurfaceArea(List<Point3f> points) {
 		double sumArea = 0;
 		final int nPoints = points.size();
+		Point3f origin = new Point3f (0.0f, 0.0f, 0.0f);
 		for (int n = 0; n < nPoints; n += 3) {
 			IJ.showStatus("Calculating surface area...");
 			final Point3f point0 = points.get(n);
@@ -132,7 +132,7 @@ public class MeasureSurface implements PlugIn {
 			// of cross product of 2 edge vectors
 			Point3f cp = VectorProduct.crossProduct(point0, point1, point2);
 
-			final double deltaArea = 0.5 * Trig.distance3D(cp);
+			final double deltaArea = 0.5 * cp.distance(origin);
 
 			sumArea += deltaArea;
 		}

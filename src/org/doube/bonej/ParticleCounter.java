@@ -27,7 +27,6 @@ import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
 import org.doube.geometry.FitEllipsoid;
-import org.doube.geometry.Trig;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 import org.doube.util.ImageCheck;
@@ -958,7 +957,7 @@ public class ParticleCounter implements PlugIn {
 				itb = surface.listIterator(ita.nextIndex());
 				while (itb.hasNext()) {
 					b = itb.next();
-					ferets[i] = Math.max(ferets[i], Trig.distance3D(a, b));
+					ferets[i] = Math.max(ferets[i], a.distance(b));
 				}
 			}
 			i++;
