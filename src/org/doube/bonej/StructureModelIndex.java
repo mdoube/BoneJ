@@ -162,7 +162,7 @@ public class StructureModelIndex implements PlugIn {
 	/**
 	 * <p>
 	 * Calculate the structure model index according to the description by
-	 * Hildebrand and Rugsegger. Creates a surface model, dilates it by a small
+	 * Hildebrand and Rüegsegger. Creates a surface model, dilates it by a small
 	 * increment and compares the areas before and after dilation.
 	 * </p>
 	 * 
@@ -182,9 +182,9 @@ public class StructureModelIndex implements PlugIn {
 	 * @param imp
 	 *            binary 3D image
 	 * @param voxelResampling
-	 *            how much to resample voxels while creatign surface mesh
+	 *            how much to resample voxels while creating surface mesh
 	 * @param meshSmoothing
-	 *            how much smoothign to apply to the mesh
+	 *            how much smoothing to apply to the mesh
 	 * @return SMI
 	 */
 	@SuppressWarnings("unchecked")
@@ -214,7 +214,7 @@ public class StructureModelIndex implements PlugIn {
 		ArrayList<Integer> locations = new ArrayList<Integer>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
-			IJ.showStatus("Finding unique vertices...");
+			IJ.showStatus("Finding vertices...");
 			IJ.showProgress(p, nPoints);
 			Point3f testPoint = triangles.get(p);
 			if (vertexHash.get(testPoint) == null) {
@@ -230,12 +230,11 @@ public class StructureModelIndex implements PlugIn {
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
-		IJ.showStatus("Calculating vertex normals...");
 		Hashtable normalsHash = new Hashtable();
-
 		Point3f vert = new Point3f();
 		Enumeration e = vertexHash.keys();
 		while (e.hasMoreElements()) {
+			IJ.showStatus("Calculating vertex normals...");
 			vert = (Point3f) e.nextElement();
 			locations = (ArrayList<Integer>) vertexHash.get(vert);
 			Point3f sumNormals = new Point3f();
@@ -298,12 +297,47 @@ public class StructureModelIndex implements PlugIn {
 			movedTriangles.add(newPoint);
 		}
 
-		CustomTriangleMesh surface2 = new CustomTriangleMesh(movedTriangles,
-				colour, 0.0f);
-		IJ.showStatus("Smoothing surface mesh...");
-		MeshEditor.smooth(surface, meshSmoothing);
+		double convexDelta = 0;
+		double concaveDelta = 0;
+		double convexArea = 0;
+		double concaveArea = 0;
 
-		double s2 = MeasureSurface.getSurfaceArea(surface2.getMesh());
+		// find the sums of the +ve and -ve changes in area
+		Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
+		for (int i = 0; i < nPoints; i += 3) {
+			Point3f point0 = triangles.get(i);
+			Point3f point1 = triangles.get(i + 1);
+			Point3f point2 = triangles.get(i + 2);
+			double area1 = 0.5 * VectorProduct.crossProduct(point0, point1,
+					point2).distance(origin);
+			point0 = movedTriangles.get(i);
+			point1 = movedTriangles.get(i + 1);
+			point2 = movedTriangles.get(i + 2);
+			double area2 = 0.5 * VectorProduct.crossProduct(point0, point1,
+					point2).distance(origin);
+
+			double deltaArea = area2 - area1;
+
+			if (deltaArea >= 0) {
+				convexDelta += deltaArea;
+				convexArea += area1;
+			} else if (deltaArea < 0) {
+				concaveDelta += deltaArea;
+				concaveArea += area1;
+			}
+		}
+
+		double concaveFraction = concaveArea / (concaveArea + convexArea);
+		IJ.log("Fraction of surface area that is concave: "
+				+ concaveFraction);
+		double sRconvex = convexDelta / r;
+		double sRconcave = concaveDelta / r;
+		double convexSMI = 6 * sRconvex * v  / (s1 * s1);
+		double concaveSMI = 6 * sRconcave * v / (s1 * s1);
+		IJ.log("Convex SMI = " + convexSMI);
+		IJ.log("Concave SMI = " + concaveSMI);
+
+		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
 		double sR = (s2 - s1) / r;
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
