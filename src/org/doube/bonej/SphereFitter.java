@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  * Fit_Sphere plugin for ImageJ
  * Copyright 2008 2009 2010 Michael Doube
@@ -25,7 +26,6 @@ import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
 
-import org.doube.bonej.Moments;
 import org.doube.geometry.FitSphere;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
@@ -40,7 +40,7 @@ import org.doube.util.RoiMan;
  * 
  *@author Michael Doube and Angelo Tardugno
  */
-public class Fit_Sphere implements PlugIn {
+public class SphereFitter implements PlugIn {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
