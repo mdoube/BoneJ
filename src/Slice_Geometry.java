@@ -333,11 +333,11 @@ public class Slice_Geometry implements PlugIn, DialogListener {
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating Ix and Iy...");
 			IJ.showProgress(s, this.endSlice);
-			this.Sx[s] = 0;
-			this.Sy[s] = 0;
-			this.Sxx[s] = 0;
-			this.Syy[s] = 0;
-			this.Sxy[s] = 0;
+			double sxs = 0;
+			double sys = 0;
+			double sxxs = 0;
+			double syys = 0;
+			double sxys = 0;
 			final int roiXEnd = r.x + r.width;
 			final int roiYEnd = r.y + r.height;
 			if (!this.emptySlices[s]) {
@@ -346,14 +346,19 @@ public class Slice_Geometry implements PlugIn, DialogListener {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
 						if (pixel >= pMin && pixel <= pMax) {
-							this.Sx[s] += x;
-							this.Sy[s] += y;
-							this.Sxx[s] += x * x;
-							this.Syy[s] += y * y;
-							this.Sxy[s] += y * x;
+							sxs += x;
+							sys += y;
+							sxxs += x * x;
+							syys += y * y;
+							sxys += y * x;
 						}
 					}
 				}
+				this.Sx[s] = sxs;
+				this.Sy[s] = sys;
+				this.Sxx[s] = sxxs;
+				this.Syy[s] = syys;
+				this.Sxy[s] = sxys;
 				this.Myy[s] = this.Sxx[s]
 						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
 						+ this.cslice[s] / 12;
@@ -393,11 +398,13 @@ public class Slice_Geometry implements PlugIn, DialogListener {
 			IJ.showProgress(s, this.endSlice);
 			if (!this.emptySlices[s]) {
 				ImageProcessor ip = stack.getProcessor(s);
-				this.Sx[s] = 0;
-				this.Sy[s] = 0;
-				this.Sxx[s] = 0;
-				this.Syy[s] = 0;
-				this.Sxy[s] = 0;
+				double sxs = 0;
+				double sys = 0;
+				double sxxs = 0;
+				double syys = 0;
+				double sxys = 0;
+				double maxRadMinS = 0;
+				double maxRadMaxS = 0;
 				final double cosTheta = Math.cos(this.theta[s]);
 				final double sinTheta = Math.sin(this.theta[s]);
 				final int roiYEnd = r.y + r.height;
@@ -413,23 +420,29 @@ public class Slice_Geometry implements PlugIn, DialogListener {
 							final double yCosTheta = y * cosTheta;
 							final double xSinTheta = x * sinTheta;
 							final double ySinTheta = y * sinTheta;
-							this.Sx[s] += xCosTheta + ySinTheta;
-							this.Sy[s] += yCosTheta - xSinTheta;
-							this.Sxx[s] += (xCosTheta + ySinTheta)
+							sxs += xCosTheta + ySinTheta;
+							sys += yCosTheta - xSinTheta;
+							sxxs += (xCosTheta + ySinTheta)
 									* (xCosTheta + ySinTheta);
-							this.Syy[s] += (yCosTheta - xSinTheta)
+							syys += (yCosTheta - xSinTheta)
 									* (yCosTheta - xSinTheta);
-							this.Sxy[s] += (yCosTheta - xSinTheta)
+							sxys += (yCosTheta - xSinTheta)
 									* (xCosTheta + ySinTheta);
-							this.maxRadMin[s] = Math.max(this.maxRadMin[s],
-									Math.abs((x - xC) * cosTheta + (y - yC)
-											* sinTheta));
-							this.maxRadMax[s] = Math.max(this.maxRadMax[s],
+							maxRadMinS = Math.max(maxRadMinS, Math.abs((x - xC)
+									* cosTheta + (y - yC) * sinTheta));
+							maxRadMaxS = Math.max(maxRadMaxS,
 									Math.abs((y - yC) * cosTheta - (x - xC)
 											* sinTheta));
 						}
 					}
 				}
+				this.Sx[s] = sxs;
+				this.Sy[s] = sys;
+				this.Sxx[s] = sxxs;
+				this.Syy[s] = syys;
+				this.Sxy[s] = sxys;
+				this.maxRadMin[s] = maxRadMinS;
+				this.maxRadMax[s] = maxRadMaxS;
 				final double pixelMoments = cS
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
 				this.Imax[s] = this.Sxx[s] - (this.Sx[s] * this.Sx[s] / cS)
