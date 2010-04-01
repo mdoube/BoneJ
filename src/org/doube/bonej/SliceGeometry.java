@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  * Slice_Geometry plugin for ImageJ
  * Copyright 2009 2010 Michael Doube 
@@ -33,9 +34,6 @@ import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.Vector;
 
-import org.doube.bonej.BoneList;
-import org.doube.bonej.Thickness;
-import org.doube.bonej.ThresholdMinConn;
 import org.doube.util.ImageCheck;
 
 /**
@@ -47,7 +45,7 @@ import org.doube.util.ImageCheck;
  * 
  */
 
-public class Slice_Geometry implements PlugIn, DialogListener {
+public class SliceGeometry implements PlugIn, DialogListener {
 	private ImagePlus imp;
 	private int boneID, al, startSlice, endSlice;
 	private double vW, vH, min, max;
@@ -704,8 +702,8 @@ public class Slice_Geometry implements PlugIn, DialogListener {
 			this.isHUCalibrated = true;
 			this.fieldUpdated = true;
 			// default bone thresholds are 0 and 4000 HU
-			this.min = Slice_Geometry.airHU + 1000;
-			this.max = Slice_Geometry.airHU + 5000;
+			this.min = SliceGeometry.airHU + 1000;
+			this.max = SliceGeometry.airHU + 5000;
 		}
 		return;
 	}
