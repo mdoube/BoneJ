@@ -27,8 +27,11 @@ import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.gui.*;
 
+import java.awt.AWTEvent;
 import java.awt.Color;
 import java.awt.Rectangle;
+import java.awt.TextField;
+import java.util.Vector;
 
 import org.doube.bonej.BoneList;
 import org.doube.bonej.Thickness;
@@ -44,7 +47,8 @@ import org.doube.util.ImageCheck;
  * 
  */
 
-public class Slice_Geometry implements PlugIn {
+public class Slice_Geometry implements PlugIn, DialogListener {
+	private ImagePlus imp;
 	private int boneID, al, startSlice, endSlice;
 	private double vW, vH, min, max;
 	/** Linear unit of measure */
@@ -52,7 +56,7 @@ public class Slice_Geometry implements PlugIn {
 	/** Unused option to do density-weighted calculations */
 	// private String analyse;
 	/** Message to inform the user what to do with their HU-calibrated image */
-	private String calString;
+	// private String calString;
 	/** Hounsfield unit value for air is -1000 */
 	private static final double airHU = -1000;
 	/** Do local thickness measurement in 3D */
@@ -132,11 +136,18 @@ public class Slice_Geometry implements PlugIn {
 	/** List of slice centroids */
 	private double[][] sliceCentroids;
 	Calibration cal;
+	private String pixUnits = "grey";
+	private double[] integratedDensity;
+	private double[] meanDensity;
+	private double m;
+	private double c;
+	private double[][] weightedCentroids;
+	private boolean fieldUpdated = false;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
-		ImagePlus imp = IJ.getImage();
+		this.imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
 			return;
@@ -150,9 +161,8 @@ public class Slice_Geometry implements PlugIn {
 
 		setDefaultThreshold(imp);
 
-		if (!showDialog(imp)) {
+		if (!showDialog())
 			return;
-		}
 
 		if (calculateCentroids(imp) == 0) {
 			IJ.error("No pixels available to calculate.\n"
@@ -246,32 +256,48 @@ public class Slice_Geometry implements PlugIn {
 		this.emptySlices = new boolean[this.al];
 		this.cslice = new double[this.al];
 		this.cortArea = new double[this.al];
+		this.integratedDensity = new double[this.al];
+		this.meanDensity = new double[this.al];
+		this.weightedCentroids = new double[2][this.al];
 		final double pixelArea = this.vW * this.vH;
 		final int roiXEnd = r.x + r.width;
 		final int roiYEnd = r.y + r.height;
+		IJ.log("startSlice = " + this.startSlice + ", endSlice = "
+				+ this.endSlice);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating centroids...");
 			IJ.showProgress(s - this.startSlice, this.endSlice);
 			double sumX = 0;
 			double sumY = 0;
-			this.cslice[s] = 0;
-			this.cortArea[s] = 0;
+			int count = 0;
+			double sumD = 0;
+			double wSumX = 0;
+			double wSumY = 0;
 			ImageProcessor ip = stack.getProcessor(s);
 			for (int y = r.y; y < roiYEnd; y++) {
 				for (int x = r.x; x < roiXEnd; x++) {
 					final double pixel = (double) ip.get(x, y);
 					if (pixel >= this.min && pixel <= this.max) {
-						this.cslice[s]++;
-						this.cortArea[s] += pixelArea;
-						sumX += x * this.vW;
-						sumY += y * this.vH;
+						count++;
+						sumX += x;
+						sumY += y;
+						final double wP = pixel * this.m + this.c;
+						sumD += wP;
+						wSumX += x * wP;
+						wSumY += y * wP;
 					}
 				}
 			}
-			if (this.cslice[s] > 0) {
-				this.sliceCentroids[0][s] = sumX / this.cslice[s];
-				this.sliceCentroids[1][s] = sumY / this.cslice[s];
-				cstack += this.cslice[s];
+			this.cslice[s] = count;
+			this.cortArea[s] = count * pixelArea;
+			if (count > 0) {
+				this.sliceCentroids[0][s] = sumX * this.vW / count;
+				this.sliceCentroids[1][s] = sumY * this.vH / count;
+				this.integratedDensity[s] = sumD;
+				this.meanDensity[s] = sumD / count;
+				this.weightedCentroids[0][s] = wSumX * this.vW / sumD;
+				this.weightedCentroids[1][s] = wSumY * this.vH / sumD;
+				cstack += count;
 				this.emptySlices[s] = false;
 			} else {
 				this.emptySlices[s] = true;
@@ -292,7 +318,6 @@ public class Slice_Geometry implements PlugIn {
 	private void calculateMoments(ImagePlus imp) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = stack.getRoi();
-		final int d = stack.getSize();
 		final double pMin = this.min;
 		final double pMax = this.max;
 		// START OF Ix AND Iy CALCULATION
@@ -305,9 +330,9 @@ public class Slice_Geometry implements PlugIn {
 		this.Mxx = new double[this.al];
 		this.Mxy = new double[this.al];
 		this.theta = new double[this.al];
-		for (int s = 1; s <= d; s++) {
+		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating Ix and Iy...");
-			IJ.showProgress(s, d);
+			IJ.showProgress(s, this.endSlice);
 			this.Sx[s] = 0;
 			this.Sy[s] = 0;
 			this.Sxx[s] = 0;
@@ -363,9 +388,9 @@ public class Slice_Geometry implements PlugIn {
 		this.maxRadMax = new double[this.al];
 		this.Zmax = new double[this.al];
 		this.Zmin = new double[this.al];
-		for (int s = 1; s <= d; s++) {
+		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating Imin and Imax...");
-			IJ.showProgress(s, d);
+			IJ.showProgress(s, this.endSlice);
 			if (!this.emptySlices[s]) {
 				ImageProcessor ip = stack.getProcessor(s);
 				this.Sx[s] = 0;
@@ -644,7 +669,6 @@ public class Slice_Geometry implements PlugIn {
 				|| (this.cal.getCValue(0) == 0 && coeff[1] == 1)
 				|| (this.cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1)) {
 			this.isHUCalibrated = false;
-			this.calString = "Image is uncalibrated\nEnter bone threshold values";
 			// set some sensible thresholding defaults
 			ThresholdMinConn tmc = new ThresholdMinConn();
 			int[] histogram = tmc.getStackHistogram(imp);
@@ -665,67 +689,12 @@ public class Slice_Geometry implements PlugIn {
 
 		} else {
 			this.isHUCalibrated = true;
-			this.calString = "Image has Hounsfield calibration.\nEnter bone HU below:";
+			this.fieldUpdated = true;
 			// default bone thresholds are 0 and 4000 HU
 			this.min = Slice_Geometry.airHU + 1000;
 			this.max = Slice_Geometry.airHU + 5000;
 		}
 		return;
-	}
-
-	private boolean showDialog(ImagePlus imp) {
-		GenericDialog gd = new GenericDialog("Options");
-
-		gd.addCheckbox("2D Thickness", true);
-		gd.addCheckbox("3D Thickness", false);
-		gd.addCheckbox("Draw Axes", true);
-		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Annotated Copy", true);
-		gd.addCheckbox("Process Stack", false);
-		// guess bone from image title
-		BoneList bl = new BoneList();
-		this.boneID = bl.guessBone(imp);
-		String[] bones = BoneList.getBoneList();
-		gd.addChoice("Bone: ", bones, bones[this.boneID]);
-		// String[] analyses = { "Weighted", "Unweighted", "Both" };
-		// gd.addChoice("Calculate: ", analyses, analyses[1]);
-		gd.addMessage(this.calString);
-		if (this.isHUCalibrated)
-			gd.addMessage("HU for air is " + Slice_Geometry.airHU);
-		gd.addNumericField("Bone Min:", this.min, 0);
-		gd.addNumericField("Bone Max:", this.max, 0);
-		gd
-				.addMessage("Only pixels <= bone min\n"
-						+ "and >= bone max are used.");
-		gd.showDialog();
-		this.doThickness2D = gd.getNextBoolean();
-		this.doThickness3D = gd.getNextBoolean();
-		this.doAxes = gd.getNextBoolean();
-		this.doCentroids = gd.getNextBoolean();
-		this.doCopy = gd.getNextBoolean();
-		this.doStack = gd.getNextBoolean();
-		if (this.doStack) {
-			this.startSlice = 1;
-			this.endSlice = imp.getImageStackSize();
-		} else {
-			this.startSlice = imp.getCurrentSlice();
-			this.endSlice = imp.getCurrentSlice();
-		}
-
-		String bone = gd.getNextChoice();
-		this.boneID = bl.guessBone(bone);
-		// this.analyse = gd.getNextChoice();
-		this.min = gd.getNextNumber();
-		this.max = gd.getNextNumber();
-		if (this.isHUCalibrated) {
-			this.min = this.cal.getRawValue(this.min);
-			this.max = this.cal.getRawValue(this.max);
-		}
-		if (gd.wasCanceled()) {
-			return false;
-		} else {
-			return true;
-		}
 	}
 
 	private void showSliceResults(ImagePlus imp) {
@@ -743,6 +712,11 @@ public class Slice_Geometry implements PlugIn {
 			rt.addValue("CSA (" + units + "²)", this.cortArea[s]);
 			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
 			rt.addValue("Y cent. (" + units + ")", this.sliceCentroids[1][s]);
+			rt.addValue("Density", this.meanDensity[s]);
+			rt.addValue("wX cent. (" + units + ")",
+					this.weightedCentroids[0][s]);
+			rt.addValue("wY cent. (" + units + ")",
+					this.weightedCentroids[1][s]);
 			rt.addValue("Theta (rad)", this.theta[s]);
 			rt.addValue("R1 (" + units + ")", this.R1[s]);
 			rt.addValue("R2 (" + units + ")", this.R2[s]);
@@ -805,5 +779,106 @@ public class Slice_Geometry implements PlugIn {
 		IJ.setSlice(initialSlice);
 		imp.setRoi(initialRoi);
 		return;
+	}
+
+	private boolean showDialog() {
+		GenericDialog gd = new GenericDialog("Options");
+
+		// guess bone from image title
+		this.boneID = BoneList.guessBone(imp);
+		String[] bones = BoneList.get();
+		gd.addChoice("Bone: ", bones, bones[this.boneID]);
+
+		gd.addCheckbox("2D Thickness", true);
+		gd.addCheckbox("3D Thickness", false);
+		gd.addCheckbox("Draw Axes", true);
+		gd.addCheckbox("Draw Centroids", true);
+		gd.addCheckbox("Annotated Copy", true);
+		gd.addCheckbox("Process Stack", false);
+		// String[] analyses = { "Weighted", "Unweighted", "Both" };
+		// gd.addChoice("Calculate: ", analyses, analyses[1]);
+		gd.addCheckbox("HU Calibrated", this.isHUCalibrated);
+		gd.addNumericField("Bone Min:", this.min, 0, 6, pixUnits);
+		gd.addNumericField("Bone Max:", this.max, 0, 6, pixUnits);
+		gd
+				.addMessage("Only pixels <= bone min\n"
+						+ "and >= bone max are used.");
+		gd.addMessage("Density calibration constants");
+		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + pixUnits);
+		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
+		gd.addDialogListener(this);
+		gd.showDialog();
+		String bone = gd.getNextChoice();
+		this.boneID = BoneList.guessBone(bone);
+		this.doThickness2D = gd.getNextBoolean();
+		this.doThickness3D = gd.getNextBoolean();
+		this.doAxes = gd.getNextBoolean();
+		this.doCentroids = gd.getNextBoolean();
+		this.doCopy = gd.getNextBoolean();
+		this.doStack = gd.getNextBoolean();
+		if (this.doStack) {
+			this.startSlice = 1;
+			this.endSlice = imp.getImageStackSize();
+		} else {
+			this.startSlice = imp.getCurrentSlice();
+			this.endSlice = imp.getCurrentSlice();
+		}
+
+		// this.analyse = gd.getNextChoice();
+		this.isHUCalibrated = gd.getNextBoolean();
+		this.min = gd.getNextNumber();
+		this.max = gd.getNextNumber();
+		if (this.isHUCalibrated) {
+			this.min = this.cal.getRawValue(this.min);
+			this.max = this.cal.getRawValue(this.max);
+		}
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
+		if (gd.wasCanceled())
+			return false;
+		else
+			return true;
+	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		this.doThickness2D = gd.getNextBoolean();
+		this.doThickness3D = gd.getNextBoolean();
+		this.doAxes = gd.getNextBoolean();
+		this.doCentroids = gd.getNextBoolean();
+		this.doCopy = gd.getNextBoolean();
+		this.doStack = gd.getNextBoolean();
+		if (this.doStack) {
+			this.startSlice = 1;
+			this.endSlice = imp.getImageStackSize();
+		} else {
+			this.startSlice = imp.getCurrentSlice();
+			this.endSlice = imp.getCurrentSlice();
+		}
+
+		String bone = gd.getNextChoice();
+		this.boneID = BoneList.guessBone(bone);
+		// this.analyse = gd.getNextChoice();
+		this.isHUCalibrated = gd.getNextBoolean();
+		this.min = gd.getNextNumber();
+		this.max = gd.getNextNumber();
+		if (this.isHUCalibrated && !fieldUpdated) {
+			Vector<?> nFields = gd.getNumericFields();
+			TextField minT = (TextField) nFields.get(0);
+			TextField maxT = (TextField) nFields.get(1);
+			minT.setText("" + this.cal.getCValue(this.min));
+			maxT.setText("" + this.cal.getCValue(this.max));
+			pixUnits = "HU";
+			fieldUpdated = true;
+		}
+		if (!this.isHUCalibrated && fieldUpdated) {
+			Vector<?> nFields = gd.getNumericFields();
+			TextField minT = (TextField) nFields.get(0);
+			TextField maxT = (TextField) nFields.get(1);
+			minT.setText("" + this.cal.getRawValue(this.min));
+			maxT.setText("" + this.cal.getRawValue(this.max));
+			pixUnits = "grey";
+			fieldUpdated = false;
+		}
+		return true;
 	}
 }

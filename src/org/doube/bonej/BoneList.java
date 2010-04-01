@@ -39,7 +39,7 @@ public class BoneList {
 	 * @return integer code relating to the position of the bone's name in the
 	 *         bone list
 	 */
-	public int guessBone(ImagePlus imp) {
+	public static int guessBone(ImagePlus imp) {
 		String boneString = imp.getTitle();
 		return guessBone(boneString);
 	}
@@ -50,7 +50,7 @@ public class BoneList {
 	 * @param boneString
 	 * @return
 	 */
-	public int guessBone(String boneString) {
+	public static int guessBone(String boneString) {
 		int boneID = 0;
 		for (int n = 0; n < boneList.length; n++) {
 			Pattern p = Pattern.compile(boneList[n], Pattern.CASE_INSENSITIVE);
