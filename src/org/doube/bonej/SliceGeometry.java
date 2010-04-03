@@ -1,4 +1,5 @@
 package org.doube.bonej;
+
 /**
  * Slice_Geometry plugin for ImageJ
  * Copyright 2009 2010 Michael Doube 
@@ -30,6 +31,8 @@ import ij.gui.*;
 
 import java.awt.AWTEvent;
 import java.awt.Color;
+import java.awt.Label;
+import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.Vector;
@@ -260,8 +263,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		final double pixelArea = this.vW * this.vH;
 		final int roiXEnd = r.x + r.width;
 		final int roiYEnd = r.y + r.height;
-		IJ.log("startSlice = " + this.startSlice + ", endSlice = "
-				+ this.endSlice);
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating centroids...");
 			IJ.showProgress(s - this.startSlice, this.endSlice);
@@ -428,9 +429,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 									* (xCosTheta + ySinTheta);
 							maxRadMinS = Math.max(maxRadMinS, Math.abs((x - xC)
 									* cosTheta + (y - yC) * sinTheta));
-							maxRadMaxS = Math.max(maxRadMaxS,
-									Math.abs((y - yC) * cosTheta - (x - xC)
-											* sinTheta));
+							maxRadMaxS = Math.max(maxRadMaxS, Math.abs((y - yC)
+									* cosTheta - (x - xC) * sinTheta));
 						}
 					}
 				}
@@ -878,7 +878,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			TextField maxT = (TextField) nFields.get(1);
 			minT.setText("" + this.cal.getCValue(this.min));
 			maxT.setText("" + this.cal.getCValue(this.max));
-			pixUnits = "HU";
 			fieldUpdated = true;
 		}
 		if (!this.isHUCalibrated && fieldUpdated) {
@@ -890,6 +889,37 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			pixUnits = "grey";
 			fieldUpdated = false;
 		}
+		if (this.isHUCalibrated) {
+			replaceUnitString(gd, "grey", "HU");
+		}
+		if (!this.isHUCalibrated) {
+			replaceUnitString(gd, "HU", "grey");
+		}
 		return true;
+	}
+
+	/**
+	 * Replace the unit string to the right of all numeric textboxes in a
+	 * GenericDialog
+	 * 
+	 * @param gd
+	 *            the dialog window
+	 * @param oldUnits
+	 *            original unit string
+	 * @param newUnits
+	 *            new unit string
+	 */
+	private void replaceUnitString(GenericDialog gd, String oldUnits,
+			String newUnits) {
+		for (int n = 0; n < gd.getComponentCount(); n++) {
+			if (gd.getComponent(n).toString().contains("java.awt.Panel")) {
+				Panel panel = (Panel) gd.getComponent(n);
+				if (panel.getComponent(1).toString().contains("java.awt.Label")) {
+					Label u = (Label) panel.getComponent(1);
+					String unitString = u.getText();
+					u.setText(unitString.replace(oldUnits, newUnits));
+				}
+			}
+		}
 	}
 }
