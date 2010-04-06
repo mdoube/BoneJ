@@ -701,6 +701,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		} else {
 			this.isHUCalibrated = true;
 			this.fieldUpdated = true;
+			this.pixUnits = "HU";
 			// default bone thresholds are 0 and 4000 HU
 			this.min = SliceGeometry.airHU + 1000;
 			this.max = SliceGeometry.airHU + 5000;
@@ -809,14 +810,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
 		gd.addCheckbox("HU Calibrated", this.isHUCalibrated);
-		gd.addNumericField("Bone Min:", this.min, 0, 6, pixUnits);
-		gd.addNumericField("Bone Max:", this.max, 0, 6, pixUnits);
+		gd.addNumericField("Bone Min:", this.min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", this.max, 1, 6, pixUnits + " ");
 		gd
 				.addMessage("Only pixels <= bone min\n"
 						+ "and >= bone max are used.");
-		gd.addMessage("Density calibration constants");
-		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + pixUnits);
-		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
+		gd.addMessage("Density calibration coefficients");
+		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
+		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		String bone = gd.getNextChoice();
@@ -891,9 +892,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 		if (this.isHUCalibrated) {
 			replaceUnitString(gd, "grey", "HU");
+			this.pixUnits = "HU";
 		}
 		if (!this.isHUCalibrated) {
 			replaceUnitString(gd, "HU", "grey");
+			this.pixUnits = "grey";
 		}
 		return true;
 	}
@@ -912,9 +915,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private void replaceUnitString(GenericDialog gd, String oldUnits,
 			String newUnits) {
 		for (int n = 0; n < gd.getComponentCount(); n++) {
-			if (gd.getComponent(n).toString().contains("java.awt.Panel")) {
+			if (gd.getComponent(n) instanceof Panel) {
 				Panel panel = (Panel) gd.getComponent(n);
-				if (panel.getComponent(1).toString().contains("java.awt.Label")) {
+				if (panel.getComponent(1) instanceof Label) {
 					Label u = (Label) panel.getComponent(1);
 					String unitString = u.getText();
 					u.setText(unitString.replace(oldUnits, newUnits));
