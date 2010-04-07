@@ -41,7 +41,7 @@ public class RoiMan {
 			Roi roi = roiList[i];
 			if (roi.getType() == 10) {
 				String label = listRoi.getItem(i);
-				Rectangle xy = roi.getBoundingRect();
+				Rectangle xy = roi.getBounds();
 				dataPoints[j][0] = xy.getX() * vW;
 				dataPoints[j][1] = xy.getY() * vH;
 				dataPoints[j][2] = roiMan.getSliceNumber(label) * vD;
