@@ -1,7 +1,8 @@
 package org.doube.bonej;
+
 import ij.IJ;
 import ij.ImagePlus;
-import ij.gui.PlotWindow;
+import ij.gui.Plot;
 import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
@@ -227,9 +228,9 @@ public class FractalBoxCounter implements PlugIn {
 
 			if (verboseOutput) {
 				IJ.log(imp.getTitle() + ": Dimension estimate: "
-						+ IJ.d2s(p[1], 4) + ": R²: " + RSq
-						+ ": Settings: " + maxBox + ":" + minBox + ":" + divBox
-						+ ":" + numOffsets);
+						+ IJ.d2s(p[1], 4) + ": R²: " + RSq + ": Settings: "
+						+ maxBox + ":" + minBox + ":" + divBox + ":"
+						+ numOffsets);
 			}
 
 			ResultInserter ri = ResultInserter.getInstance();
@@ -240,13 +241,12 @@ public class FractalBoxCounter implements PlugIn {
 			if (plotGraph && !Interpreter.isBatchMode()) {
 				drawGraph(p, boxSizes, boxCountSums);
 			}
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void drawGraph(double[] params, double[] boxSizes,
+	private void drawGraph(double[] params, double[] boxSizes,
 			double[] boxCountSums) {
 
 		final int samples = 100;
@@ -271,16 +271,15 @@ public class FractalBoxCounter implements PlugIn {
 		a = Tools.getMinMax(py);
 		ymin = Math.min(ymin, a[0]);
 		ymax = Math.max(ymax, a[1]);
-		PlotWindow pw = new PlotWindow("Plot", "-log(box size)",
-				"log(box count)", px, py);
-		pw.setLimits(xmin, xmax * 0.9, ymin, ymax * 1.1);
-		pw.addPoints(Tools.toFloat(boxSizes), Tools.toFloat(boxCountSums),
-				PlotWindow.CIRCLE);
-		CurveFitter cf = new CurveFitter(boxSizes, boxCountSums);
-		final String plotLabel = "Slope: " + IJ.d2s(params[1], 4) + "\n"
-				+ "R²: " + cf.getRSquared();
-		pw.addLabel(-3.5, 10, plotLabel);
-		pw.draw();
+		Plot plot = new Plot("Plot", "-log(box size)", "log(box count)", px, py);
+		ImagePlus plotImage = new ImagePlus("Plot", plot.getProcessor());
+		plotImage.show();
+		plot.setLimits(xmin, xmax * 0.9, ymin, ymax * 1.1);
+		plot.addPoints(boxSizes, boxCountSums, Plot.CIRCLE);
+		plot.addPoints(px, py, Plot.DOT);
+		plot.addLabel(0.25, 0.25, "Slope: " + IJ.d2s(params[1], 4));
+		plotImage.setProcessor(null, plot.getProcessor());
+		return;
 	}
 
 	public void showAbout() {
