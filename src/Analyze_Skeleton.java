@@ -177,6 +177,7 @@ public class Analyze_Skeleton implements PlugInFilter {
 	 * 
 	 * @see ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)
 	 */
+	@SuppressWarnings("unchecked")
 	public void run(ImageProcessor ip) {
 		if (!ImageCheck.checkIJVersion())
 			return;
