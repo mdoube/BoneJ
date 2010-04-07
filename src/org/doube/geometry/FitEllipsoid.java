@@ -323,4 +323,45 @@ public class FitEllipsoid {
 		}
 		return ellipsoidPoints;
 	}
+
+	/**
+	 * Return normal unit vectors at points on an ellipsoid given the radii of
+	 * an ellipsoid and points on the ellipsoid. Assumes an ellipsoid centred on
+	 * (0,0,0) and with no rotation
+	 * 
+	 * @param a
+	 *            First axis length
+	 * @param b
+	 *            Second axis length
+	 * @param c
+	 *            Third axis length
+	 * @param points
+	 *            points on the ellipsoid, e.g. result of testElipsoid()
+	 * @return array of (x,y,z) unit vectors
+	 */
+	public static double[][] testNormals(double a, double b, double c,
+			double[][] points) {
+		final int nPoints = points.length;
+		double[][] ellipsoidNormals = new double[nPoints][3];
+		final double p = 2 / (a * a);
+		final double q = 2 / (b * b);
+		final double r = 2 / (c * c);
+		for (int i = 0; i < nPoints; i++) {
+			ellipsoidNormals[i][0] = p * points[i][0];
+			ellipsoidNormals[i][1] = q * points[i][1];
+			ellipsoidNormals[i][2] = r * points[i][2];
+		}
+
+		for (int i = 0; i < nPoints; i++) {
+			final double x = ellipsoidNormals[i][0];
+			final double y = ellipsoidNormals[i][1];
+			final double z = ellipsoidNormals[i][2];
+			final double length = Trig.distance3D(x, y, z);
+			ellipsoidNormals[i][0] /= length;
+			ellipsoidNormals[i][1] /= length;
+			ellipsoidNormals[i][2] /= length;
+		}
+
+		return ellipsoidNormals;
+	}
 }
