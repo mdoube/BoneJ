@@ -276,9 +276,8 @@ public class FractalBoxCounter implements PlugIn {
 		plotImage.show();
 		plot.setLimits(xmin, xmax * 0.9, ymin, ymax * 1.1);
 		plot.addPoints(boxSizes, boxCountSums, Plot.CIRCLE);
-		plot.addPoints(px, py, Plot.DOT);
+		plot.addPoints(px, py, Plot.LINE);
 		plot.addLabel(0.25, 0.25, "Slope: " + IJ.d2s(params[1], 4));
-		plotImage.setProcessor(null, plot.getProcessor());
 		return;
 	}
 
