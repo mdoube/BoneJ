@@ -31,6 +31,12 @@ public class ThresholdMinConn implements PlugIn {
 	 */
 	private boolean thresholdOnly = false;
 
+	/** Number of cycles of erosion to apply */
+	private int nErodes = 0;
+
+	/** Number of cycles of dilation to apply */
+	private int nDilates = 0;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
@@ -47,7 +53,7 @@ public class ThresholdMinConn implements PlugIn {
 
 		if (!ic.isVoxelIsotropic(imp, 0.05)) {
 			if (!Interpreter.isBatchMode())
-			IJ.run("Properties...");
+				IJ.run("Properties...");
 		}
 
 		int[] histogram = getStackHistogram(imp);
@@ -205,10 +211,11 @@ public class ThresholdMinConn implements PlugIn {
 
 	/**
 	 * Calculate connectivity after threshold-purify-erode-purify-dilate for
-	 * several threshold values. 
+	 * several threshold values.
 	 * 
 	 * @param imp2
-	 * @param testThreshold array of test threshold values (from getTestThreshold)
+	 * @param testThreshold
+	 *            array of test threshold values (from getTestThreshold)
 	 * @return array containing connectivity resulting from each test threshold
 	 */
 	private double[] getConns(ImagePlus imp2, int[] testThreshold, int subVolume) {
@@ -235,10 +242,10 @@ public class ThresholdMinConn implements PlugIn {
 				}
 			}
 		}
-		
+
 		ImagePlus imp3 = new ImagePlus();
 		for (int i = 0; i < nTests; i++) {
-			//apply threshold
+			// apply threshold
 			final int thresh = testThreshold[i];
 			ImageStack stack3 = new ImageStack(width, height);
 			for (int z = 1; z <= depth; z++) {
@@ -267,12 +274,13 @@ public class ThresholdMinConn implements PlugIn {
 			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
-			Object[] result = p.purify(imp3, 4, false);
-			replaceImage(imp3, (ImagePlus) result[1]);
-			e.erode(imp3, 255).show();
-			result = p.purify(imp3, 4, false);
-			replaceImage(imp3, (ImagePlus) result[1]);
-			d.dilate(imp3, 255).show();
+			replaceImage(imp3, (ImagePlus) p.purify(imp3, 4, false)[1]);
+			for (int j = 0; j < nErodes; j++)
+				replaceImage(imp3, e.erode(imp3, 255));
+			if (nErodes > 0)
+				replaceImage(imp3, (ImagePlus) p.purify(imp3, 4, false)[1]);
+			for (int j = 0; j < nDilates; j++)
+				replaceImage(imp3, d.dilate(imp3, 255));
 
 			// get the connectivity
 			Connectivity con = new Connectivity();
@@ -352,6 +360,8 @@ public class ThresholdMinConn implements PlugIn {
 		gd.addNumericField("Tests", testCount, 0);
 		gd.addNumericField("Range", testRange, 2);
 		gd.addNumericField("Subvolume Size", subVolume, 0);
+		gd.addNumericField("Erosion Cycles", nErodes, 0);
+		gd.addNumericField("Dilation Cycles", nDilates, 0);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return false;
@@ -362,6 +372,8 @@ public class ThresholdMinConn implements PlugIn {
 			testCount = (int) Math.floor(gd.getNextNumber());
 			testRange = gd.getNextNumber();
 			subVolume = (int) Math.floor(gd.getNextNumber());
+			nErodes = (int) Math.floor(gd.getNextNumber());
+			nDilates = (int) Math.floor(gd.getNextNumber());
 			return true;
 		}
 	}
