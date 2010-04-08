@@ -58,6 +58,8 @@ public class MeasureSurface implements PlugIn {
 		int resamplingF = (int) Math.floor(gd.getNextNumber());
 		threshold = (int) Math.floor(gd.getNextNumber());
 		boolean doSurfaceRendering = gd.getNextBoolean();
+		if (gd.wasCanceled())
+			return;
 
 		final boolean[] channels = { true, false, false };
 
