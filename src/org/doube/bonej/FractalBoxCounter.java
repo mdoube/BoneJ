@@ -272,12 +272,16 @@ public class FractalBoxCounter implements PlugIn {
 		ymin = Math.min(ymin, a[0]);
 		ymax = Math.max(ymax, a[1]);
 		Plot plot = new Plot("Plot", "-log(box size)", "log(box count)", px, py);
-		ImagePlus plotImage = new ImagePlus("Plot", plot.getProcessor());
-		plotImage.show();
 		plot.setLimits(xmin, xmax * 0.9, ymin, ymax * 1.1);
+		plot.draw();
 		plot.addPoints(boxSizes, boxCountSums, Plot.CIRCLE);
 		plot.addPoints(px, py, Plot.LINE);
-		plot.addLabel(0.25, 0.25, "Slope: " + IJ.d2s(params[1], 4));
+		CurveFitter cf = new CurveFitter(boxSizes, boxCountSums);
+		cf.doFit(CurveFitter.STRAIGHT_LINE);
+		plot.addLabel(0.1, 0.1, "Slope: " + IJ.d2s(params[1], 4) + "\n"
+				+ "R²: " + IJ.d2s(cf.getRSquared(), 4));
+		ImagePlus plotImage = new ImagePlus("Plot", plot.getProcessor());
+		plotImage.show();
 		return;
 	}
 
