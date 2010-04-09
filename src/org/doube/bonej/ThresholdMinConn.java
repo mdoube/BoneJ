@@ -1,10 +1,16 @@
 package org.doube.bonej;
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.TextField;
+import java.util.Vector;
+
 import org.doube.util.ImageCheck;
 
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.macro.Interpreter;
@@ -13,7 +19,7 @@ import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
-public class ThresholdMinConn implements PlugIn {
+public class ThresholdMinConn implements PlugIn, DialogListener {
 
 	// private ImagePlus imp;
 	private int testCount = 11, subVolume = 256;
@@ -211,7 +217,8 @@ public class ThresholdMinConn implements PlugIn {
 	 *            array of test threshold values (from getTestThreshold)
 	 * @return array containing connectivity resulting from each test threshold
 	 */
-	private double[] getConns(ImagePlus imp2, double[] testThreshold, int subVolume) {
+	private double[] getConns(ImagePlus imp2, double[] testThreshold,
+			int subVolume) {
 		int nTests = testThreshold.length;
 		double[] conns = new double[nTests];
 
@@ -245,7 +252,7 @@ public class ThresholdMinConn implements PlugIn {
 				ByteProcessor bp = new ByteProcessor(width, height);
 				for (int y = 0; y < height; y++) {
 					for (int x = 0; x < width; x++) {
-						if ((double)ip2.get(x, y) > thresh) {
+						if ((double) ip2.get(x, y) > thresh) {
 							bp.set(x, y, 255);
 						} else {
 							bp.set(x, y, 0);
@@ -346,21 +353,22 @@ public class ThresholdMinConn implements PlugIn {
 
 	private boolean showDialog() {
 		GenericDialog gd = new GenericDialog("Options");
-		gd.addCheckbox("Show Plot", true);
-		gd.addCheckbox("Apply Threshold", false);
 		gd.addCheckbox("Threshold Only", false);
+		gd.addCheckbox("Apply Threshold", false);
+		gd.addCheckbox("Show Plot", true);
 		gd.addNumericField("Tests", testCount, 0);
 		gd.addNumericField("Range", testRange, 2);
 		gd.addNumericField("Subvolume Size", subVolume, 0);
 		gd.addNumericField("Erosion Cycles", nErodes, 0);
 		gd.addNumericField("Dilation Cycles", nDilates, 0);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return false;
 		} else {
-			doPlot = gd.getNextBoolean();
-			applyThreshold = gd.getNextBoolean();
 			thresholdOnly = gd.getNextBoolean();
+			applyThreshold = gd.getNextBoolean();
+			doPlot = gd.getNextBoolean();
 			testCount = (int) Math.floor(gd.getNextNumber());
 			testRange = gd.getNextNumber();
 			subVolume = (int) Math.floor(gd.getNextNumber());
@@ -368,5 +376,39 @@ public class ThresholdMinConn implements PlugIn {
 			nDilates = (int) Math.floor(gd.getNextNumber());
 			return true;
 		}
+	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		thresholdOnly = gd.getNextBoolean();
+		applyThreshold = gd.getNextBoolean();
+		doPlot = gd.getNextBoolean();
+		testCount = (int) Math.floor(gd.getNextNumber());
+		testRange = gd.getNextNumber();
+		subVolume = (int) Math.floor(gd.getNextNumber());
+		nErodes = (int) Math.floor(gd.getNextNumber());
+		nDilates = (int) Math.floor(gd.getNextNumber());
+
+		if (thresholdOnly) {
+			// uncheck show plot
+			Vector<?> checkboxes = gd.getCheckboxes();
+			Checkbox t = (Checkbox) checkboxes.get(2);
+			t.setState(false);
+			doPlot = false;
+			// grey out fields
+			Vector<?> numbers = gd.getNumericFields();
+			for (int i = 0; i < numbers.size(); i++) {
+				TextField n = (TextField) numbers.get(i);
+				n.setEnabled(false);
+			}
+		}
+		if (!thresholdOnly){
+			// un-grey out fields
+			Vector<?> numbers = gd.getNumericFields();
+			for (int i = 0; i < numbers.size(); i++) {
+				TextField n = (TextField) numbers.get(i);
+				n.setEnabled(true);
+			}
+		}
+		return true;
 	}
 }
