@@ -356,8 +356,9 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		gd.addCheckbox("Threshold Only", false);
 		gd.addCheckbox("Apply Threshold", false);
 		gd.addCheckbox("Show Plot", true);
+		gd.addMessage("Connectivity Options");
 		gd.addNumericField("Tests", testCount, 0);
-		gd.addNumericField("Range", testRange, 2);
+		gd.addNumericField("Range (0 - 0.5)", testRange, 2);
 		gd.addNumericField("Subvolume Size", subVolume, 0);
 		gd.addNumericField("Erosion Cycles", nErodes, 0);
 		gd.addNumericField("Dilation Cycles", nDilates, 0);
@@ -370,7 +371,13 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			applyThreshold = gd.getNextBoolean();
 			doPlot = gd.getNextBoolean();
 			testCount = (int) Math.floor(gd.getNextNumber());
+			if (testCount <= 1)
+					thresholdOnly = true;
 			testRange = gd.getNextNumber();
+			if (testRange < 0)
+				testRange = 0;
+			if (testRange > 0.5)
+				testRange = 0.5;
 			subVolume = (int) Math.floor(gd.getNextNumber());
 			nErodes = (int) Math.floor(gd.getNextNumber());
 			nDilates = (int) Math.floor(gd.getNextNumber());
