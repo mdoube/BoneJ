@@ -393,6 +393,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			Vector<?> checkboxes = gd.getCheckboxes();
 			Checkbox t = (Checkbox) checkboxes.get(2);
 			t.setState(false);
+			t.setEnabled(false);
 			doPlot = false;
 			// grey out fields
 			Vector<?> numbers = gd.getNumericFields();
@@ -408,6 +409,10 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				TextField n = (TextField) numbers.get(i);
 				n.setEnabled(true);
 			}
+			// enable show plot
+			Vector<?> checkboxes = gd.getCheckboxes();
+			Checkbox t = (Checkbox) checkboxes.get(2);
+			t.setEnabled(true);
 		}
 		return true;
 	}
