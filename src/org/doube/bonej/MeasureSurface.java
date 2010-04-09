@@ -5,7 +5,7 @@ import java.util.List;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
-import org.doube.geometry.VectorProduct;
+import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -132,7 +132,7 @@ public class MeasureSurface implements PlugIn {
 
 			// area of triangle is half magnitude
 			// of cross product of 2 edge vectors
-			Point3f cp = VectorProduct.crossProduct(point0, point1, point2);
+			Point3f cp = Vectors.crossProduct(point0, point1, point2);
 
 			final double deltaArea = 0.5 * cp.distance(origin);
 

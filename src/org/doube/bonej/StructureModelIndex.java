@@ -34,7 +34,7 @@ import isosurface.MeshEditor;
 import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
-import org.doube.geometry.VectorProduct;
+import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -262,7 +262,7 @@ public class StructureModelIndex implements PlugIn {
 					point2 = triangles.get(pointIndex);
 					break;
 				}
-				Point3f surfaceNormal = VectorProduct.crossProduct(point0,
+				Point3f surfaceNormal = Vectors.crossProduct(point0,
 						point1, point2);
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
@@ -307,12 +307,12 @@ public class StructureModelIndex implements PlugIn {
 			Point3f point0 = triangles.get(i);
 			Point3f point1 = triangles.get(i + 1);
 			Point3f point2 = triangles.get(i + 2);
-			double area1 = 0.5 * VectorProduct.crossProduct(point0, point1,
+			double area1 = 0.5 * Vectors.crossProduct(point0, point1,
 					point2).distance(origin);
 			point0 = movedTriangles.get(i);
 			point1 = movedTriangles.get(i + 1);
 			point2 = movedTriangles.get(i + 2);
-			double area2 = 0.5 * VectorProduct.crossProduct(point0, point1,
+			double area2 = 0.5 * Vectors.crossProduct(point0, point1,
 					point2).distance(origin);
 
 			double deltaArea = area2 - area1;
