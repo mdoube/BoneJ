@@ -60,7 +60,7 @@ public class ThresholdMinConn implements PlugIn {
 		double threshold = (double) ip.getAutoThreshold(histogram);
 
 		if (!thresholdOnly) {
-			int[] testThreshold = getTestThreshold(imp, histogram);
+			double[] testThreshold = getTestThreshold(imp, histogram);
 			double[] conns = getConns(imp, testThreshold, subVolume);
 			double minimum = getMinimum(testThreshold, conns);
 			threshold = checkMinimum(imp, minimum, histogram);
@@ -139,17 +139,16 @@ public class ThresholdMinConn implements PlugIn {
 	 * @param histogram
 	 * @return
 	 */
-	private int[] getTestThreshold(ImagePlus imp2, int[] histogram) {
+	private double[] getTestThreshold(ImagePlus imp2, int[] histogram) {
 		ImageProcessor ip = imp2.getProcessor();
 		int startThreshold = ip.getAutoThreshold(histogram);
 
 		// get a range of thresholds to test
 		final int nTests = testCount;
 		final double testStep = 2 * testRange * startThreshold / (nTests - 1);
-		int[] testThreshold = new int[nTests];
+		double[] testThreshold = new double[nTests];
 		for (int i = 0; i < nTests; i++) {
-			testThreshold[i] = (int) Math.round(startThreshold
-					* (1 - testRange) + i * testStep);
+			testThreshold[i] = startThreshold * (1 - testRange) + i * testStep;
 		}
 		return testThreshold;
 	}
@@ -162,14 +161,8 @@ public class ThresholdMinConn implements PlugIn {
 	 * @param conns
 	 * @return
 	 */
-	private double getMinimum(int[] testThreshold, double[] conns) {
-		// convert xData to double
-		final int nPoints = testThreshold.length;
-		double[] xData = new double[nPoints];
-		for (int i = 0; i < nPoints; i++) {
-			xData[i] = (double) testThreshold[i];
-		}
-		CurveFitter cf = new CurveFitter(xData, conns);
+	private double getMinimum(double[] testThreshold, double[] conns) {
+		CurveFitter cf = new CurveFitter(testThreshold, conns);
 		cf.doFit(CurveFitter.POLY2);
 		double[] params = cf.getParams();
 		double b = params[1], c = params[2];
@@ -183,7 +176,7 @@ public class ThresholdMinConn implements PlugIn {
 	 * @param testThreshold
 	 * @param conns
 	 */
-	private void showPlot(int[] testThreshold, double[] conns) {
+	private void showPlot(double[] testThreshold, double[] conns) {
 		// convert arrays to floats
 		int nPoints = testThreshold.length;
 		float[] xData = new float[nPoints];
@@ -218,7 +211,7 @@ public class ThresholdMinConn implements PlugIn {
 	 *            array of test threshold values (from getTestThreshold)
 	 * @return array containing connectivity resulting from each test threshold
 	 */
-	private double[] getConns(ImagePlus imp2, int[] testThreshold, int subVolume) {
+	private double[] getConns(ImagePlus imp2, double[] testThreshold, int subVolume) {
 		int nTests = testThreshold.length;
 		double[] conns = new double[nTests];
 
@@ -232,28 +225,27 @@ public class ThresholdMinConn implements PlugIn {
 
 		ImageStack stack2 = new ImageStack(width, height);
 		for (int z = 1; z <= depth; z++) {
-			byte[] nullPixels = new byte[width * height];
-			stack2.addSlice(stack.getSliceLabel(z), nullPixels);
 			ImageProcessor ip = stack.getProcessor(z);
-			ImageProcessor ip2 = stack2.getProcessor(z);
+			ImageProcessor ip2 = ip.createProcessor(width, height);
 			for (int y = 0; y < height; y++) {
 				for (int x = 0; x < width; x++) {
 					ip2.set(x, y, ip.get(x, y));
 				}
 			}
+			stack2.addSlice(stack.getSliceLabel(z), ip2);
 		}
 
 		ImagePlus imp3 = new ImagePlus();
 		for (int i = 0; i < nTests; i++) {
 			// apply threshold
-			final int thresh = testThreshold[i];
+			final double thresh = testThreshold[i];
 			ImageStack stack3 = new ImageStack(width, height);
 			for (int z = 1; z <= depth; z++) {
 				ImageProcessor ip2 = stack2.getProcessor(z);
 				ByteProcessor bp = new ByteProcessor(width, height);
 				for (int y = 0; y < height; y++) {
 					for (int x = 0; x < width; x++) {
-						if (ip2.get(x, y) > thresh) {
+						if ((double)ip2.get(x, y) > thresh) {
 							bp.set(x, y, 255);
 						} else {
 							bp.set(x, y, 0);
