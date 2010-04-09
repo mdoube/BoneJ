@@ -103,24 +103,11 @@ public class PlateRod implements PlugIn {
 	/* ----------------------------------------------------------------------- */
 
 	private double[][] skeletonPoints(ImagePlus imp) {
-		ImageStack stack = imp.getImageStack();
-		ImageStack skeletonStack = new ImageStack(imp.getWidth(), imp
-				.getHeight(), imp.getNSlices());
-		for (int s = 1; s <= stack.getSize(); s++) {
-			byte[] pixels = (byte[]) stack.getPixels(s);
-			byte[] pixelsCopy = pixels.clone();
-			skeletonStack.setPixels(pixelsCopy, s);
-		}
-
-		ImagePlus skeletonImp = new ImagePlus("Skeleton", skeletonStack);
-		skeletonImp.setCalibration(imp.getCalibration());
-		skeletonImp.show();
-		IJ.run("Invert LUT");
-		IJ.run("Skeletonise 3D");
-		skeletonStack = skeletonImp.getStack();
-		int d = skeletonImp.getStackSize();
-		int h = skeletonImp.getHeight();
-		int w = skeletonImp.getWidth();
+		Skeletonize3D sk = new Skeletonize3D();
+		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
+		final int d = imp.getStackSize();
+		final int h = imp.getHeight();
+		final int w = imp.getWidth();
 		double vW = imp.getCalibration().pixelWidth;
 		double vH = imp.getCalibration().pixelHeight;
 		double vD = imp.getCalibration().pixelDepth;
