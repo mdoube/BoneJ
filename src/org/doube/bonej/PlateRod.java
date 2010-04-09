@@ -1,3 +1,4 @@
+package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -32,7 +33,7 @@ import org.doube.util.ResultInserter;
  * Eigenvalues plot ev2/ev1 on 3d skeleton
  */
 
-public class Plate_Rod implements PlugIn {
+public class PlateRod implements PlugIn {
 	private int nVectors = 1000;
 
 	// private double vW, vH, vD, samplingIncrement;
