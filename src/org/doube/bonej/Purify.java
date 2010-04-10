@@ -76,21 +76,24 @@ public class Purify implements PlugIn {
 		}
 		boolean showPerformance = gd.getNextBoolean();
 		boolean doCopy = gd.getNextBoolean();
-		Object[] result = purify(imp, slicesPerChunk, showPerformance);
-		if (null != result) {
-			ImagePlus purified = (ImagePlus) result[1];
-
+		long startTime = System.currentTimeMillis();
+		ImagePlus purified = purify(imp, slicesPerChunk);
+		if (null != purified) {
 			if (doCopy) {
 				purified.show();
-				if (!purified.isInvertedLut())
+				if (imp.isInvertedLut() && !purified.isInvertedLut())
 					IJ.run("Invert LUT");
 			} else {
-				ImageStack stack2 = purified.getStack();
-				imp.setStack(null, stack2);
+				imp.setStack(null, purified.getStack());
 				if (!imp.isInvertedLut())
 					IJ.run("Invert LUT");
 			}
 		}
+		double duration = ((double) System.currentTimeMillis() - (double) startTime)
+				/ (double) 1000;
+
+		if (showPerformance)
+			showResults(duration, imp, slicesPerChunk);
 		return;
 	}
 
@@ -102,16 +105,10 @@ public class Purify implements PlugIn {
 	 *            input image
 	 * @param slicesPerChunk
 	 *            number of slices to send to each CPU core as a chunk
-	 * @param showPerformance
-	 *            display verbose performance data
-	 * 
-	 * @return Object[] containing the duration in seconds, purified ImagePlus
-	 *         and particle labels ImagePlus
+	 * @return purified image
 	 */
-	public Object[] purify(ImagePlus imp, int slicesPerChunk,
-			boolean showPerformance) {
+	public ImagePlus purify(ImagePlus imp, int slicesPerChunk) {
 
-		long startTime = System.currentTimeMillis();
 		ParticleCounter pc = new ParticleCounter();
 
 		final int fg = ParticleCounter.FORE;
@@ -132,12 +129,6 @@ public class Purify implements PlugIn {
 		particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, bg);
 
-		double duration = ((double) System.currentTimeMillis() - (double) startTime)
-				/ (double) 1000;
-
-		if (showPerformance)
-			showResults(duration, imp, slicesPerChunk);
-
 		IJ.showStatus("Image Purified");
 
 		ImageStack stack = new ImageStack(imp.getWidth(), imp.getHeight());
@@ -147,8 +138,7 @@ public class Purify implements PlugIn {
 		}
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
-		Object[] result = { duration, purified, particleLabels };
-		return result;
+		return purified;
 	}
 
 	/**

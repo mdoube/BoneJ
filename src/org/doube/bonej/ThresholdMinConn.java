@@ -273,11 +273,11 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			Purify p = new Purify();
 			Erode e = new Erode();
 			Dilate d = new Dilate();
-			replaceImage(imp3, (ImagePlus) p.purify(imp3, 4, false)[1]);
+			replaceImage(imp3, p.purify(imp3, 4));
 			for (int j = 0; j < nErodes; j++)
 				replaceImage(imp3, e.erode(imp3, 255));
 			if (nErodes > 0)
-				replaceImage(imp3, (ImagePlus) p.purify(imp3, 4, false)[1]);
+				replaceImage(imp3, p.purify(imp3, 4));
 			for (int j = 0; j < nDilates; j++)
 				replaceImage(imp3, d.dilate(imp3, 255));
 
