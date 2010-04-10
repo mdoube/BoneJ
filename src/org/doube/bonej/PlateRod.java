@@ -1,8 +1,10 @@
 package org.doube.bonej;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
@@ -35,8 +37,6 @@ import org.doube.util.ResultInserter;
 
 public class PlateRod implements PlugIn {
 	private int nVectors = 1000;
-
-	// private double vW, vH, vD, samplingIncrement;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -95,8 +95,8 @@ public class PlateRod implements PlugIn {
 		ri.setResultInRow(imp, "ΣeV1", sumEv1);
 		ri.setResultInRow(imp, "ΣeV2", sumEv2);
 		ri.setResultInRow(imp, "ΣeV3", sumEv3);
-		ri.setResultInRow(imp, "eV2/eV1", sumEv2 / sumEv1);
-		ri.setResultInRow(imp, "eV3/eV1", sumEv3 / sumEv1);
+		ri.setResultInRow(imp, "ΣeV2/ΣeV1", sumEv2 / sumEv1);
+		ri.setResultInRow(imp, "ΣeV3/ΣeV1", sumEv3 / sumEv1);
 		ri.updateTable();
 	}
 
@@ -149,21 +149,18 @@ public class PlateRod implements PlugIn {
 		ImageStack stack = imp.getImageStack();
 		double[][] localEigenValues = new double[skeletonPoints.length][3];
 		Calibration cal = imp.getCalibration();
-		double vD = cal.pixelDepth;
-		double vH = cal.pixelHeight;
-		double vW = cal.pixelWidth;
-		int w = stack.getWidth();
-		int h = stack.getHeight();
-		int d = stack.getSize();
-		int nP = skeletonPoints.length;
-		int nV = randomVectors.length;
-		// make a work array containing the stack
-		byte[] workArray = new byte[w * h * d];
-		int pixPerSlice = w * h;
+		final double vD = cal.pixelDepth;
+		final double vH = cal.pixelHeight;
+		final double vW = cal.pixelWidth;
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+		final int nP = skeletonPoints.length;
+		final int nV = randomVectors.length;
+		// instantiate ImageProcessors to access the stack slices
+		ImageProcessor[] ips = new ImageProcessor[d];
 		for (int s = 0; s < d; s++) {
-			byte[] slicePixels = (byte[]) stack.getPixels(s + 1);
-			System.arraycopy(slicePixels, 0, workArray, s * pixPerSlice,
-					pixPerSlice);
+			ips[s] = stack.getProcessor(s + 1);
 		}
 
 		for (int p = 0; p < nP; p++) {
@@ -180,9 +177,9 @@ public class PlateRod implements PlugIn {
 				final double vecZ = randomVectors[v][2];
 				if (hitSide)
 					break;
-				byte pixelValue = -1;
+				int pixelValue = 255;
 				double vecL = 0;
-				while (pixelValue < 0 && !hitSide) {
+				while (pixelValue == 255 && !hitSide) {
 					final int tX = (int) Math.floor((sX + vecX * vecL) / vW);
 					final int tY = (int) Math.floor((sY + vecY * vecL) / vH);
 					final int tZ = (int) Math.floor((sZ + vecZ * vecL) / vD);
@@ -191,7 +188,7 @@ public class PlateRod implements PlugIn {
 						hitSide = true;
 						break;
 					} else {
-						pixelValue = workArray[tZ * pixPerSlice + tY * w + tX];
+						pixelValue = ips[tZ].get(tX, tY);
 						vecL += samplingIncrement;
 					}
 				}
