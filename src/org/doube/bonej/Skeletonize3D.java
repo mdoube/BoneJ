@@ -83,6 +83,14 @@ public class Skeletonize3D implements PlugIn {
 		return;
 	}
 
+	/**
+	 * Gets a medial axis skeleton from a binary imp using a topology-preserving
+	 * iterative algorithm
+	 * 
+	 * @param imp
+	 *            input image
+	 * @return skeletonised image
+	 */
 	public ImagePlus getSkeleton(ImagePlus imp) {
 		ImageStack inputImage = imp.getStack();
 
