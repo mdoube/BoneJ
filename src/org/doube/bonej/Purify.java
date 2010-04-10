@@ -95,11 +95,18 @@ public class Purify implements PlugIn {
 	}
 
 	/**
+	 * Find all foreground and particles in an image and remove all but the
+	 * largest. Foreground is 26-connected and background is 8-connected.
 	 * 
 	 * @param imp
+	 *            input image
 	 * @param slicesPerChunk
+	 *            number of slices to send to each CPU core as a chunk
 	 * @param showPerformance
-	 * @return
+	 *            display verbose performance data
+	 * 
+	 * @return Object[] containing the duration in seconds, purified ImagePlus
+	 *         and particle labels ImagePlus
 	 */
 	public Object[] purify(ImagePlus imp, int slicesPerChunk,
 			boolean showPerformance) {
@@ -108,14 +115,14 @@ public class Purify implements PlugIn {
 		ParticleCounter pc = new ParticleCounter();
 
 		final int fg = ParticleCounter.FORE;
-		Object[] foregroundParticles = pc.getParticles(imp,
-				slicesPerChunk, 0, Double.POSITIVE_INFINITY, fg);
+		Object[] foregroundParticles = pc.getParticles(imp, slicesPerChunk, 0,
+				Double.POSITIVE_INFINITY, fg);
 		byte[][] workArray = (byte[][]) foregroundParticles[0];
 		int[][] particleLabels = (int[][]) foregroundParticles[1];
-		//index 0 is background particle's size...
+		// index 0 is background particle's size...
 		long[] particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, fg);
-		
+
 		final int bg = ParticleCounter.BACK;
 		Object[] backgroundParticles = pc.getParticles(imp, workArray,
 				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg);
