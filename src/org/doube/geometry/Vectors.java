@@ -14,22 +14,58 @@ public class Vectors {
 	 *            vector 1's head
 	 * @param point2
 	 *            vector 2's head
-	 * @return
+	 * @return cross product vector
 	 */
 	public static Point3f crossProduct(Point3f point0, Point3f point1,
 			Point3f point2) {
-		final float x1 = point1.x - point0.x;
-		final float y1 = point1.y - point0.y;
-		final float z1 = point1.z - point0.z;
-
-		final float x2 = point2.x - point0.x;
-		final float y2 = point2.y - point0.y;
-		final float z2 = point2.z - point0.z;
-
+		double[] p0 = new double[3];
+		double[] p1 = new double[3];
+		double[] p2 = new double[3];
+		p0[0] = point0.x;
+		p0[1] = point0.y;
+		p0[2] = point0.z;
+		p1[0] = point1.x;
+		p1[1] = point1.y;
+		p1[2] = point1.z;
+		p2[0] = point2.x;
+		p2[1] = point2.y;
+		p2[2] = point2.z;
+		double[] cV = crossProduct(p0, p1, p2);
 		Point3f crossVector = new Point3f();
-		crossVector.x = y1 * z2 - z1 * y2;
-		crossVector.y = z1 * x2 - x1 * z2;
-		crossVector.z = x1 * y2 - y1 * x2;
+		crossVector.x = (float) cV[0];
+		crossVector.y = (float) cV[1];
+		crossVector.z = (float) cV[2];
+		return crossVector;
+	}
+
+	/**
+	 * Calculate the cross product of 3 double[3]'s, which describe two vectors
+	 * joined at the tails. Can be used to find the plane / surface normal of a
+	 * triangle. Half of its magnitude is the area of the triangle.
+	 * 
+	 * @param point0
+	 *            both vectors' tails
+	 * @param point1
+	 *            vector 1's head
+	 * @param point2
+	 *            vector 2's head
+	 * 
+	 * @return cross product vector
+	 */
+	public static double[] crossProduct(double[] point0, double[] point1,
+			double[] point2) {
+		final double x1 = point1[0] - point0[0];
+		final double y1 = point1[1] - point0[1];
+		final double z1 = point1[2] - point0[2];
+
+		final double x2 = point2[0] - point0[0];
+		final double y2 = point2[1] - point0[1];
+		final double z2 = point2[2] - point0[2];
+
+		double[] crossVector = new double[3];
+		crossVector[0] = y1 * z2 - z1 * y2;
+		crossVector[1] = z1 * x2 - x1 * z2;
+		crossVector[2] = x1 * y2 - y1 * x2;
 
 		return crossVector;
 	}
