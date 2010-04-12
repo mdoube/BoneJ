@@ -58,10 +58,7 @@ public class FitSphere {
 		double r = 0;
 
 		for (int i = 0; i < nPoints; i++) {
-			double pX = points[i][0] - x;
-			double pY = points[i][1] - y;
-			double pZ = points[i][2] - z;
-			r += Math.sqrt(pX * pX + pY * pY + pZ * pZ);
+			r += Trig.distance3D(points[i], centroid);
 		}
 		r /= nPoints;
 
@@ -72,10 +69,10 @@ public class FitSphere {
 			double[][] dp = D.getArray(); // dp is a pointer to d's values
 			g_old = g_new;
 			for (int i = 0; i < nPoints; i++) {
-				double pX = points[i][0] - x;
-				double pY = points[i][1] - y;
-				double pZ = points[i][2] - z;
-				radii[i] = Math.sqrt(pX * pX + pY * pY + pZ * pZ);
+				final double pX = points[i][0] - x;
+				final double pY = points[i][1] - y;
+				final double pZ = points[i][2] - z;
+				radii[i] = Trig.distance3D(pX, pY, pZ);
 				dp[i][0] = radii[i] - r;
 				Jp[i][0] = -pX / radii[i];
 				Jp[i][1] = -pY / radii[i];
