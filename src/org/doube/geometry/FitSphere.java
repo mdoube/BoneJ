@@ -72,12 +72,13 @@ public class FitSphere {
 				final double pX = points[i][0] - x;
 				final double pY = points[i][1] - y;
 				final double pZ = points[i][2] - z;
-				radii[i] = Trig.distance3D(pX, pY, pZ);
-				dp[i][0] = radii[i] - r;
-				Jp[i][0] = -pX / radii[i];
-				Jp[i][1] = -pY / radii[i];
-				Jp[i][2] = -pZ / radii[i];
+				final double ri = Trig.distance3D(pX, pY, pZ);
+				dp[i][0] = ri - r;
+				Jp[i][0] = -pX / ri;
+				Jp[i][1] = -pY / ri;
+				Jp[i][2] = -pZ / ri;
 				Jp[i][3] = -1;
+				radii[i] = ri;
 			}
 			D = D.times(-1);
 			Matrix J1 = J;
