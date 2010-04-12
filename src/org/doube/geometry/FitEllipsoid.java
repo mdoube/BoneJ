@@ -243,11 +243,12 @@ public class FitEllipsoid {
 			double noise, int nPoints, boolean random) {
 
 		final int n = (int) Math.floor(-3 / 4 + Math.sqrt(1 + 8 * nPoints) / 4);
-		final int h = 2 * n + 1;
+		final int h = 2 * n + 2;
 		final int w = n + 1;
 		double[][] s = new double[h][w];
 		double[][] t = new double[h][w];
 		double value = -Math.PI / 2;
+		//Random points
 		if (random) {
 			for (int j = 0; j < w; j++) {
 				for (int i = 0; i < h; i++) {
@@ -259,19 +260,20 @@ public class FitEllipsoid {
 					t[i][j] = value + Math.random() * 2 * Math.PI;
 				}
 			}
+			//Regular points
 		} else {
-			final double increment = Math.PI / (n + 0.5);
+			final double increment = Math.PI / (n-1);
 
 			for (int j = 0; j < w; j++) {
 				for (int i = 0; i < h; i++) {
-					s[i][j] = value + increment;
+					s[i][j] = value;
 				}
 				value += increment;
 			}
 			value = -Math.PI / 2;
 			for (int i = 0; i < h; i++) {
 				for (int j = 0; j < w; j++) {
-					t[i][j] = value + increment;
+					t[i][j] = value;
 				}
 				value += increment;
 			}
@@ -323,7 +325,7 @@ public class FitEllipsoid {
 		}
 		return ellipsoidPoints;
 	}
-
+	
 	/**
 	 * Return normal unit vectors at points on an ellipsoid given the radii of
 	 * an ellipsoid and points on the ellipsoid. Assumes an ellipsoid centred on
