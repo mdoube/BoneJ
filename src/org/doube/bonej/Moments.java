@@ -211,7 +211,7 @@ public class Moments implements PlugIn {
 	 * @return Object containing an array of the type needed for an image with
 	 *         bitDepth
 	 */
-	public Object getEmptyPixels(int w, int h, int bitDepth) {
+	public static Object getEmptyPixels(int w, int h, int bitDepth) {
 		byte[] bytePixels = new byte[w * h];
 		short[] shortPixels = new short[w * h];
 		float[] floatPixels = new float[w * h];
