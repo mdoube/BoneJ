@@ -81,12 +81,14 @@ public class Thickness implements PlugIn {
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addCheckbox("Thickness", true);
 		gd.addCheckbox("Spacing", false);
+		gd.addCheckbox("Graphic Result", true);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		boolean doThickness = gd.getNextBoolean();
 		boolean doSpacing = gd.getNextBoolean();
+		boolean doGraphic = gd.getNextBoolean();
 
 		long startTime = System.currentTimeMillis();
 		String title = stripExtension(imp.getTitle());
@@ -99,8 +101,10 @@ public class Thickness implements PlugIn {
 			impLTC.setCalibration(imp.getCalibration());
 			double[] stats = meanStdDev(impLTC);
 			insertResults(imp, stats, inverse);
-			if (!Interpreter.isBatchMode()) {
+			if (doGraphic && !Interpreter.isBatchMode()) {
 				impLTC.show();
+				impLTC.setSlice(1);
+				impLTC.getProcessor().setMinAndMax(0, stats[2]);
 				IJ.run("Fire");
 			}
 		}
@@ -112,8 +116,10 @@ public class Thickness implements PlugIn {
 			impLTCi.setCalibration(imp.getCalibration());
 			double[] stats = meanStdDev(impLTCi);
 			insertResults(imp, stats, inverse);
-			if (!Interpreter.isBatchMode()) {
+			if (doGraphic && !Interpreter.isBatchMode()) {
 				impLTCi.show();
+				impLTCi.setSlice(1);
+				impLTCi.getProcessor().setMinAndMax(0, stats[2]);
 				IJ.run("Fire");
 			}
 		}
@@ -1004,8 +1010,6 @@ public class Thickness implements PlugIn {
 			impOut.setSlice(z + 1);
 			impOut.getProcessor().multiply(vW);
 		}
-		impOut.getProcessor().setMinAndMax(0,
-				1.5 * impOut.getProcessor().getMax());
 		return impOut;
 	}
 
