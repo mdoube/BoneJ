@@ -1,5 +1,6 @@
 package org.doube.bonej;
 
+import java.awt.AWTEvent;
 import java.awt.Rectangle;
 import java.util.List;
 
@@ -22,7 +23,7 @@ import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.gui.*;
 
-public class VolumeFraction implements PlugIn {
+public class VolumeFraction implements PlugIn, DialogListener {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -32,11 +33,16 @@ public class VolumeFraction implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+		if (imp.getBitDepth() == 32 || imp.getBitDepth() == 24){
+			IJ.error("Volume Fraction requires a binary, 8-bit or 16-bit image");
+			return;
+		}
 
 		GenericDialog gd = new GenericDialog("Volume");
 		String[] types = { "Voxel", "Surface" };
-		gd.addChoice("Type", types, types[0]);
+		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -197,5 +203,11 @@ public class VolumeFraction implements PlugIn {
 			thresholds[1] = imp.getProcessor().getMaxThreshold();
 		}
 		return thresholds;
+	}
+
+	@Override
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }
