@@ -7,8 +7,6 @@
 	<property name="dist" location="dist" />
 
 	<property name="imagejPlugins" location="/home/mdoube/ImageJ/plugins/" />
-	<property name="fijiPlugins" location="/usr/lib/fiji/plugins/" />
-	<property name="doubeNetWww" location="/var/www/doube.net/files/" />
 
 	<property name="user.name" value="Michael Doube" />
 	<target name="main" depends="compress" description="Main target">
@@ -25,7 +23,5 @@
 			</manifest>
 		</jar>
 		<copy file="BoneJ_.jar" toDir="${imagejPlugins}" />
-		<copy file="BoneJ_.jar" toDir="${fijiPlugins}" />
-		<copy file="BoneJ_.jar" toDir="${doubeNetWww}" />
 	</target>
 </project>

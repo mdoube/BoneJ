@@ -17,11 +17,16 @@ package org.doube.bonej;
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.Choice;
+import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Vector;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
@@ -39,6 +44,7 @@ import marchingcubes.MCTriangulator;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -90,7 +96,7 @@ import ij3d.Image3DUniverse;
  *      </p>
  * 
  */
-public class ParticleCounter implements PlugIn {
+public class ParticleCounter implements PlugIn, DialogListener {
 
 	/** 3D viewer for rendering graphical output */
 	private Image3DUniverse univ = new Image3DUniverse();
@@ -100,6 +106,9 @@ public class ParticleCounter implements PlugIn {
 
 	/** Background value */
 	public final static int BACK = 0;
+
+	/** Particle joining method */
+	public final static int MULTI = 0, LINEAR = 1;
 
 	private String sPhase = "";
 
@@ -141,8 +150,11 @@ public class ParticleCounter implements PlugIn {
 		gd.addCheckbox("Show_ellipsoids", true);
 		gd.addCheckbox("Show_stack (3D)", true);
 		gd.addNumericField("Volume_resampling", 2, 0);
+		String[] items = { "Multithreaded", "Linear" };
+		gd.addChoice("Labelling algorithm", items, items[0]);
 		gd.addMessage("Slice size for particle counting");
 		gd.addNumericField("Slices per chunk", 2, 0);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
@@ -166,11 +178,18 @@ public class ParticleCounter implements PlugIn {
 		final boolean doEllipsoidImage = gd.getNextBoolean();
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
+		final String choice = gd.getNextChoice();
+		int labelMethod = 0;
+		if (choice.equals(items[0])) {
+			labelMethod = MULTI;
+		} else {
+			labelMethod = LINEAR;
+		}
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
-				FORE);
+				FORE, labelMethod);
 		int[][] particleLabels = (int[][]) result[1];
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
@@ -1122,10 +1141,10 @@ public class ParticleCounter implements PlugIn {
 	 *         particle labels.
 	 */
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
-			double minVol, double maxVol, int phase) {
+			double minVol, double maxVol, int phase, int labelMethod) {
 		byte[][] workArray = makeWorkArray(imp);
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, labelMethod);
 	}
 
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk, int phase) {
@@ -1133,7 +1152,7 @@ public class ParticleCounter implements PlugIn {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, MULTI);
 	}
 
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
@@ -1141,7 +1160,7 @@ public class ParticleCounter implements PlugIn {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, MULTI);
 	}
 
 	/**
@@ -1164,7 +1183,8 @@ public class ParticleCounter implements PlugIn {
 	 *         particle sizes
 	 */
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
-			int slicesPerChunk, double minVol, double maxVol, int phase) {
+			int slicesPerChunk, double minVol, double maxVol, int phase,
+			int labelMethod) {
 		if (phase == FORE) {
 			this.sPhase = "foreground";
 		} else if (phase == BACK) {
@@ -1183,27 +1203,32 @@ public class ParticleCounter implements PlugIn {
 
 		int[][] particleLabels = firstIDAttribution(imp, workArray, phase);
 
-		// connect particles within chunks
-		final int nThreads = Runtime.getRuntime().availableProcessors();
-		ConnectStructuresThread[] cptf = new ConnectStructuresThread[nThreads];
-		for (int thread = 0; thread < nThreads; thread++) {
-			cptf[thread] = new ConnectStructuresThread(thread, nThreads, imp,
-					workArray, particleLabels, phase, nChunks, chunkRanges);
-			cptf[thread].start();
-		}
-		try {
+		if (labelMethod == MULTI) {
+			// connect particles within chunks
+			final int nThreads = Runtime.getRuntime().availableProcessors();
+			ConnectStructuresThread[] cptf = new ConnectStructuresThread[nThreads];
 			for (int thread = 0; thread < nThreads; thread++) {
-				cptf[thread].join();
+				cptf[thread] = new ConnectStructuresThread(thread, nThreads,
+						imp, workArray, particleLabels, phase, nChunks,
+						chunkRanges);
+				cptf[thread].start();
 			}
-		} catch (InterruptedException ie) {
-			IJ.error("A thread was interrupted.");
-		}
+			try {
+				for (int thread = 0; thread < nThreads; thread++) {
+					cptf[thread].join();
+				}
+			} catch (InterruptedException ie) {
+				IJ.error("A thread was interrupted.");
+			}
 
-		// connect particles between chunks
-		if (nChunks > 1) {
-			chunkString = ": stitching...";
-			connectStructures(imp, workArray, particleLabels, phase,
-					stitchRanges);
+			// connect particles between chunks
+			if (nChunks > 1) {
+				chunkString = ": stitching...";
+				connectStructures(imp, workArray, particleLabels, phase,
+						stitchRanges);
+			}
+		} else if (labelMethod == LINEAR){
+			joinStructures(imp, particleLabels, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		minimiseLabels(particleLabels);
@@ -1660,6 +1685,161 @@ public class ParticleCounter implements PlugIn {
 	}// ConnectStructuresThread
 
 	/**
+	 * Joins semi-labelled particles using a non-recursive algorithm
+	 * 
+	 * @param imp
+	 * @param particleLabels
+	 */
+	private void joinStructures(ImagePlus imp, int[][] particleLabels, int phase) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		long[] particleSizes = getParticleSizes(particleLabels);
+		final int nBlobs = particleSizes.length;
+		ArrayList<ArrayList<short[]>> particleLists = getParticleLists(
+				particleLabels, nBlobs, w, h, d);
+		switch (phase) {
+		case FORE: {
+			for (int b = 1; b < nBlobs; b++) {
+				IJ.showStatus("Joining substructures...");
+				IJ.showProgress(b, nBlobs);
+				if (particleLists.get(b).isEmpty()) {
+					continue;
+				}
+
+				for (int l = 0; l < particleLists.get(b).size(); l++) {
+					final short[] voxel = particleLists.get(b).get(l);
+					final int x = voxel[0];
+					final int y = voxel[1];
+					final int z = voxel[2];
+					// find any neighbours with bigger labels
+					for (int zN = z - 1; zN <= z + 1; zN++) {
+						for (int yN = y - 1; yN <= y + 1; yN++) {
+							final int index = yN * w;
+							for (int xN = x - 1; xN <= x + 1; xN++) {
+								if (!withinBounds(xN, yN, zN, w, h, d))
+									continue;
+								final int iN = index + xN;
+								int p = particleLabels[zN][iN];
+								if (p > b) {
+									joinBlobs(b, p, particleLabels,
+											particleLists, w);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		case BACK: {
+			for (int b = 1; b < nBlobs; b++) {
+				IJ.showStatus("Joining substructures...");
+				IJ.showProgress(b, nBlobs);
+				if (particleLists.get(b).isEmpty()) {
+					continue;
+				}
+				for (int l = 0; l < particleLists.get(b).size(); l++) {
+					final short[] voxel = particleLists.get(b).get(l);
+					final int x = voxel[0];
+					final int y = voxel[1];
+					final int z = voxel[2];
+					// find any neighbours with bigger labels
+					int xN = x, yN = y, zN = z;
+					for (int n = 1; n < 7; n++) {
+						switch (n) {
+						case 1:
+							xN = x - 1;
+							break;
+						case 2:
+							xN = x + 1;
+							break;
+						case 3:
+							yN = y - 1;
+							xN = x;
+							break;
+						case 4:
+							yN = y + 1;
+							break;
+						case 5:
+							zN = z - 1;
+							yN = y;
+							break;
+						case 6:
+							zN = z + 1;
+							break;
+						}
+						if (!withinBounds(xN, yN, zN, w, h, d))
+							continue;
+						final int iN = yN * w + xN;
+						int p = particleLabels[zN][iN];
+						if (p > b) {
+							joinBlobs(b, p, particleLabels, particleLists, w);
+						}
+					}
+				}
+			}
+		}
+		}
+		return;
+	}
+
+	// @SuppressWarnings("unchecked")
+	public ArrayList<ArrayList<short[]>> getParticleLists(
+			int[][] particleLabels, int nBlobs, int w, int h, int d) {
+		// ArrayList<int[]> particleLists[] = new ArrayList[nBlobs];
+		ArrayList<ArrayList<short[]>> pL = new ArrayList<ArrayList<short[]>>(
+				nBlobs);
+		long[] particleSizes = getParticleSizes(particleLabels);
+		ArrayList<short[]> background = new ArrayList<short[]>(0);
+		pL.add(0, background);
+		for (int b = 1; b < nBlobs; b++) {
+			ArrayList<short[]> a = new ArrayList<short[]>(
+					(int) particleSizes[b]);
+			pL.add(b, a);
+		}
+		// add all the particle coordinates to the appropriate list
+		for (short z = 0; z < d; z++) {
+			IJ.showStatus("Listing substructures...");
+			IJ.showProgress(z, d);
+			for (short y = 0; y < h; y++) {
+				final int i = y * w;
+				for (short x = 0; x < w; x++) {
+					final int p = particleLabels[z][i + x];
+					if (p > 0) { // ignore background
+						final short[] voxel = { x, y, z };
+						pL.get(p).add(voxel);
+					}
+				}
+			}
+		}
+		return pL;
+	}
+
+	/**
+	 * Join particle p to particle b, relabelling p with b.
+	 * 
+	 * @param b
+	 * @param p
+	 * @param particleLabels
+	 *            array of particle labels
+	 * @param particleLists
+	 *            list of particle voxel coordinates
+	 * @param w
+	 *            stack width
+	 */
+	public void joinBlobs(int b, int p, int[][] particleLabels,
+			ArrayList<ArrayList<short[]>> particleLists, int w) {
+		ListIterator<short[]> iterB = particleLists.get(p).listIterator();
+		while (iterB.hasNext()) {
+			short[] voxelB = iterB.next();
+			particleLists.get(b).add(voxelB);
+			final int iB = voxelB[1] * w + voxelB[0];
+			particleLabels[voxelB[2]][iB] = b;
+		}
+		particleLists.get(p).clear();
+	}
+
+	/**
 	 * Create a work array
 	 * 
 	 * @return byte[] work array
@@ -1794,6 +1974,10 @@ public class ParticleCounter implements PlugIn {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= startZ && o < endZ);
 	}
 
+	private boolean withinBounds(int m, int n, int o, int w, int h, int d) {
+		return (m >= 0 && m < w && n >= 0 && n < h && o >= 0 && o < d);
+	}
+
 	/**
 	 * Find the offset within a 1D array given 2 (x, y) offset values
 	 * 
@@ -1889,5 +2073,27 @@ public class ParticleCounter implements PlugIn {
 		impParticles.setCalibration(imp.getCalibration());
 		impParticles.getProcessor().setMinAndMax(0, max);
 		return impParticles;
+	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> choices = gd.getChoices();
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> numbers = gd.getNumericFields();
+		Choice choice = (Choice) choices.get(0);
+		TextField num = (TextField) numbers.get(4);
+		if (choice.getSelectedItem().contentEquals("Multithreaded")) {
+			num.setEnabled(true);
+		} else {
+			num.setEnabled(false);
+		}
+		Checkbox box = (Checkbox) checkboxes.get(14);
+		TextField numb = (TextField) numbers.get(3);
+		if (box.getState()) {
+			numb.setEnabled(true);
+		} else {
+			numb.setEnabled(false);
+		}
+		
+		return true;
 	}
 }

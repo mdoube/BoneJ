@@ -113,7 +113,7 @@ public class Purify implements PlugIn {
 
 		final int fg = ParticleCounter.FORE;
 		Object[] foregroundParticles = pc.getParticles(imp, slicesPerChunk, 0,
-				Double.POSITIVE_INFINITY, fg);
+				Double.POSITIVE_INFINITY, fg, ParticleCounter.MULTI);
 		byte[][] workArray = (byte[][]) foregroundParticles[0];
 		int[][] particleLabels = (int[][]) foregroundParticles[1];
 		// index 0 is background particle's size...
@@ -122,7 +122,7 @@ public class Purify implements PlugIn {
 
 		final int bg = ParticleCounter.BACK;
 		Object[] backgroundParticles = pc.getParticles(imp, workArray,
-				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg);
+				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg, ParticleCounter.MULTI);
 		particleLabels = (int[][]) backgroundParticles[1];
 		particleSizes = pc.getParticleSizes(particleLabels);
 		touchEdges(imp, workArray, particleLabels, particleSizes, bg);
