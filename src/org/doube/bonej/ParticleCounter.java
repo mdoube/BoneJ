@@ -114,6 +114,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private String chunkString = "";
 
+	private int labelMethod = MULTI;
+
 	public void run(String arg) {
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
@@ -179,7 +181,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
 		final String choice = gd.getNextChoice();
-		int labelMethod = 0;
 		if (choice.equals(items[0])) {
 			labelMethod = MULTI;
 		} else {
@@ -189,7 +190,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
-				FORE, labelMethod);
+				FORE);
 		int[][] particleLabels = (int[][]) result[1];
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
@@ -1141,10 +1142,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *         particle labels.
 	 */
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
-			double minVol, double maxVol, int phase, int labelMethod) {
+			double minVol, double maxVol, int phase) {
 		byte[][] workArray = makeWorkArray(imp);
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase, labelMethod);
+				phase);
 	}
 
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk, int phase) {
@@ -1152,15 +1153,15 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase, MULTI);
+				phase);
 	}
 
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
-			int slicesPerChunk, int phase) {
+			int slicesPerChunk, int phase, int method) {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase, MULTI);
+				phase);
 	}
 
 	/**
@@ -1183,8 +1184,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *         particle sizes
 	 */
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
-			int slicesPerChunk, double minVol, double maxVol, int phase,
-			int labelMethod) {
+			int slicesPerChunk, double minVol, double maxVol, int phase) {
 		if (phase == FORE) {
 			this.sPhase = "foreground";
 		} else if (phase == BACK) {
@@ -1227,7 +1227,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				connectStructures(imp, workArray, particleLabels, phase,
 						stitchRanges);
 			}
-		} else if (labelMethod == LINEAR){
+		} else if (labelMethod == LINEAR) {
 			joinStructures(imp, particleLabels, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
@@ -2075,6 +2075,29 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return impParticles;
 	}
 
+	/**
+	 * Return the value of this instance's labelMethod field
+	 * 
+	 * @return
+	 */
+	public int getLabelMethod() {
+		return labelMethod;
+	}
+
+	/**
+	 * Set the value of this instance's labelMethod field
+	 * 
+	 * @param label
+	 *            one of ParticleCounter.MULTI or .LINEAR
+	 */
+	public void setLabelMethod(int label) {
+		if (label != MULTI && label != LINEAR) {
+			throw new IllegalArgumentException();
+		}
+		labelMethod = label;
+		return;
+	}
+
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> choices = gd.getChoices();
 		Vector<?> checkboxes = gd.getCheckboxes();
@@ -2093,7 +2116,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		} else {
 			numb.setEnabled(false);
 		}
-		
+
 		return true;
 	}
 }

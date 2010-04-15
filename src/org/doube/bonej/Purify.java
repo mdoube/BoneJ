@@ -19,11 +19,17 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.awt.AWTEvent;
+import java.awt.Choice;
+import java.awt.TextField;
+import java.util.Vector;
+
 import org.doube.util.ImageCheck;
 
 import ij.*;
 import ij.plugin.PlugIn;
 import ij.measure.ResultsTable;
+import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 
 /**
@@ -54,7 +60,7 @@ import ij.gui.GenericDialog;
  *      </p>
  * 
  */
-public class Purify implements PlugIn {
+public class Purify implements PlugIn, DialogListener {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -66,18 +72,27 @@ public class Purify implements PlugIn {
 			return;
 		}
 		GenericDialog gd = new GenericDialog("Setup");
+		String[] items = { "Multithreaded", "Linear" };
+		gd.addChoice("Labelling algorithm", items, items[0]);
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
 		gd.addCheckbox("Make_copy", true);
+		gd.addDialogListener(this);
 		gd.showDialog();
-		int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
-		if (gd.wasCanceled()) {
+		if (gd.wasCanceled())
 			return;
+		final String choice = gd.getNextChoice();
+		int labelMethod;
+		if (choice.equals(items[0])) {
+			labelMethod = ParticleCounter.MULTI;
+		} else {
+			labelMethod = ParticleCounter.LINEAR;
 		}
+		int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 		boolean showPerformance = gd.getNextBoolean();
 		boolean doCopy = gd.getNextBoolean();
 		long startTime = System.currentTimeMillis();
-		ImagePlus purified = purify(imp, slicesPerChunk);
+		ImagePlus purified = purify(imp, slicesPerChunk, labelMethod);
 		if (null != purified) {
 			if (doCopy) {
 				purified.show();
@@ -107,13 +122,14 @@ public class Purify implements PlugIn {
 	 *            number of slices to send to each CPU core as a chunk
 	 * @return purified image
 	 */
-	public ImagePlus purify(ImagePlus imp, int slicesPerChunk) {
+	public ImagePlus purify(ImagePlus imp, int slicesPerChunk, int labelMethod) {
 
 		ParticleCounter pc = new ParticleCounter();
+		pc.setLabelMethod(labelMethod);
 
 		final int fg = ParticleCounter.FORE;
 		Object[] foregroundParticles = pc.getParticles(imp, slicesPerChunk, 0,
-				Double.POSITIVE_INFINITY, fg, ParticleCounter.MULTI);
+				Double.POSITIVE_INFINITY, fg);
 		byte[][] workArray = (byte[][]) foregroundParticles[0];
 		int[][] particleLabels = (int[][]) foregroundParticles[1];
 		// index 0 is background particle's size...
@@ -122,7 +138,7 @@ public class Purify implements PlugIn {
 
 		final int bg = ParticleCounter.BACK;
 		Object[] backgroundParticles = pc.getParticles(imp, workArray,
-				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg, ParticleCounter.MULTI);
+				slicesPerChunk, 0, Double.POSITIVE_INFINITY, bg);
 		particleLabels = (int[][]) backgroundParticles[1];
 		particleSizes = pc.getParticleSizes(particleLabels);
 		touchEdges(imp, workArray, particleLabels, particleSizes, bg);
@@ -353,5 +369,19 @@ public class Purify implements PlugIn {
 		rt.addValue("Duration (s)", duration);
 		rt.show("Results");
 		return;
+	}
+
+	@Override
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> choices = gd.getChoices();
+		Vector<?> numbers = gd.getNumericFields();
+		Choice choice = (Choice) choices.get(0);
+		TextField num = (TextField) numbers.get(0);
+		if (choice.getSelectedItem().contentEquals("Multithreaded")) {
+			num.setEnabled(true);
+		} else {
+			num.setEnabled(false);
+		}
+		return true;
 	}
 }
