@@ -148,17 +148,19 @@ public class FitEllipsoid {
 	 *      </p>
 	 * 
 	 * @param coOrdinates
-	 * @return result Object[] array containing the centre, radii, eigenvectors
+	 *            array[n][3] where n > 8
+	 * @return Object[] array containing the centre, radii, eigenvectors
 	 *         of the axes, the 9 variables of the ellipsoid equation and the
 	 *         EVD
+	 * @throws IllegalArgumentException
+	 *             if number of coordinates is less than 9
 	 */
 	public static Object[] yuryPetrov(double[][] coOrdinates) {
 
 		final int nPoints = coOrdinates.length;
 		if (nPoints < 9) {
-			System.out
-					.print("Too few points; need at least 9 to a unique ellipsoid");
-			return null;
+			throw new IllegalArgumentException(
+					"Too few points; need at least 9 to calculate a unique ellipsoid");
 		}
 
 		double[][] d = new double[nPoints][9];
@@ -248,7 +250,7 @@ public class FitEllipsoid {
 		double[][] s = new double[h][w];
 		double[][] t = new double[h][w];
 		double value = -Math.PI / 2;
-		//Random points
+		// Random points
 		if (random) {
 			for (int j = 0; j < w; j++) {
 				for (int i = 0; i < h; i++) {
@@ -260,9 +262,9 @@ public class FitEllipsoid {
 					t[i][j] = value + Math.random() * 2 * Math.PI;
 				}
 			}
-			//Regular points
+			// Regular points
 		} else {
-			final double increment = Math.PI / (n-1);
+			final double increment = Math.PI / (n - 1);
 
 			for (int j = 0; j < w; j++) {
 				for (int i = 0; i < h; i++) {
@@ -325,7 +327,7 @@ public class FitEllipsoid {
 		}
 		return ellipsoidPoints;
 	}
-	
+
 	/**
 	 * Return normal unit vectors at points on an ellipsoid given the radii of
 	 * an ellipsoid and points on the ellipsoid. Assumes an ellipsoid centred on
