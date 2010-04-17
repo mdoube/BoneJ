@@ -1,4 +1,5 @@
 package org.doube.bonej;
+
 /**
  * Fit_Sphere plugin for ImageJ
  * Copyright 2008 2009 2010 Michael Doube
@@ -16,6 +17,11 @@ package org.doube.bonej;
  *You should have received a copy of the GNU General Public License
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.TextField;
+import java.util.Vector;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -40,7 +46,7 @@ import org.doube.util.RoiMan;
  * 
  *@author Michael Doube and Angelo Tardugno
  */
-public class SphereFitter implements PlugIn {
+public class SphereFitter implements PlugIn, DialogListener {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -61,36 +67,22 @@ public class SphereFitter implements PlugIn {
 			IJ.run("ROI Manager...");
 			return;
 		}
-		if (!ic.isVoxelIsotropic(imp, 0.05)) {
-			if (!IJ.showMessageWithCancel("Voxel depth problem",
-					"Voxels are anisotropic." + "\nWidth = "
-							+ imp.getCalibration().pixelWidth + "\nHeight = "
-							+ imp.getCalibration().pixelHeight + "\nDepth = "
-							+ imp.getCalibration().pixelDepth
-							+ "\nClick OK if voxel dimensions are correct.")) {
-				imp.unlock();
-				IJ.run("Properties...");
-			}
-		}
-		if (!imp.lock())
-			imp.lock(); // if we have unlocked the image to reset properties,
-		// relock it.
 
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addMessage("");
 		gd.addCheckbox("Copy Sphere", true);
+		gd.addNumericField("Padding", 2, 0, 2, "voxels");
 		gd.addCheckbox("Inner Cube", true);
 		gd.addCheckbox("Outer Cube", true);
-		gd.addNumericField("Padding", 2, 0, 2, "voxels");
 		gd.addNumericField("Crop Factor", 1.0, 2, 4, "");
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final boolean doCopy = gd.getNextBoolean();
+		final int padding = (int) gd.getNextNumber();
 		final boolean doInnerCube = gd.getNextBoolean();
 		final boolean doOuterCube = gd.getNextBoolean();
-		final int padding = (int) gd.getNextNumber();
 		final double cropFactor = gd.getNextNumber();
 
 		final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
@@ -163,7 +155,6 @@ public class SphereFitter implements PlugIn {
 			roiDepth = imp.getStackSize() - startZ;
 		final ImageStack sourceStack = imp.getImageStack();
 		ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
-		Moments m = new Moments();
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
@@ -173,8 +164,8 @@ public class SphereFitter implements PlugIn {
 			final int tZ = z - startZ + 1;
 			final double dZ = z * vD - zC;
 			final double dZ2 = dZ * dZ;
-			targetStack.setPixels(m.getEmptyPixels(roiWidth, roiHeight, imp
-					.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
+					imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -241,13 +232,12 @@ public class SphereFitter implements PlugIn {
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
-		Moments m = new Moments();
 		for (int z = startZ; z < endZ; z++) {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying largest enclosed cube");
 			final int tZ = z - startZ + 1;
-			targetStack.setPixels(m.getEmptyPixels(roiWidth, roiHeight, imp
-					.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
+					imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -307,13 +297,12 @@ public class SphereFitter implements PlugIn {
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
-		Moments m = new Moments();
 		for (int z = startZ; z < endZ; z++) {
 			final int tZ = z - startZ + 1;
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying smallest enclosing cube");
-			targetStack.setPixels(m.getEmptyPixels(roiWidth, roiHeight, imp
-					.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
+					imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -329,5 +318,18 @@ public class SphereFitter implements PlugIn {
 		target.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
 		return target;
+	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> numbers = gd.getNumericFields();
+		Checkbox box = (Checkbox) checkboxes.get(0);
+		TextField num = (TextField) numbers.get(0);
+		if (box.getState()) {
+			num.setEnabled(true);
+		} else {
+			num.setEnabled(false);
+		}
+		return true;
 	}
 }

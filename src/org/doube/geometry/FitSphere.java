@@ -39,6 +39,8 @@ public class FitSphere {
 	 * @param points
 	 *            double[n][3] containing n (x, y, z) coordinates
 	 * @return double[4] containing (x, y, z) centre and radius
+	 * @throws IllegalArgumentException
+	 *             if n < 5
 	 */
 	public static double[] fitSphere(double[][] points) {
 		final int nPoints = points.length;
