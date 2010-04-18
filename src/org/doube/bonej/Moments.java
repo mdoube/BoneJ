@@ -31,15 +31,25 @@ import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.gui.*;
+
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
 import java.awt.Rectangle;
+import java.awt.TextField;
 import java.util.Arrays;
+import java.util.Vector;
 
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.ThresholdGuesser;
 
-public class Moments implements PlugIn {
+public class Moments implements PlugIn, DialogListener {
+
+	private boolean fieldUpdated = false;
+	private Calibration cal;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -49,69 +59,48 @@ public class Moments implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-
-		ImageProcessor ip = imp.getProcessor();
-
-		Calibration cal = imp.getCalibration();
-		final double[] coeff = cal.getCoefficients();
-		// final float[] CTable = cal.getCTable();
-		final String valueUnit = cal.getValueUnit();
-		double min = 0;
-		double max = 4000; // min and maximum bone value in HU
-		if (!cal.isSigned16Bit() && !cal.calibrated()) {
-			IJ.run("Threshold...");
-			new WaitForUserDialog(
-					"This image is not density calibrated.\nSet the threshold, then click OK.")
-					.show();
-			min = ip.getMinThreshold();
-			max = ip.getMaxThreshold();
-			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ min + " to " + max);
-		} else if (coeff[0] == -1000 && coeff[1] == 1.0) {
-			// looks like an HU calibrated image
-			// convert HU limits to pixel values
-			min = cal.getRawValue(min);
-			max = cal.getRawValue(max);
-			IJ.log("Image looks like it is HU calibrated. Using " + min
-					+ " and " + max + " " + valueUnit + " as bone cutoffs");
-		} else if (cal.isSigned16Bit() && !cal.calibrated()) {
-			new WaitForUserDialog(
-					"This image is not density calibrated.\nSet the threshold, then click OK.")
-					.show();
-			min = ip.getMinThreshold();
-			max = ip.getMaxThreshold();
-			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ min + " to " + max);
-		} else {
-			new WaitForUserDialog(
-					"This image is not density calibrated.\nSet the threshold, then click OK.")
-					.show();
-			min = ip.getMinThreshold();
-			max = ip.getMaxThreshold();
-			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ min + " to " + max);
-		}
+		cal = imp.getCalibration();
+		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		double min = thresholds[0];
+		double max = thresholds[1];
+		String pixUnits;
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Start Slice:", 1, 0);
 		gd.addNumericField("End Slice:", imp.getStackSize(), 0);
-		gd.addMessage("Density calibration constants");
-		gd.addNumericField("Slope", 0, 3, 5, "g.cm^-3 / " + valueUnit);
-		gd.addNumericField("Y_Intercept", 1.8, 3, 5, "g.cm^-3");
+
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd
+				.addMessage("Only pixels <= bone min\n"
+						+ "and >= bone max are used.");
+		gd.addMessage("Density calibration coefficients");
+		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
+		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
 		gd.addMessage("Only use pixels between clip values:");
-		gd.addNumericField("Minimum", min, 0, 6, valueUnit);
-		gd.addNumericField("Maximum", max, 0, 6, valueUnit);
 		gd.addCheckbox("Align result", true);
 		gd.addCheckbox("Show axes", true);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final int startSlice = (int) gd.getNextNumber();
 		final int endSlice = (int) gd.getNextNumber();
-		final double m = gd.getNextNumber();
-		final double c = gd.getNextNumber();
+		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
+		final double m = gd.getNextNumber();
+		final double c = gd.getNextNumber();
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
 
@@ -625,8 +614,9 @@ public class Moments implements PlugIn {
 				}
 			}
 		}
-		//TODO this still doesn't quite work properly
-		//sometimes axes are in the wrong order, or mapping is not quite right
+		// TODO this still doesn't quite work properly
+		// sometimes axes are in the wrong order, or mapping is not quite right
+		// poss longest axis not always lowest moment - max distance vs moment!
 		double[] dimensions = { xTmax, yTmax, zTmax };
 		Arrays.sort(dimensions);
 
@@ -678,4 +668,35 @@ public class Moments implements PlugIn {
 				startSlice, endSlice, min, max, doAxes);
 		return alignedImp;
 	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+		Checkbox box0 = (Checkbox) checkboxes.get(0);
+		boolean isHUCalibrated = box0.getState();
+		@SuppressWarnings("unused")
+		double start = gd.getNextNumber();
+		@SuppressWarnings("unused")
+		double end = gd.getNextNumber();
+		double min = gd.getNextNumber();
+		double max = gd.getNextNumber();
+		TextField minT = (TextField) nFields.get(2);
+		TextField maxT = (TextField) nFields.get(3);
+		if (isHUCalibrated && !fieldUpdated) {
+			minT.setText("" + cal.getCValue(min));
+			maxT.setText("" + cal.getCValue(max));
+			fieldUpdated = true;
+		}
+		if (!isHUCalibrated && fieldUpdated) {
+			minT.setText("" + cal.getRawValue(min));
+			maxT.setText("" + cal.getRawValue(max));
+			fieldUpdated = false;
+		}
+		if (isHUCalibrated)
+			DialogModifier.replaceUnitString(gd, "grey", "HU");
+		else
+			DialogModifier.replaceUnitString(gd, "HU", "grey");
+		return true;
+	}
+
 }

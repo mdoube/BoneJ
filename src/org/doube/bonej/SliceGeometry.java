@@ -30,14 +30,15 @@ import ij.measure.ResultsTable;
 import ij.gui.*;
 
 import java.awt.AWTEvent;
+import java.awt.Checkbox;
 import java.awt.Color;
-import java.awt.Label;
-import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.Vector;
 
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.ThresholdGuesser;
 
 /**
  * <p>
@@ -49,17 +50,11 @@ import org.doube.util.ImageCheck;
  */
 
 public class SliceGeometry implements PlugIn, DialogListener {
-	private ImagePlus imp;
-	private int boneID, al, startSlice, endSlice;
-	private double vW, vH, min, max;
+	private Calibration cal;
+	private int al, startSlice, endSlice;
+	private double vW, vH;// , min, max;
 	/** Linear unit of measure */
 	private String units;
-	/** Unused option to do density-weighted calculations */
-	// private String analyse;
-	/** Message to inform the user what to do with their HU-calibrated image */
-	// private String calString;
-	/** Hounsfield unit value for air is -1000 */
-	private static final double airHU = -1000;
 	/** Do local thickness measurement in 3D */
 	private boolean doThickness3D;
 	/** Do local thickness measurement in 2D */
@@ -72,8 +67,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean doCopy;
 	/** If true, process the whole stack */
 	private boolean doStack;
-	/** Is this a Hounsfield Unit calibrated image */
-	private boolean isHUCalibrated;
 	/** Number of thresholded pixels in each slice */
 	private double[] cslice;
 	/** Cross-sectional area */
@@ -136,8 +129,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean[] emptySlices;
 	/** List of slice centroids */
 	private double[][] sliceCentroids;
-	Calibration cal;
-	private String pixUnits = "grey";
+	// Calibration cal;
+	// private String pixUnits = "grey";
 	private double[] integratedDensity;
 	private double[] meanDensity;
 	private double m;
@@ -148,40 +141,146 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
 			return;
-		this.imp = IJ.getImage();
+		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
 			return;
 		}
 
 		this.cal = imp.getCalibration();
-		this.vW = this.cal.pixelWidth;
-		this.vH = this.cal.pixelHeight;
-		this.units = this.cal.getUnits();
+		this.vW = cal.pixelWidth;
+		this.vH = cal.pixelHeight;
+		this.units = cal.getUnits();
 		this.al = imp.getStackSize() + 1;
 
-		setDefaultThreshold(imp);
+		String pixUnits;
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
 
-		if (!showDialog())
+		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		double min = thresholds[0];
+		double max = thresholds[1];
+		GenericDialog gd = new GenericDialog("Options");
+
+		// guess bone from image title
+		int boneID = BoneList.guessBone(imp);
+		String[] bones = BoneList.get();
+		gd.addChoice("Bone: ", bones, bones[boneID]);
+
+		gd.addCheckbox("2D Thickness", true);
+		gd.addCheckbox("3D Thickness", false);
+		gd.addCheckbox("Draw Axes", true);
+		gd.addCheckbox("Draw Centroids", true);
+		gd.addCheckbox("Annotated Copy", true);
+		gd.addCheckbox("Process Stack", false);
+		// String[] analyses = { "Weighted", "Unweighted", "Both" };
+		// gd.addChoice("Calculate: ", analyses, analyses[1]);
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd
+				.addMessage("Only pixels <= bone min\n"
+						+ "and >= bone max are used.");
+		gd.addMessage("Density calibration coefficients");
+		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
+		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
+		gd.addDialogListener(this);
+		gd.showDialog();
+		String bone = gd.getNextChoice();
+		boneID = BoneList.guessBone(bone);
+		this.doThickness2D = gd.getNextBoolean();
+		this.doThickness3D = gd.getNextBoolean();
+		this.doAxes = gd.getNextBoolean();
+		this.doCentroids = gd.getNextBoolean();
+		this.doCopy = gd.getNextBoolean();
+		this.doStack = gd.getNextBoolean();
+		if (this.doStack) {
+			this.startSlice = 1;
+			this.endSlice = imp.getImageStackSize();
+		} else {
+			this.startSlice = imp.getCurrentSlice();
+			this.endSlice = imp.getCurrentSlice();
+		}
+
+		boolean isHUCalibrated = gd.getNextBoolean();
+		min = gd.getNextNumber();
+		max = gd.getNextNumber();
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
+		if (gd.wasCanceled())
 			return;
 
-		if (calculateCentroids(imp) == 0) {
+		if (calculateCentroids(imp, min, max) == 0) {
 			IJ.error("No pixels available to calculate.\n"
 					+ "Please check the threshold and ROI.");
 			return;
 		}
 
-		calculateMoments(imp);
+		calculateMoments(imp, min, max);
 		if (this.doThickness3D)
-			calculateThickness3D(imp);
+			calculateThickness3D(imp, min, max);
 		if (this.doThickness2D)
-			calculateThickness2D(imp);
+			calculateThickness2D(imp, min, max);
 
-		roiMeasurements(imp);
+		roiMeasurements(imp, min, max);
 
 		// TODO locate centroids of multiple sections in a single plane
 
-		showSliceResults(imp);
+		ResultsTable rt = ResultsTable.getResultsTable();
+		rt.reset();
+
+		final double unit4 = Math.pow(vW, 4);
+		final double unit3 = Math.pow(vW, 3);
+		String title = imp.getTitle();
+		for (int s = this.startSlice; s <= this.endSlice; s++) {
+			rt.incrementCounter();
+			rt.addLabel(title);
+			rt.addValue("Bone Code", boneID);
+			rt.addValue("Slice", s);
+			rt.addValue("CSA (" + units + "²)", this.cortArea[s]);
+			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
+			rt.addValue("Y cent. (" + units + ")", this.sliceCentroids[1][s]);
+			rt.addValue("Density", this.meanDensity[s]);
+			rt.addValue("wX cent. (" + units + ")",
+					this.weightedCentroids[0][s]);
+			rt.addValue("wY cent. (" + units + ")",
+					this.weightedCentroids[1][s]);
+			rt.addValue("Theta (rad)", this.theta[s]);
+			rt.addValue("R1 (" + units + ")", this.R1[s]);
+			rt.addValue("R2 (" + units + ")", this.R2[s]);
+			rt.addValue("Imin (" + units + "^4)", this.Imin[s] * unit4);
+			rt.addValue("Imax (" + units + "^4)", this.Imax[s] * unit4);
+			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
+			rt.addValue("Zmax (" + units + "³)", this.Zmax[s] * unit3);
+			rt.addValue("Zmin (" + units + "³)", this.Zmin[s] * unit3);
+			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
+			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
+			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);
+			if (this.doThickness3D) {
+				rt.addValue("Max Thick 3D (" + units + ")",
+						this.maxCortThick3D[s]);
+				rt.addValue("Mean Thick 3D (" + units + ")",
+						this.meanCortThick3D[s]);
+				rt.addValue("SD Thick 3D (" + units + ")",
+						this.stdevCortThick3D[s]);
+			}
+			if (this.doThickness2D) {
+				rt.addValue("Max Thick 2D (" + units + ")",
+						this.maxCortThick2D[s]);
+				rt.addValue("Mean Thick 2D (" + units + ")",
+						this.meanCortThick2D[s]);
+				rt.addValue("SD Thick 2D (" + units + ")",
+						this.stdevCortThick2D[s]);
+			}
+		}
+		rt.show("Results");
 
 		if (this.doAxes || this.doCentroids) {
 			if (!this.doCopy) {
@@ -247,7 +346,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 *            Input image
 	 * @return double containing sum of pixel count
 	 */
-	private double calculateCentroids(ImagePlus imp) {
+	private double calculateCentroids(ImagePlus imp, double min, double max) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
 		// 2D centroids
@@ -276,7 +375,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			for (int y = r.y; y < roiYEnd; y++) {
 				for (int x = r.x; x < roiXEnd; x++) {
 					final double pixel = (double) ip.get(x, y);
-					if (pixel >= this.min && pixel <= this.max) {
+					if (pixel >= min && pixel <= max) {
 						count++;
 						sumX += x;
 						sumY += y;
@@ -314,11 +413,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param imp
 	 */
-	private void calculateMoments(ImagePlus imp) {
+	private void calculateMoments(ImagePlus imp, double min, double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = stack.getRoi();
-		final double pMin = this.min;
-		final double pMax = this.max;
 		// START OF Ix AND Iy CALCULATION
 		this.Sx = new double[this.al];
 		this.Sy = new double[this.al];
@@ -344,7 +441,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
-						if (pixel >= pMin && pixel <= pMax) {
+						if (pixel >= min && pixel <= max) {
 							sxs += x;
 							sys += y;
 							sxxs += x * x;
@@ -414,7 +511,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
-						if (pixel >= pMin && pixel <= pMax) {
+						if (pixel >= min && pixel <= max) {
 							final double xCosTheta = x * cosTheta;
 							final double yCosTheta = y * cosTheta;
 							final double xSinTheta = x * sinTheta;
@@ -473,7 +570,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * slice
 	 * 
 	 */
-	private void calculateThickness3D(ImagePlus imp) {
+	private void calculateThickness3D(ImagePlus imp, double min, double max) {
 		this.maxCortThick3D = new double[this.al];
 		this.meanCortThick3D = new double[this.al];
 		this.stdevCortThick3D = new double[this.al];
@@ -481,7 +578,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		Thickness th = new Thickness();
 
 		// convert to binary
-		ImagePlus binaryImp = convertToBinary(imp);
+		ImagePlus binaryImp = convertToBinary(imp, min, max);
 
 		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
 
@@ -533,7 +630,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param imp
 	 */
-	private void calculateThickness2D(ImagePlus imp) {
+	private void calculateThickness2D(ImagePlus imp, double min, double max) {
 		this.maxCortThick2D = new double[this.al];
 		this.meanCortThick2D = new double[this.al];
 		this.stdevCortThick2D = new double[this.al];
@@ -541,8 +638,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		int nThreads = Runtime.getRuntime().availableProcessors();
 		SliceThread[] sliceThread = new SliceThread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
-			sliceThread[thread] = new SliceThread(thread, nThreads, imp,
-					this.meanCortThick2D, this.maxCortThick2D,
+			sliceThread[thread] = new SliceThread(thread, nThreads, imp, min,
+					max, this.meanCortThick2D, this.maxCortThick2D,
 					this.stdevCortThick2D, this.startSlice, this.endSlice,
 					this.emptySlices);
 			sliceThread[thread].start();
@@ -560,16 +657,21 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	class SliceThread extends Thread {
 		final int thread, nThreads, width, height, startSlice, endSlice;
 
+		double min, max;
+
 		double[] meanThick, maxThick, stdevThick;
 
 		boolean[] emptySlices;
 
 		final ImagePlus impT;
 
-		public SliceThread(int thread, int nThreads, ImagePlus imp,
-				double[] meanThick, double[] maxThick, double[] stdevThick,
-				int startSlice, int endSlice, boolean[] emptySlices) {
+		public SliceThread(int thread, int nThreads, ImagePlus imp, double min,
+				double max, double[] meanThick, double[] maxThick,
+				double[] stdevThick, int startSlice, int endSlice,
+				boolean[] emptySlices) {
 			this.impT = imp;
+			this.min = min;
+			this.max = max;
 			this.width = this.impT.getWidth();
 			this.height = this.impT.getHeight();
 			this.thread = thread;
@@ -594,7 +696,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				ImagePlus sliceImp = new ImagePlus(" " + s, ip);
 				Rectangle r = ip.getRoi();
 				// binarise
-				ImagePlus binaryImp = convertToBinary(sliceImp);
+				ImagePlus binaryImp = convertToBinary(sliceImp, min, max);
 				Calibration cal = impT.getCalibration();
 				binaryImp.setCalibration(cal);
 				// calculate thickness
@@ -639,7 +741,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 	}
 
-	private ImagePlus convertToBinary(ImagePlus imp) {
+	private ImagePlus convertToBinary(ImagePlus imp, double min, double max) {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
@@ -650,8 +752,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			ByteProcessor binaryIp = new ByteProcessor(w, h);
 			for (int y = 0; y < h; y++) {
 				for (int x = 0; x < w; x++) {
-					if (sliceIp.get(x, y) >= this.min
-							&& sliceIp.get(x, y) <= this.max) {
+					if (sliceIp.get(x, y) >= min && sliceIp.get(x, y) <= max) {
 						binaryIp.set(x, y, 255);
 					} else {
 						binaryIp.set(x, y, 0);
@@ -665,103 +766,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return binaryImp;
 	}
 
-	/**
-	 * Set up default thresholds and report them to the user as HU values if the
-	 * image has HU calibration or plain values if not. Sets min and max pixel
-	 * values as raw pixel values if image is uncalibrated and as HU values if
-	 * if it is.
-	 * 
-	 */
-	private void setDefaultThreshold(ImagePlus imp) {
-		this.cal = imp.getCalibration();
-
-		double[] coeff = this.cal.getCoefficients();
-		if (!this.cal.calibrated() || this.cal == null
-				|| (this.cal.getCValue(0) == 0 && coeff[1] == 1)
-				|| (this.cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1)) {
-			this.isHUCalibrated = false;
-			// set some sensible thresholding defaults
-			ThresholdMinConn tmc = new ThresholdMinConn();
-			int[] histogram = tmc.getStackHistogram(imp);
-			final int histoLength = histogram.length;
-			int histoMax = histoLength - 1;
-			for (int i = histoLength - 1; i >= 0; i--) {
-				if (histogram[i] > 0) {
-					histoMax = i;
-					break;
-				}
-			}
-			this.min = imp.getProcessor().getAutoThreshold(histogram);
-			this.max = histoMax;
-			if (this.cal.isSigned16Bit() && this.cal.getCValue(0) == 0) {
-				this.min += Short.MIN_VALUE;
-				this.max += Short.MIN_VALUE;
-			}
-
-		} else {
-			this.isHUCalibrated = true;
-			this.fieldUpdated = true;
-			this.pixUnits = "HU";
-			// default bone thresholds are 0 and 4000 HU
-			this.min = SliceGeometry.airHU + 1000;
-			this.max = SliceGeometry.airHU + 5000;
-		}
-		return;
-	}
-
-	private void showSliceResults(ImagePlus imp) {
-		ResultsTable rt = ResultsTable.getResultsTable();
-		rt.reset();
-
-		final double unit4 = Math.pow(vW, 4);
-		final double unit3 = Math.pow(vW, 3);
-		String title = imp.getTitle();
-		for (int s = this.startSlice; s <= this.endSlice; s++) {
-			rt.incrementCounter();
-			rt.addLabel(title);
-			rt.addValue("Bone Code", this.boneID);
-			rt.addValue("Slice", s);
-			rt.addValue("CSA (" + units + "²)", this.cortArea[s]);
-			rt.addValue("X cent. (" + units + ")", this.sliceCentroids[0][s]);
-			rt.addValue("Y cent. (" + units + ")", this.sliceCentroids[1][s]);
-			rt.addValue("Density", this.meanDensity[s]);
-			rt.addValue("wX cent. (" + units + ")",
-					this.weightedCentroids[0][s]);
-			rt.addValue("wY cent. (" + units + ")",
-					this.weightedCentroids[1][s]);
-			rt.addValue("Theta (rad)", this.theta[s]);
-			rt.addValue("R1 (" + units + ")", this.R1[s]);
-			rt.addValue("R2 (" + units + ")", this.R2[s]);
-			rt.addValue("Imin (" + units + "^4)", this.Imin[s] * unit4);
-			rt.addValue("Imax (" + units + "^4)", this.Imax[s] * unit4);
-			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
-			rt.addValue("Zmax (" + units + "³)", this.Zmax[s] * unit3);
-			rt.addValue("Zmin (" + units + "³)", this.Zmin[s] * unit3);
-			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
-			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
-			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);
-			if (this.doThickness3D) {
-				rt.addValue("Max Thick 3D (" + units + ")",
-						this.maxCortThick3D[s]);
-				rt.addValue("Mean Thick 3D (" + units + ")",
-						this.meanCortThick3D[s]);
-				rt.addValue("SD Thick 3D (" + units + ")",
-						this.stdevCortThick3D[s]);
-			}
-			if (this.doThickness2D) {
-				rt.addValue("Max Thick 2D (" + units + ")",
-						this.maxCortThick2D[s]);
-				rt.addValue("Mean Thick 2D (" + units + ")",
-						this.meanCortThick2D[s]);
-				rt.addValue("SD Thick 2D (" + units + ")",
-						this.stdevCortThick2D[s]);
-			}
-		}
-		rt.show("Results");
-		return;
-	}
-
-	private void roiMeasurements(ImagePlus imp) {
+	private void roiMeasurements(ImagePlus imp, double min, double max) {
 		Roi initialRoi = imp.getRoi();
 		double[] feretValues = new double[3];
 		this.feretAngle = new double[this.al];
@@ -773,7 +778,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
 			Wand w = new Wand(ip);
 			w.autoOutline(0, (int) Math.round(this.sliceCentroids[1][s]
-					/ this.vH), this.min, this.max, Wand.EIGHT_CONNECTED);
+					/ this.vH), min, max, Wand.EIGHT_CONNECTED);
 			if (this.emptySlices[s] || w.npoints == 0) {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;
@@ -793,136 +798,29 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return;
 	}
 
-	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Options");
-
-		// guess bone from image title
-		this.boneID = BoneList.guessBone(imp);
-		String[] bones = BoneList.get();
-		gd.addChoice("Bone: ", bones, bones[this.boneID]);
-
-		gd.addCheckbox("2D Thickness", true);
-		gd.addCheckbox("3D Thickness", false);
-		gd.addCheckbox("Draw Axes", true);
-		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Annotated Copy", true);
-		gd.addCheckbox("Process Stack", false);
-		// String[] analyses = { "Weighted", "Unweighted", "Both" };
-		// gd.addChoice("Calculate: ", analyses, analyses[1]);
-		gd.addCheckbox("HU Calibrated", this.isHUCalibrated);
-		gd.addNumericField("Bone Min:", this.min, 1, 6, pixUnits + " ");
-		gd.addNumericField("Bone Max:", this.max, 1, 6, pixUnits + " ");
-		gd
-				.addMessage("Only pixels <= bone min\n"
-						+ "and >= bone max are used.");
-		gd.addMessage("Density calibration coefficients");
-		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
-		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
-		gd.addDialogListener(this);
-		gd.showDialog();
-		String bone = gd.getNextChoice();
-		this.boneID = BoneList.guessBone(bone);
-		this.doThickness2D = gd.getNextBoolean();
-		this.doThickness3D = gd.getNextBoolean();
-		this.doAxes = gd.getNextBoolean();
-		this.doCentroids = gd.getNextBoolean();
-		this.doCopy = gd.getNextBoolean();
-		this.doStack = gd.getNextBoolean();
-		if (this.doStack) {
-			this.startSlice = 1;
-			this.endSlice = imp.getImageStackSize();
-		} else {
-			this.startSlice = imp.getCurrentSlice();
-			this.endSlice = imp.getCurrentSlice();
-		}
-
-		// this.analyse = gd.getNextChoice();
-		this.isHUCalibrated = gd.getNextBoolean();
-		this.min = gd.getNextNumber();
-		this.max = gd.getNextNumber();
-		if (this.isHUCalibrated) {
-			this.min = this.cal.getRawValue(this.min);
-			this.max = this.cal.getRawValue(this.max);
-		}
-		this.m = gd.getNextNumber();
-		this.c = gd.getNextNumber();
-		if (gd.wasCanceled())
-			return false;
-		else
-			return true;
-	}
-
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
-		this.doThickness2D = gd.getNextBoolean();
-		this.doThickness3D = gd.getNextBoolean();
-		this.doAxes = gd.getNextBoolean();
-		this.doCentroids = gd.getNextBoolean();
-		this.doCopy = gd.getNextBoolean();
-		this.doStack = gd.getNextBoolean();
-		if (this.doStack) {
-			this.startSlice = 1;
-			this.endSlice = imp.getImageStackSize();
-		} else {
-			this.startSlice = imp.getCurrentSlice();
-			this.endSlice = imp.getCurrentSlice();
-		}
-
-		String bone = gd.getNextChoice();
-		this.boneID = BoneList.guessBone(bone);
-		// this.analyse = gd.getNextChoice();
-		this.isHUCalibrated = gd.getNextBoolean();
-		this.min = gd.getNextNumber();
-		this.max = gd.getNextNumber();
-		if (this.isHUCalibrated && !fieldUpdated) {
-			Vector<?> nFields = gd.getNumericFields();
-			TextField minT = (TextField) nFields.get(0);
-			TextField maxT = (TextField) nFields.get(1);
-			minT.setText("" + this.cal.getCValue(this.min));
-			maxT.setText("" + this.cal.getCValue(this.max));
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+		Checkbox box6 = (Checkbox) checkboxes.get(6);
+		boolean isHUCalibrated = box6.getState();
+		double min = gd.getNextNumber();
+		double max = gd.getNextNumber();
+		TextField minT = (TextField) nFields.get(0);
+		TextField maxT = (TextField) nFields.get(1);
+		if (isHUCalibrated && !fieldUpdated) {
+			minT.setText("" + cal.getCValue(min));
+			maxT.setText("" + cal.getCValue(max));
 			fieldUpdated = true;
 		}
-		if (!this.isHUCalibrated && fieldUpdated) {
-			Vector<?> nFields = gd.getNumericFields();
-			TextField minT = (TextField) nFields.get(0);
-			TextField maxT = (TextField) nFields.get(1);
-			minT.setText("" + this.cal.getRawValue(this.min));
-			maxT.setText("" + this.cal.getRawValue(this.max));
-			pixUnits = "grey";
+		if (!isHUCalibrated && fieldUpdated) {
+			minT.setText("" + cal.getRawValue(min));
+			maxT.setText("" + cal.getRawValue(max));
 			fieldUpdated = false;
 		}
-		if (this.isHUCalibrated) {
-			replaceUnitString(gd, "grey", "HU");
-			this.pixUnits = "HU";
-		}
-		if (!this.isHUCalibrated) {
-			replaceUnitString(gd, "HU", "grey");
-			this.pixUnits = "grey";
-		}
+		if (isHUCalibrated)
+			DialogModifier.replaceUnitString(gd, "grey", "HU");
+		else
+			DialogModifier.replaceUnitString(gd, "HU", "grey");
 		return true;
-	}
-
-	/**
-	 * Replace the unit string to the right of all numeric textboxes in a
-	 * GenericDialog
-	 * 
-	 * @param gd
-	 *            the dialog window
-	 * @param oldUnits
-	 *            original unit string
-	 * @param newUnits
-	 *            new unit string
-	 */
-	private void replaceUnitString(GenericDialog gd, String oldUnits,
-			String newUnits) {
-		for (int n = 0; n < gd.getComponentCount(); n++) {
-			if (gd.getComponent(n) instanceof Panel) {
-				Panel panel = (Panel) gd.getComponent(n);
-				if (panel.getComponent(1) instanceof Label) {
-					Label u = (Label) panel.getComponent(1);
-					String unitString = u.getText();
-					u.setText(unitString.replace(oldUnits, newUnits));
-				}
-			}
-		}
 	}
 }

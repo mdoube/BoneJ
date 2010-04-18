@@ -225,24 +225,42 @@ public class ImageCheck {
 			return true;
 		}
 	}
-	
-	public static boolean checkMemory(ImagePlus imp, double ratio){
-		double size = ((double)imp.getWidth()*imp.getHeight()*imp.getStackSize());
-    	switch (imp.getType()) {
-	    	case ImagePlus.GRAY8:
-	    	case ImagePlus.COLOR_256:
-	    		break;
-	    	case ImagePlus.GRAY16:
-				size *= 2.0;
-	    		break;
-	    	case ImagePlus.GRAY32:
-				size *= 4.0;
-	    		break;
-	    	case ImagePlus.COLOR_RGB:
-				size *= 4.0;
-	    		break;
-    	}
-		long memoryRequirement = (long) (size * ratio) ;
+
+	public static boolean checkMemory(ImagePlus imp, double ratio) {
+		double size = ((double) imp.getWidth() * imp.getHeight() * imp
+				.getStackSize());
+		switch (imp.getType()) {
+		case ImagePlus.GRAY8:
+		case ImagePlus.COLOR_256:
+			break;
+		case ImagePlus.GRAY16:
+			size *= 2.0;
+			break;
+		case ImagePlus.GRAY32:
+			size *= 4.0;
+			break;
+		case ImagePlus.COLOR_RGB:
+			size *= 4.0;
+			break;
+		}
+		long memoryRequirement = (long) (size * ratio);
 		return checkMemory(memoryRequirement);
+	}
+
+	/**
+	 * Guess whether an image is Hounsfield unit calibrated
+	 * 
+	 * @param imp
+	 * @return true if the image might be HU calibrated
+	 */
+	public static boolean huCalibrated(ImagePlus imp) {
+		Calibration cal = imp.getCalibration();
+		double[] coeff = cal.getCoefficients();
+		if (!cal.calibrated() || cal == null
+				|| (cal.getCValue(0) == 0 && coeff[1] == 1)
+				|| (cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1)) {
+			return false;
+		} else
+			return true;
 	}
 }
