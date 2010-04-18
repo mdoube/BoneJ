@@ -25,22 +25,25 @@ import ij.plugin.frame.RoiManager;
 import ij.measure.Calibration;
 import ij.gui.*;
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
 import java.awt.Rectangle;
+import java.awt.TextField;
 import java.awt.event.*;
+import java.util.Vector;
 
 import org.doube.bonej.Moments;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
 import org.doube.geometry.Trig;
+import org.doube.geometry.Vectors;
 import org.doube.jama.*;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+import org.doube.util.ThresholdGuesser;
 
-/*
- * TODO incorporate curvature
- * curvature = radius of circle fit to diaphyseal slice centroids / bone length
- */
 /**
  *<p>
  * Neck Shaft Angle<br />
@@ -66,7 +69,7 @@ import org.doube.util.RoiMan;
  *@author Michael Doube
  *@version 0.1
  */
-public class Neck_Shaft_Angle implements PlugIn, MouseListener {
+public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 
 	private ImageCanvas canvas;
 
@@ -75,6 +78,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	private double[][] shaftVector;
 
 	private double[] centroid;
+
+	private Calibration cal;
+
+	private boolean fieldUpdated = false;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -90,64 +97,47 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 			return;
 		}
 
-		ImageProcessor ip = imp.getProcessor();
-		double minT = ip.getAutoThreshold();
-		double maxT = ip.getMax();
-		Calibration cal = imp.getCalibration();
-		String valueUnit = "";
-		// set up pixel calibration
-		if (!cal.isSigned16Bit() && !cal.calibrated()) {
-			IJ.run("Threshold...");
-			new WaitForUserDialog(
-					"This image is not density calibrated.\nSet the threshold, then click OK.")
-					.show();
-			minT = ip.getMinThreshold();
-			maxT = ip.getMaxThreshold();
-			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ minT + " to " + maxT);
-		} else if (cal.getCoefficients()[0] == -1000
-				&& cal.getCoefficients()[1] == 1.0) {
-			// looks like an HU calibrated image
-			minT = 0;
-			maxT = 4000;
-			valueUnit = "HU";
-			IJ.log("Image looks like it is HU calibrated. Using " + minT
-					+ " and " + maxT + " " + valueUnit + " as bone cutoffs");
-		} else if (cal.isSigned16Bit() && !cal.calibrated()) {
-			new WaitForUserDialog(
-					"This image is not density calibrated.\nSet the threshold, then click OK.")
-					.show();
-			minT = ip.getMinThreshold();
-			maxT = ip.getMaxThreshold();
-			IJ.log("Image is uncalibrated: using user-determined threshold "
-					+ minT + " to " + maxT);
-		} else {
-			IJ.error("Unrecognised file type");
-			return;
-		}
+		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		double min = thresholds[0];
+		double max = thresholds[1];
+		String pixUnits;
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
+		cal = imp.getCalibration();
+
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Shaft Start Slice:", 1, 0);
 		gd.addNumericField("Shaft End Slice:", imp.getImageStackSize(), 0);
-		gd.addMessage("Only use pixels between clip values:");
-		gd.addNumericField("Clip min.", minT, 0, 6, valueUnit);
-		gd.addNumericField("Clip max.", maxT, 0, 6, valueUnit);
+
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd
+				.addMessage("Only pixels >= bone min\n"
+						+ "and <= bone max are used.");
 		gd.addCheckbox("Calculate curvature", true);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final int startSlice = (int) gd.getNextNumber();
 		final int endSlice = (int) gd.getNextNumber();
-		minT = gd.getNextNumber();
-		maxT = gd.getNextNumber();
+		boolean isHUCalibrated = gd.getNextBoolean();
+		min = gd.getNextNumber();
+		max = gd.getNextNumber();
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
 		final boolean doCurvature = gd.getNextBoolean();
-
-		final double min = cal.getRawValue(minT);
-		final double max = cal.getRawValue(maxT);
 
 		// get coordinates from the ROI manager and fit a sphere
 		RoiManager roiMan = RoiManager.getInstance();
-		if (roiMan == null && imp != null) {
+		if (roiMan == null) {
 			IJ.run("ROI Manager...");
 			IJ.error("Please populate ROI Manager with point ROIs\n"
 					+ "placed on the boundary of the femoral head");
@@ -172,7 +162,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		// work out the centroid and regression vector of the bone
 		Moments m = new Moments();
 		final double[] centroid = m.getCentroid3D(imp, startSlice, endSlice,
-				minT, maxT, 0, 1);
+				min, max, 0, 1);
 		this.centroid = centroid;
 		if (centroid[0] < 0) {
 			IJ.error("Empty Stack", "No voxels available for calculation."
@@ -182,6 +172,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 
 		this.shaftVector = regression3D(imp, centroid, startSlice, endSlice,
 				min, max);
+		if (this.shaftVector == null)
+			return;
 
 		if (doCurvature)
 			calculateCurvature(imp, this.shaftVector, this.headCentre,
@@ -230,7 +222,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		cH.printToIJLog("cHVec");
 
 		// projectionPlane is the cross product of cHVec and shaftVector
-		double[][] projectionPlane = crossProduct(cHVec, shaftVector);
+		double[][] projectionPlane = Vectors.crossProduct(cHVec, shaftVector);
 
 		d = Trig.distance3D(projectionPlane[0][0], projectionPlane[1][0],
 				projectionPlane[2][0]);
@@ -255,7 +247,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	private double[][] neckPlane(double[][] projectionPlane,
 			double[][] neckVector) {
 		// neckPlane is the cross product of neckVector and projectionPlane
-		return crossProduct(projectionPlane, neckVector);
+		return Vectors.crossProduct(projectionPlane, neckVector);
 	}
 
 	/**
@@ -265,10 +257,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 * @param neckPlane
 	 * @return double[][] testVector.
 	 */
-	public double[][] testVector(double[][] projectionPlane,
+	private double[][] testVector(double[][] projectionPlane,
 			double[][] neckPlane) {
 		// testVector is the cross product of neckPlane and projectionPlane
-		return crossProduct(projectionPlane, neckPlane);
+		return Vectors.crossProduct(projectionPlane, neckPlane);
 	}
 
 	/**
@@ -284,7 +276,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	 *      on Ask Dr Math</a>
 	 * 
 	 */
-	public double[][] regression3D(ImagePlus imp, double[] centroid,
+	private double[][] regression3D(ImagePlus imp, double[] centroid,
 			int startSlice, int endSlice, double min, double max) {
 		IJ.showStatus("Calculating SVD");
 		ImageStack stack = imp.getImageStack();
@@ -318,7 +310,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 				final double dydy = dy * dy;
 				final double dydz = dy * dz;
 				for (int x = rX; x < rW; x++) {
-					final double testPixel = ip.get(x, y);
+					final double testPixel = (double) ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
 						final double dx = x * vW - cX;
 						sDxDx += dx * dx;
@@ -331,6 +323,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 					}
 				}
 			}
+		}
+		if (count == 0){
+			IJ.log("Count == 0");
+			return null;
 		}
 		double[][] C = new double[3][3];
 		C[0][0] = sDxDx;
@@ -497,7 +493,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 				double[] a = { x0x - x1x, x0y - x1y, x0z - x1z };
 				double[] b = { x0x - x2x, x0y - x2y, x0z - x2z };
 
-				double[] cp = crossProduct(a, b);
+				double[] cp = Vectors.crossProduct(a, b);
 
 				double distance = Trig.distance3D(cp);
 				// IJ.log("distance to regression line is "+ distance +
@@ -580,41 +576,6 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 		return;
 	}
 
-	/**
-	 * Calculate the cross product of 2 column vectors, both in double[3][1]
-	 * format
-	 * 
-	 * @param a
-	 *            first vector
-	 * @param b
-	 *            second vector
-	 * @return resulting vector in double[3][1] format
-	 */
-	private static double[][] crossProduct(double[][] a, double[][] b) {
-		double[][] c = new double[3][1];
-		c[0][0] = a[1][0] * b[2][0] - a[2][0] * b[1][0];
-		c[1][0] = a[2][0] * b[0][0] - a[0][0] * b[2][0];
-		c[2][0] = a[0][0] * b[1][0] - a[1][0] * b[0][0];
-		return c;
-	}
-
-	/**
-	 * Calculate the cross product of 2 vectors, both in double[3] format
-	 * 
-	 * @param a
-	 *            first vector
-	 * @param b
-	 *            second vector
-	 * @return resulting vector in double[3] format
-	 */
-	private static double[] crossProduct(double[] a, double[] b) {
-		double[] c = new double[3];
-		c[0] = a[1] * b[2] - a[2] * b[1];
-		c[1] = a[2] * b[0] - a[0] * b[2];
-		c[2] = a[0] * b[1] - a[1] * b[0];
-		return c;
-	}
-
 	public void mousePressed(MouseEvent e) {
 		ImagePlus imp = IJ.getImage();
 		Calibration cal = imp.getCalibration();
@@ -641,6 +602,36 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener {
 	}
 
 	public void mouseMoved(MouseEvent e) {
+	}
+
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+		Checkbox box0 = (Checkbox) checkboxes.get(0);
+		boolean isHUCalibrated = box0.getState();
+		@SuppressWarnings("unused")
+		double start = gd.getNextNumber();
+		@SuppressWarnings("unused")
+		double end = gd.getNextNumber();
+		double min = gd.getNextNumber();
+		double max = gd.getNextNumber();
+		TextField minT = (TextField) nFields.get(2);
+		TextField maxT = (TextField) nFields.get(3);
+		if (isHUCalibrated && !fieldUpdated) {
+			minT.setText("" + cal.getCValue(min));
+			maxT.setText("" + cal.getCValue(max));
+			fieldUpdated = true;
+		}
+		if (!isHUCalibrated && fieldUpdated) {
+			minT.setText("" + cal.getRawValue(min));
+			maxT.setText("" + cal.getRawValue(max));
+			fieldUpdated = false;
+		}
+		if (isHUCalibrated)
+			DialogModifier.replaceUnitString(gd, "grey", "HU");
+		else
+			DialogModifier.replaceUnitString(gd, "HU", "grey");
+		return true;
 	}
 
 }

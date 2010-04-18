@@ -77,8 +77,8 @@ public class Moments implements PlugIn, DialogListener {
 		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
 		gd
-				.addMessage("Only pixels <= bone min\n"
-						+ "and >= bone max are used.");
+				.addMessage("Only pixels >= bone min\n"
+						+ "and <= bone max are used.");
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
