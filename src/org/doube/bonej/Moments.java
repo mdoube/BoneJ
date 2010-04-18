@@ -237,7 +237,7 @@ public class Moments implements PlugIn, DialogListener {
 	 * @return double[] containing (x,y,z) centroid in scaled units
 	 */
 	public double[] getCentroid3D(ImagePlus imp, int startSlice, int endSlice,
-			final double min, final double max, double m, double c) {
+			final double min, final double max, final double m, final double c) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
@@ -323,7 +323,7 @@ public class Moments implements PlugIn, DialogListener {
 			ImageProcessor ip = stack.getProcessor(z);
 			for (int y = rY; y < rH; y++) {
 				for (int x = rX; x < rW; x++) {
-					final double testPixel = ip.get(x, y);
+					final double testPixel = (double) ip.get(x, y);
 					if (testPixel < min || testPixel > max) {
 						continue;
 					} else {
