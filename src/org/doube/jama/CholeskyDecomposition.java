@@ -10,6 +10,7 @@ package org.doube.jama;
    be queried by the isSPD() method.
    */
 
+@SuppressWarnings("serial")
 public class CholeskyDecomposition implements java.io.Serializable {
 
 /* ------------------------

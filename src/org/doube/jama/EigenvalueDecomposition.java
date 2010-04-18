@@ -16,6 +16,7 @@ package org.doube.jama;
     A = V*D*inverse(V) depends upon V.cond().
 **/
 
+@SuppressWarnings("serial")
 public class EigenvalueDecomposition implements java.io.Serializable {
 
 /* ------------------------

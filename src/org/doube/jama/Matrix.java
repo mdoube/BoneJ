@@ -60,6 +60,7 @@ import java.io.StreamTokenizer;
  * @version 5 August 1998
  */
 
+@SuppressWarnings("serial")
 public class Matrix implements Cloneable, java.io.Serializable {
 
 	/*
@@ -1295,6 +1296,7 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	 *            the input stream.
 	 */
 
+	@SuppressWarnings("unchecked")
 	public static Matrix read(BufferedReader input) throws java.io.IOException {
 		StreamTokenizer tokenizer = new StreamTokenizer(input);
 
