@@ -115,9 +115,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] maxRadMin;
 	/** maximum distance from maximum principal axis (shorter) */
 	private double[] maxRadMax;
-	/** Section modulus around maximum principal axis */
-	private double[] Zmax;
 	/** Section modulus around minimum principal axis */
+	private double[] Zmax;
+	/** Section modulus around maximum principal axis */
 	private double[] Zmin;
 	/** Maximum diameter */
 	private double[] feretMax;
