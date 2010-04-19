@@ -89,7 +89,10 @@ import ij3d.Image3DUniverse;
  * increase should be in the region of <i>n</i> * <i>c</i>, minus overhead.
  * </p>
  * 
- * @author Michael Doube, Jonathan Jackson, Fabrice Cordelires
+ * @author Michael Doube
+ * @author Jonathan Jackson
+ * @author Fabrice Cordelires
+ * @author Michał Kłosowski
  * @see <p>
  *      <a href="http://rsbweb.nih.gov/ij/plugins/track/objects.html">3D Object
  *      Counter</a>
@@ -109,6 +112,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	/** Particle joining method */
 	public final static int MULTI = 0, LINEAR = 1;
+
+	/** Surface colour style */
+	private final static int GRADIENT = 0, SPLIT = 1;
 
 	private String sPhase = "";
 
@@ -135,7 +141,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
 		gd.addCheckbox("Surface_area", true);
-		gd.addCheckbox("Feret diameter", true);
+		gd.addCheckbox("Feret diameter", false);
 		gd.addCheckbox("Enclosed_volume", true);
 		gd.addNumericField("Surface_resampling", 2, 0);
 		gd.addCheckbox("Moments of inertia", true);
@@ -147,13 +153,16 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addCheckbox("Show_size stack", false);
 		gd.addCheckbox("Show_thickness stack", false);
 		gd.addCheckbox("Show_surfaces (3D)", true);
+		String[] items = { "Gradient", " Split" };
+		gd.addChoice("Surface colours", items, items[0]);
+		gd.addNumericField("Split value", 0, 3);
 		gd.addCheckbox("Show_centroids (3D)", true);
 		gd.addCheckbox("Show_axes (3D)", true);
 		gd.addCheckbox("Show_ellipsoids", true);
 		gd.addCheckbox("Show_stack (3D)", true);
 		gd.addNumericField("Volume_resampling", 2, 0);
-		String[] items = { "Multithreaded", "Linear" };
-		gd.addChoice("Labelling algorithm", items, items[0]);
+		String[] items2 = { "Multithreaded", "Linear" };
+		gd.addChoice("Labelling algorithm", items2, items2[0]);
 		gd.addMessage("Slice size for particle counting");
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addDialogListener(this);
@@ -175,6 +184,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doThickImage = gd.getNextBoolean();
 		final boolean doSurfaceImage = gd.getNextBoolean();
+		int colourMode = GRADIENT;
+		if (gd.getNextChoice().equals(items[1])) {
+			colourMode = SPLIT;
+		}
+		final double splitValue = gd.getNextNumber();
 		final boolean doCentroidImage = gd.getNextBoolean();
 		final boolean doAxesImage = gd.getNextBoolean();
 		final boolean doEllipsoidImage = gd.getNextBoolean();
@@ -240,6 +254,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				thickImp.getProcessor().setMinAndMax(0, max);
 				thickImp.setTitle(imp.getShortTitle() + "_thickness");
 				thickImp.show();
+				thickImp.setSlice(1);
 				IJ.run("Fire");
 			}
 		}
@@ -324,7 +339,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				|| doEllipsoidImage) {
 			univ.show();
 			if (doSurfaceImage) {
-				displayParticleSurfaces(surfacePoints);
+				displayParticleSurfaces(surfacePoints, colourMode, volumes,
+						splitValue);
 			}
 			if (doCentroidImage) {
 				displayCentroids(centroids);
@@ -842,7 +858,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * 
 	 * @param surfacePoints
 	 */
-	private void displayParticleSurfaces(ArrayList<List<Point3f>> surfacePoints) {
+	private void displayParticleSurfaces(
+			ArrayList<List<Point3f>> surfacePoints, int colourMode,
+			double[] volumes, double splitValue) {
 		int p = 0;
 		int drawnParticles = 0;
 		final int nParticles = surfacePoints.size();
@@ -858,10 +876,21 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			IJ.showProgress(p, nParticles);
 			List<Point3f> points = iter.next();
 			if (p > 0 && points.size() > 0) {
-				float red = 1.0f - (float) p / (float) nParticles;
-				float green = 1.0f - red;
-				float blue = (float) p / (2.0f * (float) nParticles);
-				Color3f pColour = new Color3f(red, green, blue);
+				Color3f pColour = new Color3f(0, 0, 0);
+				if (colourMode == GRADIENT) {
+					float red = 1.0f - (float) p / (float) nParticles;
+					float green = 1.0f - red;
+					float blue = (float) p / (2.0f * (float) nParticles);
+					pColour = new Color3f(red, green, blue);
+				} else if (colourMode == SPLIT) {
+					if (volumes[p] > splitValue) {
+						// red if over
+						pColour = new Color3f(1.0f, 0.0f, 0.0f);
+					} else {
+						// yellow if under
+						pColour = new Color3f(1.0f, 1.0f, 0.0f);
+					}
+				}
 				// Add the mesh
 				try {
 					univ.addTriangleMesh(points, pColour, "Surface " + p)
@@ -2102,21 +2131,37 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		Vector<?> choices = gd.getChoices();
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> numbers = gd.getNumericFields();
-		Choice choice = (Choice) choices.get(0);
-		TextField num = (TextField) numbers.get(4);
+		// link algorithm choice to chunk size field
+		Choice choice = (Choice) choices.get(1);
+		TextField num = (TextField) numbers.get(5);
 		if (choice.getSelectedItem().contentEquals("Multithreaded")) {
 			num.setEnabled(true);
 		} else {
 			num.setEnabled(false);
 		}
+		// link show stack 3d to volume resampling
 		Checkbox box = (Checkbox) checkboxes.get(14);
-		TextField numb = (TextField) numbers.get(3);
+		TextField numb = (TextField) numbers.get(4);
 		if (box.getState()) {
 			numb.setEnabled(true);
 		} else {
 			numb.setEnabled(false);
 		}
-
+		// link show surfaces, gradient choice and split value
+		Checkbox surfbox = (Checkbox) checkboxes.get(10);
+		Choice col = (Choice) choices.get(0);
+		TextField split = (TextField) numbers.get(3);
+		if (!surfbox.getState()) {
+			col.setEnabled(false);
+			split.setEnabled(false);
+		} else {
+			col.setEnabled(true);
+			if (col.getSelectedIndex() == 1){
+				split.setEnabled(true);
+			} else {
+				split.setEnabled(false);
+			}
+		}
 		return true;
 	}
 }
