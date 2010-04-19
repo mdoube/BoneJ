@@ -1,8 +1,11 @@
 package org.doube.bonej;
 
 import java.awt.AWTEvent;
+import java.awt.Choice;
 import java.awt.Rectangle;
+import java.awt.TextField;
 import java.util.List;
+import java.util.Vector;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
@@ -205,9 +208,16 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		return thresholds;
 	}
 
-	@Override
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
-		// TODO Auto-generated method stub
-		return false;
+		Vector<?> choices = gd.getChoices();
+		Choice choice = (Choice) choices.get(0);
+		Vector<?> numbers = gd.getNumericFields();
+		TextField num = (TextField) numbers.get(0);
+		if (choice.getSelectedIndex() == 1){
+			num.setEnabled(true);
+		} else {
+			num.setEnabled(false);
+		}
+		return true;
 	}
 }
