@@ -155,7 +155,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addCheckbox("Show_surfaces (3D)", true);
 		String[] items = { "Gradient", " Split" };
 		gd.addChoice("Surface colours", items, items[0]);
-		gd.addNumericField("Split value", 0, 3);
+		gd.addNumericField("Split value", 0, 3, 7, units + "³");
 		gd.addCheckbox("Show_centroids (3D)", true);
 		gd.addCheckbox("Show_axes (3D)", true);
 		gd.addCheckbox("Show_ellipsoids", true);
@@ -2156,7 +2156,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			split.setEnabled(false);
 		} else {
 			col.setEnabled(true);
-			if (col.getSelectedIndex() == 1){
+			if (col.getSelectedIndex() == 1) {
 				split.setEnabled(true);
 			} else {
 				split.setEnabled(false);
