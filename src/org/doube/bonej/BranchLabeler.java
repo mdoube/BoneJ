@@ -18,6 +18,7 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ImageCheck;
 
 import ij.IJ;

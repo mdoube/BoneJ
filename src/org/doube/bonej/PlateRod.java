@@ -30,6 +30,7 @@ import ij.measure.Calibration;
 import org.doube.geometry.Vectors;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
+import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 

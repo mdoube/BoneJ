@@ -1,4 +1,4 @@
-package org.doube.bonej;
+package org.doube.skeleton;
 
 /**
  * Skeletonize3D plugin for ImageJ(C).
