@@ -1,5 +1,23 @@
 package org.doube.bonej;
 
+/**
+ * VolumeFraction plugin for ImageJ
+ * Copyright 2009 2010 Michael Doube
+ * 
+ *This program is free software: you can redistribute it and/or modify
+ *it under the terms of the GNU General Public License as published by
+ *the Free Software Foundation, either version 3 of the License, or
+ *(at your option) any later version.
+ *
+ *This program is distributed in the hope that it will be useful,
+ *but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *GNU General Public License for more details.
+ *
+ *You should have received a copy of the GNU General Public License
+ *along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.awt.AWTEvent;
 import java.awt.Choice;
 import java.awt.Rectangle;
@@ -36,8 +54,9 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			IJ.noImage();
 			return;
 		}
-		if (imp.getBitDepth() == 32 || imp.getBitDepth() == 24){
-			IJ.error("Volume Fraction requires a binary, 8-bit or 16-bit image");
+		if (imp.getBitDepth() == 32 || imp.getBitDepth() == 24) {
+			IJ
+					.error("Volume Fraction requires a binary, 8-bit or 16-bit image");
 			return;
 		}
 
@@ -213,7 +232,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		Choice choice = (Choice) choices.get(0);
 		Vector<?> numbers = gd.getNumericFields();
 		TextField num = (TextField) numbers.get(0);
-		if (choice.getSelectedIndex() == 1){
+		if (choice.getSelectedIndex() == 1) {
 			num.setEnabled(true);
 		} else {
 			num.setEnabled(false);

@@ -44,7 +44,7 @@ import customnode.CustomTriangleMesh;
  * Calculates the structure model index (SMI), a measure of how plate-like or
  * rod-like a structure is.
  * 
- * @author mdoube
+ * @author Michael Doube
  * @see <p>
  *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
  *      with the Structure Model Index. Comput Methods Biomech Biomed Engin

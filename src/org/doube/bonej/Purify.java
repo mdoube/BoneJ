@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  *  
- * Purify_ plugin for ImageJ
+ * Purify plugin for ImageJ
  * Copyright 2009 2010 Michael Doube 
  *
  * This program is free software: you can redistribute it and/or modify

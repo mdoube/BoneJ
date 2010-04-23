@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- * Fit_Sphere plugin for ImageJ
+ * SphereFitter plugin for ImageJ
  * Copyright 2008 2009 2010 Michael Doube
  * 
  *This program is free software: you can redistribute it and/or modify

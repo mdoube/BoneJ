@@ -1,5 +1,23 @@
 package org.doube.bonej;
 
+/**
+ * MeasureSurface plugin for ImageJ
+ * Copyright 2009 2010 Michael Doube
+ * 
+ *This program is free software: you can redistribute it and/or modify
+ *it under the terms of the GNU General Public License as published by
+ *the Free Software Foundation, either version 3 of the License, or
+ *(at your option) any later version.
+ *
+ *This program is distributed in the hope that it will be useful,
+ *but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *GNU General Public License for more details.
+ *
+ *You should have received a copy of the GNU General Public License
+ *along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.util.List;
 
 import javax.vecmath.Color3f;
@@ -120,7 +138,7 @@ public class MeasureSurface implements PlugIn {
 	public static double getSurfaceArea(List<Point3f> points) {
 		double sumArea = 0;
 		final int nPoints = points.size();
-		Point3f origin = new Point3f (0.0f, 0.0f, 0.0f);
+		Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
 		for (int n = 0; n < nPoints; n += 3) {
 			IJ.showStatus("Calculating surface area...");
 			final Point3f point0 = points.get(n);
