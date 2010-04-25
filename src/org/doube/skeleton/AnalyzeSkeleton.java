@@ -806,8 +806,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 					"Branch length", "V1 x", "V1 y", "V1 z", "V2 x", "V2 y",
 					"V2 z", "Euclidean distance" };
 
-			for (int i = 1; i < extra_head.length; i++)
-				extra_rt.setHeading(i, extra_head[i]);
 			// Edge comparator (by branch length)
 			Comparator<Edge> comp = new Comparator<Edge>() {
 				public int compare(Edge o1, Edge o2) {
@@ -831,21 +829,21 @@ public class AnalyzeSkeleton implements PlugInFilter {
 				Collections.sort(listEdges, comp);
 				for (final Edge e : listEdges) {
 					extra_rt.incrementCounter();
-					extra_rt.addValue(1, i + 1);
-					extra_rt.addValue(2, e.getLength());
-					extra_rt.addValue(3, e.getV1().getPoints().get(0).x
+					extra_rt.addValue(extra_head[1], i + 1);
+					extra_rt.addValue(extra_head[2], e.getLength());
+					extra_rt.addValue(extra_head[3], e.getV1().getPoints().get(0).x
 							* this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(4, e.getV1().getPoints().get(0).y
+					extra_rt.addValue(extra_head[4], e.getV1().getPoints().get(0).y
 							* this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(5, e.getV1().getPoints().get(0).z
+					extra_rt.addValue(extra_head[5], e.getV1().getPoints().get(0).z
 							* this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(6, e.getV2().getPoints().get(0).x
+					extra_rt.addValue(extra_head[6], e.getV2().getPoints().get(0).x
 							* this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(7, e.getV2().getPoints().get(0).y
+					extra_rt.addValue(extra_head[7], e.getV2().getPoints().get(0).y
 							* this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(8, e.getV2().getPoints().get(0).z
+					extra_rt.addValue(extra_head[8], e.getV2().getPoints().get(0).z
 							* this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(9, this.calculateDistance(e.getV1()
+					extra_rt.addValue(extra_head[9], this.calculateDistance(e.getV1()
 							.getPoints().get(0), e.getV2().getPoints().get(0)));
 				}
 			}
