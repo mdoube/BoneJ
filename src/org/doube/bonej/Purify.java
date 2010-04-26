@@ -108,7 +108,7 @@ public class Purify implements PlugIn, DialogListener {
 				/ (double) 1000;
 
 		if (showPerformance)
-			showResults(duration, imp, slicesPerChunk);
+			showResults(duration, imp, slicesPerChunk, labelMethod);
 		return;
 	}
 
@@ -353,13 +353,16 @@ public class Purify implements PlugIn, DialogListener {
 	 * @param chunkRanges
 	 * @param duration
 	 */
-	private void showResults(double duration, ImagePlus imp, int slicesPerChunk) {
+	private void showResults(double duration, ImagePlus imp, int slicesPerChunk, int labelMethod) {
+		if (labelMethod == ParticleCounter.LINEAR)
+			slicesPerChunk = imp.getImageStackSize();
 		ParticleCounter pc = new ParticleCounter();
 		final int nChunks = pc.getNChunks(imp, slicesPerChunk);
 		int[][] chunkRanges = pc.getChunkRanges(imp, nChunks, slicesPerChunk);
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
 		rt.addLabel(imp.getTitle());
+		rt.addValue("Algorithm", labelMethod);
 		rt.addValue("Threads", Runtime.getRuntime().availableProcessors());
 		rt.addValue("Slices", imp.getImageStackSize());
 		rt.addValue("Chunks", nChunks);
