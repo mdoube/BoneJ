@@ -3,6 +3,8 @@ package org.doube.skeleton;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.ListIterator;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -138,8 +140,11 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/** number of trees (skeletons) in the image */
 	private int numOfTrees = 0;
 
-	/** pruning option */
+	/** loop pruning option */
 	private boolean bPruneCycles = true;
+
+	/** dead-end pruning option */
+	private boolean pruneEnds = false;
 
 	/** array of graphs (one per tree) */
 	private Graph[] graph = null;
@@ -215,6 +220,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		GenericDialog gd = new GenericDialog("Analyze Skeleton");
 		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
 				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
+		gd.addCheckbox("Prune ends", pruneEnds);
 		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
 		gd.showDialog();
 
@@ -222,6 +228,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		if (gd.wasCanceled())
 			return;
 		pruneIndex = gd.getNextChoiceIndex();
+		pruneEnds = gd.getNextBoolean();
 		AnalyzeSkeleton.verbose = gd.getNextBoolean();
 
 		// pre-checking if another image is needed and also setting bPruneCycles
@@ -271,7 +278,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 		// now we have all the information that's needed for running the plugin
 		// as if it was called from somewhere else
-		run(pruneIndex, origIP, false, verbose);
+		run(pruneIndex, pruneEnds, origIP, false, verbose);
 
 		if (debug)
 			IJ.log("num of skeletons = " + this.numOfTrees);
@@ -288,9 +295,10 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 * @param pruneIndex
 	 *            The pruneIndex, as asked by the initial gui dialog.
 	 */
-	public SkeletonResult run(int pruneIndex, ImagePlus origIP, boolean silent,
-			boolean verbose) {
+	public SkeletonResult run(int pruneIndex, boolean pruneEnds,
+			ImagePlus origIP, boolean silent, boolean verbose) {
 		AnalyzeSkeleton.pruneIndex = pruneIndex;
+		this.pruneEnds = pruneEnds;
 		this.silent = silent;
 		AnalyzeSkeleton.verbose = verbose;
 
@@ -322,8 +330,14 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		// initialize visit flags
 		resetVisited();
 
-		// Tag skeleton, differentiate trees and visit them
+		// Tag skeleton, differentiate trees, visit them
+		//and create graphs
 		processSkeleton(this.inputImage);
+
+		// prune ends
+		if (pruneEnds) {
+			pruneEndBranches(this.inputImage, this.taggedImage);
+		}
 
 		// Prune cycles if necessary
 		if (bPruneCycles) {
@@ -336,12 +350,16 @@ public class AnalyzeSkeleton implements PlugInFilter {
 				processSkeleton(this.inputImage);
 			}
 		}
-
+		
+		// Show tags image.
+		if (!silent) {
+			displayTagImage(this.taggedImage);
+		}
 		// Calculate triple points (junctions with exactly 3 branches)
 		calculateTripleAndQuadruplePoints();
 
 		// Return the analysis results
-		return assembleResults();
+		return assembleResults();	
 	}
 
 	/**
@@ -351,7 +369,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 * This one just calls run(AnalyzeSkeleton_.NONE, null, true, false)
 	 */
 	public SkeletonResult run() {
-		return run(NONE, null, true, false);
+		return run(NONE, false, null, true, false);
 	}
 
 	// ---------------------------------------------------------------------------
@@ -405,11 +423,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 		// Prepare data: classify voxels and tag them.
 		this.taggedImage = tagImage(inputImage2);
-
-		// Show tags image.
-		if (!bPruneCycles && !silent) {
-			displayTagImage(taggedImage);
-		}
 
 		// Mark trees
 		ImageStack treeIS = markTrees(taggedImage);
@@ -465,7 +478,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 						(byte) 0);
 				pruned = true;
 			} else // For the rest, we do depth-first search to detect the
-					// cycles
+			// cycles
 			{
 				// DFS
 				ArrayList<Edge> backEdges = this.graph[iTree]
@@ -831,20 +844,27 @@ public class AnalyzeSkeleton implements PlugInFilter {
 					extra_rt.incrementCounter();
 					extra_rt.addValue(extra_head[1], i + 1);
 					extra_rt.addValue(extra_head[2], e.getLength());
-					extra_rt.addValue(extra_head[3], e.getV1().getPoints().get(0).x
+					extra_rt.addValue(extra_head[3], e.getV1().getPoints().get(
+							0).x
 							* this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(extra_head[4], e.getV1().getPoints().get(0).y
+					extra_rt.addValue(extra_head[4], e.getV1().getPoints().get(
+							0).y
 							* this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(extra_head[5], e.getV1().getPoints().get(0).z
+					extra_rt.addValue(extra_head[5], e.getV1().getPoints().get(
+							0).z
 							* this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(extra_head[6], e.getV2().getPoints().get(0).x
+					extra_rt.addValue(extra_head[6], e.getV2().getPoints().get(
+							0).x
 							* this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(extra_head[7], e.getV2().getPoints().get(0).y
+					extra_rt.addValue(extra_head[7], e.getV2().getPoints().get(
+							0).y
 							* this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(extra_head[8], e.getV2().getPoints().get(0).z
+					extra_rt.addValue(extra_head[8], e.getV2().getPoints().get(
+							0).z
 							* this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(extra_head[9], this.calculateDistance(e.getV1()
-							.getPoints().get(0), e.getV2().getPoints().get(0)));
+					extra_rt.addValue(extra_head[9], this.calculateDistance(e
+							.getV1().getPoints().get(0), e.getV2().getPoints()
+							.get(0)));
 				}
 			}
 			extra_rt.show("Branch information");
@@ -1763,6 +1783,91 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 	}// end method fusionNeighborJunction
 
+	/**
+	 * Prune end branches
+	 * 
+	 * @param stack
+	 *            ImageStack input skeleton image
+	 * 
+	 */
+	private void pruneEndBranches(ImageStack stack, ImageStack taggedImage) {
+		for (int t = 0; t < this.numOfTrees; t++){
+			Graph g = graph[t];
+			ArrayList<Vertex> vertices = g.getVertices();
+			ListIterator<Vertex> vit = vertices.listIterator();
+			while (vit.hasNext()){
+				Vertex v = vit.next();
+				if (v.getBranches().size() == 1){
+					//Remove end point voxels
+					ArrayList<Point> points = v.getPoints();
+					final int nPoints = points.size(); 
+					for (int i = 0; i < nPoints; i++){
+						Point p = points.get(i);
+						setPixel(stack, p.x, p.y, p.z, (byte) 0);
+						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
+						this.numberOfEndPoints[t]--;
+						this.totalNumberOfEndPoints--;
+						Iterator<Point> pit = this.listOfEndPoints.listIterator();
+						while (pit.hasNext()){
+							Point ep = pit.next();
+							if (ep.equals(p)){
+								pit.remove();
+								break;
+							}
+						}
+					}
+					//Remove branch voxels
+					Edge branch = v.getBranches().get(0);
+					points = branch.getSlabs();
+					final int nSlabs = points.size();
+					for (int i = 0; i < nSlabs; i++){
+						Point p = points.get(i);
+						setPixel(stack, p.x, p.y, p.z, (byte) 0);
+						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
+						this.numberOfSlabs[t]--;
+						this.totalNumberOfSlabs--;
+						Iterator<Point> pit = this.listOfSlabVoxels.listIterator();
+						while (pit.hasNext()){
+							Point ep = pit.next();
+							if (ep.equals(p)){
+								pit.remove();
+								break;
+							}
+						}
+						//remove the Edge from the Graph
+						ArrayList<Edge> gEdges = graph[t].getEdges();
+						Iterator<Edge> git = gEdges.listIterator();
+						while (git.hasNext()){
+							Edge e = git.next();
+							if (e.equals(branch)){
+								git.remove();
+								break;
+							}
+						}
+					}
+					//remove the Edge from the opposite Vertex
+					Vertex opp = branch.getOppositeVertex(v);
+					ArrayList<Edge> oppBranches = opp.getBranches();
+					Iterator<Edge> oppIt = oppBranches.listIterator();
+					while (oppIt.hasNext()){
+						Edge oppBranch = oppIt.next();
+						if (oppBranch.equals(branch)){
+							oppIt.remove();
+							break;
+						}
+					}
+					
+					//remove the Edge from the Vertex
+					v.getBranches().remove(0);
+					
+					//remove the Vertex from the Graph
+					vit.remove();
+				}
+			}
+		}
+		return;
+	}
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Check if two groups of voxels are neighbors.
@@ -2408,6 +2513,16 @@ public class AnalyzeSkeleton implements PlugInFilter {
 				&& z < this.depth)
 			((short[]) image.getPixels(z + 1))[x + y * this.width] = value;
 	} // end setPixel
+
+	/*------------------------------------------------------------------------ */
+	/**
+	 * Get the array of graphs (one Graph per tree) that resulted from skeleton
+	 * analysis
+	 * 
+	 */
+	public Graph[] getGraphs(){
+		return graph;
+	}
 
 	/* ----------------------------------------------------------------------- */
 	/**
