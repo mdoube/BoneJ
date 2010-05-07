@@ -278,7 +278,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 		// now we have all the information that's needed for running the plugin
 		// as if it was called from somewhere else
-		run(pruneIndex, pruneEnds, origIP, false, verbose);
+		run(pruneIndex, pruneEnds, imRef, origIP, false, verbose);
 
 		if (debug)
 			IJ.log("num of skeletons = " + this.numOfTrees);
@@ -295,11 +295,12 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 * @param pruneIndex
 	 *            The pruneIndex, as asked by the initial gui dialog.
 	 */
-	public SkeletonResult run(int pruneIndex, boolean pruneEnds,
+	public SkeletonResult run(int pruneIndex, boolean pruneEnds, ImagePlus skeleton,
 			ImagePlus origIP, boolean silent, boolean verbose) {
 		AnalyzeSkeleton.pruneIndex = pruneIndex;
 		this.pruneEnds = pruneEnds;
 		this.silent = silent;
+		this.imRef = skeleton;
 		AnalyzeSkeleton.verbose = verbose;
 
 		switch (pruneIndex) {
@@ -369,7 +370,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 * This one just calls run(AnalyzeSkeleton_.NONE, null, true, false)
 	 */
 	public SkeletonResult run() {
-		return run(NONE, false, null, true, false);
+		return run(NONE, false, null, null, true, false);
 	}
 
 	// ---------------------------------------------------------------------------
