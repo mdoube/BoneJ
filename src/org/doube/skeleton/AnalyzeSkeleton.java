@@ -903,82 +903,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		return result;
 	}
 
-	// -----------------------------------------------------------------------
-	/**
-	 * Visit skeleton from end points and register measures.
-	 * 
-	 * @param taggedImage
-	 * 
-	 * @deprecated
-	 */
-	private void visitSkeleton(ImageStack taggedImage) {
-
-		// length of branches
-		double branchLength = 0;
-		int numberOfBranches = 0;
-		double maximumBranchLength = 0;
-		double averageBranchLength = 0;
-		Point initialPoint = null;
-		Point finalPoint = null;
-
-		// Visit branches starting at end points
-		for (int i = 0; i < this.totalNumberOfEndPoints; i++) {
-			Point endPointCoord = this.listOfEndPoints.get(i);
-
-			// visit branch until next junction or end point.
-			double length = visitBranch(endPointCoord);
-
-			if (length == 0)
-				continue;
-
-			// increase number of branches
-			numberOfBranches++;
-			branchLength += length;
-
-			// update maximum branch length
-			if (length > maximumBranchLength) {
-				maximumBranchLength = length;
-				initialPoint = endPointCoord;
-				finalPoint = this.auxPoint;
-			}
-		}
-
-		// Now visit branches starting at junctions
-		for (int i = 0; i < this.totalNumberOfJunctionVoxels; i++) {
-			Point junctionCoord = this.listOfJunctionVoxels.get(i);
-
-			// Mark junction as visited
-			setVisited(junctionCoord, true);
-
-			Point nextPoint = getNextUnvisitedVoxel(junctionCoord);
-
-			while (nextPoint != null) {
-				branchLength += calculateDistance(junctionCoord, nextPoint);
-
-				double length = visitBranch(nextPoint);
-
-				branchLength += length;
-
-				// Increase number of branches
-				if (length != 0) {
-					numberOfBranches++;
-					// update maximum branch length
-					if (length > maximumBranchLength) {
-						maximumBranchLength = length;
-						initialPoint = junctionCoord;
-						finalPoint = this.auxPoint;
-					}
-				}
-
-				nextPoint = getNextUnvisitedVoxel(junctionCoord);
-			}
-		}
-
-		// Average length
-		averageBranchLength = branchLength / numberOfBranches;
-
-	} // end visitSkeleton
-
 	/* ----------------------------------------------------------------------- */
 	/**
 	 * Visit skeleton starting at end-points, junctions and slab of circular
@@ -1319,7 +1243,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 			if (debug)
 				IJ.log("-- Visit tree from end-point:");
 			// Visit the entire tree.
-			int numOfVoxelsInTree = visitTree(endPointCoord, outputImage, color);
+			visitTree(endPointCoord, outputImage, color);
 
 			// increase number of trees
 			this.numOfTrees++;
@@ -1492,55 +1416,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		return numOfVoxels;
 	} // end method visitTree
 
-	// -----------------------------------------------------------------------
-	/**
-	 * Visit a branch and calculate length.
-	 * 
-	 * @param startingPoint
-	 *            starting coordinates
-	 * @return branch length
-	 * 
-	 * @deprecated
-	 */
-	private double visitBranch(Point startingPoint) {
-		double length = 0;
-
-		// mark starting point as visited
-		setVisited(startingPoint, true);
-
-		// Get next unvisited voxel
-		Point nextPoint = getNextUnvisitedVoxel(startingPoint);
-
-		if (nextPoint == null)
-			return 0;
-
-		Point previousPoint = startingPoint;
-
-		// We visit the branch until we find an end point or a junction
-		while (nextPoint != null && isSlab(nextPoint)) {
-			// Add length
-			length += calculateDistance(previousPoint, nextPoint);
-
-			// Mark as visited
-			setVisited(nextPoint, true);
-
-			// Move in the graph
-			previousPoint = nextPoint;
-			nextPoint = getNextUnvisitedVoxel(previousPoint);
-		}
-
-		if (nextPoint != null) {
-			// Add distance to last point
-			length += calculateDistance(previousPoint, nextPoint);
-
-			// Mark last point as visited
-			setVisited(nextPoint, true);
-		}
-
-		this.auxPoint = previousPoint;
-
-		return length;
-	}// end visitBranch
 
 	// -----------------------------------------------------------------------
 	/**
@@ -2240,27 +2115,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 	// -----------------------------------------------------------------------
 	/**
-	 * Get average 3x3x3 neighborhood pixel value of a given point
-	 * 
-	 * @param image
-	 *            input image
-	 * @param p
-	 *            image coordinates
-	 */
-	private double getAverageNeighborhoodValue(ImageStack image, Point p) {
-		byte[] neighborhood = getNeighborhood(image, p);
-
-		double avg = 0;
-		for (int i = 0; i < neighborhood.length; i++)
-			avg += (double) (neighborhood[i] & 0xFF);
-		if (neighborhood.length > 0)
-			return avg / (double) neighborhood.length;
-		else
-			return 0;
-	}// end method getAverageNeighborhoodValue
-
-	// -----------------------------------------------------------------------
-	/**
 	 * Get average neighborhood pixel value of a given point.
 	 * 
 	 * @param image
@@ -2310,20 +2164,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 					neighborhood[l] = getPixel(image, i, j, k);
 		return neighborhood;
 	} // end getNeighborhood
-
-	// -----------------------------------------------------------------------
-	/**
-	 * Get neighborhood of a pixel in a 3D image (0 border conditions).
-	 * 
-	 * @param image
-	 *            3D image (ImageStack)
-	 * @param p
-	 *            3D point coordinates
-	 * @return corresponding 27-pixels neighborhood (0 if out of image)
-	 */
-	private byte[] getNeighborhood(ImageStack image, Point p) {
-		return getNeighborhood(image, p.x, p.y, p.z);
-	}
 
 	// -----------------------------------------------------------------------
 	/**
