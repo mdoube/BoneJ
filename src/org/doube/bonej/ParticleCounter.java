@@ -55,9 +55,9 @@ import ij3d.Image3DUniverse;
 
 /**
  * <p>
- * This class implements multithreaded 3D particle identification and shape
- * analysis. Surface meshing and 3D visualisation are provided by Bene Schmid's
- * ImageJ 3D Viewer.
+ * This class implements multithreaded and linear O(n) 3D particle
+ * identification and shape analysis. Surface meshing and 3D visualisation are
+ * provided by Bene Schmid's ImageJ 3D Viewer.
  * </p>
  * <p>
  * This plugin is based on Object_Counter3D by Fabrice P Cordelires and Jonathan
@@ -140,6 +140,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
+		gd.addCheckbox("Exclude on sides", false);
 		gd.addCheckbox("Surface_area", true);
 		gd.addCheckbox("Feret diameter", false);
 		gd.addCheckbox("Enclosed_volume", true);
@@ -172,6 +173,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 		final double minVol = gd.getNextNumber();
 		final double maxVol = gd.getNextNumber();
+		final boolean doExclude = gd.getNextBoolean();
 		final boolean doSurfaceArea = gd.getNextBoolean();
 		final boolean doFeret = gd.getNextBoolean();
 		final boolean doSurfaceVolume = gd.getNextBoolean();
@@ -204,7 +206,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// get the particles and do the analysis
 		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
-				FORE);
+				FORE, doExclude);
 		int[][] particleLabels = (int[][]) result[1];
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
@@ -1167,14 +1169,23 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            maximum volume particle to include
 	 * @param phase
 	 *            foreground or background (FORE or BACK)
+	 * @param doExclude
+	 *            if true, remove particles touching sides of the stack
 	 * @return Object[] {byte[][], int[][]} containing a binary workArray and
 	 *         particle labels.
 	 */
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
+			double minVol, double maxVol, int phase, boolean doExclude) {
+		byte[][] workArray = makeWorkArray(imp);
+		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
+				phase, doExclude);
+	}
+
+	public Object[] getParticles(ImagePlus imp, int slicesPerChunk,
 			double minVol, double maxVol, int phase) {
 		byte[][] workArray = makeWorkArray(imp);
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, false);
 	}
 
 	public Object[] getParticles(ImagePlus imp, int slicesPerChunk, int phase) {
@@ -1182,7 +1193,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, false);
 	}
 
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
@@ -1190,7 +1201,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		double minVol = 0;
 		double maxVol = Double.POSITIVE_INFINITY;
 		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
-				phase);
+				phase, false);
+	}
+
+	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
+			int slicesPerChunk, double minVol, double maxVol, int phase) {
+		return getParticles(imp, workArray, slicesPerChunk, minVol, maxVol,
+				phase, false);
 	}
 
 	/**
@@ -1213,7 +1230,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *         particle sizes
 	 */
 	public Object[] getParticles(ImagePlus imp, byte[][] workArray,
-			int slicesPerChunk, double minVol, double maxVol, int phase) {
+			int slicesPerChunk, double minVol, double maxVol, int phase,
+			boolean doExclude) {
 		if (phase == FORE) {
 			this.sPhase = "foreground";
 		} else if (phase == BACK) {
@@ -1260,6 +1278,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			joinStructures(imp, particleLabels, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
+		if (doExclude)
+			excludeOnEdges(imp, particleLabels, workArray);
 		minimiseLabels(particleLabels);
 		long[] particleSizes = getParticleSizes(particleLabels);
 		Object[] result = { workArray, particleLabels, particleSizes };
@@ -1347,6 +1367,81 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				}
 			}
 		}
+		return;
+	}
+
+	/**
+	 * Scans edge voxels and set all touching particles to background
+	 * 
+	 * @param particleLabels
+	 * @param nLabels
+	 * @param w
+	 * @param h
+	 * @param d
+	 */
+	private void excludeOnEdges(ImagePlus imp, int[][] particleLabels,
+			byte[][] workArray) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		long[] particleSizes = getParticleSizes(particleLabels);
+		final int nLabels = particleSizes.length;
+		int[] newLabel = new int[nLabels];
+		for (int i = 0; i < nLabels; i++)
+			newLabel[i] = i;
+
+		// scan faces
+		// top and bottom faces
+		for (int y = 0; y < h; y++) {
+			final int index = y * w;
+			for (int x = 0; x < w; x++) {
+				final int pt = particleLabels[0][index + x];
+				if (pt > 0)
+					newLabel[pt] = 0;
+				final int pb = particleLabels[d - 1][index + x];
+				if (pb > 0)
+					newLabel[pb] = 0;
+			}
+		}
+
+		// west and east faces
+		for (int z = 0; z < d; z++) {
+			for (int y = 0; y < h; y++) {
+				final int pw = particleLabels[z][y * w];
+				final int pe = particleLabels[z][y * w + w - 1];
+				if (pw > 0)
+					newLabel[pw] = 0;
+				if (pe > 0)
+					newLabel[pe] = 0;
+			}
+		}
+
+		// north and south faces
+		final int lastRow = w * (h - 1);
+		for (int z = 0; z < d; z++) {
+			for (int x = 0; x < w; x++) {
+				final int pn = particleLabels[z][x];
+				final int ps = particleLabels[z][lastRow + x];
+				if (pn > 0)
+					newLabel[pn] = 0;
+				if (ps > 0)
+					newLabel[ps] = 0;
+			}
+		}
+
+		// replace labels
+		final int wh = w * h;
+		for (int z = 0; z < d; z++) {
+			for (int i = 0; i < wh; i++) {
+				final int p = particleLabels[z][i];
+				final int nL = newLabel[p];
+				if (nL == 0) {
+					particleLabels[z][i] = 0;
+					workArray[z][i] = (byte) 0;
+				}
+			}
+		}
+
 		return;
 	}
 
