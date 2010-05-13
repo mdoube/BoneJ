@@ -34,6 +34,7 @@ import javax.vecmath.Point3f;
 import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 
 import customnode.CustomPointMesh;
@@ -123,6 +124,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	private int labelMethod = MULTI;
 
 	public void run(String arg) {
+		if (!ImageCheck.checkIJVersion())
+			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
@@ -140,31 +143,52 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
-		gd.addCheckbox("Exclude on sides", false);
-		gd.addCheckbox("Surface_area", true);
-		gd.addCheckbox("Feret diameter", false);
-		gd.addCheckbox("Enclosed_volume", true);
+		String[] labels = new String[8];
+		boolean[] defaultValues = new boolean[8];
+		labels[0] = "Exclude on sides";
+		defaultValues[0] = false;
+		labels[1] = "Surface_area";
+		defaultValues[1] = true;
+		labels[2] = "Feret diameter";
+		defaultValues[2] = false;
+		labels[3] = "Enclosed_volume";
+		defaultValues[3] = true;
+		labels[4] = "Moments of inertia";
+		defaultValues[4] = true;
+		labels[5] = "Euler characteristic";
+		defaultValues[5] = true;
+		labels[6] = "Thickness";
+		defaultValues[6] = true;
+		labels[7] = "Ellipsoids";
+		defaultValues[7] = true;
+		gd.addCheckboxGroup(4, 2, labels, defaultValues);
 		gd.addNumericField("Surface_resampling", 2, 0);
-		gd.addCheckbox("Moments of inertia", true);
-		gd.addCheckbox("Euler characteristic", true);
-		gd.addCheckbox("Thickness", true);
-		gd.addCheckbox("Ellipsoids", true);
 		gd.addMessage("Graphical Results");
-		gd.addCheckbox("Show_particle stack", true);
-		gd.addCheckbox("Show_size stack", false);
-		gd.addCheckbox("Show_thickness stack", false);
-		gd.addCheckbox("Show_surfaces (3D)", true);
-		String[] items = { "Gradient", " Split" };
+		String[] labels2 = new String[8];
+		boolean[] defaultValues2 = new boolean[8];
+		labels2[0] = "Show_particle stack";
+		defaultValues2[0] = true;
+		labels2[1] = "Show_size stack";
+		defaultValues2[0] = false;
+		labels2[2] = "Show_thickness stack";
+		defaultValues2[0] = false;
+		labels2[3] = "Show_surfaces (3D)";
+		defaultValues2[0] = true;
+		labels2[4] = "Show_centroids (3D)";
+		defaultValues2[0] = true;
+		labels2[5] = "Show_axes (3D)";
+		defaultValues2[0] = true;
+		labels2[6] = "Show_ellipsoids (3D)";
+		defaultValues2[0] = true;
+		labels2[7] = "Show_stack (3D)";
+		defaultValues2[0] = true;
+		gd.addCheckboxGroup(4, 2, labels2, defaultValues2);
+		String[] items = { "Gradient", "Split" };
 		gd.addChoice("Surface colours", items, items[0]);
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
-		gd.addCheckbox("Show_centroids (3D)", true);
-		gd.addCheckbox("Show_axes (3D)", true);
-		gd.addCheckbox("Show_ellipsoids", true);
-		gd.addCheckbox("Show_stack (3D)", true);
 		gd.addNumericField("Volume_resampling", 2, 0);
 		String[] items2 = { "Multithreaded", "Linear" };
 		gd.addChoice("Labelling algorithm", items2, items2[0]);
-		gd.addMessage("Slice size for particle counting");
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -1907,10 +1931,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return;
 	}
 
-	// @SuppressWarnings("unchecked")
 	public ArrayList<ArrayList<short[]>> getParticleLists(
 			int[][] particleLabels, int nBlobs, int w, int h, int d) {
-		// ArrayList<int[]> particleLists[] = new ArrayList[nBlobs];
 		ArrayList<ArrayList<short[]>> pL = new ArrayList<ArrayList<short[]>>(
 				nBlobs);
 		long[] particleSizes = getParticleSizes(particleLabels);
@@ -2235,7 +2257,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			num.setEnabled(false);
 		}
 		// link show stack 3d to volume resampling
-		Checkbox box = (Checkbox) checkboxes.get(14);
+		Checkbox box = (Checkbox) checkboxes.get(15);
 		TextField numb = (TextField) numbers.get(4);
 		if (box.getState()) {
 			numb.setEnabled(true);
@@ -2243,7 +2265,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			numb.setEnabled(false);
 		}
 		// link show surfaces, gradient choice and split value
-		Checkbox surfbox = (Checkbox) checkboxes.get(10);
+		Checkbox surfbox = (Checkbox) checkboxes.get(11);
 		Choice col = (Choice) choices.get(0);
 		TextField split = (TextField) numbers.get(3);
 		if (!surfbox.getState()) {
@@ -2257,6 +2279,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				split.setEnabled(false);
 			}
 		}
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

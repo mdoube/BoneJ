@@ -631,6 +631,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 

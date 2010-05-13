@@ -30,6 +30,7 @@ import javax.vecmath.Point3f;
 
 import marchingcubes.MCTriangulator;
 
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 
@@ -228,15 +229,18 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		gd.getNextChoice();
 		Vector<?> choices = gd.getChoices();
 		Choice choice = (Choice) choices.get(0);
 		Vector<?> numbers = gd.getNumericFields();
 		TextField num = (TextField) numbers.get(0);
 		if (choice.getSelectedIndex() == 1) {
 			num.setEnabled(true);
+			Math.floor(gd.getNextNumber());
 		} else {
 			num.setEnabled(false);
 		}
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

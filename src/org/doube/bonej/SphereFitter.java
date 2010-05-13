@@ -33,6 +33,7 @@ import ij.plugin.frame.*;
 import ij.measure.Calibration;
 
 import org.doube.geometry.FitSphere;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
@@ -330,6 +331,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

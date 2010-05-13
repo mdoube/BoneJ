@@ -31,6 +31,7 @@ import org.doube.util.ImageCheck;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 
 /**
@@ -42,7 +43,7 @@ import ij.plugin.PlugIn;
  * 
  */
 public class BranchLabeler implements PlugIn {
-	int width, height, depth;
+	static int width, height, depth;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -56,7 +57,13 @@ public class BranchLabeler implements PlugIn {
 		width = imp.getWidth();
 		height = imp.getHeight();
 		depth = imp.getImageStackSize();
-		
+		GenericDialog gd = new GenericDialog("Options");
+		gd.addCheckbox("Prune_ends", false);
+		gd.showDialog();
+		if (gd.wasCanceled())
+			return;
+		boolean pruneEnds = gd.getNextBoolean();
+
 		ImageStack stack = imp.getImageStack();
 		// skeletonise original
 		Skeletonize3D skel = new Skeletonize3D();
@@ -64,7 +71,7 @@ public class BranchLabeler implements PlugIn {
 
 		// Process the skeleton and retrieve the Graphs for each tree
 		AnalyzeSkeleton as = new AnalyzeSkeleton();
-		as.run(AnalyzeSkeleton.NONE, true, skeleton, imp, true, false);
+		as.run(AnalyzeSkeleton.NONE, pruneEnds, skeleton, imp, true, false);
 		Graph[] graphs = as.getGraphs();
 		skeleton.close();
 		skeleton.flush();
@@ -81,10 +88,11 @@ public class BranchLabeler implements PlugIn {
 
 		// iteratively grow neighbourhoods from labelled branches
 		// until all the space in imp is filled
-		int labels = 1;
+		int labels = 2;
 		final int nTrees = graphs.length;
 		for (int t = 0; t < nTrees; t++) {
 			Graph graph = graphs[t];
+
 			// Initial labelling of branches
 			final int nBranches = graph.getEdges().size();
 			int nSeeds = 0;
@@ -99,6 +107,7 @@ public class BranchLabeler implements PlugIn {
 					setPixel(its, p.x, p.y, p.z, labels + b);
 				}
 			}
+
 			while (nSeeds > 0) {
 				nSeeds = countSlabs(branches);
 				for (int b = 0; b < nBranches; b++) {
@@ -113,9 +122,10 @@ public class BranchLabeler implements PlugIn {
 						for (int z = seed.z - 1; z <= seed.z + 1; z++) {
 							for (int y = seed.y - 1; y <= seed.y + 1; y++) {
 								for (int x = seed.x - 1; x <= seed.x + 1; x++) {
-									final float label = getPixel(its, x, y, z);
-									final byte template = getPixel(stack, x, y,
-											z, true);
+									final float label = getFloatPixel(its, x,
+											y, z);
+									final byte template = getBytePixel(stack,
+											x, y, z);
 									if (label == 0 && template != 0) {
 										setPixel(its, x, y, z, labels + b);
 										nextSeeds.add(new Point(x, y, z));
@@ -169,9 +179,8 @@ public class BranchLabeler implements PlugIn {
 	 *            pixel value
 	 */
 	private void setPixel(ImageStack image, int x, int y, int z, float value) {
-		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0
-				&& z < this.depth)
-			((float[]) image.getPixels(z + 1))[x + y * this.width] = value;
+		if (x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth)
+			((float[]) image.getPixels(z + 1))[x + y * width] = value;
 	} // end setPixel
 
 	/**
@@ -187,11 +196,8 @@ public class BranchLabeler implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private static byte getPixel(final ImageStack image, final int x,
-			final int y, final int z, boolean b) {
-		final int width = image.getWidth();
-		final int height = image.getHeight();
-		final int depth = image.getSize();
+	private static byte getBytePixel(final ImageStack image, final int x,
+			final int y, final int z) {
 		if (x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth)
 			return ((byte[]) image.getPixels(z + 1))[x + y * width];
 		else
@@ -199,7 +205,7 @@ public class BranchLabeler implements PlugIn {
 	}
 
 	/**
-	 * Get pixel in 3D byte (8-bit) image (0 border conditions)
+	 * Get pixel in 3D float (32-bit) image (0 border conditions)
 	 * 
 	 * @param image
 	 *            3D image
@@ -211,7 +217,7 @@ public class BranchLabeler implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private static float getPixel(final ImageStack image, final int x,
+	private static float getFloatPixel(final ImageStack image, final int x,
 			final int y, final int z) {
 		final int width = image.getWidth();
 		final int height = image.getHeight();

@@ -821,6 +821,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

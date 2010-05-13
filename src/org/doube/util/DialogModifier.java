@@ -2,8 +2,12 @@ package org.doube.util;
 
 import ij.gui.GenericDialog;
 
+import java.awt.Checkbox;
+import java.awt.Choice;
+import java.awt.Component;
 import java.awt.Label;
 import java.awt.Panel;
+import java.awt.TextField;
 
 public class DialogModifier {
 	/**
@@ -31,4 +35,26 @@ public class DialogModifier {
 		}
 	}
 
+	/**
+	 * Go through all values in a GenericDialog's Components and call the
+	 * appropriate get method. Recursively enter Panel Components.
+	 * 
+	 * @param gd
+	 * @param comps
+	 */
+	public static void registerMacroValues(GenericDialog gd, Component[] comps) {
+		for (Component c : comps) {
+			if (c instanceof Checkbox)
+				gd.getNextBoolean();
+			else if (c instanceof Choice)
+				gd.getNextChoice();
+			else if (c instanceof TextField)
+				gd.getNextNumber();
+			else if (c instanceof Panel)
+				registerMacroValues(gd, ((Panel) c).getComponents());
+			else
+				continue;
+		}
+		return;
+	}
 }

@@ -24,6 +24,7 @@ import java.awt.Checkbox;
 import java.awt.TextField;
 import java.util.Vector;
 
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 
 import ij.IJ;
@@ -441,6 +442,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			Checkbox t = (Checkbox) checkboxes.get(2);
 			t.setEnabled(true);
 		}
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

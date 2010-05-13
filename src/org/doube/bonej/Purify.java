@@ -24,6 +24,7 @@ import java.awt.Choice;
 import java.awt.TextField;
 import java.util.Vector;
 
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 
 import ij.*;
@@ -385,6 +386,7 @@ public class Purify implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }
