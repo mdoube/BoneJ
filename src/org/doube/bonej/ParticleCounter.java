@@ -139,10 +139,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addMessage("Measurement Options");
-		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
-		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
-				+ "³");
+		String[] headers = {"Measurement Options", " "};
 		String[] labels = new String[8];
 		boolean[] defaultValues = new boolean[8];
 		labels[0] = "Exclude on sides";
@@ -161,9 +158,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues[6] = true;
 		labels[7] = "Ellipsoids";
 		defaultValues[7] = true;
-		gd.addCheckboxGroup(4, 2, labels, defaultValues);
+		gd.addCheckboxGroup(4, 2, labels, defaultValues, headers);
+		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
+		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
+				+ "³");
 		gd.addNumericField("Surface_resampling", 2, 0);
-		gd.addMessage("Graphical Results");
+		String[] headers2 = {"Graphical Results", " "};
 		String[] labels2 = new String[8];
 		boolean[] defaultValues2 = new boolean[8];
 		labels2[0] = "Show_particle stack";
@@ -182,7 +182,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues2[0] = true;
 		labels2[7] = "Show_stack (3D)";
 		defaultValues2[0] = true;
-		gd.addCheckboxGroup(4, 2, labels2, defaultValues2);
+		gd.addCheckboxGroup(4, 2, labels2, defaultValues2, headers2);
 		String[] items = { "Gradient", "Split" };
 		gd.addChoice("Surface colours", items, items[0]);
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
