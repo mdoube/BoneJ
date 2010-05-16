@@ -240,7 +240,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
-		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		DialogModifier.registerMacroValues(gd);
 		return true;
 	}
 }

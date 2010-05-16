@@ -74,15 +74,14 @@ public class Moments implements PlugIn, DialogListener {
 		gd.addNumericField("End Slice:", imp.getStackSize(), 0);
 
 		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
-		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
-		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
 		gd
 				.addMessage("Only pixels >= bone min\n"
 						+ "and <= bone max are used.");
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
-		gd.addMessage("Only use pixels between clip values:");
 		gd.addCheckbox("Align result", true);
 		gd.addCheckbox("Show axes", true);
 		gd.addDialogListener(this);
@@ -696,7 +695,7 @@ public class Moments implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
-		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		DialogModifier.registerMacroValues(gd);
 		return true;
 	}
 

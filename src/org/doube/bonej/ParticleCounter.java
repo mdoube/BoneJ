@@ -64,7 +64,7 @@ import ij3d.Image3DUniverse;
  * This plugin is based on Object_Counter3D by Fabrice P Cordelires and Jonathan
  * Jackson, but with significant speed increases through reduction of recursion
  * and multi-threading. Thanks to Robert Barbour for the suggestion to 'chunk'
- * the stack. Chunking works as follows:
+ * the stack. Ch@param compsunking works as follows:
  * </p>
  * <ol>
  * <li>Perform initial labelling on the whole stack in a single thread</li>
@@ -2279,7 +2279,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				split.setEnabled(false);
 			}
 		}
-		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		DialogModifier.registerMacroValues(gd);
 		return true;
 	}
 }

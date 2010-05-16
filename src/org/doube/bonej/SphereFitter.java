@@ -331,7 +331,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
-		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		DialogModifier.registerMacroValues(gd);
 		return true;
 	}
 }
