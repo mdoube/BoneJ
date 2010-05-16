@@ -27,7 +27,11 @@ import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
-import ij.gui.*;
+import ij.gui.DialogListener;
+import ij.gui.GenericDialog;
+import ij.gui.PolygonRoi;
+import ij.gui.Roi;
+import ij.gui.Wand;
 
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
@@ -129,14 +133,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean[] emptySlices;
 	/** List of slice centroids */
 	private double[][] sliceCentroids;
-	// Calibration cal;
-	// private String pixUnits = "grey";
 	private double[] integratedDensity;
 	private double[] meanDensity;
 	private double m;
 	private double c;
 	private double[][] weightedCentroids;
 	private boolean fieldUpdated = false;
+	/** List of perimeter lengths */
+	private double[] perimeter;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -170,17 +174,17 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		String[] bones = BoneList.get();
 		gd.addChoice("Bone: ", bones, bones[boneID]);
 
-		gd.addCheckbox("2D Thickness", true);
-		gd.addCheckbox("3D Thickness", false);
-		gd.addCheckbox("Draw Axes", true);
-		gd.addCheckbox("Draw Centroids", true);
-		gd.addCheckbox("Annotated Copy", true);
-		gd.addCheckbox("Process Stack", false);
+		gd.addCheckbox("2D_Thickness", true);
+		gd.addCheckbox("3D_Thickness", false);
+		gd.addCheckbox("Draw_Axes", true);
+		gd.addCheckbox("Draw_Centroids", true);
+		gd.addCheckbox("Annotated_Copy", true);
+		gd.addCheckbox("Process_Stack", false);
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
-		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
-		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
-		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd.addCheckbox("HU_Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
 		gd
 				.addMessage("Only pixels >= bone min\n"
 						+ "and <= bone max are used.");
@@ -263,6 +267,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
 			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
 			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);
+			rt.addValue("Perimeter (" + units + ")", this.perimeter[s]);
 			if (this.doThickness3D) {
 				rt.addValue("Max Thick 3D (" + units + ")",
 						this.maxCortThick3D[s]);
@@ -772,6 +777,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.feretAngle = new double[this.al];
 		this.feretMax = new double[this.al];
 		this.feretMin = new double[this.al];
+		this.perimeter = new double[this.al];
 		int initialSlice = imp.getCurrentSlice();
 		// for the required slices...
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
@@ -783,13 +789,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;
 				this.feretMax[s] = Double.NaN;
+				this.perimeter[s] = Double.NaN;
 			} else {
 				int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
-				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
+				PolygonRoi roi = new PolygonRoi(w.xpoints, w.ypoints,
+						w.npoints, type);
 				feretValues = roi.getFeretValues();
 				this.feretMin[s] = feretValues[2] * this.vW;
 				this.feretAngle[s] = feretValues[1] * Math.PI / 180;
 				this.feretMax[s] = feretValues[0] * this.vW;
+				this.perimeter[s] = roi.getLength() * this.vW;
 			}
 			feretValues = null;
 		}
@@ -821,7 +830,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
-		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		DialogModifier.registerMacroValues(gd);
 		return true;
 	}
 }
