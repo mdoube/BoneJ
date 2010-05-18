@@ -123,6 +123,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			if (!imp.isInvertedLut())
 				IJ.run("Invert LUT");
 		}
+		IJ.showStatus("");
 		return;
 	}
 
@@ -407,18 +408,11 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
-		thresholdOnly = gd.getNextBoolean();
-		applyThreshold = gd.getNextBoolean();
-		doPlot = gd.getNextBoolean();
-		testCount = (int) Math.floor(gd.getNextNumber());
-		testRange = gd.getNextNumber();
-		subVolume = (int) Math.floor(gd.getNextNumber());
-		nErodes = (int) Math.floor(gd.getNextNumber());
-		nDilates = (int) Math.floor(gd.getNextNumber());
-
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Checkbox to = (Checkbox) checkboxes.get(0);
+		thresholdOnly = to.getState();
 		if (thresholdOnly) {
 			// uncheck show plot
-			Vector<?> checkboxes = gd.getCheckboxes();
 			Checkbox t = (Checkbox) checkboxes.get(2);
 			t.setState(false);
 			t.setEnabled(false);
@@ -438,7 +432,6 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				n.setEnabled(true);
 			}
 			// enable show plot
-			Vector<?> checkboxes = gd.getCheckboxes();
 			Checkbox t = (Checkbox) checkboxes.get(2);
 			t.setEnabled(true);
 		}
