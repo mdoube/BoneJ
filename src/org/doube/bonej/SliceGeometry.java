@@ -141,6 +141,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean fieldUpdated = false;
 	/** List of perimeter lengths */
 	private double[] perimeter;
+	/** List of maximal distances from centroid */
+	private double[] maxRadCentre;
+	/** List of polar section moduli */
+	private double[] Zpol;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -236,12 +240,13 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		roiMeasurements(imp, min, max);
 
 		// TODO locate centroids of multiple sections in a single plane
+		// TODO show axis results in 3D viewer window with copy of original
+		// TODO polar section modulus Z = J/r where J is polar moment of area
+		// and r is maximum radial distance from centroid
 
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
 
-		final double unit4 = Math.pow(vW, 4);
-		final double unit3 = Math.pow(vW, 3);
 		String title = imp.getTitle();
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			rt.incrementCounter();
@@ -259,11 +264,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			rt.addValue("Theta (rad)", this.theta[s]);
 			rt.addValue("R1 (" + units + ")", this.R1[s]);
 			rt.addValue("R2 (" + units + ")", this.R2[s]);
-			rt.addValue("Imin (" + units + "^4)", this.Imin[s] * unit4);
-			rt.addValue("Imax (" + units + "^4)", this.Imax[s] * unit4);
-			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s] * unit4);
-			rt.addValue("Zmax (" + units + "³)", this.Zmax[s] * unit3);
-			rt.addValue("Zmin (" + units + "³)", this.Zmin[s] * unit3);
+			rt.addValue("Imin (" + units + "^4)", this.Imin[s]);
+			rt.addValue("Imax (" + units + "^4)", this.Imax[s]);
+			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s]);
+			rt.addValue("Zmax (" + units + "³)", this.Zmax[s]);
+			rt.addValue("Zmin (" + units + "³)", this.Zmin[s]);
+			rt.addValue("Zpol (" + units + "³)", this.Zpol[s]);
 			rt.addValue("Feret Min (" + units + ")", this.feretMin[s]);
 			rt.addValue("Feret Max (" + units + ")", this.feretMax[s]);
 			rt.addValue("Feret Angle (rad)", this.feretAngle[s]);
@@ -447,11 +453,13 @@ public class SliceGeometry implements PlugIn, DialogListener {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
-							sxs += x;
-							sys += y;
-							sxxs += x * x;
-							syys += y * y;
-							sxys += y * x;
+							final double xVw = x * vW;
+							final double yVh = y * vH;
+							sxs += xVw;
+							sys += yVh;
+							sxxs += xVw * xVw;
+							syys += yVh * yVh;
+							sxys += xVw * yVh;
 						}
 					}
 				}
@@ -462,14 +470,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.Sxy[s] = sxys;
 				this.Myy[s] = this.Sxx[s]
 						- (this.Sx[s] * this.Sx[s] / this.cslice[s])
-						+ this.cslice[s] / 12;
+						+ this.cslice[s] * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
 				this.Mxx[s] = this.Syy[s]
 						- (this.Sy[s] * this.Sy[s] / this.cslice[s])
-						+ this.cslice[s] / 12;
+						+ this.cslice[s] * vH * vH / 12;
 				this.Mxy[s] = this.Sxy[s]
 						- (this.Sx[s] * this.Sy[s] / this.cslice[s])
-						+ this.cslice[s] / 12;
+						+ this.cslice[s] * vH * vW / 12;
 				if (this.Mxy[s] == 0)
 					this.theta[s] = 0;
 				else {
@@ -492,8 +500,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.R2 = new double[this.al];
 		this.maxRadMin = new double[this.al];
 		this.maxRadMax = new double[this.al];
+		this.maxRadCentre = new double[this.al];
 		this.Zmax = new double[this.al];
 		this.Zmin = new double[this.al];
+		this.Zpol = new double[this.al];
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating Imin and Imax...");
 			IJ.showProgress(s, this.endSlice);
@@ -506,6 +516,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				double sxys = 0;
 				double maxRadMinS = 0;
 				double maxRadMaxS = 0;
+				double maxRadCentreS = 0;
 				final double cosTheta = Math.cos(this.theta[s]);
 				final double sinTheta = Math.sin(this.theta[s]);
 				final int roiYEnd = r.y + r.height;
@@ -514,13 +525,15 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				final double yC = this.sliceCentroids[1][s];
 				final double cS = this.cslice[s];
 				for (int y = r.y; y < roiYEnd; y++) {
+					final double yYc = y * vH - yC;
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
-							final double xCosTheta = x * cosTheta;
-							final double yCosTheta = y * cosTheta;
-							final double xSinTheta = x * sinTheta;
-							final double ySinTheta = y * sinTheta;
+							final double xXc = x * vW - xC;
+							final double xCosTheta = x * vW * cosTheta;
+							final double yCosTheta = y * vH * cosTheta;
+							final double xSinTheta = x * vW * sinTheta;
+							final double ySinTheta = y * vH * sinTheta;
 							sxs += xCosTheta + ySinTheta;
 							sys += yCosTheta - xSinTheta;
 							sxxs += (xCosTheta + ySinTheta)
@@ -529,10 +542,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 									* (yCosTheta - xSinTheta);
 							sxys += (yCosTheta - xSinTheta)
 									* (xCosTheta + ySinTheta);
-							maxRadMinS = Math.max(maxRadMinS, Math.abs((x - xC)
-									* cosTheta + (y - yC) * sinTheta));
-							maxRadMaxS = Math.max(maxRadMaxS, Math.abs((y - yC)
-									* cosTheta - (x - xC) * sinTheta));
+							maxRadMinS = Math.max(maxRadMinS, Math.abs(xXc
+									* cosTheta + yYc * sinTheta));
+							maxRadMaxS = Math.max(maxRadMaxS, Math.abs(yYc
+									* cosTheta - xXc * sinTheta));
+							maxRadCentreS = Math.max(maxRadCentreS, Math
+									.sqrt(xXc * xXc + yYc * yYc));
 						}
 					}
 				}
@@ -543,18 +558,23 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.Sxy[s] = sxys;
 				this.maxRadMin[s] = maxRadMinS;
 				this.maxRadMax[s] = maxRadMaxS;
-				final double pixelMoments = cS
+				this.maxRadCentre[s] = maxRadCentreS;
+				final double pixelMoments = cS * vW * vH
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				this.Imax[s] = this.Sxx[s] - (this.Sx[s] * this.Sx[s] / cS)
-						+ pixelMoments;
-				this.Imin[s] = this.Syy[s] - (this.Sy[s] * this.Sy[s] / cS)
-						+ pixelMoments;
+				this.Imax[s] = vW
+						* vH
+						* (this.Sxx[s] - (this.Sx[s] * this.Sx[s] / cS) + pixelMoments);
+				this.Imin[s] = vW
+						* vH
+						* (this.Syy[s] - (this.Sy[s] * this.Sy[s] / cS) + pixelMoments);
 				this.Ipm[s] = this.Sxy[s] - (this.Sy[s] * this.Sx[s] / cS)
 						+ pixelMoments;
-				this.R1[s] = Math.sqrt(this.Imin[s] / cS);
-				this.R2[s] = Math.sqrt(this.Imax[s] / cS);
+				this.R1[s] = Math.sqrt(this.Imin[s] / (cS * vW * vH * vW * vH));
+				this.R2[s] = Math.sqrt(this.Imax[s] / (cS * vW * vH * vW * vH));
 				this.Zmax[s] = this.Imax[s] / this.maxRadMin[s];
 				this.Zmin[s] = this.Imin[s] / this.maxRadMax[s];
+				this.Zpol[s] = (this.Imax[s] + this.Imin[s])
+						/ this.maxRadCentre[s];
 			} else {
 				this.Imax[s] = Double.NaN;
 				this.Imin[s] = Double.NaN;
@@ -565,6 +585,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.maxRadMax[s] = Double.NaN;
 				this.Zmax[s] = Double.NaN;
 				this.Zmin[s] = Double.NaN;
+				this.Zpol[s] = Double.NaN;
 			}
 		}
 		return;
@@ -812,10 +833,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		Vector<?> nFields = gd.getNumericFields();
 		Checkbox box6 = (Checkbox) checkboxes.get(6);
 		boolean isHUCalibrated = box6.getState();
-		double min = gd.getNextNumber();
-		double max = gd.getNextNumber();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
+		double min = 0;
+		double max = 0;
+		try {
+			min = Double.parseDouble(minT.getText());
+			max = Double.parseDouble(maxT.getText());
+		} catch (Exception ex) {
+			IJ.error("You put text in a number field");
+		}
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));
@@ -830,7 +857,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
-		DialogModifier.registerMacroValues(gd);
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

@@ -442,7 +442,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			Checkbox t = (Checkbox) checkboxes.get(2);
 			t.setEnabled(true);
 		}
-		DialogModifier.registerMacroValues(gd);
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

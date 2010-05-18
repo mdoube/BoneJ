@@ -3,8 +3,12 @@ package org.doube.util;
 import ij.IJ;
 import ij.gui.GenericDialog;
 
+import java.awt.Checkbox;
+import java.awt.Choice;
+import java.awt.Component;
 import java.awt.Label;
 import java.awt.Panel;
+import java.awt.TextField;
 import java.util.Vector;
 
 public class DialogModifier {
@@ -34,45 +38,38 @@ public class DialogModifier {
 	}
 
 	/**
-	 * Count the number of each input type in a GenericDialog and call
-	 * the appropriate get method the correct number of times, registering
-	 * the value of the field in the macro recorder.
+	 * Go through all values in a GenericDialog's Components and call the
+	 * appropriate get method. Recursively enter Panel Components. Will throw an
+	 * ArrayIndexOutOfBounds exception if gd.getNext... is called elsewhere in
+	 * dialogItemChanged().
 	 * 
 	 * @param gd
+	 * @param comps
 	 */
-	public static void registerMacroValues(GenericDialog gd) {
-		// count the different input types
-		Vector<?> numbers = gd.getNumericFields();
-		if (numbers != null) {
-			IJ.log("Number of numeric fields = " + numbers.size());
-			int nNumeric = numbers.size();
-			for (int i = 0; i < nNumeric; i++) {
-				gd.getNumericFields();
+	public static void registerMacroValues(GenericDialog gd, Component[] comps) {
+		try {
+			for (Component c : comps) {
+				if (c instanceof Checkbox)
+					gd.getNextBoolean();
+				else if (c instanceof Choice)
+					gd.getNextChoice();
+				else if (c instanceof TextField) {
+					String text = ((TextField) c).getText();
+					try {
+						Double.parseDouble(text);
+						gd.getNextNumber();
+						IJ.log("Found a numeric field");
+					} catch (NumberFormatException e) {
+						gd.getNextString();
+						IJ.log("Found a text field");
+					}
+				} else if (c instanceof Panel)
+					registerMacroValues(gd, ((Panel) c).getComponents());
+				else
+					continue;
 			}
-		}
-		Vector<?> checkboxes = gd.getCheckboxes();
-		if (checkboxes != null) {
-			IJ.log("Number of checkboxes = " + checkboxes.size());
-			int nCheckboxes = checkboxes.size();
-			for (int i = 0; i < nCheckboxes; i++) {
-				gd.getNextBoolean();
-			}
-		}
-		Vector<?> choices = gd.getChoices();
-		if (choices != null) {
-			IJ.log("Number of choices = " + choices.size());
-			int nChoices = choices.size();
-			for (int i = 0; i < nChoices; i++) {
-				gd.getNextChoice();
-			}
-		}
-		Vector<?> strings = gd.getStringFields();
-		if (strings != null) {
-			IJ.log("Number of strings = " + strings.size());
-			int nStrings = strings.size();
-			for (int i = 0; i < nStrings; i++) {
-				gd.getNextString();
-			}
+		} catch (Exception e) {
+			IJ.log("This plugin causes an exception\n" + e.toString());
 		}
 		return;
 	}

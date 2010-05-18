@@ -2279,7 +2279,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				split.setEnabled(false);
 			}
 		}
-		DialogModifier.registerMacroValues(gd);
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

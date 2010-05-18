@@ -386,7 +386,7 @@ public class Purify implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
-		DialogModifier.registerMacroValues(gd);
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 }

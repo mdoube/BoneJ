@@ -673,14 +673,16 @@ public class Moments implements PlugIn, DialogListener {
 		Vector<?> nFields = gd.getNumericFields();
 		Checkbox box0 = (Checkbox) checkboxes.get(0);
 		boolean isHUCalibrated = box0.getState();
-		@SuppressWarnings("unused")
-		double start = gd.getNextNumber();
-		@SuppressWarnings("unused")
-		double end = gd.getNextNumber();
-		double min = gd.getNextNumber();
-		double max = gd.getNextNumber();
 		TextField minT = (TextField) nFields.get(2);
 		TextField maxT = (TextField) nFields.get(3);
+		double min = 0;
+		double max = 0;
+		try {
+			min = Double.parseDouble(minT.getText());
+			max = Double.parseDouble(maxT.getText());
+		} catch (Exception ex) {
+			IJ.error("You put text in a number field");
+		}
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));
@@ -695,7 +697,7 @@ public class Moments implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
-		DialogModifier.registerMacroValues(gd);
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 
