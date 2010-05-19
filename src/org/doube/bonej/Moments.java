@@ -136,7 +136,7 @@ public class Moments implements PlugIn, DialogListener {
 		ri.updateTable();
 
 		if (doAlign)
-			alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, min,
+			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice, min,
 					max, doAxes).show();
 		return;
 	}
@@ -379,7 +379,7 @@ public class Moments implements PlugIn, DialogListener {
 	 * @param imp
 	 *            Input image
 	 * @param E
-	 *            EigenvalueDecomposition of moments of inertia
+	 *            Rotation matrix
 	 * @param centroid
 	 *            3-element array containing centroid coordinates, {x,y,z}
 	 * @param startSlice
@@ -390,9 +390,9 @@ public class Moments implements PlugIn, DialogListener {
 	 *            if true, draw axes on the aligned copy
 	 * @return ImagePlus copy of the input image
 	 */
-	public ImagePlus alignToPrincipalAxes(ImagePlus imp,
-			EigenvalueDecomposition E, double[] centroid, int startSlice,
-			int endSlice, double min, double max, boolean doAxes) {
+	public ImagePlus alignToPrincipalAxes(ImagePlus imp, Matrix E,
+			double[] centroid, int startSlice, int endSlice, double min,
+			double max, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
 		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
@@ -427,7 +427,7 @@ public class Moments implements PlugIn, DialogListener {
 		swapxz[0][2] = 1;
 		Matrix R = new Matrix(swapxz);
 
-		Matrix rotation = E.getV().times(R);
+		Matrix rotation = E.times(R);
 		rotation.printToIJLog("Original Rotation Matrix (Source -> Target)");
 		// check for reflection and reflect back if necessary
 		if (!rotation.isRightHanded()) {
@@ -531,7 +531,7 @@ public class Moments implements PlugIn, DialogListener {
 	 * Find the smallest stack to fit the aligned image
 	 * 
 	 * @param E
-	 *            EigenvalueDecomposition of source image moments of inertia
+	 *            Rotation matrix
 	 * @param imp
 	 *            Source image
 	 * @param centroid
@@ -546,9 +546,9 @@ public class Moments implements PlugIn, DialogListener {
 	 *            maximum threshold
 	 * @return ImageStack that will 'just fit' the aligned image
 	 */
-	private ImageStack getRotatedStack(EigenvalueDecomposition E,
-			ImagePlus imp, double[] centroid, int startSlice, int endSlice,
-			double min, double max) {
+	private ImageStack getRotatedStack(Matrix E, ImagePlus imp,
+			double[] centroid, int startSlice, int endSlice, double min,
+			double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Calibration cal = imp.getCalibration();
 		final double xC = centroid[0];
@@ -564,8 +564,7 @@ public class Moments implements PlugIn, DialogListener {
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
 
-		final Matrix V = E.getV();
-		final double[][] v = V.getArrayCopy();
+		final double[][] v = E.getArrayCopy();
 		final double v00 = v[0][0];
 		final double v10 = v[1][0];
 		final double v20 = v[2][0];
@@ -646,7 +645,7 @@ public class Moments implements PlugIn, DialogListener {
 	 * @param imp
 	 *            input ImagePlus stack
 	 * @param E
-	 *            Eigenvalue decomposition containing EigenVectors
+	 *            Eigenvector rotation matrix
 	 * @param doAxes
 	 *            if true, draws axes on the aligned image
 	 * @param startSlice
@@ -663,9 +662,9 @@ public class Moments implements PlugIn, DialogListener {
 	 *            intercept of density equation, d = m * p + c
 	 * @return aligned ImagePlus
 	 */
-	public ImagePlus alignImage(ImagePlus imp, EigenvalueDecomposition E,
-			boolean doAxes, int startSlice, int endSlice, double min,
-			double max, double m, double c) {
+	public ImagePlus alignImage(ImagePlus imp, Matrix E, boolean doAxes,
+			int startSlice, int endSlice, double min, double max, double m,
+			double c) {
 		final double[] centroid = getCentroid3D(imp, startSlice, endSlice, min,
 				max, m, c);
 		ImagePlus alignedImp = alignToPrincipalAxes(imp, E, centroid,

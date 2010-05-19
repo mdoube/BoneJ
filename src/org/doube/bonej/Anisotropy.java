@@ -145,7 +145,7 @@ public class Anisotropy implements PlugIn {
 		if (doAlign) {
 			EigenvalueDecomposition E = (EigenvalueDecomposition) result[2];
 			Moments m = new Moments();
-			ImagePlus alignedImp = m.alignImage(imp, E, false, 1, d, 128, 255,
+			ImagePlus alignedImp = m.alignImage(imp, E.getV(), false, 1, d, 128, 255,
 					0, 1);
 			alignedImp.show();
 		}
