@@ -1283,6 +1283,7 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			row = row + "|";
 			IJ.log(row);
 		}
+		IJ.log("");
 		return;
 	}
 
