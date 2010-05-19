@@ -1405,10 +1405,44 @@ public class Matrix implements Cloneable, java.io.Serializable {
 	public Matrix diag() {
 		final int min = Math.min(m, n);
 		double[][] diag = new double[min][1];
-		for (int i = 0; i < min; i++){
+		for (int i = 0; i < min; i++) {
 			diag[i][0] = get(i, i);
 		}
 		return new Matrix(diag);
+	}
+
+	/**
+	 * Check if a 3 x 3 Matrix is right handed. If the matrix is a rotation
+	 * matrix, then right-handedness implies rotation only, while
+	 * left-handedness implies a reflection will be performed.
+	 * 
+	 * @return true if the Matrix is right handed, false if it is left handed
+	 */
+	public boolean isRightHanded() {
+		if (m != 3 || n != 3) {
+			throw new IllegalArgumentException();
+		}
+
+		final double x0 = get(0, 0);
+		final double x1 = get(1, 0);
+		final double x2 = get(2, 0);
+		final double y0 = get(0, 1);
+		final double y1 = get(1, 1);
+		final double y2 = get(2, 1);
+		final double z0 = get(0, 2);
+		final double z1 = get(1, 2);
+		final double z2 = get(2, 2);
+
+		final double c0 = x1 * y2 - x2 * y1;
+		final double c1 = x2 * y0 - x0 * y2;
+		final double c2 = x0 * y1 - x1 * y0;
+
+		final double dot = c0 * z0 + c1 * z1 + c2 * z2;
+
+		if (dot > 0)
+			return true;
+		else
+			return false;
 	}
 
 	/*

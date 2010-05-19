@@ -420,21 +420,28 @@ public class Moments implements PlugIn, DialogListener {
 		final double dYc = yC - yTc;
 		final double dZc = zC - zTc;
 
-		Matrix eVec = E.getV();
-		double[][] eigenVectors = eVec.getArrayCopy();
-		// check orientation of eigenvectors and correct them
-		if (eigenVectors[2][0] < 0) {
-			double[][] eVecA = eVec.getArray();
-			// rotate 180 deg
-			for (int row = 0; row < 3; row++) {
-				for (int col = 0; col < 2; col++) {
-					eVecA[row][col] *= -1;
-				}
-			}
-			eigenVectors = eVec.getArrayCopy();
+		// Rotation matrix to rotate data 90 deg around y axis
+		double[][] swapxz = new double[3][3];
+		swapxz[2][0] = -1;
+		swapxz[1][1] = 1;
+		swapxz[0][2] = 1;
+		Matrix R = new Matrix(swapxz);
+
+		Matrix rotation = E.getV().times(R);
+		rotation.printToIJLog("Original Rotation Matrix (Source -> Target)");
+		// check for reflection and reflect back if necessary
+		if (!rotation.isRightHanded()) {
+			double[][] reflectY = new double[3][3];
+			reflectY[0][0] = -1;
+			reflectY[1][1] = 1;
+			reflectY[2][2] = 1;
+			Matrix RY = new Matrix(reflectY);
+			rotation = rotation.times(RY);
+			IJ.log("Reflected the rotation matrix");
 		}
-		Matrix eVecInv = eVec.inverse();
-		eVecInv.printToIJLog("Inverse Eigenvector matrix");
+		rotation.printToIJLog("Rotation Matrix (Source -> Target)");
+		Matrix eVecInv = rotation.inverse();
+		eVecInv.printToIJLog("Inverse Rotation Matrix (Target -> Source)");
 		final double[][] eigenVecInv = eVecInv.getArrayCopy();
 		final double eVI00 = eigenVecInv[0][0];
 		final double eVI10 = eigenVecInv[1][0];
@@ -612,17 +619,22 @@ public class Moments implements PlugIn, DialogListener {
 				}
 			}
 		}
-		
-		//use the smallest input voxel dimension as the voxel size
+
+		// swap x and z so that long axis is in z of target image
+		double xTemp = xTmax;
+		xTmax = zTmax;
+		zTmax = xTemp;
+
+		// use the smallest input voxel dimension as the voxel size
 		double vS = Math.min(vW, Math.min(vH, vD));
-		
+
 		int tW = (int) Math.floor(2 * xTmax / vS) + 5;
 		int tH = (int) Math.floor(2 * yTmax / vS) + 5;
 		int tD = (int) Math.floor(2 * zTmax / vS) + 5;
 
 		ImageStack targetStack = new ImageStack(tW, tH, tD);
 		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
-				+ tD + ") pixels, with isotropic voxels of size "+vS);
+				+ tD + ") pixels, with isotropic voxels of size " + vS);
 
 		return targetStack;
 	}
