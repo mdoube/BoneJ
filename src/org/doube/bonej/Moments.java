@@ -1,12 +1,6 @@
 package org.doube.bonej;
 
-/** Moments 3D
- *tool to calculate centroid and principal axes 
- *of a thresholded stack; originally designed for 16-bit CT scans 
- *of a bone in air so default thresholds are 0 and 4000 HU, but most greyscale images shoudl be handled
- *Outputs stack data aligned to principal axes
- *
- *Copyright 2008 2009 2010 Michael Doube 
+/** Moments ImageJ plugin Copyright 2008 2009 2010 Michael Doube 
  *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -21,7 +15,6 @@ package org.doube.bonej;
  *You should have received a copy of the GNU General Public License
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *@author Michael Doube
  */
 
 import ij.IJ;
@@ -36,7 +29,6 @@ import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.Rectangle;
 import java.awt.TextField;
-import java.util.Arrays;
 import java.util.Vector;
 
 import org.doube.jama.Matrix;
@@ -46,6 +38,14 @@ import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.ThresholdGuesser;
 
+/**
+ * Calculate centroid and principal axes of a thresholded stack; originally
+ * designed for 16-bit CT scans of a bone in air so default thresholds are 0 and
+ * 4000 HU, but most greyscale images should be handled
+ * 
+ * @author Michael Doube
+ * 
+ */
 public class Moments implements PlugIn, DialogListener {
 
 	private boolean fieldUpdated = false;
@@ -363,10 +363,8 @@ public class Moments implements PlugIn, DialogListener {
 		// do the Eigenvalue decomposition
 		EigenvalueDecomposition E = new EigenvalueDecomposition(
 				inertiaTensorMatrix);
-		IJ.log("Eigenvalues:");
-		E.getD().printToIJLog();
-		IJ.log("Eigenvectors:");
-		E.getV().printToIJLog();
+		E.getD().printToIJLog("Eigenvalues");
+		E.getV().printToIJLog("Eigenvectors");
 
 		double[] moments = { sumVoxVol, sumVoxMass, Icxx, Icyy, Iczz, Icxy,
 				Icxz, Icyz };
@@ -405,6 +403,7 @@ public class Moments implements PlugIn, DialogListener {
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
+		final double vS = Math.min(vW, Math.min(vH, vD));
 		final int d = sourceStack.getSize();
 		ImageStack targetStack = getRotatedStack(E, imp, centroid, startSlice,
 				endSlice, min, max);
@@ -414,9 +413,9 @@ public class Moments implements PlugIn, DialogListener {
 		final double xC = centroid[0];
 		final double yC = centroid[1];
 		final double zC = centroid[2];
-		final double xTc = wT * vW / 2;
-		final double yTc = hT * vH / 2;
-		final double zTc = dT * vD / 2;
+		final double xTc = wT * vS / 2;
+		final double yTc = hT * vS / 2;
+		final double zTc = dT * vS / 2;
 		final double dXc = xC - xTc;
 		final double dYc = yC - yTc;
 		final double dZc = zC - zTc;
@@ -434,12 +433,8 @@ public class Moments implements PlugIn, DialogListener {
 			}
 			eigenVectors = eVec.getArrayCopy();
 		}
-		IJ.log("\nEigenvector matrix");
-		eVec.printToIJLog();
-
 		Matrix eVecInv = eVec.inverse();
-		IJ.log("\nInverse Eigenvector matrix");
-		eVecInv.printToIJLog();
+		eVecInv.printToIJLog("Inverse Eigenvector matrix");
 		final double[][] eigenVecInv = eVecInv.getArrayCopy();
 		final double eVI00 = eigenVecInv[0][0];
 		final double eVI10 = eigenVecInv[1][0];
@@ -464,20 +459,20 @@ public class Moments implements PlugIn, DialogListener {
 			IJ.showProgress(z, dT);
 			targetStack.setPixels(getEmptyPixels(wT, hT, imp.getBitDepth()), z);
 			ImageProcessor targetIP = targetStack.getProcessor(z);
-			final double zD = z * vD - zTc;
-			final double zDeVI00 = zD * eVI00;
-			final double zDeVI01 = zD * eVI01;
-			final double zDeVI02 = zD * eVI02;
+			final double zD = z * vS - zTc;
+			final double zDeVI00 = zD * eVI20;
+			final double zDeVI01 = zD * eVI21;
+			final double zDeVI02 = zD * eVI22;
 			for (int y = 0; y < hT; y++) {
-				final double yD = y * vH - yTc;
+				final double yD = y * vS - yTc;
 				final double yDeVI10 = yD * eVI10;
 				final double yDeVI11 = yD * eVI11;
 				final double yDeVI12 = yD * eVI12;
 				for (int x = 0; x < wT; x++) {
-					final double xD = x * vW - xTc;
-					final double xAlign = xD * eVI20 + yDeVI10 + zDeVI00 + xTc;
-					final double yAlign = xD * eVI21 + yDeVI11 + zDeVI01 + yTc;
-					final double zAlign = xD * eVI22 + yDeVI12 + zDeVI02 + zTc;
+					final double xD = x * vS - xTc;
+					final double xAlign = xD * eVI00 + yDeVI10 + zDeVI00 + xTc;
+					final double yAlign = xD * eVI01 + yDeVI11 + zDeVI01 + yTc;
+					final double zAlign = xD * eVI02 + yDeVI12 + zDeVI02 + zTc;
 					// possibility to do some voxel interpolation instead
 					// of just rounding in next 3 lines
 					final int xA = (int) Math.floor((xAlign + dXc) / vW);
@@ -495,9 +490,9 @@ public class Moments implements PlugIn, DialogListener {
 		}
 		if (doAxes) {
 			// draw axes on stack
-			final int xCent = (int) Math.floor(xTc / vW);
-			final int yCent = (int) Math.floor(yTc / vH);
-			final int zCent = (int) Math.floor(zTc / vD);
+			final int xCent = (int) Math.floor(xTc / vS);
+			final int yCent = (int) Math.floor(yTc / vS);
+			final int zCent = (int) Math.floor(zTc / vS);
 			final int axisColour = Integer.MAX_VALUE;
 			for (int z = 1; z <= dT; z++) {
 				ImageProcessor axisIP = targetStack.getProcessor(z);
@@ -516,6 +511,10 @@ public class Moments implements PlugIn, DialogListener {
 		ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(),
 				targetStack);
 		impTarget.setCalibration(imp.getCalibration());
+		Calibration targetCal = impTarget.getCalibration();
+		targetCal.pixelDepth = vS;
+		targetCal.pixelHeight = vS;
+		targetCal.pixelWidth = vS;
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
 		return impTarget;
@@ -578,9 +577,9 @@ public class Moments implements PlugIn, DialogListener {
 			IJ.showStatus("Getting aligned stack dimensions...");
 			ImageProcessor ip = stack.getProcessor(z);
 			final double zCz = z * vD - zC;
-			final double zCzv00 = zCz * v00;
-			final double zCzv01 = zCz * v01;
-			final double zCzv02 = zCz * v02;
+			final double zCzv20 = zCz * v20;
+			final double zCzv21 = zCz * v21;
+			final double zCzv22 = zCz * v22;
 			for (int y = rY; y < rH; y++) {
 				final double yCy = y * vH - yC;
 				final double yCyv10 = yCy * v10;
@@ -600,9 +599,9 @@ public class Moments implements PlugIn, DialogListener {
 						// transformed coordinate is dot product of original
 						// coordinates
 						// and eigenvectors
-						final double xT = xCx * v20 + yCyv10 + zCzv00;
-						final double yT = xCx * v21 + yCyv11 + zCzv01;
-						final double zT = xCx * v22 + yCyv12 + zCzv02;
+						final double xT = xCx * v00 + yCyv10 + zCzv20;
+						final double yT = xCx * v01 + yCyv11 + zCzv21;
+						final double zT = xCx * v02 + yCyv12 + zCzv22;
 
 						// keep the biggest value to find the greatest distance
 						// in x, y and z
@@ -613,23 +612,17 @@ public class Moments implements PlugIn, DialogListener {
 				}
 			}
 		}
-		// TODO this still doesn't quite work properly
-		// sometimes axes are in the wrong order, or mapping is not quite right
-		// poss longest axis not always lowest moment - max distance vs moment!
-		double[] dimensions = { xTmax, yTmax, zTmax };
-		Arrays.sort(dimensions);
-
-		xTmax = dimensions[0];
-		yTmax = dimensions[1];
-		zTmax = dimensions[2];
-
-		int tW = (int) Math.floor(2 * xTmax / vW) + 3;
-		int tH = (int) Math.floor(2 * yTmax / vH) + 3;
-		int tD = (int) Math.floor(2 * zTmax / vD) + 3;
+		
+		//use the smallest input voxel dimension as the voxel size
+		double vS = Math.min(vW, Math.min(vH, vD));
+		
+		int tW = (int) Math.floor(2 * xTmax / vS) + 5;
+		int tH = (int) Math.floor(2 * yTmax / vS) + 5;
+		int tD = (int) Math.floor(2 * zTmax / vS) + 5;
 
 		ImageStack targetStack = new ImageStack(tW, tH, tD);
 		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
-				+ tD + ")");
+				+ tD + ") pixels, with isotropic voxels of size "+vS);
 
 		return targetStack;
 	}
