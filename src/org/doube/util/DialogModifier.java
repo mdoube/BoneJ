@@ -9,7 +9,6 @@ import java.awt.Component;
 import java.awt.Label;
 import java.awt.Panel;
 import java.awt.TextField;
-import java.util.Vector;
 
 public class DialogModifier {
 	/**

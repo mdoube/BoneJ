@@ -29,6 +29,7 @@ import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.Rectangle;
 import java.awt.TextField;
+import java.util.Arrays;
 import java.util.Vector;
 
 import org.doube.jama.Matrix;
@@ -136,8 +137,8 @@ public class Moments implements PlugIn, DialogListener {
 		ri.updateTable();
 
 		if (doAlign)
-			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice, min,
-					max, doAxes).show();
+			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice,
+					min, max, doAxes).show();
 		return;
 	}
 
@@ -405,41 +406,73 @@ public class Moments implements PlugIn, DialogListener {
 		final double vD = cal.pixelDepth;
 		final double vS = Math.min(vW, Math.min(vH, vD));
 		final int d = sourceStack.getSize();
-		ImageStack targetStack = getRotatedStack(E, imp, centroid, startSlice,
-				endSlice, min, max);
-		final int wT = targetStack.getWidth();
-		final int hT = targetStack.getHeight();
-		final int dT = targetStack.getSize();
-		final double xC = centroid[0];
-		final double yC = centroid[1];
-		final double zC = centroid[2];
-		final double xTc = wT * vS / 2;
-		final double yTc = hT * vS / 2;
-		final double zTc = dT * vS / 2;
-		final double dXc = xC - xTc;
-		final double dYc = yC - yTc;
-		final double dZc = zC - zTc;
+		int[] sides = getRotatedSize(E, imp, centroid, startSlice, endSlice,
+				min, max);
+
+		// Rotation matrix to rotate data 90 deg around x axis
+		double[][] rotX = new double[3][3];
+		rotX[0][0] = 1;
+		rotX[1][2] = -1;
+		rotX[2][1] = 1;
+		Matrix RotX = new Matrix(rotX);
 
 		// Rotation matrix to rotate data 90 deg around y axis
-		double[][] swapxz = new double[3][3];
-		swapxz[2][0] = -1;
-		swapxz[1][1] = 1;
-		swapxz[0][2] = 1;
-		Matrix R = new Matrix(swapxz);
+		double[][] rotY = new double[3][3];
+		rotY[0][2] = 1;
+		rotY[1][1] = 1;
+		rotY[2][0] = -1;
+		Matrix RotY = new Matrix(rotY);
 
-		Matrix rotation = E.times(R);
-		rotation.printToIJLog("Original Rotation Matrix (Source -> Target)");
+		// Rotation matrix to rotate data 90 deg around z axis
+		double[][] rotZ = new double[3][3];
+		rotZ[0][1] = -1;
+		rotZ[1][0] = 1;
+		rotZ[2][2] = 1;
+		Matrix RotZ = new Matrix(rotZ);
+
+		final int wi = sides[0];
+		final int hi = sides[1];
+		final int di = sides[2];
+
+		E.printToIJLog("Original Rotation Matrix (Source -> Target)");
+		Matrix rotation = new Matrix(new double[3][3]);
+
+		//put long axis in z, middle axis in y and short axis in x
+		if (wi <= hi && hi <= di) {
+			IJ.log("Case 0");
+			rotation = E;
+		} else if (wi <= di && di <= hi) {
+			IJ.log("Case 1");
+			rotation = E.times(RotX);
+		} else if (hi <= wi && wi <= di) {
+			IJ.log("Case 2");
+			rotation = E.times(RotZ);
+		} else if (di <= hi && hi <= wi) {
+			IJ.log("Case 3");
+			rotation = E.times(RotY);
+		} else if (hi <= di && di <= wi) {
+			IJ.log("Case 4");
+			rotation = E.times(RotY).times(RotZ);
+		} else if (di <= wi && wi <= hi) {
+			IJ.log("Case 5");
+			rotation = E.times(RotX).times(RotZ);
+		} else {
+			IJ.log("Case 6");
+			rotation = E;
+		}
+		
 		// check for reflection and reflect back if necessary
 		if (!rotation.isRightHanded()) {
 			double[][] reflectY = new double[3][3];
 			reflectY[0][0] = -1;
 			reflectY[1][1] = 1;
 			reflectY[2][2] = 1;
-			Matrix RY = new Matrix(reflectY);
-			rotation = rotation.times(RY);
+			Matrix RefY = new Matrix(reflectY);
+			rotation = rotation.times(RefY);
 			IJ.log("Reflected the rotation matrix");
 		}
 		rotation.printToIJLog("Rotation Matrix (Source -> Target)");
+
 		Matrix eVecInv = rotation.inverse();
 		eVecInv.printToIJLog("Inverse Rotation Matrix (Target -> Source)");
 		final double[][] eigenVecInv = eVecInv.getArrayCopy();
@@ -452,6 +485,22 @@ public class Moments implements PlugIn, DialogListener {
 		final double eVI02 = eigenVecInv[0][2];
 		final double eVI12 = eigenVecInv[1][2];
 		final double eVI22 = eigenVecInv[2][2];
+
+		// create the target stack
+		Arrays.sort(sides);
+		final int wT = sides[0];
+		final int hT = sides[1];
+		final int dT = sides[2];
+		ImageStack targetStack = new ImageStack(wT, hT, dT);
+		final double xC = centroid[0];
+		final double yC = centroid[1];
+		final double zC = centroid[2];
+		final double xTc = wT * vS / 2;
+		final double yTc = hT * vS / 2;
+		final double zTc = dT * vS / 2;
+		final double dXc = xC - xTc;
+		final double dYc = yC - yTc;
+		final double dZc = zC - zTc;
 
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
@@ -528,7 +577,8 @@ public class Moments implements PlugIn, DialogListener {
 	}
 
 	/**
-	 * Find the smallest stack to fit the aligned image
+	 * Find side lengths in pixels of the smallest stack to fit the aligned
+	 * image
 	 * 
 	 * @param E
 	 *            Rotation matrix
@@ -544,11 +594,11 @@ public class Moments implements PlugIn, DialogListener {
 	 *            minimum threshold
 	 * @param max
 	 *            maximum threshold
-	 * @return ImageStack that will 'just fit' the aligned image
+	 * @return Width, height and depth of a stack that will 'just fit' the
+	 *         aligned image
 	 */
-	private ImageStack getRotatedStack(Matrix E, ImagePlus imp,
-			double[] centroid, int startSlice, int endSlice, double min,
-			double max) {
+	private int[] getRotatedSize(Matrix E, ImagePlus imp, double[] centroid,
+			int startSlice, int endSlice, double min, double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Calibration cal = imp.getCalibration();
 		final double xC = centroid[0];
@@ -619,11 +669,6 @@ public class Moments implements PlugIn, DialogListener {
 			}
 		}
 
-		// swap x and z so that long axis is in z of target image
-		double xTemp = xTmax;
-		xTmax = zTmax;
-		zTmax = xTemp;
-
 		// use the smallest input voxel dimension as the voxel size
 		double vS = Math.min(vW, Math.min(vH, vD));
 
@@ -631,11 +676,11 @@ public class Moments implements PlugIn, DialogListener {
 		int tH = (int) Math.floor(2 * yTmax / vS) + 5;
 		int tD = (int) Math.floor(2 * zTmax / vS) + 5;
 
-		ImageStack targetStack = new ImageStack(tW, tH, tD);
 		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
 				+ tD + ") pixels, with isotropic voxels of size " + vS);
 
-		return targetStack;
+		int[] size = { tW, tH, tD };
+		return size;
 	}
 
 	/**
