@@ -104,7 +104,6 @@ public class ShapeSkeletoniser implements PlugIn {
 			return true;
 
 		// label 6-connected white 18-neighbours by particle
-
 		int id = 1;
 		int[] labels = new int[27];
 		for (int i = 0; i < 18; i++) {
@@ -189,9 +188,109 @@ public class ShapeSkeletoniser implements PlugIn {
 	 * @return
 	 */
 	private boolean isBlack26ConnectedSet(byte[] neighbours) {
-		// TODO Auto-generated method stub
-		return false;
+		// join 26 black neighbours into particles
+		int id = 1;
+		int[] labels = new int[27];
+		for (int p = 0; p < 27; p++) {
+			if (p == 13)
+				continue;
+			if (neighbours[p] == BLACK) {
+				// assign an initial value
+				labels[p] = id;
+				int minId = id;
+
+				// check 26-neighbours
+				int[] neigh26 = conn26Neigh26LUT[p];
+				final int nNeigh = neigh26.length;
+				for (int n = 0; n < nNeigh; n++) {
+					final int n26 = neigh26[n];
+					if (neighbours[n26] == BLACK) {
+						final int nId = labels[n26];
+						if (nId != 0 && nId < minId) {
+							minId = nId;
+						}
+					}
+				}
+				labels[p] = minId;
+				if (minId == id)
+					id++;
+			}
+		}
+		// find minimum label in each 26-neighbour's 26-neighbourhood
+		for (int p = 0; p < 27; p++) {
+			if (p == 13)
+				continue;
+			if (neighbours[p] == BLACK) {
+				int minId = labels[p];
+				int[] neigh26 = conn26Neigh26LUT[p];
+				final int nNeigh = neigh26.length;
+				for (int n = 0; n < nNeigh; n++) {
+					final int n26 = neigh26[n];
+					if (neighbours[n26] == BLACK) {
+						final int nId = labels[n26];
+						if (nId < minId)
+							minId = nId;
+					}
+				}
+				for (int n = 0; n < nNeigh; n++) {
+					final int n26 = neigh26[n];
+					final int nId = labels[n26];
+					if (nId != minId && nId != 0) {
+						for (int j = 0; j < 27; j++) {
+							if (labels[j] == nId) {
+								labels[j] = minId;
+							}
+						}
+					}
+				}
+			}
+		}
+		int b = 0;
+		for (int i = 0; i < 27; i++) {
+			if (i == 13)
+				continue;
+			int a = labels[i];
+			if (a != 0) {
+				if (b != 0 && a != b)
+					return false;
+				b = a;
+			}
+		}
+		return true;
 	}
+
+	/**
+	 * List of 26-neighbour points that are 26 connected to the input point,
+	 * which must also be an 26-neighbourhood point
+	 */
+	private static final int[][] conn26Neigh26LUT = { { 1, 3, 4, 9, 10, 12 }, // 0
+			{ 0, 2, 3, 4, 5, 9, 10, 11, 12, 14 }, // 1
+			{ 1, 4, 5, 10, 11, 14 },// 2
+			{ 0, 1, 4, 6, 7, 9, 10, 12, 15, 16 },// 3
+			{ 0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17 },// 4
+			{ 1, 2, 4, 7, 8, 10, 11, 14, 16, 17 }, // 5
+			{ 3, 4, 7, 12, 15, 16 },// 6
+			{ 3, 4, 5, 6, 8, 12, 14, 15, 16, 17 },// 7
+			{ 4, 5, 7, 14, 16, 17 },// 8
+			{ 0, 1, 3, 4, 10, 12, 18, 19, 21, 22 },// 9
+			{ 0, 1, 2, 3, 4, 5, 9, 11, 12, 14, 18, 19, 20, 21, 22, 23 },// 10
+			{ 1, 2, 4, 5, 10, 14, 19, 20, 22, 23 },// 11
+			{ 0, 1, 3, 4, 6, 7, 9, 10, 15, 16, 18, 19, 21, 22, 24, 25 },// 12
+			{},// 13
+			{ 1, 2, 4, 5, 7, 8, 10, 11, 16, 17, 19, 20, 22, 23, 25, 26 },// 14
+			{ 3, 4, 6, 7, 12, 16, 21, 22, 24, 25 },// 15
+			{ 3, 4, 5, 6, 7, 8, 12, 14, 15, 17, 21, 22, 23, 24, 25, 26 },// 16
+			{ 4, 5, 7, 8, 14, 16, 22, 23, 25, 26 },// 17
+			{ 9, 10, 12, 19, 21, 22 },// 18
+			{ 9, 10, 11, 12, 14, 18, 20, 21, 22, 23 },// 19
+			{ 10, 11, 14, 19, 22, 23 },// 20
+			{ 9, 10, 12, 15, 16, 18, 19, 22, 24, 25 },// 21
+			{ 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26 }, // 22
+			{ 10, 11, 14, 16, 17, 19, 20, 22, 25, 26 },// 23
+			{ 12, 15, 16, 21, 22, 25 },// 24
+			{ 12, 14, 15, 16, 17, 21, 22, 23, 24, 26 },// 25
+			{ 14, 16, 17, 22, 23, 25 } // 26
+	};
 
 	/** LUT to find the 6 neighbours in a 27 neighbourhood array */
 	private static final int[] sixNeighbours = { 4, 10, 12, 14, 16, 22 };
