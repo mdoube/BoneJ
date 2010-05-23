@@ -57,10 +57,8 @@ public class DialogModifier {
 					try {
 						Double.parseDouble(text);
 						gd.getNextNumber();
-						IJ.log("Found a numeric field");
 					} catch (NumberFormatException e) {
 						gd.getNextString();
-						IJ.log("Found a text field");
 					}
 				} else if (c instanceof Panel)
 					registerMacroValues(gd, ((Panel) c).getComponents());
