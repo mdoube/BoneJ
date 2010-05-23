@@ -103,12 +103,83 @@ public class ShapeSkeletoniser implements PlugIn {
 		if (nwp == 1)
 			return true;
 
-		// else check for connection of the 2 white 6-points in the white
-		// 18-neighbours
+		// label 6-connected white 18-neighbours by particle
 
-		// TODO Auto-generated method stub
-		return false;
+		int id = 1;
+		int[] labels = new int[27];
+		for (int i = 0; i < 18; i++) {
+			// find the 18-neighbour in the 27 neighbourhood
+			final int p = eighteenNeighbours[i];
+			if (neighbours[p] == WHITE) {
+				// assign an initial value
+				labels[p] = id;
+				int minId = id;
+
+				// check 6-neighbours
+				int[] neigh6 = conn6Neigh18LUT[p];
+				for (int n = 0; n < neigh6.length; n++) {
+					final int n6 = neigh6[n];
+					if (neighbours[n6] == WHITE) {
+						final int nId = labels[n6];
+						if (nId != 0 && nId < minId) {
+							minId = nId;
+						}
+					}
+				}
+				labels[p] = minId;
+				if (minId == id)
+					id++;
+			}
+		}
+		// find minimum label in each 18-neighbour's 6-neighbourhood
+		for (int i = 0; i < 18; i++) {
+			final int p = eighteenNeighbours[i];
+			if (neighbours[p] == WHITE) {
+				int minId = labels[p];
+				int[] neigh6 = conn6Neigh18LUT[p];
+				for (int n = 0; n < neigh6.length; n++) {
+					final int n6 = neigh6[n];
+					if (neighbours[n6] == WHITE) {
+						final int nId = labels[n6];
+						if (nId < minId)
+							minId = nId;
+					}
+				}
+				for (int n = 0; n < neigh6.length; n++) {
+					final int n6 = neigh6[n];
+					final int nId = labels[n6];
+					if (nId != minId && nId != 0) {
+						for (int j = 0; j < 27; j++) {
+							if (labels[j] == nId) {
+								labels[j] = minId;
+							}
+						}
+					}
+				}
+			}
+		}
+		int b = 0;
+		for (int i = 0; i < 6; i++) {
+			int a = labels[sixNeighbours[i]];
+			if (a != 0) {
+				if (b != 0 && a != b)
+					return false;
+				b = a;
+			}
+		}
+		return true;
 	}
+
+	/**
+	 * List of 18-neighbour points that are 6 connected to the input point,
+	 * which must also be an 18-neighbourhood point
+	 */
+	private static final int[][] conn6Neigh18LUT = { null, { 4, 10 }, null,
+			{ 4, 12 }, { 1, 3, 5, 7 }, { 4, 14 }, null, { 4, 16 }, null,
+			{ 10, 12 }, { 1, 9, 11, 19 }, { 10, 14 }, { 3, 9, 15, 21 }, null,
+			{ 5, 11, 17, 23 }, { 12, 16 }, { 7, 15, 17, 25 }, { 14, 16 }, null,
+			{ 10, 22 }, null, { 12, 22 }, { 19, 21, 23, 25 }, { 14, 22 }, null,
+			{ 16, 22 }, null };
 
 	/**
 	 * Check the black elements of the 26 neighbourhood and return true if they
@@ -124,6 +195,10 @@ public class ShapeSkeletoniser implements PlugIn {
 
 	/** LUT to find the 6 neighbours in a 27 neighbourhood array */
 	private static final int[] sixNeighbours = { 4, 10, 12, 14, 16, 22 };
+
+	/** LUT to find the 18 neighbours in a 27 neighbourhood array */
+	private static final int[] eighteenNeighbours = { 1, 3, 4, 5, 7, 9, 10, 11,
+			12, 14, 15, 16, 17, 19, 21, 22, 23, 25 };
 
 	// -------------------------------------------------------------------//
 	// Utility methods from Ignacio Arganda Carreras' Skeletonize3D
