@@ -676,9 +676,6 @@ public class Moments implements PlugIn, DialogListener {
 		int tH = (int) Math.floor(2 * yTmax / vS) + 5;
 		int tD = (int) Math.floor(2 * zTmax / vS) + 5;
 
-		IJ.log("New stack created with dimensions (" + tW + ", " + tH + ", "
-				+ tD + ") pixels, with isotropic voxels of size " + vS);
-
 		int[] size = { tW, tH, tD };
 		return size;
 	}
