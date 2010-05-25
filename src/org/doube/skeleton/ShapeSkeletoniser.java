@@ -170,17 +170,6 @@ public class ShapeSkeletoniser implements PlugIn {
 	}
 
 	/**
-	 * List of 18-neighbour points that are 6 connected to the input point,
-	 * which must also be an 18-neighbourhood point
-	 */
-	private static final int[][] conn6Neigh18LUT = { null, { 4, 10 }, null,
-			{ 4, 12 }, { 1, 3, 5, 7 }, { 4, 14 }, null, { 4, 16 }, null,
-			{ 10, 12 }, { 1, 9, 11, 19 }, { 10, 14 }, { 3, 9, 15, 21 }, null,
-			{ 5, 11, 17, 23 }, { 12, 16 }, { 7, 15, 17, 25 }, { 14, 16 }, null,
-			{ 10, 22 }, null, { 12, 22 }, { 19, 21, 23, 25 }, { 14, 22 }, null,
-			{ 16, 22 }, null };
-
-	/**
 	 * Check the black elements of the 26 neighbourhood and return true if they
 	 * form a single 26-connected set
 	 * 
@@ -258,6 +247,20 @@ public class ShapeSkeletoniser implements PlugIn {
 		}
 		return true;
 	}
+	
+	//-----------------------------------------------------------------//
+	//Look-up tables
+	
+	/**
+	 * List of 18-neighbour points that are 6 connected to the input point,
+	 * which must also be an 18-neighbourhood point
+	 */
+	private static final int[][] conn6Neigh18LUT = { null, { 4, 10 }, null,
+			{ 4, 12 }, { 1, 3, 5, 7 }, { 4, 14 }, null, { 4, 16 }, null,
+			{ 10, 12 }, { 1, 9, 11, 19 }, { 10, 14 }, { 3, 9, 15, 21 }, null,
+			{ 5, 11, 17, 23 }, { 12, 16 }, { 7, 15, 17, 25 }, { 14, 16 }, null,
+			{ 10, 22 }, null, { 12, 22 }, { 19, 21, 23, 25 }, { 14, 22 }, null,
+			{ 16, 22 }, null };
 
 	/**
 	 * List of 26-neighbour points that are 26 connected to the input point,
