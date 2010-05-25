@@ -21,6 +21,133 @@ public class ShapeSkeletoniser implements PlugIn {
 			IJ.error("Shape Skeletoniser requires a binary image.");
 			return;
 		}
+		ImagePlus outImp = shapeSkeletonize(imp);
+		outImp.show();
+	}
+
+	/**
+	 * Main skeletonisation method
+	 * 
+	 * @param imp
+	 * @return
+	 */
+	public ImagePlus shapeSkeletonize(ImagePlus imp) {
+		ImageCheck ic = new ImageCheck();
+		if (!ic.isBinary(imp))
+			throw new IllegalArgumentException();
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		short[][] workArray = initialiseWorkArray(imp);
+		short threshold = Short.MIN_VALUE + 1;
+		long nDeletable = Long.MAX_VALUE;
+		short iteration = 1;
+
+		// "scan" until there are no more deletable voxels
+		//scan means go through all voxels in volume
+		//iterate means traverse all surface points in a topological way and may require multiple scans
+		while (nDeletable > 0) {
+			long dc = 0;
+			for (int z = 0; z < d; z++) {
+				for (int y = 0; y < h; y++) {
+					final int yw = y * w;
+					for (int x = 0; x < w; x++) {
+						if (isDeletable(workArray, threshold, x, y, z, w, h, d)) {
+							workArray[z][yw + x] = threshold;
+							dc++;
+						}
+					}
+				}
+			}
+			iteration++;
+			threshold++;
+			nDeletable = dc;
+		}
+		return imp;
+	}
+
+	/**
+	 * Create work array, converting original white values to large negative
+	 * number and black values to 0
+	 * 
+	 * @param imp
+	 * @return
+	 */
+	private short[][] initialiseWorkArray(ImagePlus imp) {
+		ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+		final int wh = w * h;
+		short[][] workArray = new short[d][wh];
+		for (int z = 0; z < d; z++) {
+			byte[] pixels = (byte[]) stack.getPixels(z + 1);
+			for (int i = 0; i < wh; i++) {
+				if (pixels[i] == WHITE) {
+					workArray[z][i] = Short.MIN_VALUE;
+				} else {
+					workArray[z][i] = 0;
+				}
+			}
+		}
+		return workArray;
+	}
+
+	/**
+	 * Determine if a point (x, y, z) in the work array is marked
+	 * 
+	 * @param workArray
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isMarked(short[][] workArray, int x, int y, int z, int w,
+			int h, int d) {
+		if (workArray[z][y * w + x] > 0)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * Determine if a voxel is black (true) or white (false)
+	 * 
+	 * @param workArray
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isBlack(short[][] workArray, int x, int y, int z, int w,
+			int h, int d) {
+		if (workArray[z][y * w + x] >= 0)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * Determine if the point at (x, y, z) in the work array is deletable
+	 * 
+	 * @param workArray
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isDeletable(short[][] workArray, long threshold, int x,
+			int y, int z, int w, int h, int d) {
+		return false;
 	}
 
 	/**
@@ -43,6 +170,7 @@ public class ShapeSkeletoniser implements PlugIn {
 	 * @param d
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private boolean isSimplePoint(ImageStack stack, int x, int y, int z, int w,
 			int h, int d) {
 		byte[] neighbours = getNeighborhood(stack, x, y, z, w, h, d);
@@ -76,7 +204,8 @@ public class ShapeSkeletoniser implements PlugIn {
 		if (!isBlack26ConnectedSet(neighbours))
 			return false;
 
-		// Condition 4.
+		// Condition 4. check that white 6 neighbours are 6-connected in the set
+		// of white 18-neighbours
 		if (!isWhite6ConnectedIn18Set(neighbours))
 			return false;
 
@@ -247,10 +376,10 @@ public class ShapeSkeletoniser implements PlugIn {
 		}
 		return true;
 	}
-	
-	//-----------------------------------------------------------------//
-	//Look-up tables
-	
+
+	// -----------------------------------------------------------------//
+	// Look-up tables
+
 	/**
 	 * List of 18-neighbour points that are 6 connected to the input point,
 	 * which must also be an 18-neighbourhood point
