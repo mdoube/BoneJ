@@ -1445,6 +1445,25 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			return false;
 	}
 
+	/**
+	 * Check if a rotation matrix will flip the direction of the z component of
+	 * the original
+	 * 
+	 * @return true if the rotation matrix will cause z-flipping
+	 */
+	public boolean isZFlipped() {
+		final double x2 = get(2, 0);
+		final double y2 = get(2, 1);
+		final double z2 = get(2, 2);
+
+		final double dot = x2 + y2 + z2;
+
+		if (dot < 0)
+			return true;
+		else
+			return false;
+	}
+
 	/*
 	 * ------------------------ Private Methods ------------------------
 	 */

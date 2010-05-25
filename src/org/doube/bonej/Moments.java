@@ -460,8 +460,13 @@ public class Moments implements PlugIn, DialogListener {
 			IJ.log("Case 6");
 			rotation = E;
 		}
+		//Check for z-flipping
+		if (rotation.isZFlipped()){
+			rotation = rotation.times(RotX).times(RotX);
+			IJ.log("Corrected Z-flipping");
+		}
 		
-		// check for reflection and reflect back if necessary
+		//Check for reflection
 		if (!rotation.isRightHanded()) {
 			double[][] reflectY = new double[3][3];
 			reflectY[0][0] = -1;
@@ -505,6 +510,7 @@ public class Moments implements PlugIn, DialogListener {
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
 
+		//TODO multithread target stack drawing
 		// Cache the sourceStack's processors
 		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
