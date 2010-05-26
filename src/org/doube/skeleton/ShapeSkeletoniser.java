@@ -1,5 +1,7 @@
 package org.doube.skeleton;
 
+import java.util.Arrays;
+
 import org.doube.util.ImageCheck;
 
 import ij.IJ;
@@ -44,8 +46,9 @@ public class ShapeSkeletoniser implements PlugIn {
 		short iteration = 1;
 
 		// "scan" until there are no more deletable voxels
-		//scan means go through all voxels in volume
-		//iterate means traverse all surface points in a topological way and may require multiple scans
+		// scan means go through all voxels in volume
+		// iterate means traverse all surface points in a topological way and
+		// may require multiple scans
 		while (nDeletable > 0) {
 			long dc = 0;
 			for (int z = 0; z < d; z++) {
@@ -151,15 +154,53 @@ public class ShapeSkeletoniser implements PlugIn {
 	}
 
 	/**
-	 * Determine if a point is a (26, 6) simple point. For <i>p</i> to be a
-	 * simple point, 4 conditions must be met:
-	 * <ol>
-	 * <li><i>p</i> has at least one black 26-neighbour</li>
-	 * <li><i>p</i> has at least one white 6-neighbour</li>
-	 * <li>The set of black 26-neighbours of <i>p</i> is 26-connected</li>
-	 * <li>The set of white 6-neighbours of <i>p</i> is 6-connected in the set
-	 * of white 18-neighbours of <i>p</i></li>
-	 * </ol>
+	 * Determine if a black point p is s-open, which means at least one of its
+	 * 6-neighbours is white prior to iteration
+	 * 
+	 * @param neighbours
+	 * @return
+	 */
+	private boolean isSOpen(byte[] neighbours) {
+		for (int i = 0; i < 6; i++) {
+			if (neighbours[sixNeighbours[i]] == WHITE)
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Determine if a black point p is e-open p is e-open if and only if: p is
+	 * not s open
+	 * 
+	 * @param x
+	 *            coordinate of p
+	 * @param y
+	 *            coordinate of p
+	 * @param z
+	 *            coordinate of p
+	 * @param neighbours
+	 * @return
+	 */
+	private boolean isEOpen(byte[] neighbours, ImageStack stack, int x, int y,
+			int z, int w, int h, int d) {
+		if (isSOpen(neighbours))
+			return false;
+		final byte[] f1Points = getF1Points(stack, x, y, z, w, h, d);
+		for (int i = 0; i < 12; i++) {
+			final int n = ePoints[i];
+			if (neighbours[n] == WHITE) {
+				if (f1Points[edgeSixes[n][0]] == BLACK &&
+						f1Points[edgeSixes[n][1]] == BLACK){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get the f<sub>1</sub> points around p, which are the points that are
+	 * 6-adjacent to the 6-neighbours, but which are not in p's neighbourhood.
 	 * 
 	 * @param stack
 	 * @param x
@@ -170,10 +211,35 @@ public class ShapeSkeletoniser implements PlugIn {
 	 * @param d
 	 * @return
 	 */
-	@SuppressWarnings("unused")
-	private boolean isSimplePoint(ImageStack stack, int x, int y, int z, int w,
+	private byte[] getF1Points(ImageStack stack, int x, int y, int z, int w,
 			int h, int d) {
-		byte[] neighbours = getNeighborhood(stack, x, y, z, w, h, d);
+		byte[] f1Points = new byte[27];
+		f1Points[4] = getPixel(stack, x, y, z - 2, w, h, d);
+		f1Points[10] = getPixel(stack, x, y - 2, z, w, h, d);
+		f1Points[12] = getPixel(stack, x - 2, y, z, w, h, d);
+		f1Points[14] = getPixel(stack, x + 2, y, z, w, h, d);
+		f1Points[16] = getPixel(stack, x, y + 2, z, w, h, d);
+		f1Points[22] = getPixel(stack, x, y, z + 2, w, h, d);
+		return f1Points;
+	}
+
+	/**
+	 * Determine if a point is a (26, 6) simple point. For <i>p</i> to be a
+	 * simple point, 4 conditions must be met:
+	 * <ol>
+	 * <li><i>p</i> has at least one black 26-neighbour</li>
+	 * <li><i>p</i> has at least one white 6-neighbour</li>
+	 * <li>The set of black 26-neighbours of <i>p</i> is 26-connected</li>
+	 * <li>The set of white 6-neighbours of <i>p</i> is 6-connected in the set
+	 * of white 18-neighbours of <i>p</i></li>
+	 * </ol>
+	 * 
+	 * @param neighbours
+	 *            from Ignacio's getNeighborhood() method
+	 * @return
+	 */
+	@SuppressWarnings("unused")
+	private boolean isSimplePoint(byte[] neighbours) {
 
 		// Condition 2. check 6 neighbourhood for white pixels
 		boolean hasWhite6Neighbour = false;
@@ -424,10 +490,56 @@ public class ShapeSkeletoniser implements PlugIn {
 			{ 14, 16, 17, 22, 23, 25 } // 26
 	};
 
-	/** LUT to find the 6 neighbours in a 27 neighbourhood array */
+	/**
+	 * LUT to find the e-points, which are 18-adjacent but not 6-adjacent to p
+	 * (i.e. share an edge with p)
+	 */
+	private static final int[] ePoints = { 1, 3, 5, 7, 9, 11, 15, 17, 19, 21,
+			23, 25 };
+
+	/**
+	 * LUT to find the pair of 6-neighbours of p that are six neighbours of each
+	 * edge point
+	 */
+	private static final int[][] edgeSixes = { null,// 0
+			{4, 10}, // 1
+			null,// 2
+			{4, 12}, // 3
+			null,// 4
+			{4, 14},// 5
+			null,// 6
+			{4, 16},// 7
+			null,// 8
+			{10, 12},// 9
+			null,// 10
+			{10, 14},// 11
+			null,// 12
+			null,// 13
+			null,// 14
+			{12, 16},// 15
+			null,// 16
+			{14, 16},// 17
+			null,// 18
+			{10, 22},// 19
+			null,// 20
+			{12, 22},// 21
+			null,// 22
+			{14, 22},// 23
+			null,// 24
+			{16, 22},// 25
+			null // 26
+	};
+
+	/**
+	 * LUT to find the 6 neighbours in a 27 neighbourhood array. s-points are
+	 * 6-adjacent to p (i.e. share a face with p)
+	 */
 	private static final int[] sixNeighbours = { 4, 10, 12, 14, 16, 22 };
 
-	/** LUT to find the 18 neighbours in a 27 neighbourhood array */
+	/**
+	 * LUT to find the 18 neighbours in a 27 neighbourhood array, these points
+	 * share an edge and/or a face with p.
+	 */
 	private static final int[] eighteenNeighbours = { 1, 3, 4, 5, 7, 9, 10, 11,
 			12, 14, 15, 16, 17, 19, 21, 22, 23, 25 };
 
