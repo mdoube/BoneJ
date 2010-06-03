@@ -185,12 +185,12 @@ public class ShapeSkeletoniser implements PlugIn {
 			int z, int w, int h, int d) {
 		if (isSOpen(neighbours))
 			return false;
-		final byte[] f1Points = getF1Points(stack, x, y, z, w, h, d);
+		final byte[] f1Points = getF1SPoints(stack, x, y, z, w, h, d);
 		for (int i = 0; i < 12; i++) {
 			final int n = ePoints[i];
 			if (neighbours[n] == WHITE) {
-				if (f1Points[edgeSixes[n][0]] == BLACK &&
-						f1Points[edgeSixes[n][1]] == BLACK){
+				if (f1Points[edgeSixes[n][0]] == BLACK
+						&& f1Points[edgeSixes[n][1]] == BLACK) {
 					return true;
 				}
 			}
@@ -199,8 +199,46 @@ public class ShapeSkeletoniser implements PlugIn {
 	}
 
 	/**
-	 * Get the f<sub>1</sub> points around p, which are the points that are
-	 * 6-adjacent to the 6-neighbours, but which are not in p's neighbourhood.
+	 * Check if a point is v-open
+	 * 
+	 * @param neighbours
+	 * @param stack
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isVOpen(byte[] neighbours, ImageStack stack, int x, int y,
+			int z, int w, int h, int d) {
+		if (isSOpen(neighbours) || isEOpen(neighbours, stack, x, y, z, w, h, d))
+			return false;
+
+		byte[][] f1Points = getF1VPoints(stack, x, y, z, w, h, d);
+		// check v-points
+		checkNeighbours: for (int i = 0; i < 8; i++) {
+			final int n = vPoints[i];
+			// if white
+			if (neighbours[n] == WHITE) {
+				// check 3 f1s for blackness
+				for (int f = 0; f < 3; f++) {
+					if (f1Points[n][f] == WHITE) {
+						continue checkNeighbours;
+					}
+				}
+				// return true if all f1s are black
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get the f<sub>1</sub> of the s-points around p, which are the points that
+	 * are 6-adjacent to the 6-neighbours, but which are not in p's
+	 * neighbourhood.
 	 * 
 	 * @param stack
 	 * @param x
@@ -211,7 +249,7 @@ public class ShapeSkeletoniser implements PlugIn {
 	 * @param d
 	 * @return
 	 */
-	private byte[] getF1Points(ImageStack stack, int x, int y, int z, int w,
+	private byte[] getF1SPoints(ImageStack stack, int x, int y, int z, int w,
 			int h, int d) {
 		byte[] f1Points = new byte[27];
 		f1Points[4] = getPixel(stack, x, y, z - 2, w, h, d);
@@ -220,6 +258,50 @@ public class ShapeSkeletoniser implements PlugIn {
 		f1Points[14] = getPixel(stack, x + 2, y, z, w, h, d);
 		f1Points[16] = getPixel(stack, x, y + 2, z, w, h, d);
 		f1Points[22] = getPixel(stack, x, y, z + 2, w, h, d);
+		return f1Points;
+	}
+
+	/**
+	 * Get the f<sub>1</sub> of the v-points around p, which are the points that
+	 * are 6-adjacent to the vertex neighbours, but which are not in p's
+	 * neighbourhood.
+	 * 
+	 * @param stack
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private byte[][] getF1VPoints(ImageStack stack, int x, int y, int z, int w,
+			int h, int d) {
+		byte[][] f1Points = new byte[27][3];
+		f1Points[0][0] = getPixel(stack, x - 1, y - 1, z - 2, w, h, d);
+		f1Points[0][1] = getPixel(stack, x - 1, y - 2, z - 1, w, h, d);
+		f1Points[0][2] = getPixel(stack, x - 2, y - 1, z - 1, w, h, d);
+		f1Points[2][0] = getPixel(stack, x + 1, y - 1, z - 2, w, h, d);
+		f1Points[2][1] = getPixel(stack, x + 1, y - 2, z - 1, w, h, d);
+		f1Points[2][2] = getPixel(stack, x + 2, y - 1, z - 1, w, h, d);
+		f1Points[6][0] = getPixel(stack, x - 1, y + 1, z - 2, w, h, d);
+		f1Points[6][1] = getPixel(stack, x - 1, y + 2, z - 1, w, h, d);
+		f1Points[6][2] = getPixel(stack, x - 2, y + 1, z - 1, w, h, d);
+		f1Points[8][0] = getPixel(stack, x + 1, y + 1, z - 2, w, h, d);
+		f1Points[8][1] = getPixel(stack, x + 1, y + 2, z - 1, w, h, d);
+		f1Points[8][2] = getPixel(stack, x + 2, y + 1, z - 1, w, h, d);
+		f1Points[18][0] = getPixel(stack, x - 1, y - 1, z + 2, w, h, d);
+		f1Points[18][1] = getPixel(stack, x - 1, y - 2, z + 1, w, h, d);
+		f1Points[18][2] = getPixel(stack, x - 2, y - 1, z + 1, w, h, d);
+		f1Points[20][0] = getPixel(stack, x + 1, y - 1, z + 2, w, h, d);
+		f1Points[20][1] = getPixel(stack, x + 1, y - 2, z + 1, w, h, d);
+		f1Points[20][2] = getPixel(stack, x + 2, y - 1, z + 1, w, h, d);
+		f1Points[24][0] = getPixel(stack, x - 1, y + 1, z + 2, w, h, d);
+		f1Points[24][1] = getPixel(stack, x - 1, y + 2, z + 1, w, h, d);
+		f1Points[24][2] = getPixel(stack, x - 2, y + 1, z + 1, w, h, d);
+		f1Points[26][0] = getPixel(stack, x + 1, y + 1, z + 2, w, h, d);
+		f1Points[26][1] = getPixel(stack, x + 1, y + 2, z + 1, w, h, d);
+		f1Points[26][2] = getPixel(stack, x + 2, y + 1, z + 1, w, h, d);
 		return f1Points;
 	}
 
@@ -498,35 +580,41 @@ public class ShapeSkeletoniser implements PlugIn {
 			23, 25 };
 
 	/**
+	 * LUT to find the v-points, which are 26-adjacent but not 18-adjacent to p
+	 * (i.e. share only a vertex with p)
+	 */
+	private static final int[] vPoints = { 0, 2, 6, 8, 18, 20, 24, 26 };
+
+	/**
 	 * LUT to find the pair of 6-neighbours of p that are six neighbours of each
 	 * edge point
 	 */
 	private static final int[][] edgeSixes = { null,// 0
-			{4, 10}, // 1
+			{ 4, 10 }, // 1
 			null,// 2
-			{4, 12}, // 3
+			{ 4, 12 }, // 3
 			null,// 4
-			{4, 14},// 5
+			{ 4, 14 },// 5
 			null,// 6
-			{4, 16},// 7
+			{ 4, 16 },// 7
 			null,// 8
-			{10, 12},// 9
+			{ 10, 12 },// 9
 			null,// 10
-			{10, 14},// 11
+			{ 10, 14 },// 11
 			null,// 12
 			null,// 13
 			null,// 14
-			{12, 16},// 15
+			{ 12, 16 },// 15
 			null,// 16
-			{14, 16},// 17
+			{ 14, 16 },// 17
 			null,// 18
-			{10, 22},// 19
+			{ 10, 22 },// 19
 			null,// 20
-			{12, 22},// 21
+			{ 12, 22 },// 21
 			null,// 22
-			{14, 22},// 23
+			{ 14, 22 },// 23
 			null,// 24
-			{16, 22},// 25
+			{ 16, 22 },// 25
 			null // 26
 	};
 
