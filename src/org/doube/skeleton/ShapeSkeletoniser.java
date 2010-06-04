@@ -614,13 +614,13 @@ public class ShapeSkeletoniser implements PlugIn {
 
 		// fill extendedMiddlePlane with values from the stack
 		if (p0 == 4 && p1 == 22) {
-			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
-			extMiddlePlane[9] = getPixel(stack, x, y - 2, z, w, h, d);
-			extMiddlePlane[10] = getPixel(stack, x, y - 1, z - 2, w, h, d);
-			extMiddlePlane[11] = getPixel(stack, x, y + 1, z - 2, w, h, d);
-			extMiddlePlane[12] = getPixel(stack, x, y - 2, z - 1, w, h, d);
-			extMiddlePlane[13] = getPixel(stack, x, y - 2, z + 1, w, h, d);
-			extMiddlePlane[14] = getPixel(stack, x, y - 2, z - 2, w, h, d);
+			extMiddlePlane[8] = getPixel(stack, x - 2, y - 2, z, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x - 1, y - 2, z, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y - 2, z, w, h, d);
+			extMiddlePlane[11] = getPixel(stack, x + 1, y - 2, z, w, h, d);
+			extMiddlePlane[12] = getPixel(stack, x - 2, y - 1, z, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x - 2, y, z, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x - 2, y + 1, z, w, h, d);
 		} else if (p0 == 10 && p1 == 16) {
 			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
 			extMiddlePlane[9] = getPixel(stack, x - 2, y, z, w, h, d);
@@ -630,13 +630,13 @@ public class ShapeSkeletoniser implements PlugIn {
 			extMiddlePlane[13] = getPixel(stack, x - 2, y, z + 1, w, h, d);
 			extMiddlePlane[14] = getPixel(stack, x - 2, y, z - 2, w, h, d);
 		} else if (p0 == 12 && p1 == 14) {
-			extMiddlePlane[8] = getPixel(stack, x - 2, y - 2, z, w, h, d);
-			extMiddlePlane[9] = getPixel(stack, x - 1, y - 2, z, w, h, d);
-			extMiddlePlane[10] = getPixel(stack, x, y - 2, z, w, h, d);
-			extMiddlePlane[11] = getPixel(stack, x + 1, y - 2, z, w, h, d);
-			extMiddlePlane[12] = getPixel(stack, x - 2, y - 1, z, w, h, d);
-			extMiddlePlane[13] = getPixel(stack, x - 2, y, z, w, h, d);
-			extMiddlePlane[14] = getPixel(stack, x - 2, y + 1, z, w, h, d);
+			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x, y - 2, z, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y - 1, z - 2, w, h, d);
+			extMiddlePlane[11] = getPixel(stack, x, y + 1, z - 2, w, h, d);
+			extMiddlePlane[12] = getPixel(stack, x, y - 2, z - 1, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x, y - 2, z + 1, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x, y - 2, z - 2, w, h, d);
 		} else
 			throw new IllegalArgumentException();
 
