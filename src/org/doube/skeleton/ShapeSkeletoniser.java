@@ -557,6 +557,63 @@ public class ShapeSkeletoniser implements PlugIn {
 		return middlePlane;
 	}
 
+	/**
+	 * Get the extended middle plane for 2 points, which is an expansion of the
+	 * middle plane by 1 voxel in -x, -y and -z
+	 * 
+	 * @param stack
+	 * @param neighbours
+	 * @param p0
+	 *            zeroth s-point of p, must have lower index than p1
+	 * @param p1
+	 *            first s-point of p, must have higher index than p0
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 * @throws IllegalArgumentException
+	 *             if p0 >= p1 or p0 and p1 are not opposite s-points of p
+	 */
+	private byte[] getExtendedMiddlePlane(ImageStack stack, byte[] neighbours,
+			int p0, int p1, int x, int y, int z, int w, int h, int d) {
+		byte[] extMiddlePlane = new byte[15];
+		byte[] middlePlane = getMiddlePlane(neighbours, p0, p1);
+		System.arraycopy(middlePlane, 0, extMiddlePlane, 0, 8);
+
+		// fill extendedMiddlePlane with values from the stack
+		if (p0 == 4 && p1 == 22) {
+			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x, y - 2, z, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y - 1, z - 2, w, h, d);
+			extMiddlePlane[11] = getPixel(stack, x, y + 1, z - 2, w, h, d);
+			extMiddlePlane[12] = getPixel(stack, x, y - 2, z - 1, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x, y - 2, z + 1, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x, y - 2, z - 2, w, h, d);
+		} else if (p0 == 10 && p1 == 16) {
+			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x - 2, y, z, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x - 2, y, z - 2, w, h, d);
+			extMiddlePlane[11] = getPixel(stack, x + 1, y, z - 2, w, h, d);
+			extMiddlePlane[12] = getPixel(stack, x - 2, y, z - 1, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x - 2, y, z + 1, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x - 2, y, z - 2, w, h, d);
+		} else if (p0 == 12 && p1 == 14) {
+			extMiddlePlane[8] = getPixel(stack, x - 2, y - 2, z, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x - 1, y - 2, z, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y - 2, z, w, h, d);
+			extMiddlePlane[11] = getPixel(stack, x + 1, y - 2, z, w, h, d);
+			extMiddlePlane[12] = getPixel(stack, x - 2, y - 1, z, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x - 2, y, z, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x - 2, y + 1, z, w, h, d);
+		} else
+			throw new IllegalArgumentException();
+
+		return extMiddlePlane;
+	}
+
 	// -----------------------------------------------------------------//
 	// Look-up tables
 
