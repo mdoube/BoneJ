@@ -525,6 +525,38 @@ public class ShapeSkeletoniser implements PlugIn {
 		return true;
 	}
 
+	/**
+	 * Find the values of the voxels in the middle plane, which is a plane
+	 * perpendicular to p and 2 opposite s-neighbours, p0 and p1
+	 * 
+	 * @param neighbours
+	 * @param p0
+	 *            zeroth s-neighbour, must have smaller neighbour index than p1
+	 * @param p1
+	 *            first s-neighbour, must have larger neighbour index than p0
+	 * @return list of voxel values in the middle plane
+	 * @throws IllegalArgumentException
+	 *             if p0 and p1 are not a pair of opposite s-neighbours or p0 >=
+	 *             p1
+	 */
+	private byte[] getMiddlePlane(byte[] neighbours, int p0, int p1) {
+		byte[] middlePlane = new byte[8];
+		int[] plane = new int[8];
+		if (p0 == 4 && p1 == 22)
+			plane = middlePlanes[0];
+		else if (p0 == 10 && p1 == 16)
+			plane = middlePlanes[1];
+		else if (p0 == 12 && p1 == 14)
+			plane = middlePlanes[2];
+		else
+			throw new IllegalArgumentException();
+
+		for (int i = 0; i < 8; i++)
+			middlePlane[i] = neighbours[plane[i]];
+
+		return middlePlane;
+	}
+
 	// -----------------------------------------------------------------//
 	// Look-up tables
 
@@ -630,6 +662,14 @@ public class ShapeSkeletoniser implements PlugIn {
 	 */
 	private static final int[] eighteenNeighbours = { 1, 3, 4, 5, 7, 9, 10, 11,
 			12, 14, 15, 16, 17, 19, 21, 22, 23, 25 };
+
+	/**
+	 * LUT of the 3 middle planes. 0 is the xy plane, 1 is the xz plane and 2 is
+	 * the yz plane.
+	 */
+	private static final int[][] middlePlanes = {
+			{ 9, 10, 11, 12, 14, 15, 16, 17 }, { 3, 4, 5, 12, 14, 21, 22, 23 },
+			{ 1, 4, 7, 10, 16, 19, 22, 25 } };
 
 	// -------------------------------------------------------------------//
 	// Utility methods from Ignacio Arganda Carreras' Skeletonize3D
