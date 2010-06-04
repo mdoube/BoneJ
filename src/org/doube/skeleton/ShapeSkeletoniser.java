@@ -757,6 +757,39 @@ public class ShapeSkeletoniser implements PlugIn {
 			{ 9, 10, 11, 12, 14, 15, 16, 17 }, { 3, 4, 5, 12, 14, 21, 22, 23 },
 			{ 1, 4, 7, 10, 16, 19, 22, 25 } };
 
+	/**
+	 * LUT of the 6 surfaces of the neighbourhood, each defined by the s-point
+	 * of p at their centre
+	 */
+	private static final int[][] surfaceLUT = { null, // 0
+			null, // 1
+			null, // 2
+			null, // 3
+			{ 0, 1, 2, 3, 4, 5, 6, 7, 8 },// 4
+			null, // 5
+			null, // 6
+			null, // 7
+			null, // 8
+			null, // 9
+			{ 0, 1, 2, 9, 10, 11, 18, 19, 20 }, // 10
+			null, // 11
+			{ 0, 3, 6, 9, 12, 15, 18, 21, 24 },// 12
+			null, // 13
+			{ 2, 5, 8, 11, 14, 17, 20, 23, 26 },// 14
+			null, // 15
+			{ 6, 7, 8, 15, 16, 17, 24, 25, 26 },// 16
+			null,// 17
+			null,// 18
+			null, // 19
+			null, // 20
+			null,// 21
+			{ 18, 19, 20, 21, 22, 23, 24, 25, 26 },// 22
+			null,// 23
+			null,// 24
+			null,// 25
+			null,// 26
+	};
+
 	// -------------------------------------------------------------------//
 	// Utility methods from Ignacio Arganda Carreras' Skeletonize3D
 	// If classes merge, following methods are safe to exclude
