@@ -1,7 +1,7 @@
 package org.doube.skeleton;
 
 /**
- * BranchLabeler plugin for ImageJ
+ * ShapeSkeletoniser plugin for ImageJ
  * Copyright 2010 Michael Doube 
  *
  * This program is free software: you can redistribute it and/or modify
