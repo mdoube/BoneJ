@@ -1,6 +1,22 @@
 package org.doube.skeleton;
 
-import java.util.Arrays;
+/**
+ * BranchLabeler plugin for ImageJ
+ * Copyright 2010 Michael Doube 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 import org.doube.util.ImageCheck;
 
@@ -9,6 +25,19 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 
+/**
+ * Perform shape and topology-preserving medial axis thinning
+ * 
+ * @author Michael Doube
+ * @see <p>
+ *      Saha PK, Chaudhuri BB, Dutta Majumder D (1997) A new shape preserving
+ *      parallel thinning algorithm for 3D digital images. Pattern Recognit. 30:
+ *      1939-1955. doi:<a
+ *      href="http://dx.doi.org/10.1016/S0031-3203(97)00016-2">
+ *      10.1016/S0031-3203(97)00016-2</a>.
+ *      </p>
+ * 
+ */
 public class ShapeSkeletoniser implements PlugIn {
 
 	private static final byte BLACK = (byte) 255;
