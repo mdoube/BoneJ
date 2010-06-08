@@ -9,8 +9,6 @@ import ij.process.ImageStatistics;
 /**
  * Check if an image conforms to the type defined by each method.
  * 
- * Testing git
- * 
  * @author Michael Doube
  * 
  */
