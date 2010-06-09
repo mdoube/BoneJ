@@ -643,6 +643,47 @@ public class ShapeSkeletoniser implements PlugIn {
 		return extMiddlePlane;
 	}
 
+	private boolean condition1(byte[] neighbours, ImageStack stack, int x,
+			int y, int z, int w, int h, int d) {
+		if (blackInSurface(neighbours, 4) && blackInSurface(neighbours, 22)) {
+			//check for closed 6-connected loop in eMidPlane
+			//special condition that the 2 thin side 6-points must be white
+			//actually, none of the 5 thin side points can be black 
+			if (neighbours[14] == WHITE && neighbours[16] == WHITE) {
+				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours, 4,
+						22, x, y, z, w, h, d);
+				//start at thin side, iterate through connected WHITEs until either:
+				// no WHITE unvisited neighbours (return false)
+				// get to last neighbour before start voxel (return true)
+				boolean[] visited = new boolean[15];
+				for (boolean i : visited)
+					i = false;
+			}
+		}
+		if (blackInSurface(neighbours, 10) && blackInSurface(neighbours, 16)) {
+			if (neighbours[14] == WHITE && neighbours[22] == WHITE) {
+				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
+						10, 16, x, y, z, w, h, d);
+			}
+		}
+		if (blackInSurface(neighbours, 12) && blackInSurface(neighbours, 14)) {
+			if (neighbours[16] == WHITE && neighbours[22] == WHITE) {
+				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
+						12, 14, x, y, z, w, h, d);
+			}
+		}
+		return false;
+	}
+	
+
+	private boolean blackInSurface(byte[] neighbours, int n) {
+		for (int i = 0; i < 9; i++) {
+			if (neighbours[surfaceLUT[n][i]] == BLACK)
+				return true;
+		}
+		return false;
+	}
+
 	// -----------------------------------------------------------------//
 	// Look-up tables
 
