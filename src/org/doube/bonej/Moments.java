@@ -85,6 +85,7 @@ public class Moments implements PlugIn, DialogListener {
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
 		gd.addCheckbox("Align result", true);
 		gd.addCheckbox("Show axes", true);
+		gd.addHelp("http://bonej.org/moments");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {

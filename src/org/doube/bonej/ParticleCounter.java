@@ -190,6 +190,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		String[] items2 = { "Multithreaded", "Linear" };
 		gd.addChoice("Labelling algorithm", items2, items2[0]);
 		gd.addNumericField("Slices per chunk", 2, 0);
+		gd.addHelp("http://bonej.org/particles");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {

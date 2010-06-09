@@ -195,6 +195,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
+		gd.addHelp("http://bonej.org/slice");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		String bone = gd.getNextChoice();

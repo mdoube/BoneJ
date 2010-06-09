@@ -284,12 +284,4 @@ public class FractalBoxCounter implements PlugIn {
 		plotImage.show();
 		return;
 	}
-
-	public void showAbout() {
-		IJ.showMessage("About FractalCount..",
-				"This plugin calculates the boxing dimension"
-						+ " (an estimate of the fractal dimension) \n"
-						+ "of 2D and 3D images.\n");
-	}
-
 }

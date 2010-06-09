@@ -76,6 +76,7 @@ public class StructureModelIndex implements PlugIn {
 		gd.addChoice("SMI Method", smiMethods, "Hildebrand & Rüegsegger");
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
+		gd.addHelp("http://bonej.org/smi");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;

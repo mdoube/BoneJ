@@ -75,6 +75,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		gd.addCheckbox("Inner Cube", true);
 		gd.addCheckbox("Outer Cube", true);
 		gd.addNumericField("Crop Factor", 1.0, 2, 4, "");
+		gd.addHelp("http://bonej.org/sphere");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {

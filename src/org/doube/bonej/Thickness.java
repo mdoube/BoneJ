@@ -82,6 +82,7 @@ public class Thickness implements PlugIn {
 		gd.addCheckbox("Thickness", true);
 		gd.addCheckbox("Spacing", false);
 		gd.addCheckbox("Graphic Result", true);
+		gd.addHelp("http://bonej.org/thickness");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;

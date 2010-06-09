@@ -81,6 +81,7 @@ public class PlateRod implements PlugIn {
 				.addNumericField("Sampling increment", samplingIncrement, 3, 8,
 						units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
+		gd.addHelp("http://bonej.org/plateness");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
 			samplingIncrement = gd.getNextNumber();

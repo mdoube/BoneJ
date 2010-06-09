@@ -110,6 +110,7 @@ public class Anisotropy implements PlugIn {
 		gd.addCheckbox("Show_Plot", true);
 		gd.addCheckbox("3D_Result", false);
 		gd.addCheckbox("Align to fabric tensor", false);
+		gd.addHelp("http://bonej.org/anisotropy");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;

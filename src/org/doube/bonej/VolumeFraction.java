@@ -65,6 +65,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		String[] types = { "Voxel", "Surface" };
 		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
+		gd.addHelp("http://bonej.org/volumefraction");
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {

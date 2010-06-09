@@ -72,6 +72,7 @@ public class MeasureSurface implements PlugIn {
 		gd.addNumericField("Resampling", 6, 0);
 		gd.addNumericField("Threshold", threshold, 0);
 		gd.addCheckbox("Show surface", true);
+		gd.addHelp("http://bonej.org/isosurface");
 		gd.showDialog();
 		int resamplingF = (int) Math.floor(gd.getNextNumber());
 		threshold = (int) Math.floor(gd.getNextNumber());

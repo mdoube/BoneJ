@@ -222,6 +222,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
 		gd.addCheckbox("Prune ends", pruneEnds);
 		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
+		gd.addHelp("http://pacific.mpi-cbg.de/wiki/index.php/AnalyzeSkeleton");
 		gd.showDialog();
 
 		// Exit when canceled

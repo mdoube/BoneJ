@@ -43,6 +43,7 @@ public class Erode implements PlugIn {
 		}
 		GenericDialog gd = new GenericDialog("Erode");
 		gd.addNumericField("Iso value", 255, 0);
+		gd.addHelp("http://pacific.mpi-cbg.de/wiki/index.php/3D_Binary_Filters");
 		gd.showDialog();
 		if (gd.wasCanceled())
 			return;
