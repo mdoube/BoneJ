@@ -761,11 +761,12 @@ public class Moments implements PlugIn, DialogListener {
 		// copy the data from inside the ROI and convert it to 8-bit
 		Duplicator d = new Duplicator();
 		ImagePlus roiImp = d.run(imp, startSlice, endSlice);
-
-		Rectangle roi = imp.getRoi().getBounds();
-		centroid[0] -= roi.getX() * imp.getCalibration().pixelWidth;
-		centroid[1] -= roi.getY() * imp.getCalibration().pixelHeight;
-		centroid[2] -= startSlice * imp.getCalibration().pixelDepth;
+		if (imp.getRoi() != null) {
+			Rectangle roi = imp.getRoi().getBounds();
+			centroid[0] -= roi.getX() * imp.getCalibration().pixelWidth;
+			centroid[1] -= roi.getY() * imp.getCalibration().pixelHeight;
+			centroid[2] -= startSlice * imp.getCalibration().pixelDepth;
+		}
 		final double cX = centroid[0];
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
