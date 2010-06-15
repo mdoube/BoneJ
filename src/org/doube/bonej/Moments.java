@@ -153,7 +153,7 @@ public class Moments implements PlugIn, DialogListener {
 		if (doAlign)
 			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice,
 					min, max, doAxes).show();
-		
+
 		if (doAxes3D)
 			show3DAxes(imp, E.getV(), centroid, startSlice, endSlice, min, max);
 
@@ -738,6 +738,24 @@ public class Moments implements PlugIn, DialogListener {
 		return alignedImp;
 	}
 
+	/**
+	 * Display principal axes on a 3D rendered version of the image
+	 * 
+	 * @param imp
+	 *            Original image
+	 * @param E
+	 *            eigenvectors of the principal axes
+	 * @param centroid
+	 *            in real units
+	 * @param startSlice
+	 *            first slice
+	 * @param endSlice
+	 *            last slice
+	 * @param min
+	 *            lower threshold
+	 * @param max
+	 *            upper threshold
+	 */
 	private void show3DAxes(ImagePlus imp, Matrix E, double[] centroid,
 			int startSlice, int endSlice, double min, double max) {
 		// copy the data from inside the ROI and convert it to 8-bit
