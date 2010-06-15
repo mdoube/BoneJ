@@ -21,16 +21,25 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
+import ij.process.StackConverter;
+import ij.plugin.Duplicator;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.gui.*;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.Rectangle;
 import java.awt.TextField;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
 
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
@@ -38,6 +47,8 @@ import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.ThresholdGuesser;
+
+import customnode.CustomPointMesh;
 
 /**
  * Calculate centroid and principal axes of a thresholded stack; originally
@@ -84,7 +95,8 @@ public class Moments implements PlugIn, DialogListener {
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
 		gd.addCheckbox("Align result", true);
-		gd.addCheckbox("Show axes", true);
+		gd.addCheckbox("Show axes (2D)", false);
+		gd.addCheckbox("Show axes (3D)", true);
 		gd.addHelp("http://bonej.org/moments");
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -104,6 +116,7 @@ public class Moments implements PlugIn, DialogListener {
 		final double c = gd.getNextNumber();
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
+		final boolean doAxes3D = gd.getNextBoolean();
 
 		double[] centroid = getCentroid3D(imp, startSlice, endSlice, min, max,
 				m, c);
@@ -140,6 +153,10 @@ public class Moments implements PlugIn, DialogListener {
 		if (doAlign)
 			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice,
 					min, max, doAxes).show();
+		
+		if (doAxes3D)
+			show3DAxes(imp, E.getV(), centroid, startSlice, endSlice, min, max);
+
 		return;
 	}
 
@@ -438,7 +455,7 @@ public class Moments implements PlugIn, DialogListener {
 		E.printToIJLog("Original Rotation Matrix (Source -> Target)");
 		Matrix rotation = new Matrix(new double[3][3]);
 
-		//put long axis in z, middle axis in y and short axis in x
+		// put long axis in z, middle axis in y and short axis in x
 		if (wi <= hi && hi <= di) {
 			IJ.log("Case 0");
 			rotation = E;
@@ -461,13 +478,13 @@ public class Moments implements PlugIn, DialogListener {
 			IJ.log("Case 6");
 			rotation = E;
 		}
-		//Check for z-flipping
-		if (rotation.isZFlipped()){
+		// Check for z-flipping
+		if (rotation.isZFlipped()) {
 			rotation = rotation.times(RotX).times(RotX);
 			IJ.log("Corrected Z-flipping");
 		}
-		
-		//Check for reflection
+
+		// Check for reflection
 		if (!rotation.isRightHanded()) {
 			double[][] reflectY = new double[3][3];
 			reflectY[0][0] = -1;
@@ -511,7 +528,7 @@ public class Moments implements PlugIn, DialogListener {
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
 
-		//TODO multithread target stack drawing
+		// TODO multithread target stack drawing
 		// Cache the sourceStack's processors
 		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
@@ -719,6 +736,114 @@ public class Moments implements PlugIn, DialogListener {
 		ImagePlus alignedImp = alignToPrincipalAxes(imp, E, centroid,
 				startSlice, endSlice, min, max, doAxes);
 		return alignedImp;
+	}
+
+	private void show3DAxes(ImagePlus imp, Matrix E, double[] centroid,
+			int startSlice, int endSlice, double min, double max) {
+		// copy the data from inside the ROI and convert it to 8-bit
+		Duplicator d = new Duplicator();
+		ImagePlus roiImp = d.run(imp, startSlice, endSlice);
+
+		Rectangle roi = imp.getRoi().getBounds();
+		centroid[0] -= roi.getX() * imp.getCalibration().pixelWidth;
+		centroid[1] -= roi.getY() * imp.getCalibration().pixelHeight;
+		centroid[2] -= startSlice * imp.getCalibration().pixelDepth;
+		final double cX = centroid[0];
+		final double cY = centroid[1];
+		final double cZ = centroid[2];
+
+		Point3f cent = new Point3f();
+		cent.x = (float) cX;
+		cent.y = (float) cY;
+		cent.z = (float) cZ;
+
+		// initialise and show the 3D universe
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+
+		// show the centroid
+		ArrayList<Point3f> point = new ArrayList<Point3f>();
+		point.add(cent);
+		CustomPointMesh mesh = new CustomPointMesh(point);
+		mesh.setPointSize(5.0f);
+		float red = 0.0f;
+		float green = 0.5f;
+		float blue = 1.0f;
+		Color3f cColour = new Color3f(red, green, blue);
+		mesh.setColor(cColour);
+		try {
+			univ.addCustomMesh(mesh, "Centroid").setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+
+		int[] sideLengths = getRotatedSize(E, roiImp, centroid, 1, endSlice
+				- startSlice + 1, min, max);
+		Calibration cal = roiImp.getCalibration();
+		double vW = cal.pixelWidth;
+		double vH = cal.pixelHeight;
+		double vD = cal.pixelDepth;
+		final double vS = Math.min(vW, Math.min(vH, vD));
+		final double l1 = sideLengths[0] * vS;
+		final double l2 = sideLengths[1] * vS;
+		final double l3 = sideLengths[2] * vS;
+		List<Point3f> axes = new ArrayList<Point3f>();
+		Point3f start1 = new Point3f();
+		start1.x = (float) (cX - E.get(0, 0) * l1);
+		start1.y = (float) (cY - E.get(1, 0) * l1);
+		start1.z = (float) (cZ - E.get(2, 0) * l1);
+		axes.add(start1);
+
+		Point3f end1 = new Point3f();
+		end1.x = (float) (cX + E.get(0, 0) * l1);
+		end1.y = (float) (cY + E.get(1, 0) * l1);
+		end1.z = (float) (cZ + E.get(2, 0) * l1);
+		axes.add(end1);
+
+		Point3f start2 = new Point3f();
+		start2.x = (float) (cX - E.get(0, 1) * l2);
+		start2.y = (float) (cY - E.get(1, 1) * l2);
+		start2.z = (float) (cZ - E.get(2, 1) * l2);
+		axes.add(start2);
+
+		Point3f end2 = new Point3f();
+		end2.x = (float) (cX + E.get(0, 1) * l2);
+		end2.y = (float) (cY + E.get(1, 1) * l2);
+		end2.z = (float) (cZ + E.get(2, 1) * l2);
+		axes.add(end2);
+
+		Point3f start3 = new Point3f();
+		start3.x = (float) (cX - E.get(0, 2) * l3);
+		start3.y = (float) (cY - E.get(1, 2) * l3);
+		start3.z = (float) (cZ - E.get(2, 2) * l3);
+		axes.add(start3);
+
+		Point3f end3 = new Point3f();
+		end3.x = (float) (cX + E.get(0, 2) * l3);
+		end3.y = (float) (cY + E.get(1, 2) * l3);
+		end3.z = (float) (cZ + E.get(2, 2) * l3);
+		axes.add(end3);
+
+		Color3f aColour = new Color3f(red, green, blue);
+		try {
+			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(
+					true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+
+		// show the stack
+		try {
+			new StackConverter(roiImp).convertToGray8();
+			Content c = univ.addVoltex(roiImp);
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		return;
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
