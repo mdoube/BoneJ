@@ -24,6 +24,8 @@ import ij.ImageStack;
 import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import ij.process.StackConverter;
+import ij.plugin.Duplicator;
 import ij.plugin.PlugIn;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -32,17 +34,26 @@ import ij.gui.GenericDialog;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
 import ij.gui.Wand;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.Color;
 import java.awt.Rectangle;
 import java.awt.TextField;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
 
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
+
+import customnode.CustomPointMesh;
 
 /**
  * <p>
@@ -145,6 +156,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] maxRadCentre;
 	/** List of polar section moduli */
 	private double[] Zpol;
+	private boolean do3DAnnotation;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkIJVersion())
@@ -182,7 +194,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addCheckbox("3D_Thickness", false);
 		gd.addCheckbox("Draw_Axes", true);
 		gd.addCheckbox("Draw_Centroids", true);
-		gd.addCheckbox("Annotated_Copy", true);
+		gd.addCheckbox("Annotated_Copy_(2D)", true);
+		gd.addCheckbox("3D_Annotation", false);
 		gd.addCheckbox("Process_Stack", false);
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
@@ -205,6 +218,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
 		this.doCopy = gd.getNextBoolean();
+		this.do3DAnnotation = gd.getNextBoolean();
 		this.doStack = gd.getNextBoolean();
 		if (this.doStack) {
 			this.startSlice = 1;
@@ -241,9 +255,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		roiMeasurements(imp, min, max);
 
 		// TODO locate centroids of multiple sections in a single plane
-		// TODO show axis results in 3D viewer window with copy of original
-		// TODO polar section modulus Z = J/r where J is polar moment of area
-		// and r is maximum radial distance from centroid
 
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
@@ -302,6 +313,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				annotateImage(imp).show();
 			}
 		}
+		if (this.do3DAnnotation)
+			show3DAxes(imp);
+		return;
 	}
 
 	/**
@@ -349,6 +363,126 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		ann.setCalibration(imp.getCalibration());
 		return ann;
+	}
+
+	/**
+	 * Display principal axes on a 3D rendered version of the image
+	 * 
+	 * @param imp
+	 *            Original image
+	 * @param E
+	 *            eigenvectors of the principal axes
+	 * @param centroid
+	 *            in real units
+	 * @param startSlice
+	 *            first slice
+	 * @param endSlice
+	 *            last slice
+	 * @param min
+	 *            lower threshold
+	 * @param max
+	 *            upper threshold
+	 */
+	private void show3DAxes(ImagePlus imp) {
+		Calibration cal = imp.getCalibration();
+		// copy the data from inside the ROI and convert it to 8-bit
+		Duplicator d = new Duplicator();
+		ImagePlus roiImp = d.run(imp, 1, imp.getImageStackSize());
+
+		// initialise and show the 3D universe
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+
+		double rX = 0;
+		double rY = 0;
+		if (imp.getRoi() != null) {
+			Rectangle roi = imp.getRoi().getBounds();
+			rX = roi.getX() * cal.pixelWidth;
+			rY = roi.getY() * cal.pixelHeight;
+		}
+
+		// list of centroids
+		List<Point3f> centroids = new ArrayList<Point3f>();
+		// list of axes
+		List<Point3f> axes = new ArrayList<Point3f>();
+		for (int s = 1; s <= roiImp.getImageStackSize(); s++) {
+			if (R1[s] == Double.NaN)
+				continue;
+
+			final double cX = sliceCentroids[0][s] - rX;
+			final double cY = sliceCentroids[1][s] - rY;
+			final double cZ = (s - 0.5) * cal.pixelDepth;
+
+			Point3f cent = new Point3f();
+			cent.x = (float) cX;
+			cent.y = (float) cY;
+			cent.z = (float) cZ;
+			centroids.add(cent);
+
+			// add the axes to the list
+			double th = this.theta[s];
+			double rMin = this.R1[s] * cal.pixelWidth;
+			double rMax = this.R2[s] * cal.pixelWidth;
+			double thPi = th + Math.PI / 2;
+
+			Point3f start1 = new Point3f();
+			start1.x = (float) (cX - Math.cos(thPi) * 2 * rMin);
+			start1.y = (float) (cY - Math.sin(thPi) * 2 * rMin);
+			start1.z = (float) cZ;
+			axes.add(start1);
+
+			Point3f end1 = new Point3f();
+			end1.x = (float) (cX + Math.cos(thPi) * 2 * rMin);
+			end1.y = (float) (cY + Math.sin(thPi) * 2 * rMin);
+			end1.z = (float) cZ;
+			axes.add(end1);
+
+			Point3f start2 = new Point3f();
+			start2.x = (float) (cX - Math.cos(-th) * 2 * rMax);
+			start2.y = (float) (cY + Math.sin(-th) * 2 * rMax);
+			start2.z = (float) cZ;
+			axes.add(start2);
+
+			Point3f end2 = new Point3f();
+			end2.x = (float) (cX + Math.cos(-th) * 2 * rMax);
+			end2.y = (float) (cY - Math.sin(-th) * 2 * rMax);
+			end2.z = (float) cZ;
+			axes.add(end2);
+		}
+		// show the centroids
+		CustomPointMesh mesh = new CustomPointMesh(centroids);
+		mesh.setPointSize(5.0f);
+		float red = 0.0f;
+		float green = 0.5f;
+		float blue = 1.0f;
+		Color3f cColour = new Color3f(red, green, blue);
+		mesh.setColor(cColour);
+		try {
+			univ.addCustomMesh(mesh, "Centroid").setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+
+		// show the axes
+		Color3f aColour = new Color3f(red, green, blue);
+		try {
+			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(
+					true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		// show the stack
+		try {
+			new StackConverter(roiImp).convertToGray8();
+			Content c = univ.addVoltex(roiImp);
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		return;
 	}
 
 	/**
@@ -832,7 +966,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Checkbox box6 = (Checkbox) checkboxes.get(6);
+		Checkbox box6 = (Checkbox) checkboxes.get(7);
 		boolean isHUCalibrated = box6.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
