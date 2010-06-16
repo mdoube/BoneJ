@@ -758,15 +758,16 @@ public class Moments implements PlugIn, DialogListener {
 	 */
 	private void show3DAxes(ImagePlus imp, Matrix E, double[] centroid,
 			int startSlice, int endSlice, double min, double max) {
+		Calibration cal = imp.getCalibration();
 		// copy the data from inside the ROI and convert it to 8-bit
 		Duplicator d = new Duplicator();
 		ImagePlus roiImp = d.run(imp, startSlice, endSlice);
 		if (imp.getRoi() != null) {
 			Rectangle roi = imp.getRoi().getBounds();
-			centroid[0] -= roi.getX() * imp.getCalibration().pixelWidth;
-			centroid[1] -= roi.getY() * imp.getCalibration().pixelHeight;
-			centroid[2] -= startSlice * imp.getCalibration().pixelDepth;
+			centroid[0] -= roi.getX() * cal.pixelWidth;
+			centroid[1] -= roi.getY() * cal.pixelHeight;
 		}
+		centroid[2] -= startSlice * cal.pixelDepth;
 		final double cX = centroid[0];
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
@@ -797,13 +798,11 @@ public class Moments implements PlugIn, DialogListener {
 			return;
 		}
 
+		//show the axes
 		int[] sideLengths = getRotatedSize(E, roiImp, centroid, 1, endSlice
 				- startSlice + 1, min, max);
-		Calibration cal = roiImp.getCalibration();
-		double vW = cal.pixelWidth;
-		double vH = cal.pixelHeight;
-		double vD = cal.pixelDepth;
-		final double vS = Math.min(vW, Math.min(vH, vD));
+		final double vS = Math.min(cal.pixelWidth, Math.min(cal.pixelHeight,
+				cal.pixelDepth));
 		final double l1 = sideLengths[0] * vS;
 		final double l2 = sideLengths[1] * vS;
 		final double l3 = sideLengths[2] * vS;
