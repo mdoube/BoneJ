@@ -370,18 +370,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param imp
 	 *            Original image
-	 * @param E
-	 *            eigenvectors of the principal axes
-	 * @param centroid
-	 *            in real units
-	 * @param startSlice
-	 *            first slice
-	 * @param endSlice
-	 *            last slice
-	 * @param min
-	 *            lower threshold
-	 * @param max
-	 *            upper threshold
 	 */
 	private void show3DAxes(ImagePlus imp) {
 		Calibration cal = imp.getCalibration();
