@@ -622,21 +622,21 @@ public class ShapeSkeletoniser implements PlugIn {
 			extMiddlePlane[13] = getPixel(stack, x - 2, y, z, w, h, d);
 			extMiddlePlane[14] = getPixel(stack, x - 2, y + 1, z, w, h, d);
 		} else if (p0 == 10 && p1 == 16) {
-			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
-			extMiddlePlane[9] = getPixel(stack, x - 2, y, z, w, h, d);
-			extMiddlePlane[10] = getPixel(stack, x - 2, y, z - 2, w, h, d);
+			extMiddlePlane[8] = getPixel(stack, x - 2, y, z - 2, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x - 1, y, z - 2, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y, z - 2, w, h, d);
 			extMiddlePlane[11] = getPixel(stack, x + 1, y, z - 2, w, h, d);
 			extMiddlePlane[12] = getPixel(stack, x - 2, y, z - 1, w, h, d);
-			extMiddlePlane[13] = getPixel(stack, x - 2, y, z + 1, w, h, d);
-			extMiddlePlane[14] = getPixel(stack, x - 2, y, z - 2, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x - 2, y, z, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x - 2, y, z + 1, w, h, d);
 		} else if (p0 == 12 && p1 == 14) {
-			extMiddlePlane[8] = getPixel(stack, x, y, z - 2, w, h, d);
-			extMiddlePlane[9] = getPixel(stack, x, y - 2, z, w, h, d);
-			extMiddlePlane[10] = getPixel(stack, x, y - 1, z - 2, w, h, d);
+			extMiddlePlane[8] = getPixel(stack, x, y - 2, z - 2, w, h, d);
+			extMiddlePlane[9] = getPixel(stack, x, y - 1, z - 2, w, h, d);
+			extMiddlePlane[10] = getPixel(stack, x, y, z - 2, w, h, d);
 			extMiddlePlane[11] = getPixel(stack, x, y + 1, z - 2, w, h, d);
 			extMiddlePlane[12] = getPixel(stack, x, y - 2, z - 1, w, h, d);
-			extMiddlePlane[13] = getPixel(stack, x, y - 2, z + 1, w, h, d);
-			extMiddlePlane[14] = getPixel(stack, x, y - 2, z - 2, w, h, d);
+			extMiddlePlane[13] = getPixel(stack, x, y - 2, z, w, h, d);
+			extMiddlePlane[14] = getPixel(stack, x, y - 2, z + 1, w, h, d);
 		} else
 			throw new IllegalArgumentException();
 
@@ -646,35 +646,86 @@ public class ShapeSkeletoniser implements PlugIn {
 	private boolean condition1(byte[] neighbours, ImageStack stack, int x,
 			int y, int z, int w, int h, int d) {
 		if (blackInSurface(neighbours, 4) && blackInSurface(neighbours, 22)) {
-			//check for closed 6-connected loop in eMidPlane
-			//special condition that the 2 thin side 6-points must be white
-			//actually, none of the 5 thin side points can be black 
-			if (neighbours[14] == WHITE && neighbours[16] == WHITE) {
+			if (thinSideClear(neighbours, 4, 22)) {
 				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours, 4,
 						22, x, y, z, w, h, d);
-				//start at thin side, iterate through connected WHITEs until either:
-				// no WHITE unvisited neighbours (return false)
-				// get to last neighbour before start voxel (return true)
-				boolean[] visited = new boolean[15];
-				for (boolean i : visited)
-					i = false;
+				if (thickSideClear(eMidPlane))
+					return true;
 			}
 		}
 		if (blackInSurface(neighbours, 10) && blackInSurface(neighbours, 16)) {
-			if (neighbours[14] == WHITE && neighbours[22] == WHITE) {
+			if (thinSideClear(neighbours, 10, 16)) {
 				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
 						10, 16, x, y, z, w, h, d);
+				if (thickSideClear(eMidPlane))
+					return true;
 			}
 		}
 		if (blackInSurface(neighbours, 12) && blackInSurface(neighbours, 14)) {
-			if (neighbours[16] == WHITE && neighbours[22] == WHITE) {
+			if (thinSideClear(neighbours, 12, 14)) {
 				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
 						12, 14, x, y, z, w, h, d);
+				if (thickSideClear(eMidPlane))
+					return true;
 			}
 		}
 		return false;
 	}
-	
+
+	/**
+	 * Check if it's possible to make a 6-closed WHITE connection around the
+	 * thin side of an extended middle plane
+	 * 
+	 * @param neighbours
+	 * @param i
+	 * @param j
+	 * @return false if any of the thin side neighbours are black
+	 */
+	private boolean thinSideClear(byte[] neighbours, int i, int j) {
+		if (i == 4 && j == 22) {
+			if (neighbours[11] == BLACK || neighbours[14] == BLACK
+					|| neighbours[15] == BLACK || neighbours[16] == BLACK
+					|| neighbours[17] == BLACK)
+				return false;
+		} else if (i == 10 && j == 16) {
+			if (neighbours[5] == BLACK || neighbours[14] == BLACK
+					|| neighbours[21] == BLACK || neighbours[22] == BLACK
+					|| neighbours[23] == BLACK)
+				return false;
+		} else if (i == 12 && j == 14) {
+			if (neighbours[7] == BLACK || neighbours[16] == BLACK
+					|| neighbours[19] == BLACK || neighbours[22] == BLACK
+					|| neighbours[25] == BLACK)
+				return false;
+		} else {
+			throw new IllegalArgumentException();
+		}
+		return true;
+	}
+
+	/**
+	 * Check if there are any pairs of BLACK voxels blocking a 6-closed loop
+	 * through the thick side of an extended middle plane
+	 * 
+	 * @param eMidPlane
+	 * @return true if the way is clear
+	 */
+	private boolean thickSideClear(byte[] eMidPlane) {
+		if ((eMidPlane[1] == BLACK && eMidPlane[11] == BLACK)
+				|| (eMidPlane[1] == BLACK && eMidPlane[10] == BLACK)
+				|| (eMidPlane[1] == BLACK && eMidPlane[9] == BLACK)
+				|| (eMidPlane[0] == BLACK && eMidPlane[10] == BLACK)
+				|| (eMidPlane[0] == BLACK && eMidPlane[9] == BLACK)
+				|| (eMidPlane[0] == BLACK && eMidPlane[8] == BLACK)
+				|| (eMidPlane[0] == BLACK && eMidPlane[12] == BLACK)
+				|| (eMidPlane[0] == BLACK && eMidPlane[13] == BLACK)
+				|| (eMidPlane[3] == BLACK && eMidPlane[12] == BLACK)
+				|| (eMidPlane[3] == BLACK && eMidPlane[13] == BLACK)
+				|| (eMidPlane[3] == BLACK && eMidPlane[14] == BLACK))
+			return false;
+		else
+			return true;
+	}
 
 	private boolean blackInSurface(byte[] neighbours, int n) {
 		for (int i = 0; i < 9; i++) {
