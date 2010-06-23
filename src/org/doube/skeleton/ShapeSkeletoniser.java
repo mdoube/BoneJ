@@ -391,6 +391,28 @@ public class ShapeSkeletoniser implements PlugIn {
 	}
 
 	/**
+	 * Check whether a point satisfies Definition 4 and is a shape point
+	 * 
+	 * @param neighbours
+	 * @param stack
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isShapePoint(byte[] neighbours, ImageStack stack, int x,
+			int y, int z, int w, int h, int d) {
+		if (condition1(neighbours, stack, x, y, z, w, h, d)
+				|| condition2(neighbours, stack, x, y, z, w, h, d))
+			return true;
+		else
+			return false;
+	}
+
+	/**
 	 * Check that the white elements in the 6 neighbourhood are 6-connected by
 	 * the white elements in the 18 neighbourhood (face-to-face around edges)
 	 * 
@@ -645,26 +667,21 @@ public class ShapeSkeletoniser implements PlugIn {
 
 	private boolean condition1(byte[] neighbours, ImageStack stack, int x,
 			int y, int z, int w, int h, int d) {
-		if (blackInSurface(neighbours, 4) && blackInSurface(neighbours, 22)) {
-			if (thinSideClear(neighbours, 4, 22)) {
-				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours, 4,
-						22, x, y, z, w, h, d);
-				if (thickSideClear(eMidPlane))
-					return true;
-			}
-		}
-		if (blackInSurface(neighbours, 10) && blackInSurface(neighbours, 16)) {
-			if (thinSideClear(neighbours, 10, 16)) {
-				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
-						10, 16, x, y, z, w, h, d);
-				if (thickSideClear(eMidPlane))
-					return true;
-			}
-		}
-		if (blackInSurface(neighbours, 12) && blackInSurface(neighbours, 14)) {
-			if (thinSideClear(neighbours, 12, 14)) {
-				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours,
-						12, 14, x, y, z, w, h, d);
+		if (con1Pair(4, 22, neighbours, stack, x, y, z, w, h, d))
+			return true;
+		if (con1Pair(10, 16, neighbours, stack, x, y, z, w, h, d))
+			return true;
+		if (con1Pair(12, 14, neighbours, stack, x, y, z, w, h, d))
+			return true;
+		return false;
+	}
+
+	private boolean con1Pair(int i, int j, byte[] neighbours, ImageStack stack,
+			int x, int y, int z, int w, int h, int d) {
+		if (blackInSurface(neighbours, i) && blackInSurface(neighbours, j)) {
+			if (thinSideClear(neighbours, i, j)) {
+				byte[] eMidPlane = getExtendedMiddlePlane(stack, neighbours, i,
+						j, x, y, z, w, h, d);
 				if (thickSideClear(eMidPlane))
 					return true;
 			}
@@ -733,6 +750,65 @@ public class ShapeSkeletoniser implements PlugIn {
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Check whether condition 2 is satisfied and the point is in a surface
+	 * 
+	 * @param neighbours
+	 * @param stack
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean condition2(byte[] neighbours, ImageStack stack, int x,
+			int y, int z, int w, int h, int d) {
+		byte[] f1Points = getF1SPoints(stack, x, y, z, w, h, d);
+		// might have orientation wrong way here, S, W, B ?
+		if (con2Pair(neighbours, 4, 22, f1Points))
+			return true;
+		if (con2Pair(neighbours, 10, 16, f1Points))
+			return true;
+		if (con2Pair(neighbours, 12, 14, f1Points))
+			return true;
+		return false;
+	}
+
+	private boolean con2Pair(byte[] neighbours, int a, int d, byte[] f1Points) {
+		if (neighbours[a] == WHITE
+				&& (neighbours[d] == WHITE || f1Points[d] == WHITE)) {
+			if (checkCond2LUT(neighbours, a))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Check the neighbourhood satisfies the second part of condition 2: that a
+	 * projection along one axis results in a complete 3 x 3 black square
+	 * 
+	 * @param neighbours
+	 * @param i
+	 * @return
+	 */
+	private boolean checkCond2LUT(byte[] neighbours, int i) {
+		int[][] cols = cond2LUT[i];
+		for (int c = 0; c < 8; c++) {
+			boolean blackInColumn = false;
+			for (int e = 0; e < 3; e++) {
+				if (neighbours[cols[c][e]] == BLACK) {
+					blackInColumn = true;
+					break;
+				}
+			}
+			if (!blackInColumn)
+				return false;
+		}
+		return true;
 	}
 
 	// -----------------------------------------------------------------//
@@ -876,6 +952,45 @@ public class ShapeSkeletoniser implements PlugIn {
 			null, // 20
 			null,// 21
 			{ 18, 19, 20, 21, 22, 23, 24, 25, 26 },// 22
+			null,// 23
+			null,// 24
+			null,// 25
+			null,// 26
+	};
+
+	/**
+	 * LUT to project 27-neighbourhood down the x, y and z axes
+	 */
+	private static final int[][][] cond2LUT = {
+			null,// 0
+			null,// 1
+			null,// 2
+			null,// 3
+			{// first s-point, 4
+			{ 0, 9, 18 }, { 1, 10, 19 }, { 2, 11, 20 }, { 3, 12, 21 },
+					{ 5, 14, 23 }, { 6, 15, 24 }, { 7, 16, 25 }, { 8, 17, 26 } },
+			null,// 5
+			null,// 6
+			null,// 7
+			null,// 8
+			null,// 9
+			{// second s-point, 10
+			{ 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 }, { 9, 12, 15 },
+					{ 11, 14, 17 }, { 18, 21, 24 }, { 19, 22, 25 },
+					{ 20, 23, 26 } }, null,// 11
+			{ // third s-point, 12
+			{ 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 }, { 9, 10, 11 },
+					{ 15, 16, 17 }, { 18, 19, 20 }, { 21, 22, 23 },
+					{ 24, 25, 26 } }, null,// 13
+			null,// 14
+			null,// 15
+			null,// 16
+			null,// 17
+			null,// 18
+			null,// 19
+			null,// 20
+			null,// 21
+			null,// 22
 			null,// 23
 			null,// 24
 			null,// 25
