@@ -811,6 +811,59 @@ public class ShapeSkeletoniser implements PlugIn {
 		return true;
 	}
 
+	private boolean condition3(byte[] neighbours) {
+		// TODO
+		// Each middle plane must have either all its e-points black OR black
+		// points forming single non-tunnel particle
+
+		// check each middle plane for black tunnels (all s points black)
+		// return false if tunnel
+		return false;
+	}
+
+	/**
+	 * Check if a midplane p has all its e-points BLACK
+	 * 
+	 * @param neighbours
+	 * @param p
+	 * @return true if all the e-points in the mid-plane are black
+	 */
+	private boolean midPlaneBlackEdges(byte[] neighbours, int p) {
+		int[] midPlane = middlePlanes[p];
+		if (neighbours[midPlane[0]] == BLACK
+				&& neighbours[midPlane[2]] == BLACK
+				&& neighbours[midPlane[5]] == BLACK
+				&& neighbours[midPlane[7]] == BLACK)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * Check if midplane p (where p >= 0; p < 3) contains a black tunnel
+	 * 
+	 * @param neighbours
+	 * @param p
+	 * @return true if the black points in a middle plane form a tunnel
+	 */
+	private boolean midPlaneHasTunnel(byte[] neighbours, int p) {
+		int[] midPlane = middlePlanes[p];
+		if (neighbours[midPlane[1]] == BLACK
+				&& neighbours[midPlane[3]] == BLACK
+				&& neighbours[midPlane[4]] == BLACK
+				&& neighbours[midPlane[6]] == BLACK)
+			return true;
+		else
+			return false;
+	}
+
+	private boolean single26Component(byte[] neighbours, int p) {
+		int[] midPlane = middlePlanes[p];
+		// TODO return true if there is a single 26-connected component in the
+		// midplane p
+		return false;
+	}
+
 	// -----------------------------------------------------------------//
 	// Look-up tables
 
