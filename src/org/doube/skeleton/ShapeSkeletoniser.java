@@ -857,11 +857,36 @@ public class ShapeSkeletoniser implements PlugIn {
 			return false;
 	}
 
+	/**
+	 * Determine whether the middle plane contains a single black 26-component
+	 * by boundary counting
+	 * 
+	 * @param neighbours
+	 * @param p midPlane index (0, 1 or 2)
+	 * @return
+	 */
 	private boolean single26Component(byte[] neighbours, int p) {
 		int[] midPlane = middlePlanes[p];
-		// TODO return true if there is a single 26-connected component in the
-		// midplane p
-		return false;
+		int boundaries = 0;
+		for (int i = 0; i < 8; i++) {
+			int[] n = midPlaneBoundaries[i];
+			final byte voxelState = neighbours[midPlane[i]];
+			if (n.length == 1) {
+				if (voxelState == BLACK && neighbours[midPlane[n[0]]] == WHITE)
+					boundaries++;
+			} else {
+				if (voxelState == BLACK && neighbours[midPlane[n[0]]] == WHITE
+						&& neighbours[midPlane[n[1]]] == WHITE)
+					boundaries++;
+				else if (voxelState == WHITE
+						&& neighbours[midPlane[n[0]]] != neighbours[midPlane[n[1]]])
+					boundaries++;
+			}
+		}
+		if (boundaries == 0 || boundaries == 2)
+			return true;
+		else
+			return false;
 	}
 
 	// -----------------------------------------------------------------//
@@ -977,6 +1002,12 @@ public class ShapeSkeletoniser implements PlugIn {
 	private static final int[][] middlePlanes = {
 			{ 9, 10, 11, 12, 14, 15, 16, 17 }, { 3, 4, 5, 12, 14, 21, 22, 23 },
 			{ 1, 4, 7, 10, 16, 19, 22, 25 } };
+
+	/**
+	 * List of forward neighbours for midplane boundary counting
+	 */
+	private static final int[][] midPlaneBoundaries = { { 1 }, { 4, 2 }, { 2 },
+			{ 1, 0 }, { 6, 7 }, { 3 }, { 3, 5 }, { 6 } };
 
 	/**
 	 * LUT of the 6 surfaces of the neighbourhood, each defined by the s-point
