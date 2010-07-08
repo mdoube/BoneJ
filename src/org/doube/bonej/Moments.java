@@ -413,11 +413,6 @@ public class Moments implements PlugIn, DialogListener {
 			double[] centroid, int startSlice, int endSlice, double min,
 			double max, boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
-		final Rectangle r = imp.getProcessor().getRoi();
-		final int rW = r.x + r.width;
-		final int rH = r.y + r.height;
-		final int rX = r.x;
-		final int rY = r.y;
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -499,15 +494,6 @@ public class Moments implements PlugIn, DialogListener {
 		Matrix eVecInv = rotation.inverse();
 		eVecInv.printToIJLog("Inverse Rotation Matrix (Target -> Source)");
 		final double[][] eigenVecInv = eVecInv.getArrayCopy();
-		final double eVI00 = eigenVecInv[0][0];
-		final double eVI10 = eigenVecInv[1][0];
-		final double eVI20 = eigenVecInv[2][0];
-		final double eVI01 = eigenVecInv[0][1];
-		final double eVI11 = eigenVecInv[1][1];
-		final double eVI21 = eigenVecInv[2][1];
-		final double eVI02 = eigenVecInv[0][2];
-		final double eVI12 = eigenVecInv[1][2];
-		final double eVI22 = eigenVecInv[2][2];
 
 		// create the target stack
 		Arrays.sort(sides);
@@ -515,59 +501,35 @@ public class Moments implements PlugIn, DialogListener {
 		final int hT = sides[1];
 		final int dT = sides[2];
 		ImageStack targetStack = new ImageStack(wT, hT, dT);
-		final double xC = centroid[0];
-		final double yC = centroid[1];
-		final double zC = centroid[2];
 		final double xTc = wT * vS / 2;
 		final double yTc = hT * vS / 2;
 		final double zTc = dT * vS / 2;
-		final double dXc = xC - xTc;
-		final double dYc = yC - yTc;
-		final double dZc = zC - zTc;
 
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
 
-		// TODO multithread target stack drawing
 		// Cache the sourceStack's processors
 		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
 			sliceProcessors[z] = sourceStack.getProcessor(z);
 		}
-		for (int z = 1; z <= dT; z++) {
-			IJ.showStatus("Aligning image stack...");
-			IJ.showProgress(z, dT);
-			targetStack.setPixels(getEmptyPixels(wT, hT, imp.getBitDepth()), z);
-			ImageProcessor targetIP = targetStack.getProcessor(z);
-			final double zD = z * vS - zTc;
-			final double zDeVI00 = zD * eVI20;
-			final double zDeVI01 = zD * eVI21;
-			final double zDeVI02 = zD * eVI22;
-			for (int y = 0; y < hT; y++) {
-				final double yD = y * vS - yTc;
-				final double yDeVI10 = yD * eVI10;
-				final double yDeVI11 = yD * eVI11;
-				final double yDeVI12 = yD * eVI12;
-				for (int x = 0; x < wT; x++) {
-					final double xD = x * vS - xTc;
-					final double xAlign = xD * eVI00 + yDeVI10 + zDeVI00 + xTc;
-					final double yAlign = xD * eVI01 + yDeVI11 + zDeVI01 + yTc;
-					final double zAlign = xD * eVI02 + yDeVI12 + zDeVI02 + zTc;
-					// possibility to do some voxel interpolation instead
-					// of just rounding in next 3 lines
-					final int xA = (int) Math.floor((xAlign + dXc) / vW);
-					final int yA = (int) Math.floor((yAlign + dYc) / vH);
-					final int zA = (int) Math.floor((zAlign + dZc) / vD);
-
-					if (xA < rX || xA >= rW || yA < rY || yA >= rH
-							|| zA < startSlice || zA > endSlice) {
-						continue;
-					} else {
-						targetIP.set(x, y, sliceProcessors[zA].get(xA, yA));
-					}
-				}
-			}
+		// Multithread start
+		int nThreads = Runtime.getRuntime().availableProcessors();
+		AlignThread[] alignThread = new AlignThread[nThreads];
+		for (int thread = 0; thread < nThreads; thread++) {
+			alignThread[thread] = new AlignThread(thread, nThreads, imp,
+					sliceProcessors, targetStack, eigenVecInv, centroid, wT,
+					hT, dT, startSlice, endSlice);
+			alignThread[thread].start();
 		}
+		try {
+			for (int thread = 0; thread < nThreads; thread++) {
+				alignThread[thread].join();
+			}
+		} catch (InterruptedException ie) {
+			IJ.error("A thread was interrupted.");
+		}
+		// end multithreading
 		if (doAxes) {
 			// draw axes on stack
 			final int xCent = (int) Math.floor(xTc / vS);
@@ -587,7 +549,6 @@ public class Moments implements PlugIn, DialogListener {
 			// y axis
 			axisIP.drawLine(xCent, 0, xCent, hT);
 		}
-
 		ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(),
 				targetStack);
 		impTarget.setCalibration(imp.getCalibration());
@@ -598,6 +559,111 @@ public class Moments implements PlugIn, DialogListener {
 		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
 		return impTarget;
+	}
+
+	/**
+	 * Multithreading class to look up aligned voxel values, processing each
+	 * slice in its own thread
+	 * 
+	 * @author Michael Doube
+	 * 
+	 */
+	class AlignThread extends Thread {
+		final int thread, nThreads, wT, hT, dT, startSlice, endSlice;
+		final ImagePlus impT;
+		final ImageStack stackT;
+		final ImageProcessor[] sliceProcessors;
+		final ImageStack targetStack;
+		final double[][] eigenVecInv;
+		final double[] centroid;
+
+		public AlignThread(int thread, int nThreads, ImagePlus imp,
+				ImageProcessor[] sliceProcessors, ImageStack targetStack,
+				double[][] eigenVecInv, double[] centroid, int wT, int hT,
+				int dT, int startSlice, int endSlice) {
+			this.impT = imp;
+			this.stackT = this.impT.getStack();
+			this.thread = thread;
+			this.nThreads = nThreads;
+			this.sliceProcessors = sliceProcessors;
+			this.targetStack = targetStack;
+			this.eigenVecInv = eigenVecInv;
+			this.centroid = centroid;
+			this.wT = wT;
+			this.hT = hT;
+			this.dT = dT;
+			this.startSlice = startSlice;
+			this.endSlice = endSlice;
+		}
+
+		public void run() {
+			final Rectangle r = this.impT.getProcessor().getRoi();
+			final int rW = r.x + r.width;
+			final int rH = r.y + r.height;
+			final int rX = r.x;
+			final int rY = r.y;
+			Calibration cal = this.impT.getCalibration();
+			final double vW = cal.pixelWidth;
+			final double vH = cal.pixelHeight;
+			final double vD = cal.pixelDepth;
+			final double vS = Math.min(vW, Math.min(vH, vD));
+			final double xC = centroid[0];
+			final double yC = centroid[1];
+			final double zC = centroid[2];
+			final double xTc = wT * vS / 2;
+			final double yTc = hT * vS / 2;
+			final double zTc = dT * vS / 2;
+			final double dXc = xC - xTc;
+			final double dYc = yC - yTc;
+			final double dZc = zC - zTc;
+			final double eVI00 = eigenVecInv[0][0];
+			final double eVI10 = eigenVecInv[1][0];
+			final double eVI20 = eigenVecInv[2][0];
+			final double eVI01 = eigenVecInv[0][1];
+			final double eVI11 = eigenVecInv[1][1];
+			final double eVI21 = eigenVecInv[2][1];
+			final double eVI02 = eigenVecInv[0][2];
+			final double eVI12 = eigenVecInv[1][2];
+			final double eVI22 = eigenVecInv[2][2];
+			for (int z = this.thread; z <= this.dT; z += this.nThreads) {
+				IJ.showStatus("Aligning image stack...");
+				IJ.showProgress(z, this.dT);
+				this.targetStack.setPixels(getEmptyPixels(this.wT, this.hT, this.impT
+						.getBitDepth()), z);
+				ImageProcessor targetIP = this.targetStack.getProcessor(z);
+				final double zD = z * vS - zTc;
+				final double zDeVI00 = zD * eVI20;
+				final double zDeVI01 = zD * eVI21;
+				final double zDeVI02 = zD * eVI22;
+				for (int y = 0; y < this.hT; y++) {
+					final double yD = y * vS - yTc;
+					final double yDeVI10 = yD * eVI10;
+					final double yDeVI11 = yD * eVI11;
+					final double yDeVI12 = yD * eVI12;
+					for (int x = 0; x < this.wT; x++) {
+						final double xD = x * vS - xTc;
+						final double xAlign = xD * eVI00 + yDeVI10 + zDeVI00
+								+ xTc;
+						final double yAlign = xD * eVI01 + yDeVI11 + zDeVI01
+								+ yTc;
+						final double zAlign = xD * eVI02 + yDeVI12 + zDeVI02
+								+ zTc;
+						// possibility to do some voxel interpolation instead
+						// of just rounding in next 3 lines
+						final int xA = (int) Math.floor((xAlign + dXc) / vW);
+						final int yA = (int) Math.floor((yAlign + dYc) / vH);
+						final int zA = (int) Math.floor((zAlign + dZc) / vD);
+
+						if (xA < rX || xA >= rW || yA < rY || yA >= rH
+								|| zA < this.startSlice || zA > this.endSlice) {
+							continue;
+						} else {
+							targetIP.set(x, y, this.sliceProcessors[zA].get(xA, yA));
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -798,7 +864,7 @@ public class Moments implements PlugIn, DialogListener {
 			return;
 		}
 
-		//show the axes
+		// show the axes
 		int[] sideLengths = getRotatedSize(E, roiImp, centroid, 1, endSlice
 				- startSlice + 1, min, max);
 		final double vS = Math.min(cal.pixelWidth, Math.min(cal.pixelHeight,
