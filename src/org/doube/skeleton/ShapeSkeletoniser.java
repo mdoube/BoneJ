@@ -882,11 +882,13 @@ public class ShapeSkeletoniser implements PlugIn {
 						&& neighbours[midPlane[n[0]]] != neighbours[midPlane[n[1]]])
 					boundaries++;
 			}
+			if (boundaries > 2)
+				return false;
 		}
 		if (boundaries == 0 || boundaries == 2)
 			return true;
 		else
-			return false;
+			throw new RuntimeException("Bad boundary count, boundaries = "+boundaries);
 	}
 
 	// -----------------------------------------------------------------//
