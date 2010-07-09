@@ -394,7 +394,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// list of axes
 		List<Point3f> axes = new ArrayList<Point3f>();
 		for (int s = 1; s <= roiImp.getImageStackSize(); s++) {
-			if (cslice[s] == 0)
+			if (((Double)this.cortArea[s]).equals(Double.NaN))
 				continue;
 
 			final double cX = sliceCentroids[0][s] - rX;
