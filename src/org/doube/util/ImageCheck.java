@@ -136,11 +136,11 @@ public class ImageCheck {
 
 		if (vD != sliceSpacing) {
 			IJ
-					.log("Voxel Depth Error: \n"
-							+ "Voxel depth does not agree with slice spacing.\n"
-							+ "Voxel depth: " + IJ.d2s(vD, 4) + " " + units
-							+ "\n" + "Slice spacing: "
-							+ IJ.d2s(sliceSpacing, 4) + " " + units);
+					.log(imp.getTitle()+":\n"+
+							"Current voxel depth does not agree with DICOM header slice spacing.\n"
+							+ "Current voxel depth: " + IJ.d2s(vD, 4) + " " + units
+							+ "\n" + "DICOM slice spacing: "
+							+ IJ.d2s(sliceSpacing, 4) + " " + units+"\n");
 		}
 		return sliceSpacing;
 	}
