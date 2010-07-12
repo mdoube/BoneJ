@@ -811,14 +811,23 @@ public class ShapeSkeletoniser implements PlugIn {
 		return true;
 	}
 
+	/**
+	 * Check if condition 3 is satisfied: Each middle plane must have either all
+	 * its e-points black OR black points forming single non-tunnel particle
+	 * 
+	 * @param neighbours
+	 * @return true if condition 3 is satisfied
+	 */
 	private boolean condition3(byte[] neighbours) {
-		// TODO
-		// Each middle plane must have either all its e-points black OR black
-		// points forming single non-tunnel particle
-
-		// check each middle plane for black tunnels (all s points black)
-		// return false if tunnel
-		return false;
+		for (int i = 0; i < 3; i++) {
+			if (!midPlaneBlackEdges(neighbours, i))
+				return false;
+			if (midPlaneHasTunnel(neighbours, i))
+				return false;
+			if (!single26Component(neighbours, i))
+				return false;
+		}
+		return true;
 	}
 
 	/**
@@ -862,7 +871,8 @@ public class ShapeSkeletoniser implements PlugIn {
 	 * by boundary counting
 	 * 
 	 * @param neighbours
-	 * @param p midPlane index (0, 1 or 2)
+	 * @param p
+	 *            midPlane index (0, 1 or 2)
 	 * @return
 	 */
 	private boolean single26Component(byte[] neighbours, int p) {
@@ -888,7 +898,8 @@ public class ShapeSkeletoniser implements PlugIn {
 		if (boundaries == 0 || boundaries == 2)
 			return true;
 		else
-			throw new RuntimeException("Bad boundary count, boundaries = "+boundaries);
+			throw new RuntimeException("Bad boundary count, boundaries = "
+					+ boundaries);
 	}
 
 	// -----------------------------------------------------------------//
