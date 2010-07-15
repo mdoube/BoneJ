@@ -479,19 +479,6 @@ public class FitCircle {
 		return centreRadius;
 	}
 
-	private static double getNorm(Matrix A) {
-		final int n = A.getColumnDimension();
-		final int m = A.getRowDimension();
-		double sumSquares = 0;
-		for (int i = 0; i < m; i++) {
-			for (int j = 0; j < n; j++) {
-				sumSquares += A.get(i, j);
-			}
-		}
-		double norm = Math.sqrt(sumSquares);
-		return norm;
-	}
-
 	/**
 	 * Levenberg-Marquardt fit in the "full" (a,b,R) space
 	 * 
@@ -547,7 +534,7 @@ public class FitCircle {
 				G.set(nPoints + 1, 0, 0);
 				G.set(nPoints + 2, 0, 0);
 				Matrix DelPar = (J.inverse()).times(G);
-				progress = getNorm(DelPar) / (getNorm(Par) + epsilon);
+				progress = DelPar.getNorm() / (Par.getNorm() + epsilon);
 				if (progress < epsilon) {
 					break;
 				}
@@ -664,7 +651,7 @@ public class FitCircle {
 				G.set(nPoints, 0, 0);
 				G.set(nPoints + 1, 0, 0);
 				Matrix DelPar = (J.inverse()).times(G);
-				progress = getNorm(DelPar) / (r + getNorm(Par) + epsilon);
+				progress = DelPar.getNorm() / (r + Par.getNorm() + epsilon);
 				if (progress < epsilon) {
 					break;
 				}

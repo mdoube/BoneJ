@@ -1464,6 +1464,34 @@ public class Matrix implements Cloneable, java.io.Serializable {
 			return false;
 	}
 
+	/**
+	 * Calculate the norm of a matrix. For a vector, this is the Euclidean
+	 * distance. For a matrix it is equal to the maximum singular value.
+	 * 
+	 * @return
+	 */
+	public double getNorm() {
+		if (m == 1 || n == 1) {
+			double sumSquares = 0;
+			for (int i = 0; i < m; i++) {
+				for (int j = 0; j < n; j++) {
+					final double p = get(i, j);
+					sumSquares += p * p;
+				}
+			}
+			return Math.sqrt(sumSquares);
+		} else {
+			SingularValueDecomposition svd = new SingularValueDecomposition(
+					this);
+			double[] values = svd.getSingularValues();
+			double norm = 0;
+			for (int i = 0; i < values.length; i++) {
+				norm = Math.max(norm, values[i]);
+			}
+			return norm;
+		}
+	}
+
 	/*
 	 * ------------------------ Private Methods ------------------------
 	 */
