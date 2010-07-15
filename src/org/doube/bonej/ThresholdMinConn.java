@@ -21,7 +21,6 @@ package org.doube.bonej;
 
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
-import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.Vector;
 
