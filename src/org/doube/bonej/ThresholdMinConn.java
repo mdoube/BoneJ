@@ -21,6 +21,7 @@ package org.doube.bonej;
 
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
+import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.Vector;
 
@@ -33,6 +34,7 @@ import ij.ImageStack;
 import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
+import ij.gui.Roi;
 import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
@@ -335,20 +337,21 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	 * @param imp2
 	 * @return
 	 */
-	public int[] getStackHistogram(ImagePlus imp2) {
-		final int d = imp2.getStackSize();
-		ImageStack stack = imp2.getStack();
-
+	public int[] getStackHistogram(ImagePlus imp) {
+		final int d = imp.getStackSize();
+		ImageStack stack = imp.getStack();
+		Roi roi = imp.getRoi();
 		if (stack.getSize() == 1) {
-			return stack.getProcessor(1).getHistogram();
+			return imp.getProcessor().getHistogram();
 		}
 
-		else if (imp2.getBitDepth() == 8) {
+		else if (imp.getBitDepth() == 8) {
 			int[] histogram = new int[256];
 			for (int z = 1; z <= d; z++) {
 				IJ.showStatus("Getting stack histogram...");
 				IJ.showProgress(z, d);
 				ImageProcessor sliceIP = stack.getProcessor(z);
+				sliceIP.setRoi(roi);
 				int[] sliceHistogram = sliceIP.getHistogram();
 				for (int i = 0; i < 256; i++) {
 					histogram[i] += sliceHistogram[i];
@@ -357,7 +360,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			return histogram;
 		}
 
-		else if (imp2.getBitDepth() == 16) {
+		else if (imp.getBitDepth() == 16) {
 			int[] histogram = new int[65536];
 			for (int z = 1; z <= d; z++) {
 				IJ.showStatus("Getting stack histogram...");
