@@ -366,6 +366,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				IJ.showStatus("Getting stack histogram...");
 				IJ.showProgress(z, d);
 				ImageProcessor sliceIP = stack.getProcessor(z);
+				sliceIP.setRoi(roi);
 				int[] sliceHistogram = sliceIP.getHistogram();
 				for (int i = 0; i < 65536; i++) {
 					histogram[i] += sliceHistogram[i];
