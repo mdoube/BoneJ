@@ -534,7 +534,7 @@ public class FitCircle {
 				G.set(nPoints + 1, 0, 0);
 				G.set(nPoints + 2, 0, 0);
 				Matrix DelPar = (J.inverse()).times(G);
-				progress = DelPar.norm2() / (Par.norm2() + epsilon);
+				progress = DelPar.normF() / (Par.normF() + epsilon);
 				if (progress < epsilon) {
 					break;
 				}
@@ -651,7 +651,7 @@ public class FitCircle {
 				G.set(nPoints, 0, 0);
 				G.set(nPoints + 1, 0, 0);
 				Matrix DelPar = (J.inverse()).times(G);
-				progress = DelPar.norm2() / (r + Par.norm2() + epsilon);
+				progress = DelPar.normF() / (r + Par.normF() + epsilon);
 				if (progress < epsilon) {
 					break;
 				}
