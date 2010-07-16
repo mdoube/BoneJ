@@ -85,7 +85,11 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		if (type.equals(types[0])) {
 			volumes = getVolumes(imp, minT, maxT);
 		} else if (type.equals(types[1])) {
-			volumes = getSurfaceVolume(imp, minT, maxT, resampling);
+			try {
+				volumes = getSurfaceVolume(imp, minT, maxT, resampling);
+			} catch (Exception e) {
+				IJ.log(e.getMessage());
+			}
 		}
 		double volBone = volumes[0];
 		double volTotal = volumes[1];
@@ -203,7 +207,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		boolean[] channels = { true, false, false };
 		MCTriangulator mct = new MCTriangulator();
-		List<Point3f> points = mct.getTriangles(impOut, 128, channels, resampling);
+		List<Point3f> points = mct.getTriangles(impOut, 128, channels,
+				resampling);
 		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
 				0.0f);
 		double boneVolume = surface.getVolume();
@@ -213,6 +218,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		surface = new CustomTriangleMesh(points, colour, 0.0f);
 		double totalVolume = surface.getVolume();
 		double[] volumes = { boneVolume, totalVolume };
+
 		return volumes;
 	}
 
