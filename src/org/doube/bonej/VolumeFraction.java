@@ -43,7 +43,10 @@ import ij.measure.Calibration;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
-import ij.gui.*;
+
+import ij.gui.DialogListener;
+import ij.gui.GenericDialog;
+import ij.gui.WaitForUserDialog;
 
 public class VolumeFraction implements PlugIn, DialogListener {
 
@@ -200,8 +203,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		boolean[] channels = { true, false, false };
 		MCTriangulator mct = new MCTriangulator();
-		List<Point3f> points = mct.getTriangles(impOut, 128, channels,
-				resampling);
+		List<Point3f> points = mct.getTriangles(impOut, 128, channels, resampling);
 		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
 				0.0f);
 		double boneVolume = surface.getVolume();
