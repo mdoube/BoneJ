@@ -58,7 +58,7 @@ public class PlateRod implements PlugIn {
 	private int nVectors = 1000;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (imp == null) {

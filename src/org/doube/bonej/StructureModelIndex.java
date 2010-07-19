@@ -57,7 +57,7 @@ import customnode.CustomTriangleMesh;
 public class StructureModelIndex implements PlugIn {
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion()) {
+		if (!ImageCheck.checkEnvironment()) {
 			return;
 		}
 		ImagePlus imp = IJ.getImage();

@@ -46,7 +46,7 @@ public class BranchLabeler implements PlugIn {
 	static int width, height, depth;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();

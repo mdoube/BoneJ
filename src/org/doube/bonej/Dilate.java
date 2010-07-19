@@ -34,7 +34,7 @@ public class Dilate implements PlugIn {
 	private byte[][] pixels_out;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {

@@ -62,7 +62,7 @@ import ij.plugin.PlugIn;
 public class Skeletonize3D implements PlugIn {
 
 	public void run(String run) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {

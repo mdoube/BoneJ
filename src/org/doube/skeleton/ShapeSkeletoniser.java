@@ -44,7 +44,7 @@ public class ShapeSkeletoniser implements PlugIn {
 	private static final byte WHITE = (byte) 0;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();

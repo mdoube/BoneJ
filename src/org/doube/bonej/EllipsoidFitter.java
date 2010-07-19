@@ -41,7 +41,7 @@ import org.doube.util.RoiMan;
 public class EllipsoidFitter implements PlugIn {
 
 		public void run(String arg) {
-			if (!ImageCheck.checkIJVersion())
+			if (!ImageCheck.checkEnvironment())
 				return;
 			final ImagePlus imp = IJ.getImage();
 			if (null == imp) {

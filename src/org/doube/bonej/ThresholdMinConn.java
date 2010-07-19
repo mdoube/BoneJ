@@ -65,7 +65,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	private int nDilates = 0;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageProcessor ip = imp.getProcessor();

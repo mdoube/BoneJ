@@ -64,7 +64,7 @@ import ij.gui.GenericDialog;
 public class Purify implements PlugIn, DialogListener {
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		ImageCheck ic = new ImageCheck();

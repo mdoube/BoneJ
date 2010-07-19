@@ -71,7 +71,7 @@ import org.doube.util.ResultInserter;
 public class Anisotropy implements PlugIn {
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion()) {
+		if (!ImageCheck.checkEnvironment()) {
 			return;
 		}
 		final ImagePlus imp = IJ.getImage();

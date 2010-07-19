@@ -159,7 +159,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean do3DAnnotation;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {

@@ -84,7 +84,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 	private boolean fieldUpdated = false;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (null == imp) {

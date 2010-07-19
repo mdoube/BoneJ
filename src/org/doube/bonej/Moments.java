@@ -64,7 +64,7 @@ public class Moments implements PlugIn, DialogListener {
 	private Calibration cal;
 
 	public void run(String arg) {
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
 		if (null == imp) {

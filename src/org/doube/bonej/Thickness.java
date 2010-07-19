@@ -70,7 +70,7 @@ public class Thickness implements PlugIn {
 
 	public void run(String arg) {
 		ImageCheck ic = new ImageCheck();
-		if (!ImageCheck.checkIJVersion())
+		if (!ImageCheck.checkEnvironment())
 			return;
 		ImagePlus imp = IJ.getImage();
 		if (!ic.isBinary(imp)) {
