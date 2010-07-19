@@ -1,7 +1,5 @@
 package org.doube.util;
 
-import javax.media.j3d.VirtualUniverse;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
