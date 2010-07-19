@@ -193,7 +193,6 @@ public class ImageCheck {
 	 * @return false if the IJ version is too old
 	 */
 	private static boolean checkIJVersion() {
-		checkEnvironment();
 		if (requiredIJVersion.compareTo(IJ.getVersion()) > 0) {
 			IJ.error("Update ImageJ",
 					"You are using an old version of ImageJ, v"
