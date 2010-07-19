@@ -2,10 +2,12 @@ package org.doube.bonej;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.gui.Plot;
 import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
 import ij.util.Tools;
 
 import java.util.ArrayList;
@@ -64,6 +66,7 @@ public class FractalBoxCounter implements PlugIn {
 		}
 		if (noGo)
 			return;
+		ImagePlus surfaceImp = findSurfaceVoxels(imp);
 		try {
 			// Fetch data
 			final int width = imp.getWidth();
@@ -168,7 +171,7 @@ public class FractalBoxCounter implements PlugIn {
 													// If pixel inside region,
 													// count it
 
-													if ((0xff & ((byte[]) imp
+													if ((0xff & ((byte[]) surfaceImp
 															.getStack()
 															.getPixels(zPos + 1))[xPos
 															+ yPart]) >= threshold) {
@@ -245,6 +248,66 @@ public class FractalBoxCounter implements PlugIn {
 			e.printStackTrace();
 		}
 	}
+
+	private ImagePlus findSurfaceVoxels(ImagePlus imp) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+		ImageStack stack = imp.getImageStack();
+		ImageStack surfaceStack = new ImageStack(w, h, d);
+
+		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Finding surface voxels");
+			byte[] pixels = (byte[]) stack.getPixels(z + 1);
+			surfaceStack.setPixels(pixels.clone(), z + 1);
+			ImageProcessor surfaceIP = surfaceStack.getProcessor(z + 1);
+			for (int y = 0; y < h; y++) {
+				checkNeighbours: for (int x = 0; x < w; x++) {
+					if (getPixel(stack, x, y, z, w, h, d) == (byte) 0)
+						continue;
+					for (int nz = -1; nz < 2; nz++) {
+						final int znz = z + nz;
+						for (int ny = -1; ny < 2; ny++) {
+							final int yny = y + ny;
+							for (int nx = -1; nx < 2; nx++) {
+								final int xnx = x + nx;
+								final byte pixel = getPixel(stack, xnx, yny,
+										znz, w, h, d);
+								if (pixel == (byte) 0)
+									continue checkNeighbours;
+							}
+						}
+					}
+					// we checked all the neighbours for a 0
+					// but didn't find one, so this is not a surface voxel
+					surfaceIP.set(x, y, (byte) 1);
+				}
+			}
+		}
+		// turn all the 1's into 0's
+		final int wh = w * h;
+		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Finding surface voxels");
+			ImageProcessor ip = surfaceStack.getProcessor(z + 1);
+			for (int i = 0; i < wh; i++) {
+				if (ip.get(i) == (byte) 1)
+					ip.set(i, (byte) 0);
+			}
+		}
+
+		ImagePlus surfaceImp = new ImagePlus("Surface");
+		surfaceImp.setStack(surfaceStack);
+		surfaceImp.setCalibration(imp.getCalibration());
+		return surfaceImp;
+	}
+
+	private byte getPixel(ImageStack image, int x, int y, int z, int w, int h,
+			int d) {
+		if (x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
+			return ((byte[]) image.getPixels(z + 1))[x + y * w];
+		else
+			return (byte) 255;
+	} /* end getPixel */
 
 	private void drawGraph(double[] params, double[] boxSizes,
 			double[] boxCountSums) {
