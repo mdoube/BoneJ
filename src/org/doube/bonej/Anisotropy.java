@@ -624,8 +624,6 @@ public class Anisotropy implements PlugIn {
 	 * @param coOrdinates
 	 * @return Object[] containing degree of anisotropy and the
 	 *         eigendecomposition
-	 * @throws RuntimeException
-	 *             if ellipsoid fitting fails
 	 */
 	private Object[] harriganMann(double[][] coOrdinates) {
 		Object[] ellipsoid = new Object[6];
