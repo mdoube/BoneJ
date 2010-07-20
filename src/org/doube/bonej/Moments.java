@@ -500,19 +500,21 @@ public class Moments implements PlugIn, DialogListener {
 		final int wT = sides[0];
 		final int hT = sides[1];
 		final int dT = sides[2];
-		ImageStack targetStack = new ImageStack(wT, hT, dT);
 		final double xTc = wT * vS / 2;
 		final double yTc = hT * vS / 2;
 		final double zTc = dT * vS / 2;
 
 		// for each voxel in the target stack,
 		// find the corresponding source voxel
-
+		
 		// Cache the sourceStack's processors
 		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
 			sliceProcessors[z] = sourceStack.getProcessor(z);
 		}
+		// Initialise an empty stack and tartgetStack's processor array
+		ImageStack targetStack = new ImageStack(wT, hT, dT);
+
 		// Multithread start
 		int nThreads = Runtime.getRuntime().availableProcessors();
 		AlignThread[] alignThread = new AlignThread[nThreads];
@@ -537,9 +539,14 @@ public class Moments implements PlugIn, DialogListener {
 			final int zCent = (int) Math.floor(zTc / vS);
 			final int axisColour = Integer.MAX_VALUE;
 			for (int z = 1; z <= dT; z++) {
-				ImageProcessor axisIP = targetStack.getProcessor(z);
 				// z axis
-				axisIP.set(xCent, yCent, axisColour);
+				try {
+					ImageProcessor axisIP = targetStack.getProcessor(z);
+					axisIP.set(xCent, yCent, axisColour);
+				} catch (NullPointerException npe) {
+					IJ.handleException(npe);
+					break;
+				}
 			}
 			ImageProcessor axisIP = targetStack.getProcessor(zCent);
 			axisIP.setColor(Integer.MAX_VALUE);
@@ -625,11 +632,11 @@ public class Moments implements PlugIn, DialogListener {
 			final double eVI02 = eigenVecInv[0][2];
 			final double eVI12 = eigenVecInv[1][2];
 			final double eVI22 = eigenVecInv[2][2];
-			for (int z = this.thread; z <= this.dT; z += this.nThreads) {
+			for (int z = this.thread + 1; z <= this.dT; z += this.nThreads) {
 				IJ.showStatus("Aligning image stack...");
 				IJ.showProgress(z, this.dT);
-				this.targetStack.setPixels(getEmptyPixels(this.wT, this.hT, this.impT
-						.getBitDepth()), z);
+				this.targetStack.setPixels(getEmptyPixels(this.wT, this.hT,
+						this.impT.getBitDepth()), z);
 				ImageProcessor targetIP = this.targetStack.getProcessor(z);
 				final double zD = z * vS - zTc;
 				final double zDeVI00 = zD * eVI20;
@@ -658,7 +665,8 @@ public class Moments implements PlugIn, DialogListener {
 								|| zA < this.startSlice || zA > this.endSlice) {
 							continue;
 						} else {
-							targetIP.set(x, y, this.sliceProcessors[zA].get(xA, yA));
+							targetIP.set(x, y, this.sliceProcessors[zA].get(xA,
+									yA));
 						}
 					}
 				}
