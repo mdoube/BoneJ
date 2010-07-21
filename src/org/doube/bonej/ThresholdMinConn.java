@@ -18,7 +18,6 @@ package org.doube.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.TextField;
@@ -339,41 +338,63 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	public int[] getStackHistogram(ImagePlus imp) {
 		final int d = imp.getStackSize();
 		ImageStack stack = imp.getStack();
+		int[][] sliceHistograms = new int[d + 1][1];
 		Roi roi = imp.getRoi();
 		if (stack.getSize() == 1) {
 			return imp.getProcessor().getHistogram();
 		}
 
-		else if (imp.getBitDepth() == 8) {
-			int[] histogram = new int[256];
-			for (int z = 1; z <= d; z++) {
-				IJ.showStatus("Getting stack histogram...");
-				IJ.showProgress(z, d);
-				ImageProcessor sliceIP = stack.getProcessor(z);
-				sliceIP.setRoi(roi);
-				int[] sliceHistogram = sliceIP.getHistogram();
-				for (int i = 0; i < 256; i++) {
-					histogram[i] += sliceHistogram[i];
-				}
+		int nThreads = Runtime.getRuntime().availableProcessors();
+		HistogramThread[] ht = new HistogramThread[nThreads];
+		for (int thread = 0; thread < nThreads; thread++) {
+			ht[thread] = new HistogramThread(thread, nThreads, stack,
+					sliceHistograms, roi);
+			ht[thread].start();
+		}
+		try {
+			for (int thread = 0; thread < nThreads; thread++) {
+				ht[thread].join();
 			}
-			return histogram;
+		} catch (InterruptedException ie) {
+			IJ.error("A thread was interrupted.");
 		}
 
-		else if (imp.getBitDepth() == 16) {
-			int[] histogram = new int[65536];
-			for (int z = 1; z <= d; z++) {
-				IJ.showStatus("Getting stack histogram...");
-				IJ.showProgress(z, d);
-				ImageProcessor sliceIP = stack.getProcessor(z);
-				sliceIP.setRoi(roi);
-				int[] sliceHistogram = sliceIP.getHistogram();
-				for (int i = 0; i < 65536; i++) {
-					histogram[i] += sliceHistogram[i];
-				}
+		final int l = sliceHistograms[1].length;
+		int[] histogram = new int[l];
+
+		for (int z = 1; z <= d; z++) {
+			int[] slice = sliceHistograms[z];
+			for (int i = 0; i < l; i++) {
+				histogram[i] += slice[i];
 			}
-			return histogram;
-		} else
-			return null;
+		}
+		return histogram;
+	}
+
+	class HistogramThread extends Thread {
+		int thread, nThreads;
+		ImageStack stack;
+		int[][] sliceHistograms;
+		Roi roi;
+
+		public HistogramThread(int thread, int nThreads, ImageStack stack,
+				int[][] sliceHistograms, Roi roi) {
+			this.thread = thread;
+			this.nThreads = nThreads;
+			this.stack = stack;
+			this.sliceHistograms = sliceHistograms;
+			this.roi = roi;
+		}
+
+		public void run() {
+			final int d = stack.getSize();
+			for (int z = thread + 1; z <= d; z += nThreads) {
+				IJ.showStatus("Getting stack histogram...");
+				ImageProcessor ip = stack.getProcessor(z);
+				ip.setRoi(roi);
+				sliceHistograms[z] = ip.getHistogram();
+			}
+		}
 	}
 
 	private boolean showDialog() {
@@ -398,7 +419,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			doPlot = gd.getNextBoolean();
 			testCount = (int) Math.floor(gd.getNextNumber());
 			if (testCount <= 1)
-					thresholdOnly = true;
+				thresholdOnly = true;
 			testRange = gd.getNextNumber();
 			if (testRange < 0)
 				testRange = 0;
@@ -428,7 +449,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				n.setEnabled(false);
 			}
 		}
-		if (!thresholdOnly){
+		if (!thresholdOnly) {
 			// un-grey out fields
 			Vector<?> numbers = gd.getNumericFields();
 			for (int i = 0; i < numbers.size(); i++) {
