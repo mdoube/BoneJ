@@ -117,38 +117,84 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	 * 
 	 */
 	public double[] getVolumes(ImagePlus imp, double minT, double maxT) {
-		ImageProcessor ip = imp.getProcessor();
 		final ImageStack stack = imp.getImageStack();
-		final ImageProcessor mask = ip.getMask();
-		final boolean hasMask = (mask != null);
-		Rectangle r = ip.getRoi();
-		final int rLeft = r.x;
-		final int rTop = r.y;
-		final int rRight = rLeft + r.width;
-		final int rBottom = rTop + r.height;
-		final int nSlices = imp.getStackSize();
+		final ImageProcessor mask = imp.getProcessor().getMask();
+		final Rectangle r = imp.getProcessor().getRoi();
+
+		int nThreads = Runtime.getRuntime().availableProcessors();
+		long[] volTotalT = new long[nThreads];
+		long[] volBoneT = new long[nThreads];
+		VolumesThread[] vt = new VolumesThread[nThreads];
+		for (int thread = 0; thread < nThreads; thread++) {
+			vt[thread] = new VolumesThread(thread, nThreads, stack, minT, maxT,
+					mask, r, volTotalT, volBoneT);
+			vt[thread].start();
+		}
+		try {
+			for (int thread = 0; thread < nThreads; thread++) {
+				vt[thread].join();
+			}
+		} catch (InterruptedException ie) {
+			IJ.error("A thread was interrupted.");
+		}
 
 		long volTotal = 0;
 		long volBone = 0;
-		for (int s = 1; s <= nSlices; s++) {
-			ImageProcessor ipSlice = stack.getProcessor(s);
-			for (int v = rTop; v < rBottom; v++) {
-				final int vrTop = v - rTop;
-				for (int u = rLeft; u < rRight; u++) {
-					if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-						volTotal++;
-						final double pixel = ipSlice.get(u, v);
-						if (pixel >= minT && pixel <= maxT) {
-							volBone++;
-						}
-					}
-				}
-			}
+		for (int i = 0; i < nThreads; i++){
+			volTotal += volTotalT[i];
+			volBone += volBoneT[i];
 		}
 		Calibration cal = imp.getCalibration();
 		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
 		double[] volumes = { volBone * voxelVol, volTotal * voxelVol };
 		return volumes;
+	}
+
+	class VolumesThread extends Thread {
+		int thread, nThreads;
+		ImageStack stack;
+		double minT, maxT;
+		long[] volTotalT, volBoneT;
+		ImageProcessor mask;
+		Rectangle r;
+
+		public VolumesThread(int thread, int nThreads, ImageStack stack,
+				double minT, double maxT, ImageProcessor mask, Rectangle r,
+				long[] volTotalT, long[] volBoneT) {
+			this.thread = thread;
+			this.nThreads = nThreads;
+			this.stack = stack;
+			this.minT = minT;
+			this.maxT = maxT;
+			this.volTotalT = volTotalT;
+			this.volBoneT = volBoneT;
+			this.mask = mask;
+			this.r = r;
+		}
+
+		public void run() {
+			final int nSlices = stack.getSize();
+			final int rLeft = r.x;
+			final int rTop = r.y;
+			final int rRight = rLeft + r.width;
+			final int rBottom = rTop + r.height;
+			final boolean hasMask = (mask != null);
+			for (int s = thread + 1; s <= nSlices; s += nThreads) {
+				ImageProcessor ipSlice = stack.getProcessor(s);
+				for (int v = rTop; v < rBottom; v++) {
+					final int vrTop = v - rTop;
+					for (int u = rLeft; u < rRight; u++) {
+						if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
+							volTotalT[thread]++;
+							final double pixel = ipSlice.get(u, v);
+							if (pixel >= minT && pixel <= maxT) {
+								volBoneT[thread]++;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/**
