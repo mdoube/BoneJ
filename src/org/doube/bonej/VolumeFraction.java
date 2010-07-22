@@ -201,6 +201,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final ByteProcessor[] outIps = new ByteProcessor[nSlices + 1];
 		final ByteProcessor[] maskIps = new ByteProcessor[nSlices + 1];
 		for (int i = 1; i <= nSlices; i++) {
+			IJ.showStatus("Initialising templates...");
+			IJ.showProgress(i, nSlices);
 			outStack.setPixels(Moments.getEmptyPixels(r.width, r.height, 8), i);
 			maskStack
 					.setPixels(Moments.getEmptyPixels(r.width, r.height, 8), i);
