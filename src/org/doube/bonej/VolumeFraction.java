@@ -229,9 +229,6 @@ public class VolumeFraction implements PlugIn, DialogListener {
 									if (pixel >= minT && pixel <= maxT) {
 										outIps[s].set(u - rLeft, v - rTop,
 												(byte) 255);
-									} else {
-										outIps[s].set(u - rLeft, v - rTop,
-												(byte) 0);
 									}
 								}
 							}
