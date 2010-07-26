@@ -364,6 +364,30 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		ann.setCalibration(imp.getCalibration());
 		return ann;
 	}
+	
+	/**
+	 * For external calculation of Feret Diameters for each slice.
+	 * Requirements are this.endSlice, this.al, this.vW and this.vH.
+	 */
+	public void setParameters(ImagePlus imp) {
+		this.startSlice = 1;
+		this.endSlice = imp.getImageStackSize();
+		this.al = imp.getStackSize() + 1;
+		this.vW = imp.getCalibration().pixelWidth;
+		this.vH = imp.getCalibration().pixelHeight;
+	}
+	public double[] getFeretMax() {
+		return this.feretMax;
+	}
+	public double[] getFeretMin() {
+		return this.feretMin;
+	}
+	public double[] getPerimeter() {
+		return this.perimeter;
+	}
+	public boolean[] getEmptySlices() {
+		return this.emptySlices;
+	}
 
 	/**
 	 * Display principal axes on a 3D rendered version of the image
@@ -480,7 +504,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 *            Input image
 	 * @return double containing sum of pixel count
 	 */
-	private double calculateCentroids(ImagePlus imp, double min, double max) {
+	public double calculateCentroids(ImagePlus imp, double min, double max) {
 		ImageStack stack = imp.getImageStack();
 		Rectangle r = stack.getRoi();
 		// 2D centroids
@@ -915,7 +939,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return binaryImp;
 	}
 
-	private void roiMeasurements(ImagePlus imp, double min, double max) {
+	public void roiMeasurements(ImagePlus imp, double min, double max) {
 		Roi initialRoi = imp.getRoi();
 		double[] feretValues = new double[3];
 		this.feretAngle = new double[this.al];
