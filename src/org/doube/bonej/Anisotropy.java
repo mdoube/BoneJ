@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.ArrayList;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import ij3d.Image3DUniverse;
 import ij3d.Content;
@@ -45,6 +46,7 @@ import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
 
 /**
@@ -416,8 +418,8 @@ public class Anisotropy implements PlugIn {
 	 * @return 1D array containing a count of intercepts for each vector
 	 */
 	private double[] countIntercepts(ImagePlus imp, double[] centroid,
-			double[][] vectorList, int nVectors, double radius,
-			double vectorSampling) {
+			final double[][] vectorList, final int nVectors, final double radius,
+			final double vectorSampling) {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -433,7 +435,7 @@ public class Anisotropy implements PlugIn {
 		final int w = (int) Math.round(radius / vW);
 		final int h = (int) Math.round(radius / vH);
 		final int d = (int) Math.round(radius / vD);
-		byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
+		final byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
 
 		final int startCol = (int) Math.round(cX / vW) - w;
 		final int endCol = (int) Math.round(cX / vW) + w;
@@ -467,109 +469,73 @@ public class Anisotropy implements PlugIn {
 		final int centroidIndex = wVz + wVy + wVx;
 
 		// store an intercept count for each vector
-		double[] interceptCounts = new double[nVectors];
+		final double[] interceptCounts = new double[nVectors];
 
 		// loop through all vectors
 		// start multithreading here - each thread samples a set of vectors
-		int nThreads = Runtime.getRuntime().availableProcessors();
-		InterceptThread[] it = new InterceptThread[nThreads];
-		for (int thread = 0; thread < nThreads; thread++) {
-			it[thread] = new InterceptThread(thread, nThreads, nVectors,
-					centroidIndex, a, b, radius, vW, vH, vD, vectorSampling,
-					interceptCounts, vectorList, workArray);
-			it[thread].start();
+		final double radVw = -radius * vW;
+		final double radVh = -radius * vH;
+		final double radVd = -radius * vD;
+		
+		//new multithread pattern
+		final AtomicInteger ai = new AtomicInteger(0);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int v = ai.getAndIncrement(); v < nVectors; v = ai.getAndIncrement()) {
+						double nIntercepts = 0;
+						final double vX = vectorList[v][0];
+						final double vY = vectorList[v][1];
+						final double vZ = vectorList[v][2];
+
+						// start at negative end of vector
+						final int xS = (int) Math.round(radVw * vX);
+						final int yS = (int) Math.round(radVh * vY);
+						final int zS = (int) Math.round(radVd * vZ);
+
+						final int startIndex = centroidIndex + b * zS + a * yS + xS;
+						boolean lastPos, thisPos;
+						if (workArray[startIndex] == 0) {
+							lastPos = true;
+						} else {
+							lastPos = false;
+						}
+
+						final double vXvW = vX / vW;
+						final double vYvH = vY / vH;
+						final double vZvD = vZ / vD;
+
+						for (double pos = -radius; pos <= radius; pos += vectorSampling) {
+							// find the index of the voxel that the sample falls within
+							// offset from centroid
+							final int x = (int) Math.round(pos * vXvW);
+							final int y = (int) Math.round(pos * vYvH);
+							final int z = (int) Math.round(pos * vZvD);
+							final int testIndex = centroidIndex + b * z + a * y + x;
+							// determine if the voxel is thresholded or not
+							if (workArray[testIndex] == 0) {
+								thisPos = true;
+							} else {
+								thisPos = false;
+							}
+							// if this pos is not equal to last pos then an interface is
+							// counted
+							if (thisPos != lastPos) {
+								nIntercepts++;
+							}
+							// then before incrementing the for loop, set lastPos to
+							// thisPos
+							lastPos = thisPos;
+						}
+						interceptCounts[v] = nIntercepts;
+					}
+				}
+			});
 		}
-		try {
-			for (int thread = 0; thread < nThreads; thread++) {
-				it[thread].join();
-			}
-		} catch (InterruptedException ie) {
-			IJ.error("A thread was interrupted.");
-		}
+		Multithreader.startAndJoin(threads);
 		return interceptCounts;
 	}/* end meanInterceptLengths */
-
-	class InterceptThread extends Thread {
-		int thread, nThreads, nVectors, centroidIndex, a, b;
-		double radius, vW, vH, vD, vectorSampling;
-		double[] interceptCounts;
-		double[][] vectorList;
-		byte[] workArray;
-
-		public InterceptThread(int thread, int nThreads, int nVectors,
-				int centroidIndex, int a, int b, double radius, double vW,
-				double vH, double vD, double vectorSampling,
-				double[] interceptCounts, double[][] vectorList,
-				byte[] workArray) {
-			this.thread = thread;
-			this.nThreads = nThreads;
-			this.nVectors = nVectors;
-			this.centroidIndex = centroidIndex;
-			this.a = a;
-			this.b = b;
-			this.radius = radius;
-			this.vW = vW;
-			this.vH = vH;
-			this.vD = vD;
-			this.vectorSampling = vectorSampling;
-			this.interceptCounts = interceptCounts;
-			this.vectorList = vectorList;
-			this.workArray = workArray;
-		}
-
-		public void run() {
-			final double radVw = -radius * vW;
-			final double radVh = -radius * vH;
-			final double radVd = -radius * vD;
-			for (int v = this.thread; v < this.nVectors; v += this.nThreads) {
-				double nIntercepts = 0;
-				final double vX = vectorList[v][0];
-				final double vY = vectorList[v][1];
-				final double vZ = vectorList[v][2];
-
-				// start at negative end of vector
-				final int xS = (int) Math.round(radVw * vX);
-				final int yS = (int) Math.round(radVh * vY);
-				final int zS = (int) Math.round(radVd * vZ);
-
-				final int startIndex = centroidIndex + b * zS + a * yS + xS;
-				boolean lastPos, thisPos;
-				if (workArray[startIndex] == 0) {
-					lastPos = true;
-				} else {
-					lastPos = false;
-				}
-
-				final double vXvW = vX / vW;
-				final double vYvH = vY / vH;
-				final double vZvD = vZ / vD;
-
-				for (double pos = -radius; pos <= radius; pos += vectorSampling) {
-					// find the index of the voxel that the sample falls within
-					// offset from centroid
-					final int x = (int) Math.round(pos * vXvW);
-					final int y = (int) Math.round(pos * vYvH);
-					final int z = (int) Math.round(pos * vZvD);
-					final int testIndex = centroidIndex + b * z + a * y + x;
-					// determine if the voxel is thresholded or not
-					if (workArray[testIndex] == 0) {
-						thisPos = true;
-					} else {
-						thisPos = false;
-					}
-					// if this pos is not equal to last pos then an interface is
-					// counted
-					if (thisPos != lastPos) {
-						nIntercepts++;
-					}
-					// then before incrementing the for loop, set lastPos to
-					// thisPos
-					lastPos = thisPos;
-				}
-				interceptCounts[v] = nIntercepts;
-			}
-		}
-	}
 
 	/*--------------------------------------------------------------------------*/
 	/**
