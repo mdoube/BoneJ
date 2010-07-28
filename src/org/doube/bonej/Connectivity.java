@@ -18,7 +18,10 @@ package org.doube.bonej;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
 
 import ij.IJ;
@@ -139,14 +142,12 @@ public class Connectivity implements PlugIn {
 	 * @return
 	 */
 	public double getConnDensity(ImagePlus imp, double connectivity) {
+		setDimensions(imp);
 		Calibration cal = imp.getCalibration();
-		double w = imp.getWidth();
-		double h = imp.getHeight();
-		double d = imp.getStackSize();
 		double vW = cal.pixelWidth;
 		double vH = cal.pixelHeight;
 		double vD = cal.pixelDepth;
-		double stackVolume = w * h * d * vW * vH * vD;
+		double stackVolume = width * height * depth * vW * vH * vD;
 		double connDensity = connectivity / stackVolume;
 		return connDensity;
 	}
@@ -174,9 +175,7 @@ public class Connectivity implements PlugIn {
 	 * @return delta Chi
 	 */
 	public double getDeltaChi(ImagePlus imp, double sumEuler) {
-		this.width = imp.getWidth();
-		this.height = imp.getHeight();
-		this.depth = imp.getStackSize();
+		setDimensions(imp);
 		double deltaChi = sumEuler - correctForEdges(imp.getStack());
 		return deltaChi;
 	}
@@ -189,30 +188,35 @@ public class Connectivity implements PlugIn {
 	 * @return Euler characteristic of the foreground particles
 	 */
 	public double getSumEuler(ImagePlus imp) {
-		this.width = imp.getWidth();
-		this.height = imp.getHeight();
-		this.depth = imp.getStackSize();
+		setDimensions(imp);
+		final ImageStack stack = imp.getImageStack();
 
-		int eulerLUT[] = new int[256];
+		final int eulerLUT[] = new int[256];
 		fillEulerLUT(eulerLUT);
 
-		int nThreads = Runtime.getRuntime().availableProcessors();
-		int[] sumEulerInt = new int[nThreads];
+		final int[] sumEulerInt = new int[depth+1];
 
-		SliceThread[] sliceThread = new SliceThread[nThreads];
-		for (int thread = 0; thread < nThreads; thread++) {
-			sliceThread[thread] = new SliceThread(thread, nThreads, imp,
-					eulerLUT, sumEulerInt);
-			sliceThread[thread].start();
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					long deltaEuler = 0;
+					for (int z = ai.getAndIncrement(); z <= depth; z = ai.getAndIncrement()) {
+						for (int y = 0; y <= height; y++) {
+							for (int x = 0; x <= width; x++) {
+								final byte[] octant = getOctant(stack, x, y, z);
+								if (octant[0] > 0) { // this octant is not empty
+									deltaEuler = getDeltaEuler(octant, eulerLUT);
+									sumEulerInt[z] += deltaEuler;
+								}
+							}
+						}
+					}
+				}
+			});
 		}
-		try {
-			for (int thread = 0; thread < nThreads; thread++) {
-				sliceThread[thread].join();
-			}
-		} catch (InterruptedException ie) {
-			IJ.error("A thread was interrupted.");
-		}
-
+		Multithreader.startAndJoin(threads);
 		double sumEuler = 0;
 		for (int i = 0; i < sumEulerInt.length; i++) {
 			sumEuler += sumEulerInt[i];
@@ -220,6 +224,13 @@ public class Connectivity implements PlugIn {
 
 		sumEuler /= 8;
 		return sumEuler;
+	}
+
+	private void setDimensions(ImagePlus imp) {
+		this.width = imp.getWidth();
+		this.height = imp.getHeight();
+		this.depth = imp.getStackSize();
+		return;
 	}
 
 	/* ----------------------------------------------------------------------- */
@@ -412,9 +423,6 @@ public class Connectivity implements PlugIn {
 	 * @return number of voxel edges intersecting with stack edges
 	 */
 	private long getStackEdges(final ImageStack stack) {
-		final int width = stack.getWidth();
-		final int height = stack.getHeight();
-		final int depth = stack.getSize();
 		long nStackEdges = 0;
 
 		// vertex voxels contribute 3 edges
@@ -463,9 +471,6 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getStackFaces(final ImageStack stack) {
 		long nStackFaces = 0;
-		final int width = stack.getWidth();
-		final int height = stack.getHeight();
-		final int depth = stack.getSize();
 
 		// vertex voxels contribute 3 faces
 		// this could be taken out into a variable to avoid recalculating it
@@ -516,9 +521,6 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getFaceVertices(final ImageStack stack) {
 		long nFaceVertices = 0;
-		final int width = stack.getWidth();
-		final int height = stack.getHeight();
-		final int depth = stack.getSize();
 
 		// top and bottom faces (all 4 edges)
 		for (int z = 0; z < depth; z += depth - 1) {
@@ -585,9 +587,6 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getFaceEdges(final ImageStack stack) {
 		long nFaceEdges = 0;
-		final int width = stack.getWidth();
-		final int height = stack.getHeight();
-		final int depth = stack.getSize();
 
 		// top and bottom faces (all 4 edges)
 		// check 2 edges per voxel
@@ -670,9 +669,6 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getEdgeVertices(final ImageStack stack) {
 		long nEdgeVertices = 0;
-		final int width = stack.getWidth();
-		final int height = stack.getHeight();
-		final int depth = stack.getSize();
 
 		// vertex voxels contribute 1 edge vertex each
 		// this could be taken out into a variable to avoid recalculating it
@@ -903,42 +899,4 @@ public class Connectivity implements PlugIn {
 		LUT[253] = 1;
 		LUT[255] = 0;
 	}/* end fillEulerLUT */
-
-	class SliceThread extends Thread {
-		final int thread, nThreads, width, height, depth;
-
-		final int[] eulerLUT, sumEulerInt;
-
-		final ImagePlus impT;
-
-		final ImageStack stackT;
-
-		public SliceThread(int thread, int nThreads, ImagePlus imp,
-				int[] eulerLUT, int[] sumEulerInt) {
-			this.impT = imp;
-			this.stackT = this.impT.getStack();
-			this.width = this.impT.getWidth();
-			this.height = this.impT.getHeight();
-			this.depth = this.impT.getStackSize();
-			this.thread = thread;
-			this.nThreads = nThreads;
-			this.eulerLUT = eulerLUT;
-			this.sumEulerInt = sumEulerInt;
-		}
-
-		public void run() {
-			long deltaEuler = 0;
-			for (int z = this.thread; z <= this.depth; z += this.nThreads) {
-				for (int y = 0; y <= this.height; y++) {
-					for (int x = 0; x <= this.width; x++) {
-						final byte[] octant = getOctant(this.stackT, x, y, z);
-						if (octant[0] > 0) { // this octant is not empty
-							deltaEuler = getDeltaEuler(octant, this.eulerLUT);
-							this.sumEulerInt[this.thread] += deltaEuler;
-						}
-					}
-				}
-			}
-		}
-	}
 }
