@@ -1,6 +1,7 @@
 package org.doube.bonej;
 
 import org.doube.bonej.SliceGeometry;
+import org.doube.geometry.Centroid;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
 
@@ -82,7 +83,7 @@ public class ShaftGuillotine implements PlugIn {
 		}
 		
 		if(!doManuallyThreshold) {
-			/** Copied from SliceGeometry */
+			// Copied from SliceGeometry
 			double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 			this.min = thresholds[0];
 			this.max = thresholds[1];
@@ -96,6 +97,7 @@ public class ShaftGuillotine implements PlugIn {
 //			
 //		}
 		
+		// Get values from SliceGeometry
 		SliceGeometry sg = new SliceGeometry();
 		sg.setParameters(imp);
 		sg.calculateCentroids(imp, min, max);
@@ -154,7 +156,7 @@ public class ShaftGuillotine implements PlugIn {
 		 * Measurement is Mean + 1/2 SD */
 		if(shaftVia == shaftOTwo) {
 			
-			this.shaftCutOff = mean(feretMax) + (0.5 * this.shaftSD);
+			this.shaftCutOff = Centroid.getCentroid(feretMax) + (0.5 * this.shaftSD);
 			this.shaftPosition = shaftGuesser(feretMax, shaftCutOff, gradSlices);
 		}
 		
@@ -286,20 +288,6 @@ public class ShaftGuillotine implements PlugIn {
 	}
 	
 	/**
-	 * Calculate mean of a double[]
-	 */
-	public static double mean(double[] a) {
-		
-		double sum = 0;
-		for(int i = 0; i < a.length; i++) {
-			sum += a[i];
-		}
-		double mean = sum / a.length;
-		
-		return mean;
-	}
-	
-	/**
 	 * Calculates variance of a double[]
 	 * 
 	 * @param a
@@ -307,7 +295,7 @@ public class ShaftGuillotine implements PlugIn {
 	 */
 	public static double variance(double[] a) {
 		
-		double mean = mean(a);
+		double mean = Centroid.getCentroid(a);
 		
 		double ssdm = 0;
 		for(int i = 0; i < a.length; i++) {
