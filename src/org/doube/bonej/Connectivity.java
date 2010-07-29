@@ -196,7 +196,7 @@ public class Connectivity implements PlugIn {
 
 		final int[] sumEulerInt = new int[depth+1];
 
-		final AtomicInteger ai = new AtomicInteger(1);
+		final AtomicInteger ai = new AtomicInteger(0);
 		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
