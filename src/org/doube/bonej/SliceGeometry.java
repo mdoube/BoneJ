@@ -385,6 +385,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	public double[] getPerimeter() {
 		return this.perimeter;
 	}
+	public double[] getMeanCorticalThickness2D() {
+		return this.meanCortThick2D;
+	}
 	public boolean[] getEmptySlices() {
 		return this.emptySlices;
 	}
@@ -571,7 +574,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param imp
 	 */
-	private void calculateMoments(ImagePlus imp, double min, double max) {
+	public void calculateMoments(ImagePlus imp, double min, double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = stack.getRoi();
 		// START OF Ix AND Iy CALCULATION
@@ -803,7 +806,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param imp
 	 */
-	private void calculateThickness2D(ImagePlus imp, double min, double max) {
+	public void calculateThickness2D(ImagePlus imp, double min, double max) {
 		this.maxCortThick2D = new double[this.al];
 		this.meanCortThick2D = new double[this.al];
 		this.stdevCortThick2D = new double[this.al];

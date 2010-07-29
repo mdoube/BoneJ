@@ -1,9 +1,13 @@
 package org.doube.bonej;
 
+import java.util.Arrays;
+
 import org.doube.bonej.SliceGeometry;
 import org.doube.geometry.Centroid;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
+
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -14,8 +18,8 @@ import ij.plugin.PlugIn;
 
 /** 
  * <p>
+ * Isolates the shaft numerically, using various methods:
  * Uses org.doube.bonej.SliceGeometry to calculate maximum Feret diameter (MFD)/slice.
- * Isolates the shaft numerically, using various calculations on MFD.
  * 
  * Intended for use on femurs.
  * 
@@ -29,19 +33,21 @@ import ij.plugin.PlugIn;
 
 public class ShaftGuillotine implements PlugIn {
 	
-	private boolean proximalLow, doGraph, doFeret, cropEnds, do3DMarkers, doManuallyThreshold;
+	private boolean proximalLow, doGraph, cropEnds, do3DMarkers, doManuallyThreshold;
 	private boolean[] emptySlices;
 	
-	private double shaftSD, boneSD, gradSD, meanMFD, shaftCutOff, min, max;
-	private double[] sliceCol, feretMax, feretMin, shaft, boneGradientNoNaNs, feretMaxOnMin, perimeter;
+	private double shaftSD, boneSD, gradSD, meanMFD, shaftCutOff, min, max, medianCort;
+	private double[] slices, feretMax, feretMin, shaft, boneGradientNoNaNs, feretMinOnMax, eccentricity, perimeter, meanCortThick2D, sortedMCT2D, smoothGradE;
 	private double[][] boneGradient, perimeterGradient;
 	
-	private int al, startSlice, iss, centralSlice, gradSlices;
+	private int al, startSlice, iss, centralSlice, gradSlices, smoothSlices;
 	private int[] shaftPosition;			// Contains first and last shaft slices
 	
-	private String shaftOOne = "0.25 x standard deviation of gradient";
-	private String shaftOTwo = "Mean(max FD) + 0.5 standard deviations of max FD";
-	private String[] shaftViaChoices = {shaftOOne, shaftOTwo};
+	private String opt_0 = "All";
+	private String opt_1 = "0.25 x standard deviation of gradient of MFD";
+	private String opt_2 = "Mean MFD + 0.5 standard deviations of MFD";
+	private String opt_3 = "Shaft has above median mean cortical thickness (2D)";
+	private String[] shaftViaChoices = {opt_0, opt_1, opt_2, opt_3};
 
 	public void run(String arg) {
 		
@@ -58,9 +64,9 @@ public class ShaftGuillotine implements PlugIn {
 		gd.addCheckbox("Proximal end of bone has lower slice number", true);
 		gd.addCheckbox("Graph output", true);
 //		gd.addCheckbox("Crop ends", true);
-//		gd.addCheckbox("Max Feret diameter", true);
-		gd.addChoice("Shaft selection via", shaftViaChoices, shaftOOne);
+		gd.addChoice("Shaft selection via", shaftViaChoices, opt_0);
 		gd.addNumericField("Calculate gradient over # slices: ", 1, 0);
+		gd.addNumericField("Smooth over # slices: ", 5, 0);
 //		gd.addCheckbox("Show 3D Markers at end of shaft", true);
 		gd.addCheckbox("Manually threshold", false);
 		gd.addNumericField("Manually threshold: min", 30, 0);
@@ -70,9 +76,9 @@ public class ShaftGuillotine implements PlugIn {
 		this.proximalLow = gd.getNextBoolean();
 		this.doGraph = gd.getNextBoolean();
 //		this.cropEnds = gd.getNextBoolean();
-//		this.doFeret = gd.getNextBoolean();
 		String shaftVia = gd.getNextChoice();
 		this.gradSlices = (int) gd.getNextNumber();
+		this.smoothSlices = (int) gd.getNextNumber();
 //		this.do3DMarkers = gd.getNextBoolean();
 		this.doManuallyThreshold = gd.getNextBoolean();
 		this.min = gd.getNextNumber();
@@ -93,34 +99,43 @@ public class ShaftGuillotine implements PlugIn {
 		this.startSlice = 1;
 		this.iss = imp.getImageStackSize();
 		
-//		if(doFeret) {
-//			
-//		}
+		this.slices = new double[this.al];
+		for (int s = this.startSlice; s <= this.iss; s++) {
+			slices[s] = (double) s;
+		}
 		
 		// Get values from SliceGeometry
 		SliceGeometry sg = new SliceGeometry();
 		sg.setParameters(imp);
 		sg.calculateCentroids(imp, min, max);
 		sg.roiMeasurements(imp, min, max);
+		sg.calculateMoments(imp, min, max);
+		sg.calculateThickness2D(imp, min, max);
 		this.feretMax = sg.getFeretMax();
 		this.feretMin = sg.getFeretMin();
 		this.perimeter = sg.getPerimeter();
 		this.emptySlices = sg.getEmptySlices();
+		this.meanCortThick2D = sg.getMeanCorticalThickness2D();
 		
-		this.sliceCol = new double[this.al];
-		for (int s = this.startSlice; s <= this.iss; s++) {
-			sliceCol[s] = (double) s;
-		}
+		// Median of means of cortical thickness
+//		this.medianCort = median(meanCortThick2D);
 		
-		// Ellipsoidness
-		this.feretMaxOnMin = new double[feretMax.length];
+		// Feret Min / Feret Max
+		this.feretMinOnMax = new double[feretMax.length];
 		for(int i = 0; i < feretMax.length; i++) {
-			feretMaxOnMin[i] = feretMax[i] / feretMin[i];
+			feretMinOnMax[i] = feretMin[i] / feretMax[i] ;
 		}
 		
-		// Gradient
-		this.boneGradient = gradient(sliceCol, feretMax, gradSlices);
-		this.perimeterGradient = gradient(sliceCol, perimeter, gradSlices);
+		// Rough eccentricity, based on Feret's min and max
+		this.eccentricity = new double[feretMax.length];
+		for(int i = 0; i < feretMax.length; i++) {
+			eccentricity[i] = eccentricity(feretMin[i], feretMax[i]);
+		}
+		
+		// Gradients
+		this.boneGradient = gradient(slices, feretMax, gradSlices);
+		this.perimeterGradient = gradient(slices, perimeter, gradSlices);
+		this.smoothGradE = smooth(eccentricity, smoothSlices);
 		
 		this.shaftPosition = new int[2];
 		
@@ -145,7 +160,7 @@ public class ShaftGuillotine implements PlugIn {
 		this.gradSD = Math.sqrt(variance(boneGradientNoNaNs));
 		
 		// Gradient-based: identifies changes in gradient, rather than in raw feretMax
-		if(shaftVia == shaftOOne) {
+		if(shaftVia == opt_1) {
 			
 			this.shaftCutOff = 0.25 * this.gradSD;
 			this.shaftPosition = shaftGuesser(boneGradientNoNaNs, shaftCutOff, gradSlices);
@@ -154,10 +169,16 @@ public class ShaftGuillotine implements PlugIn {
 		/* Uses Mean(max Feret diameter) and Standard Deviation(max FD).
 		 * Also relies on arbitrary 'mid third', using shaftSD.
 		 * Measurement is Mean + 1/2 SD */
-		if(shaftVia == shaftOTwo) {
+		if(shaftVia == opt_2) {
 			
 			this.shaftCutOff = Centroid.getCentroid(feretMax) + (0.5 * this.shaftSD);
 			this.shaftPosition = shaftGuesser(feretMax, shaftCutOff, gradSlices);
+		}
+		
+		if(shaftVia == opt_3) {
+			
+			this.shaftCutOff = medianCort;
+			this.shaftPosition = shaftGuesser(meanCortThick2D, shaftCutOff, 1);
 		}
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
@@ -171,27 +192,48 @@ public class ShaftGuillotine implements PlugIn {
 		rt.addValue("Mean MFD", this.meanMFD);
 		rt.addValue("Threshold min", min);
 		rt.addValue("Threshold max", max);
+		rt.addValue("Median Mean Cortical Thickness 2D", medianCort);
+		rt.addValue("SmGrad", smoothGradE[60]);
 		rt.show("Results");
 		
 		if(doGraph) {
 			/** Plot maximum Feret diameter versus slice number */
-			Plot feretPlot = new Plot("Feret Plot", "Slice", "Max Feret Diameter", this.sliceCol, this.feretMax);
+			Plot feretPlot = new Plot("Feret Plot", "Slice", "Max Feret Diameter", this.slices, this.feretMax);
 			feretPlot.show();
 			
 			Plot gradMFDPlot = new Plot("Gradient (MFD)", "Slice", "Gradient (over " + gradSlices + " slices)", this.boneGradient[0], this.boneGradient[1]);
 			gradMFDPlot.show();
 			
-			Plot ellipsePlot = new Plot("Feret Max / Feret Min", "Slice", "Proportion", this.sliceCol, this.feretMaxOnMin);
+			Plot ellipsePlot = new Plot("Feret Min / Feret Max", "Slice", "Proportion", this.slices, this.feretMinOnMax);
 			ellipsePlot.show();
 			
-			Plot perimeterPlot = new Plot("Perimeter", "Slice", "Perimeter", this.sliceCol, this.perimeter);
+			Plot meanCortThick2DPlot = new Plot("Mean Cortical Thickness (2D)", "Slice", "Thickness", this.slices, this.meanCortThick2D);
+			meanCortThick2DPlot.show();
+			
+			Plot perimeterPlot = new Plot("Perimeter", "Slice", "Perimeter", this.slices, this.perimeter);
 			perimeterPlot.show();
 			
 			Plot gradPerimPlot = new Plot("Gradient (Perimeter)", "Slice", "Gradient (over " + gradSlices + " slices)", this.perimeterGradient[0], this.perimeterGradient[1]);
 			gradPerimPlot.show();
+			
+			Plot ePlot = new Plot("Eccentricity", "Slice", "e", this.slices, this.eccentricity);
+			ePlot.show();
+			
+			Plot smoothGradEPlot = new Plot("Smoothed eccentricity", "Slice", "e (over " + smoothSlices + " slices)", this.slices, this.smoothGradE);
+			smoothGradEPlot.show();
 		}
 		
 		return;
+	}
+	
+	/**
+	 * Rough eccentricity, 0 < e < 1 (0 is a circle), based on Feret's min and max.
+	 * See <a href="http://mathworld.wolfram.com/Eccentricity.html">http://mathworld.wolfram.com/Eccentricity.html</a>
+	 */
+	private double eccentricity(double feretMin, double feretMax) {
+		
+		double e = Math.sqrt(1 - ((feretMin * feretMin) / (feretMax * feretMax)));
+		return e;
 	}
 	
 	/**
@@ -200,9 +242,9 @@ public class ShaftGuillotine implements PlugIn {
 	 * 
 	 * @param boneStack
 	 * @param shaftLimit value boneStack[i] should reach before end of shaft is recorded.
-	 * @param slices set to 1 by default: change if boneStack is a fraction of the full bone, eg. 3 if it's 1/3.
+	 * @param numSlices set to 1 by default: change if boneStack is a fraction of the full bone, eg. 3 if it's 1/3.
 	 */
-	private int[] shaftGuesser(double boneStack[], double shaftLimit, int slices) {
+	private int[] shaftGuesser(double boneStack[], double shaftLimit, int numSlices) {
 		
 		this.shaftPosition = new int[2];
 		
@@ -212,13 +254,13 @@ public class ShaftGuillotine implements PlugIn {
 		// Cycle through slices from central slice, first down; then up.
 		for(int k = centralSlice; k >= this.startSlice; k--) {
 			if(Math.abs(boneStack[k]) >= shaftLimit) {
-				this.shaftPosition[0] = k * slices;
+				this.shaftPosition[0] = k * numSlices;
 				break;
 			}
 		}
 		for(int k = centralSlice; k < this.iss; k++) {
 			if(Math.abs(boneStack[k]) >= shaftLimit) {
-				this.shaftPosition[1] = k * slices;
+				this.shaftPosition[1] = k * numSlices;
 				break;
 			}
 		}
@@ -272,6 +314,50 @@ public class ShaftGuillotine implements PlugIn {
 	}
 	
 	/**
+	 * Find the gradient of a double[] by averaging over the surrounding slices.
+	 * 
+	 * @param x
+	 * @param a number of slices +/- over which to average
+	 * @return gradient[]
+	 */
+	private double[] smooth(double[] x, int a) {
+		
+		double[] average = new double[x.length];
+		
+		for(int s = 0; s < x.length; s++) {
+			
+			double sum = 0;
+			
+			// Don't sum slices < 0
+			if(s - a < 0) {
+				for(int i = 0; i <= a; i++) {
+					sum += x[s+i];
+				}
+				average[s] = sum / (a/2);
+			}
+			
+			// Don't sum slices > x.length - 1
+			else if(s + a > x.length - 1) {
+				for(int i = 0; i <= a; i++) {
+					sum += x[s-i];
+				}
+				average[s] = sum / (a/2);
+			}
+			else {
+				for(int i = 0; i <= a; i++) {
+					sum += x[s-i];
+				}
+				for(int i = 0; i <= a; i++) {
+					sum += x[s+i];
+				}
+				average[s] = sum / a;
+			}
+		}
+		
+		return average;
+	}
+	
+	/**
 	 * Remove the NaNs in a double[] and replace with zeros
 	 * 
 	 * @param a
@@ -316,6 +402,22 @@ public class ShaftGuillotine implements PlugIn {
 		}
 		else {
 			return false;
+		}
+	}
+	
+	/**
+	 * Find the median of a double[]
+	 */
+	public static double median(double[] a) {
+		
+		int mid = a.length / 2;
+		Arrays.sort(a);
+		
+		if(a.length%2 == 1) {
+			return a[mid];
+		}
+		else {
+			return (a[mid - 1] + a[mid]) / 2;
 		}
 	}
 }
