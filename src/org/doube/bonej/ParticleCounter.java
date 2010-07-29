@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
@@ -36,6 +37,7 @@ import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 
 import customnode.CustomPointMesh;
 import customnode.CustomTriangleMesh;
@@ -139,7 +141,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
-		String[] headers = {"Measurement Options", " "};
+		String[] headers = { "Measurement Options", " " };
 		String[] labels = new String[8];
 		boolean[] defaultValues = new boolean[8];
 		labels[0] = "Exclude on sides";
@@ -163,7 +165,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
 		gd.addNumericField("Surface_resampling", 2, 0);
-		String[] headers2 = {"Graphical Results", " "};
+		String[] headers2 = { "Graphical Results", " " };
 		String[] labels2 = new String[8];
 		boolean[] defaultValues2 = new boolean[8];
 		labels2[0] = "Show_particle stack";
@@ -2160,6 +2162,45 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					particleLabels[z][i] = n;
 				}
 		}
+	}
+
+	/**
+	 * Check whole array replacing m with n
+	 * 
+	 * @param m
+	 *            value to be replaced
+	 * @param n
+	 *            new value
+	 * @param startZ
+	 *            first z coordinate to check
+	 * @param endZ
+	 *            last+1 z coordinate to check
+	 * @param multithreaded
+	 *            true if label replacement should happen in multiple threads
+	 */
+	public void replaceLabel(final int[][] particleLabels, final int m,
+			final int n, int startZ, final int endZ, final boolean multithreaded) {
+		if (!multithreaded) {
+			replaceLabel(particleLabels, m, n, startZ, endZ);
+			return;
+		}
+		final int s = particleLabels[0].length;
+		final AtomicInteger ai = new AtomicInteger(startZ);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z < endZ; z = ai
+							.getAndIncrement()) {
+						for (int i = 0; i < s; i++)
+							if (particleLabels[z][i] == m) {
+								particleLabels[z][i] = n;
+							}
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
 	}
 
 	/**
