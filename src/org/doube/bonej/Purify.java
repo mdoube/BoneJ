@@ -23,9 +23,11 @@ import java.awt.AWTEvent;
 import java.awt.Choice;
 import java.awt.TextField;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 
 import ij.*;
 import ij.plugin.PlugIn;
@@ -209,7 +211,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -225,7 +227,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -240,7 +242,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -255,7 +257,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -271,7 +273,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -286,7 +288,7 @@ public class Purify implements PlugIn, DialogListener {
 				if (workArray[z][offset] == phase
 						&& particleLabels[z][offset] != biggestParticle) {
 					pc.replaceLabel(particleLabels, particleLabels[z][offset],
-							biggestParticle, 0, d);
+							biggestParticle, 0, d, true);
 				}
 			}
 		}
@@ -302,7 +304,7 @@ public class Purify implements PlugIn, DialogListener {
 	 * @param phase
 	 * @return workArray
 	 */
-	private void removeSmallParticles(byte[][] workArray,
+	private void removeSmallParticles(final byte[][] workArray,
 			final int[][] particleLabels, final long[] particleSizes,
 			final int phase) {
 		final int d = workArray.length;
@@ -317,35 +319,46 @@ public class Purify implements PlugIn, DialogListener {
 			}
 		}
 		final long maxVoxCount = maxVC;
-		if (phase == fg) {
-			// go through work array and turn all
-			// smaller foreground particles into background (0)
-			for (int z = 0; z < d; z++) {
-				for (int i = 0; i < wh; i++) {
-					if (workArray[z][i] == fg) {
-						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
-							workArray[z][i] = bg;
+		final AtomicInteger ai = new AtomicInteger(0);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					if (phase == fg) {
+						// go through work array and turn all
+						// smaller foreground particles into background (0)
+						for (int z = ai.getAndIncrement(); z < d; z = ai
+								.getAndIncrement()) {
+							for (int i = 0; i < wh; i++) {
+								if (workArray[z][i] == fg) {
+									if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
+										workArray[z][i] = bg;
+									}
+								}
+							}
+							IJ.showStatus("Removing foreground particles");
+							IJ.showProgress(z, d);
+						}
+					} else if (phase == bg) {
+						// go through work array and turn all
+						// smaller background particles into foreground
+						for (int z = ai.getAndIncrement(); z < d; z = ai
+								.getAndIncrement()) {
+							for (int i = 0; i < wh; i++) {
+								if (workArray[z][i] == bg) {
+									if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
+										workArray[z][i] = fg;
+									}
+								}
+							}
+							IJ.showStatus("Removing background particles");
+							IJ.showProgress(z, d);
 						}
 					}
 				}
-				IJ.showStatus("Removing foreground particles");
-				IJ.showProgress(z, d);
-			}
-		} else if (phase == bg) {
-			// go through work array and turn all
-			// smaller background particles into foreground
-			for (int z = 0; z < d; z++) {
-				for (int i = 0; i < wh; i++) {
-					if (workArray[z][i] == bg) {
-						if (particleSizes[particleLabels[z][i]] < maxVoxCount) {
-							workArray[z][i] = fg;
-						}
-					}
-				}
-				IJ.showStatus("Removing background particles");
-				IJ.showProgress(z, d);
-			}
+			});
 		}
+		Multithreader.startAndJoin(threads);
 		return;
 	}
 
@@ -355,7 +368,8 @@ public class Purify implements PlugIn, DialogListener {
 	 * @param chunkRanges
 	 * @param duration
 	 */
-	private void showResults(double duration, ImagePlus imp, int slicesPerChunk, int labelMethod) {
+	private void showResults(double duration, ImagePlus imp,
+			int slicesPerChunk, int labelMethod) {
 		if (labelMethod == ParticleCounter.LINEAR)
 			slicesPerChunk = imp.getImageStackSize();
 		ParticleCounter pc = new ParticleCounter();
