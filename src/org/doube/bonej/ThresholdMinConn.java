@@ -22,9 +22,11 @@ import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.TextField;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -96,28 +98,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		IJ.log(imp.getTitle() + " threshold  = " + IJ.d2s(threshold, 1));
 
 		if (applyThreshold) {
-			final int w = imp.getWidth();
-			final int h = imp.getHeight();
-			final int d = imp.getStackSize();
-			// final int nPixels = w * h;
-			ImageStack stack = imp.getImageStack();
-			ImageStack stack2 = new ImageStack(w, h);
-			for (int z = 1; z <= d; z++) {
-				// byte[] slice = new byte[nPixels];
-				ip = stack.getProcessor(z);
-				ByteProcessor bp = new ByteProcessor(w, h);
-				for (int y = 0; y < h; y++) {
-					for (int x = 0; x < w; x++) {
-						final double pixel = (double) ip.get(x, y);
-						if (pixel > threshold) {
-							bp.set(x, y, 255);
-						} else {
-							bp.set(x, y, 0);
-						}
-					}
-				}
-				stack2.addSlice(stack.getSliceLabel(z), bp);
-			}
+			ImageStack stack2 = thresholdStack(imp, threshold);
 			imp.setStack(imp.getTitle(), stack2);
 			IJ.selectWindow(imp.getTitle());
 			if (!imp.isInvertedLut())
@@ -125,6 +106,42 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		}
 		IJ.showStatus("");
 		return;
+	}
+
+	private ImageStack thresholdStack(ImagePlus imp, final double threshold) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		// final int nPixels = w * h;
+		final ImageStack stack = imp.getImageStack();
+		final ImageStack stack2 = new ImageStack(w, h, d);
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						// byte[] slice = new byte[nPixels];
+						ImageProcessor ip = stack.getProcessor(z);
+						ByteProcessor bp = new ByteProcessor(w, h);
+						for (int y = 0; y < h; y++) {
+							for (int x = 0; x < w; x++) {
+								final double pixel = (double) ip.get(x, y);
+								if (pixel > threshold) {
+									bp.set(x, y, 255);
+								} else {
+									bp.set(x, y, 0);
+								}
+							}
+						}
+						stack2.setPixels(bp.getPixels(), z);
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+		return stack2;
 	}
 
 	/**
