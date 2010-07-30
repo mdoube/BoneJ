@@ -19,7 +19,14 @@ import ij.plugin.PlugIn;
 /** 
  * <p>
  * Isolates the shaft numerically, using various methods:
- * Uses org.doube.bonej.SliceGeometry to calculate maximum Feret diameter (MFD)/slice.
+ * Uses org.doube.bonej.SliceGeometry to calculate numerical properties of each slice.
+ * 
+ * Smoothes over several slices +/- to account for variations in image quality.
+ * Gradient calculated by tangent from slices +/- from the target slice.
+ * Calculations combined to accentuate features:
+ * 		- Feret's diameter Min / Max (FMOM)
+ * 		- FMOM (smoothed) / Perimeter (smoothed)
+ * 		- Gradient (FMOM) * Gradient (Perimeter)
  * 
  * Intended for use on femurs.
  * 
@@ -36,9 +43,9 @@ public class ShaftGuillotine implements PlugIn {
 	private boolean proximalLow, doGraph, cropEnds, do3DMarkers, doManuallyThreshold;
 	private boolean[] emptySlices;
 	
-	private double shaftSD, boneSD, gradSD, meanMFD, shaftCutOff, min, max, medianCort;
-	private double[] slices, feretMax, feretMin, shaft, boneGradientNoNaNs, feretMinOnMax, eccentricity, perimeter, meanCortThick2D, sortedMCT2D, smoothGradE;
-	private double[][] boneGradient, perimeterGradient;
+	private double shaftSD, boneSD, gradSD, meanMFD, shaftCutOff, min, max, medianMeanCort;
+	private double[] slices, feretMax, feretMin, shaft, boneGradientNoNaNs, feretMinOnMax, eccentricity, perimeter, smoothPerim, meanCortThick2D, sortedMCT2D, smoothE, smoothFMOM, smoothFMax, normFMOMPerim;
+	private double[] boneGradient, perimeterGradient, FMOMGradient, normFMOMPerimGradient;
 	
 	private int al, startSlice, iss, centralSlice, gradSlices, smoothSlices;
 	private int[] shaftPosition;			// Contains first and last shaft slices
@@ -60,13 +67,22 @@ public class ShaftGuillotine implements PlugIn {
 			return;
 		}
 		
+		this.al = imp.getStackSize() + 1;
+		this.startSlice = 1;
+		this.iss = imp.getImageStackSize();
+		
+		this.slices = new double[this.al];
+		for (int s = this.startSlice; s <= this.iss; s++) {
+			slices[s] = (double) s;
+		}
+		
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addCheckbox("Proximal end of bone has lower slice number", true);
 		gd.addCheckbox("Graph output", true);
 //		gd.addCheckbox("Crop ends", true);
 		gd.addChoice("Shaft selection via", shaftViaChoices, opt_0);
-		gd.addNumericField("Calculate gradient over # slices: ", 1, 0);
-		gd.addNumericField("Smooth over # slices: ", 5, 0);
+		gd.addNumericField("Smooth over # slices (+/-): ", Math.round(this.al / 75), 0);
+		gd.addNumericField("Calculate gradient over # slices: ", Math.round(this.al / 75), 0);
 //		gd.addCheckbox("Show 3D Markers at end of shaft", true);
 		gd.addCheckbox("Manually threshold", false);
 		gd.addNumericField("Manually threshold: min", 30, 0);
@@ -77,8 +93,8 @@ public class ShaftGuillotine implements PlugIn {
 		this.doGraph = gd.getNextBoolean();
 //		this.cropEnds = gd.getNextBoolean();
 		String shaftVia = gd.getNextChoice();
-		this.gradSlices = (int) gd.getNextNumber();
 		this.smoothSlices = (int) gd.getNextNumber();
+		this.gradSlices = (int) gd.getNextNumber();
 //		this.do3DMarkers = gd.getNextBoolean();
 		this.doManuallyThreshold = gd.getNextBoolean();
 		this.min = gd.getNextNumber();
@@ -95,15 +111,6 @@ public class ShaftGuillotine implements PlugIn {
 			this.max = thresholds[1];
 		}
 		
-		this.al = imp.getStackSize() + 1;
-		this.startSlice = 1;
-		this.iss = imp.getImageStackSize();
-		
-		this.slices = new double[this.al];
-		for (int s = this.startSlice; s <= this.iss; s++) {
-			slices[s] = (double) s;
-		}
-		
 		// Get values from SliceGeometry
 		SliceGeometry sg = new SliceGeometry();
 		sg.setParameters(imp);
@@ -115,10 +122,17 @@ public class ShaftGuillotine implements PlugIn {
 		this.feretMin = sg.getFeretMin();
 		this.perimeter = sg.getPerimeter();
 		this.emptySlices = sg.getEmptySlices();
-		this.meanCortThick2D = sg.getMeanCorticalThickness2D();
+
+		SliceGeometry sg2 = new SliceGeometry();
+		sg2.setParameters(imp);
+		sg2.calculateCentroids(imp, min, max);
+		sg2.roiMeasurements(imp, min, max);
+		sg2.calculateMoments(imp, min, max);
+		sg2.calculateThickness2D(imp, min, max);
+		this.meanCortThick2D = sg2.getMeanCorticalThickness2D();
 		
 		// Median of means of cortical thickness
-//		this.medianCort = median(meanCortThick2D);
+		this.medianMeanCort = median(sg.getMeanCorticalThickness2D());
 		
 		// Feret Min / Feret Max
 		this.feretMinOnMax = new double[feretMax.length];
@@ -132,10 +146,24 @@ public class ShaftGuillotine implements PlugIn {
 			eccentricity[i] = eccentricity(feretMin[i], feretMax[i]);
 		}
 		
+		// Gradients (old)
+//		this.boneGradient = gradient(slices, feretMax, gradSlices);
+//		this.perimeterGradient = gradient(slices, perimeter, gradSlices);
+		
+		// Smoothing
+		this.smoothE = smooth(eccentricity, smoothSlices);
+		this.smoothFMOM = smooth(feretMinOnMax, smoothSlices);
+		this.smoothFMax = smooth(feretMax, smoothSlices);
+		this.smoothPerim = smooth(perimeter, smoothSlices);
+		
+		// Fancy tricks
+		this.normFMOMPerim = normalise(smoothFMOM, smoothPerim);
+		
 		// Gradients
-		this.boneGradient = gradient(slices, feretMax, gradSlices);
-		this.perimeterGradient = gradient(slices, perimeter, gradSlices);
-		this.smoothGradE = smooth(eccentricity, smoothSlices);
+		this.boneGradient = gradient2(feretMax, gradSlices);
+		this.perimeterGradient = gradient2(perimeter, gradSlices);
+		this.FMOMGradient = gradient2(feretMinOnMax, gradSlices);
+		this.normFMOMPerimGradient = gradient2(normFMOMPerim, smoothSlices);
 		
 		this.shaftPosition = new int[2];
 		
@@ -152,19 +180,19 @@ public class ShaftGuillotine implements PlugIn {
 		// Get rid of NaNs (required for standard deviations)
 		this.shaft = removeNaNs(shaft);
 		this.feretMax = removeNaNs(feretMax);
-		this.boneGradientNoNaNs = removeNaNs(boneGradient[1]);
+//		this.boneGradientNoNaNs = removeNaNs(boneGradient[1]);
 		
 		// Standard deviations
 		this.shaftSD = Math.sqrt(variance(shaft));
 		this.boneSD = Math.sqrt(variance(feretMax));
-		this.gradSD = Math.sqrt(variance(boneGradientNoNaNs));
+//		this.gradSD = Math.sqrt(variance(boneGradientNoNaNs));
 		
 		// Gradient-based: identifies changes in gradient, rather than in raw feretMax
-		if(shaftVia == opt_1) {
-			
-			this.shaftCutOff = 0.25 * this.gradSD;
-			this.shaftPosition = shaftGuesser(boneGradientNoNaNs, shaftCutOff, gradSlices);
-		}
+//		if(shaftVia == opt_1) {
+//			
+//			this.shaftCutOff = 0.25 * this.gradSD;
+//			this.shaftPosition = shaftGuesser(boneGradientNoNaNs, shaftCutOff, gradSlices);
+//		}
 		
 		/* Uses Mean(max Feret diameter) and Standard Deviation(max FD).
 		 * Also relies on arbitrary 'mid third', using shaftSD.
@@ -177,7 +205,7 @@ public class ShaftGuillotine implements PlugIn {
 		
 		if(shaftVia == opt_3) {
 			
-			this.shaftCutOff = medianCort;
+			this.shaftCutOff = medianMeanCort;
 			this.shaftPosition = shaftGuesser(meanCortThick2D, shaftCutOff, 1);
 		}
 		
@@ -192,17 +220,16 @@ public class ShaftGuillotine implements PlugIn {
 		rt.addValue("Mean MFD", this.meanMFD);
 		rt.addValue("Threshold min", min);
 		rt.addValue("Threshold max", max);
-		rt.addValue("Median Mean Cortical Thickness 2D", medianCort);
-		rt.addValue("SmGrad", smoothGradE[60]);
+		rt.addValue("Median Mean Cortical Thickness 2D", medianMeanCort);
 		rt.show("Results");
 		
 		if(doGraph) {
 			/** Plot maximum Feret diameter versus slice number */
-			Plot feretPlot = new Plot("Feret Plot", "Slice", "Max Feret Diameter", this.slices, this.feretMax);
-			feretPlot.show();
+			Plot feretMaxPlot = new Plot("Feret Max Plot", "Slice", "Max Feret Diameter", this.slices, this.feretMax);
+			feretMaxPlot.show();
 			
-			Plot gradMFDPlot = new Plot("Gradient (MFD)", "Slice", "Gradient (over " + gradSlices + " slices)", this.boneGradient[0], this.boneGradient[1]);
-			gradMFDPlot.show();
+			Plot feretMinPlot = new Plot("Feret Min Plot", "Slice", "Min Feret Diameter", this.slices, this.feretMin);
+			feretMinPlot.show();
 			
 			Plot ellipsePlot = new Plot("Feret Min / Feret Max", "Slice", "Proportion", this.slices, this.feretMinOnMax);
 			ellipsePlot.show();
@@ -213,14 +240,29 @@ public class ShaftGuillotine implements PlugIn {
 			Plot perimeterPlot = new Plot("Perimeter", "Slice", "Perimeter", this.slices, this.perimeter);
 			perimeterPlot.show();
 			
-			Plot gradPerimPlot = new Plot("Gradient (Perimeter)", "Slice", "Gradient (over " + gradSlices + " slices)", this.perimeterGradient[0], this.perimeterGradient[1]);
-			gradPerimPlot.show();
-			
 			Plot ePlot = new Plot("Eccentricity", "Slice", "e", this.slices, this.eccentricity);
 			ePlot.show();
 			
-			Plot smoothGradEPlot = new Plot("Smoothed eccentricity", "Slice", "e (over " + smoothSlices + " slices)", this.slices, this.smoothGradE);
-			smoothGradEPlot.show();
+			Plot smoothEPlot = new Plot("Smoothed eccentricity", "Slice", "e (over " + smoothSlices * 2 + " slices)", this.slices, this.smoothE);
+			smoothEPlot.show();
+			
+			Plot smoothFMOMPlot = new Plot("Smoothed Feret's Min on Max", "Slice", "e (over " + smoothSlices * 2 + " slices)", this.slices, this.smoothFMOM);
+			smoothFMOMPlot.show();
+			
+			Plot normFMOMPerimPlot = new Plot("Normalised Feret's Min on Max wrt Perimeter", "Slice", "Normalised FMOM", this.slices, this.normFMOMPerim);
+			normFMOMPerimPlot.show();
+			
+			Plot gradFMOMPlot = new Plot("Gradient (FMOM)", "Slice", "Gradient (over " + gradSlices * 2 + " slices)", this.slices, this.FMOMGradient);
+			gradFMOMPlot.show();
+			
+			Plot gradPerimPlot = new Plot("Gradient (Perimeter)", "Slice", "Gradient (over " + gradSlices *2 + " slices)", this.slices, this.perimeterGradient);
+			gradPerimPlot.show();
+			
+			Plot gradMFDPlot = new Plot("Gradient (MFD)", "Slice", "Gradient (over " + gradSlices *2 + " slices)", this.slices, this.boneGradient);
+			gradMFDPlot.show();
+			
+			Plot gradNormFMOMPerimPlot = new Plot("Gradient(Norm FMOM wrt Perim)", "Slice", "Gradient (over " + gradSlices *2 + " slices)", this.slices, this.normFMOMPerimGradient);
+			gradNormFMOMPerimPlot.show();
 		}
 		
 		return;
@@ -253,13 +295,13 @@ public class ShaftGuillotine implements PlugIn {
 		
 		// Cycle through slices from central slice, first down; then up.
 		for(int k = centralSlice; k >= this.startSlice; k--) {
-			if(Math.abs(boneStack[k]) >= shaftLimit) {
+			if(Math.abs(boneStack[k]) <= shaftLimit) {
 				this.shaftPosition[0] = k * numSlices;
 				break;
 			}
 		}
 		for(int k = centralSlice; k < this.iss; k++) {
-			if(Math.abs(boneStack[k]) >= shaftLimit) {
+			if(Math.abs(boneStack[k]) <= shaftLimit) {
 				this.shaftPosition[1] = k * numSlices;
 				break;
 			}
@@ -314,7 +356,69 @@ public class ShaftGuillotine implements PlugIn {
 	}
 	
 	/**
+	 * Find the gradient of a double[] by comparing x[i-gradSlices] with x[i+gradSlices].
+	 * Close to the ends of a stack, only uses available slices.
+	 * 
+	 * @param x
+	 * @param a number of slices over which to find the gradient: resolution
+	 * @return gradient[]
+	 */
+	private double[] gradient2(double[] x, int a) {
+		
+		double[] gradient = new double[x.length];
+		
+		for(int s = 0; s < x.length; s++) {
+			
+			// Don't sum slices < 0
+			if(s - a < 0) {
+				gradient[s] = (x[s + a] - x[s]) / a;
+			}
+			
+			// Don't sum slices > x.length - 1
+			else if(s + a > x.length - 1) {
+				gradient[s] = (x[s] - x[s - a]) / a;
+			}
+			else {
+				gradient[s] = (x[s + a] - x[s - a]) / (2 * a);
+			}
+		}
+
+		return gradient;
+	}
+	
+	/**
+	 * Normalise one double with respect to another (divide 1st by 2nd) - both must be of same length.
+	 */
+	private double[] normalise(double[] a, double[] b) {
+		
+		double norm[] = new double[a.length];
+		
+		for(int i = 0; i < a.length; i++) {
+			
+			norm[i] = a[i] / b[i];
+		}
+		
+		return norm;
+	}
+	
+	/**
+	 * Multiply one double by another (multiply 1st by 2nd) - both must be of same length.
+	 */
+	private double[] multiply(double[] a, double[] b) {
+		
+		double mult[] = new double[a.length];
+		
+		for(int i = 0; i < a.length; i++) {
+			
+			mult[i] = a[i] / b[i];
+		}
+		
+		return mult;
+	}
+	
+	/**
 	 * Find the gradient of a double[] by averaging over the surrounding slices.
+	 * Near the ends, only uses available slices.
 	 * 
 	 * @param x
 	 * @param a number of slices +/- over which to average
