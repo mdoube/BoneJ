@@ -48,6 +48,8 @@ public class FitCircle {
 	 */
 	public static double[] kasaFit(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[][] z = new double[nPoints][1];
 		double[][] xy1 = new double[nPoints][3];
 		for (int n = 0; n < nPoints; n++) {
@@ -80,6 +82,8 @@ public class FitCircle {
 	 */
 	public static double[] prattNewton(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] centroid = Centroid.getCentroid(points);
 		double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 
@@ -158,6 +162,8 @@ public class FitCircle {
 	 */
 	public static double[] prattSVD(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] centroid = Centroid.getCentroid(points);
 		double[][] xyXY1 = new double[nPoints][4];
 		for (int i = 0; i < nPoints; i++) {
@@ -214,6 +220,8 @@ public class FitCircle {
 	 */
 	public static double[] taubinNewton(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] centroid = Centroid.getCentroid(points);
 		double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 		for (int i = 0; i < nPoints; i++) {
@@ -294,6 +302,8 @@ public class FitCircle {
 	 */
 	public static double[] taubinSVD(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] centroid = Centroid.getCentroid(points);
 
 		double[][] zxy = new double[nPoints][3];
@@ -351,6 +361,8 @@ public class FitCircle {
 	 */
 	public static double[] hyperSimple(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 
 		double[][] zxy1 = new double[nPoints][4];
 		double xSum = 0, ySum = 0, zSum = 0;
@@ -417,6 +429,8 @@ public class FitCircle {
 	 */
 	public static double[] hyperStable(double[][] points) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] centroid = Centroid.getCentroid(points);
 
 		double sumZ = 0;
@@ -489,6 +503,8 @@ public class FitCircle {
 	 */
 	public static double[] levenMarqFull(double[][] points, double lambdaIni) {
 		final int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] guess = hyperStable(points);
 		double x = guess[0];
 		double y = guess[1];
@@ -592,6 +608,8 @@ public class FitCircle {
 	 */
 	public static double[] levenMarqRed(double[][] points, double lambdaIni) {
 		int nPoints = points.length;
+		if (nPoints < 3)
+			throw new IllegalArgumentException("Too few points");
 		double[] guess = hyperStable(points);
 		double x = guess[0];
 		double y = guess[1];
@@ -768,7 +786,7 @@ public class FitCircle {
 	 */
 	public static double[][] getTestCircle(double x, double y, double r, int n,
 			double noise) {
-		return getTestCircle(x, y, r, 0, 2 * Math.PI, n, noise);
+		return getTestCircle(x, y, r, n, 0, 2 * Math.PI, noise);
 	}
 
 	/**
