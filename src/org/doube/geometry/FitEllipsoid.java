@@ -52,8 +52,9 @@ public class FitEllipsoid {
 	 *      href="http://dx.doi.org/10.1109/GMAP.2004.1290055">doi:10.1109
 	 *      /GMAP.2004.1290055</a>
 	 *      </p>
+	 * @deprecated until debugged
 	 */
-	public double[] liGriffiths(double[][] coOrdinates, int maxPoints) {
+	public static double[] liGriffiths(double[][] coOrdinates, int maxPoints) {
 		final int nPoints = coOrdinates.length;
 		IJ.showStatus("Fitting ellipsoid");
 		double[][] coOrd = new double[maxPoints][3];
@@ -149,9 +150,8 @@ public class FitEllipsoid {
 	 * 
 	 * @param coOrdinates
 	 *            array[n][3] where n > 8
-	 * @return Object[] array containing the centre, radii, eigenvectors
-	 *         of the axes, the 9 variables of the ellipsoid equation and the
-	 *         EVD
+	 * @return Object[] array containing the centre, radii, eigenvectors of the
+	 *         axes, the 9 variables of the ellipsoid equation and the EVD
 	 * @throws IllegalArgumentException
 	 *             if number of coordinates is less than 9
 	 */
