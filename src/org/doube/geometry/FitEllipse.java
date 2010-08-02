@@ -34,10 +34,10 @@ public class FitEllipse {
 	 * @param points
 	 *            n * 2 array of 2D coordinates.
 	 * @return <p>
-	 *         6-element array, {a b c d e f}, which are the algebraic
+	 *         6-element array, {a b c d f g}, which are the algebraic
 	 *         parameters of the fitting ellipse: <i>ax</i><sup>2</sup> +
-	 *         <i>bxy</i> + <i>cy</i><sup>2</sup> +<i>dx</i> + <i>ey</i> +
-	 *         <i>f</i> = 0. The vector <b>A</b> represented in the array is
+	 *         2<i>bxy</i> + <i>cy</i><sup>2</sup> +2<i>dx</i> + 2<i>fy</i> +
+	 *         <i>g</i> = 0. The vector <b>A</b> represented in the array is
 	 *         normed, so that ||<b>A</b>||=1.
 	 *         </p>
 	 * 
@@ -133,8 +133,8 @@ public class FitEllipse {
 	 * x(i)=points[i][0], y(i)=points[i][1]
 	 * 
 	 * Output: A = [a b c d e f]' is the vector of algebraic parameters of the
-	 * fitting ellipse: ax² + bxy + cy² +dx + ey + f = 0 the vector A is
-	 * normed, so that ||A||=1
+	 * fitting ellipse: ax² + bxy + cy² +dx + ey + f = 0 the vector A is normed,
+	 * so that ||A||=1
 	 * 
 	 * Among fast non-iterative ellipse fitting methods, this is perhaps the
 	 * most accurate and robust
@@ -150,6 +150,7 @@ public class FitEllipse {
 	 *      <a href="http://www.mathworks.co.uk/matlabcentral/fileexchange/22683-ellipse-fit-taubin-method"
 	 *      >MATLAB script</a>
 	 *      </p>
+	 * @deprecated until eig(a,b) is implemented
 	 */
 	public static double[] taubin(double[][] points) {
 
@@ -243,7 +244,7 @@ public class FitEllipse {
 
 		Matrix Q = new Matrix(q);
 
-		// [V,D] = eig(P,Q);
+		// [V,D] = eig(P,Q); //TODO generalised eigenvalues
 		EigenvalueDecomposition E = new EigenvalueDecomposition(P.times(Q
 				.inverse()));
 		Matrix V = E.getV();
@@ -316,7 +317,7 @@ public class FitEllipse {
 	public static double[][] testEllipse(double a, double b, double r,
 			double c, double d, double noise, int n) {
 		double[][] points = new double[n][2];
-		double increment = 2 * Math.PI / (n + 1);
+		double increment = 2 * Math.PI / n;
 		double alpha = 0;
 		for (int i = 0; i < n; i++) {
 			points[i][0] = a * Math.cos(alpha) + Math.random() * noise;
@@ -361,7 +362,7 @@ public class FitEllipse {
 		final double b = ellipse[1] / 2;
 		final double c = ellipse[2];
 		final double d = ellipse[3] / 2;
-		final double f = ellipse[4];
+		final double f = ellipse[4] / 2;
 		final double g = ellipse[5];
 
 		// centre
@@ -372,13 +373,15 @@ public class FitEllipse {
 		final double af = 2 * (a * f * f + c * d * d + g * b * b - 2 * b * d
 				* f - a * c * g);
 
-		final double aL = Math.sqrt((af)
-				/ ((b * b - a * c) * (Math.sqrt((a - c) * (a - c) + 4 * b * b)
-						- a - c)));
+		final double aL = Math
+				.sqrt((af)
+						/ ((b * b - a * c) * (Math.sqrt((a - c) * (a - c) + 4
+								* b * b) - (a + c))));
 
-		final double bL = Math.sqrt((af)
-				/ ((b * b - a * c) * (-Math.sqrt((a - c) * (a - c) + 4 * b * b)
-						- a - c)));
+		final double bL = Math
+				.sqrt((af)
+						/ ((b * b - a * c) * (-Math.sqrt((a - c) * (a - c) + 4
+								* b * b) - (a + c))));
 		double phi = 0;
 		if (b == 0) {
 			if (a <= c)
