@@ -14,13 +14,14 @@ public class FitCircleTest {
 	/** expected result */
 	final static double[] expected = { x, y, r };
 	/** Equally-spaced points on a full circle, without noise */
-	final static double[][] points = FitCircle.getTestCircle(x, y, r, 1000, 0.0);
+	final static double[][] points = FitCircle
+			.getTestCircle(x, y, r, 1000, 0.0);
 	/** Equally-spaced points on a full circle, with noise */
-	final static double[][] noisyPoints = FitCircle.getTestCircle(x, y, r, 1000,
-			0.001);
+	final static double[][] noisyPoints = FitCircle.getTestCircle(x, y, r,
+			1000, 0.001);
 	/** Equally-spaced points on a circular arc, without noise */
-	final static double[][] arcPoints = FitCircle.getTestCircle(x, y, r, 100, 1,
-			1.5, 0.0);
+	final static double[][] arcPoints = FitCircle.getTestCircle(x, y, r, 100,
+			1, 1.5, 0.0);
 	/** Equally-spaced points on a circular arc, with noise */
 	final static double[][] noisyArcPoints = FitCircle.getTestCircle(x, y, r,
 			100, 1, 1.5, 0.001);
@@ -95,6 +96,35 @@ public class FitCircleTest {
 		assertArrayEquals(expected, FitCircle.levenMarqRed(noisyPoints), 1e-2);
 		assertArrayEquals(expected, FitCircle.levenMarqRed(arcPoints), 1e-10);
 		assertArrayEquals(expected, FitCircle.levenMarqRed(noisyArcPoints), 1);
+	}
+
+	@Test
+	public void testGetTestCircle() {
+		final double r2 = r * r;
+		for (int i = 0; i < points.length; i++) {
+			final double xi = points[i][0];
+			final double yi = points[i][1];
+			final double equation = (xi - x) * (xi - x) + (yi - y) * (yi - y);
+			assertEquals(r2, equation, 1e-10);
+		}
+		for (int i = 0; i < noisyPoints.length; i++) {
+			final double xi = noisyPoints[i][0];
+			final double yi = noisyPoints[i][1];
+			final double equation = (xi - x) * (xi - x) + (yi - y) * (yi - y);
+			assertEquals(r2, equation, 10);
+		}
+		for (int i = 0; i < arcPoints.length; i++) {
+			final double xi = arcPoints[i][0];
+			final double yi = arcPoints[i][1];
+			final double equation = (xi - x) * (xi - x) + (yi - y) * (yi - y);
+			assertEquals(r2, equation, 1e-10);
+		}
+		for (int i = 0; i < noisyArcPoints.length; i++) {
+			final double xi = noisyArcPoints[i][0];
+			final double yi = noisyArcPoints[i][1];
+			final double equation = (xi - x) * (xi - x) + (yi - y) * (yi - y);
+			assertEquals(r2, equation, 10);
+		}
 	}
 
 }
