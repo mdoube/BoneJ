@@ -137,7 +137,7 @@ public class StructureModelIndex implements PlugIn {
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
-		double v = surface.getVolume();
+		double v = Math.abs(surface.getVolume());
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 
@@ -205,7 +205,7 @@ public class StructureModelIndex implements PlugIn {
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
-		double v = surface.getVolume();
+		double v = Math.abs(surface.getVolume());
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 

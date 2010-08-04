@@ -246,14 +246,14 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
 				0.0f);
 		IJ.showStatus("Calculating BV...");
-		double boneVolume = surface.getVolume();
+		double boneVolume = Math.abs(surface.getVolume());
 		ImagePlus maskImp = new ImagePlus("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
 		IJ.showStatus("Creating surface mesh...");
 		points = mct.getTriangles(maskImp, 128, channels, resampling);
 		surface = new CustomTriangleMesh(points, colour, 0.0f);
 		IJ.showStatus("Calculating TV...");
-		double totalVolume = surface.getVolume();
+		double totalVolume = Math.abs(surface.getVolume());
 		double[] volumes = { boneVolume, totalVolume };
 		IJ.showStatus("");
 		return volumes;

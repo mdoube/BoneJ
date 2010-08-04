@@ -959,7 +959,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			if (null != points) {
 				CustomTriangleMesh surface = new CustomTriangleMesh(points,
 						colour, 0.0f);
-				surfaceVolumes[p] = surface.getVolume();
+				surfaceVolumes[p] = Math.abs(surface.getVolume());
 			}
 			p++;
 		}
