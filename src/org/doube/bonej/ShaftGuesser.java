@@ -1,5 +1,6 @@
 package org.doube.bonej;
 
+import org.doube.util.DeleteSliceRange;
 import org.doube.util.ImageCheck;
 
 import ij.IJ;
@@ -19,10 +20,15 @@ import ij.plugin.PlugIn;
 
 public class ShaftGuesser implements PlugIn {
 	
+	private boolean proximalLow, doGraph;
+	
+	private double smoothOver;
+	private double gradientOver;
+	
 	/** List of slice numbers */
 	private double[] slices;
 	
-	private int al, startSlice, ss, iss;
+	private int al, startSlice, endSlice, ss, iss;
 	
 	public void run(String arg) {
 		
@@ -36,7 +42,6 @@ public class ShaftGuesser implements PlugIn {
 		}
 		
 		this.al = imp.getStackSize() + 1;
-		this.startSlice = 1;
 		this.iss = imp.getImageStackSize();
 		
 		this.slices = new double[this.al];
@@ -44,14 +49,39 @@ public class ShaftGuesser implements PlugIn {
 			slices[s] = (double) s;
 		}
 		
-		
 		GenericDialog gd = new GenericDialog("Shaft Guesser Options");
 		gd.addCheckbox("Proximal end of bone has lower slice number", true);
-		gd.addMessage("Choose how to estimate the shaft parameters");
+		gd.addNumericField("Bone start slice", 1, 2);
+		gd.addNumericField("Bone end slice", this.iss, 2);
+		gd.addMessage("Choose how to estimate the shaft parameters: ");
 		gd.addNumericField("Smooth over # slices (+/-): ", Math.round(this.al / 50), 0);
-		gd.addNumericField("Calculate gradient over # slices: ", Math.round(this.al / 50), 0);
-		
+		gd.addNumericField("Calculate gradient over # slices (+/-): ", Math.round(this.al / 50), 0);
 		gd.addCheckbox("Graph output", true);
+		gd.showDialog();
+		
+		this.proximalLow = gd.getNextBoolean();
+		this.startSlice = (int) gd.getNextNumber();
+		this.endSlice = (int) gd.getNextNumber();
+		this.smoothOver = gd.getNextNumber();
+		this.gradientOver = gd.getNextNumber();
+		this.doGraph = gd.getNextBoolean();
+		
+		/* Initial setup */
+		if(!proximalLow) {
+			IJ.run("Flip Z");
+		}
+		
+		if(this.startSlice > 1) {
+			DeleteSliceRange dsr1 = new DeleteSliceRange();
+			dsr1.deleteSliceRange(imp.getImageStack(), 1, this.startSlice - 1);
+			this.startSlice = 1;
+		}
+		if(this.endSlice < this.iss) {
+			DeleteSliceRange dsr2 = new DeleteSliceRange();
+			dsr2.deleteSliceRange(imp.getImageStack(), this.endSlice + 1, this.iss);
+			this.endSlice = this.iss;
+		}
+		
 	}
 
 }
