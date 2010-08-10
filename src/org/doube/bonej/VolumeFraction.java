@@ -126,8 +126,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final Rectangle r = imp.getProcessor().getRoi();
 		final AtomicInteger ai = new AtomicInteger(1);
 		Thread[] threads = Multithreader.newThreads();
-		final long[] volTotalT = new long[nSlices];
-		final long[] volBoneT = new long[nSlices];
+		final long[] volTotalT = new long[nSlices+1];
+		final long[] volBoneT = new long[nSlices+1];
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
@@ -159,7 +159,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 
 		long volTotal = 0;
 		long volBone = 0;
-		for (int i = 0; i < nSlices; i++) {
+		for (int i = 0; i <= nSlices; i++) {
 			volTotal += volTotalT[i];
 			volBone += volBoneT[i];
 		}
