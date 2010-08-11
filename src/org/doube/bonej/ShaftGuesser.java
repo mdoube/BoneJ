@@ -161,7 +161,11 @@ public class ShaftGuesser implements PlugIn {
 		 * 
 		 * Poss: don't count slices with NaN...?
 		 */
+		
+		/* Run 1: possible outer limits of shaft */
 		this.shaftPosition = shaftLimiter(sPerimeter, mPerimeter, false);
+		
+		/* Copy image to a new stack (not yet) */
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
@@ -188,6 +192,7 @@ public class ShaftGuesser implements PlugIn {
 	 * Estimates at which slices the shaft begins and ends, based on numerical limits.
 	 * Cycles through slices from the centre, first down, then up, until 
 	 * a condition is met (shaftLimit).
+	 * Main weakness: assumes the central slice is part of the shaft.
 	 * 
 	 * @param boneStack
 	 * @param shaftLimit
