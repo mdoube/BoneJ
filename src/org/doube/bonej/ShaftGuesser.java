@@ -2,6 +2,7 @@ package org.doube.bonej;
 
 import java.util.Arrays;
 
+import org.doube.geometry.Centroid;
 import org.doube.util.DeleteSliceRange;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
@@ -34,9 +35,14 @@ public class ShaftGuesser implements PlugIn {
 	private int gradientOver;
 	/** First and last slice numbers of the femoral shaft */
 	private int[] shaftPosition;
+	/** First and last slice numbers of the femoral shaft, from:
+	 * - perimeter
+	 * - eccentricity
+	 * - mean cortical thickness (2D) */
+	private int[][] shaftPositions;
 	
 	/** Median values */
-	private double medianMeanCort, mFeretMax, mFeretMin, mPerimeter;
+	private double mEccentricity, mMeanCort, mFeretMax, mFeretMin, mPerimeter;
 	/** List of eccentricities, based on Feret's min and max */
 	private double[] eccentricity;
 	/** List of maximum diameters */
@@ -70,11 +76,6 @@ public class ShaftGuesser implements PlugIn {
 		this.al = imp.getStackSize() + 1;
 		this.iss = imp.getImageStackSize();
 		
-		this.slices = new double[this.al];
-		for (int s = this.startSlice; s <= this.iss; s++) {
-			slices[s] = (double) s;
-		}
-		
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
@@ -103,7 +104,7 @@ public class ShaftGuesser implements PlugIn {
 			IJ.run("Flip Z");
 		}
 		
-		/* Crop ends */
+		/* Crop ends (copy image to a new stack first (not yet)) */
 		if(this.startSlice > 1) {
 			DeleteSliceRange dsr1 = new DeleteSliceRange();
 			dsr1.deleteSliceRange(imp.getImageStack(), 1, this.startSlice - 1);
@@ -114,7 +115,13 @@ public class ShaftGuesser implements PlugIn {
 		if(this.endSlice < this.iss) {
 			DeleteSliceRange dsr2 = new DeleteSliceRange();
 			dsr2.deleteSliceRange(imp.getImageStack(), this.endSlice + 1, this.iss);
-			this.endSlice = this.iss;
+			this.iss = imp.getImageStackSize();
+		}
+		
+		/* For plotting */
+		this.slices = new double[imp.getStackSize() + 1];
+		for (int s = this.startSlice; s <= this.iss; s++) {
+			slices[s] = (double) s;
 		}
 		
 		/* Get values from SliceGeometry */
@@ -147,43 +154,97 @@ public class ShaftGuesser implements PlugIn {
 		this.gMeanCort = gradient(sMeanCort, gradientOver);
 		
 		/* Calculate median values */
+		this.mEccentricity = median(sEccentricity);
 		this.mFeretMax = median(sFeretMax);
 		this.mFeretMin = median(sFeretMin);
 		this.mPerimeter = median(sPerimeter);
-		this.medianMeanCort = median(sMeanCort);
+		this.mMeanCort = median(sMeanCort);
 		
 		/* Possible outer limits of shaft */
 		/* Perimeter measures relative size;
 		 * Cortical thickness is an actual bone property;
 		 * Eccentricity measures shape.
 		 * 
-		 * 
+		 * Poss: if we increase the median cutoff by 10%, does this increase the selection length by more than 5% of the bone?
 		 * 
 		 * Poss: don't count slices with NaN...?
+		 * 
+		 * If the positions agree to within +/- the smoothing number of slices... average these?
+		 * 
+		 * Poss: gradient for reliability: low is no; high is yes.
+		 * The gradients actually tell me something about how significant the features at that particular point are.
+		 * 
+		 * Peak detection for lesser and greater trochanter?
 		 */
-		
-		/* Run 1: possible outer limits of shaft */
-		this.shaftPosition = shaftLimiter(sPerimeter, mPerimeter, false);
-		
-		/* Copy image to a new stack (not yet) */
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
-		rt.addValue("Shaft start slice", shaftPosition[0]);
-		rt.addValue("Shaft end slice", shaftPosition[1]);
+		rt.addValue("Median Eccentricity", mEccentricity);
 		rt.addValue("Median Feret Max", mFeretMax);
 		rt.addValue("Median Feret Min", mFeretMin);
 		rt.addValue("Median Perimeter", mPerimeter);
-		rt.addValue("Median Mean Cortical Thickness (2D)", medianMeanCort);
+		rt.addValue("Median Mean Cortical Thickness (2D)", mMeanCort);
+		
+		/* Run 1: possible outer limits of shaft: by size */
+		this.shaftPosition = shaftLimiter(sPerimeter, mPerimeter, false);		
+		rt.addValue("Shaft start slice (Perim)", shaftPosition[0]);
+		rt.addValue("Shaft end slice (Perim)", shaftPosition[1]);
+		rt.addValue("Shaft start gradient (Perim)", gPerimeter[shaftPosition[0]]);
+		rt.addValue("Shaft end gradient (Perim)", gPerimeter[shaftPosition[1]]);
+		
+		/* Reset start and end slices based on outer limits calculated above */
+//		this.startSlice = shaftPosition[0];
+//		this.endSlice = shaftPosition[1];
+		
+		/* Run 2: refine shaft limits: by shape */
+//		if(this.eccentricity[shaftPosition[0]] > mEccentricity) {
+//			
+//		}
+		
+		this.shaftPosition = shaftLimiter(sEccentricity, mEccentricity, false);
+		rt.addValue("Shaft start slice (Ecc)", shaftPosition[0]);
+		rt.addValue("Shaft end slice (Ecc)", shaftPosition[1]);
+		rt.addValue("Shaft start gradient (Ecc)", gEccentricity[shaftPosition[0]]);
+		rt.addValue("Shaft end gradient (Ecc)", gEccentricity[shaftPosition[1]]);
+		
+		this.shaftPosition = shaftLimiter(sMeanCort, mMeanCort, true);
+		rt.addValue("Shaft start slice (Cort)", shaftPosition[0]);
+		rt.addValue("Shaft end slice (Cort)", shaftPosition[1]);
+		rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPosition[0]]);
+		rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPosition[1]]);
+		
+		this.shaftPositions = new int[3][1];
+		this.shaftPositions[0] = shaftLimiter(sPerimeter, mPerimeter, false);
+		this.shaftPositions[1] = shaftLimiter(sEccentricity, mEccentricity, false);
+		this.shaftPositions[2] = shaftLimiter(sMeanCort, mMeanCort, true);
+		
+		/* Are shaft positions at all correlated already? */
+		if((shaftPosition[0] + smoothOver) < shaftPosition[0] ||
+				(shaftPosition[0] + smoothOver) < shaftPosition[0]) {
+			
+		}
+		
 		rt.show("Results");
 		
 		if(doGraph) {
+			
+			Plot sEccPlot = new Plot("Smoothed eccentricity", "Slice", "Eccentricity", this.slices, this.sEccentricity);
+			sEccPlot.show();
 			
 			Plot sPerimPlot = new Plot("Smoothed perimeter", "Slice", "Perimeter", this.slices, this.sPerimeter);
 			sPerimPlot.show();
 			
 			Plot sMeanCortPlot = new Plot("Smoothed Mean Cort Thick (2D)", "Slice", "Mean Cort Thickness", this.slices, this.sMeanCort);
 			sMeanCortPlot.show();
+			
+			Plot gEccPlot = new Plot("Gradient eccentricity", "Slice", "Eccentricity", this.slices, this.gEccentricity);
+			gEccPlot.show();
+			
+			Plot gPerimPlot = new Plot("Gradient perimeter", "Slice", "Perimeter", this.slices, this.gPerimeter);
+			gPerimPlot.show();
+			
+			Plot gMeanCortPlot = new Plot("Gradient Mean Cort Thick (2D)", "Slice", "Mean Cort Thickness", this.slices, this.gMeanCort);
+			gMeanCortPlot.show();
 		}
 		
 	}
@@ -203,7 +264,7 @@ public class ShaftGuesser implements PlugIn {
 		
 		int[] shaftEnds = new int[2];
 		// Find the central slice. (For stacks with odd number of slices, should round up ImageStackSize/2.)
-		int centralSlice = Math.round(boneStack.length / 2);
+		int centralSlice = Math.round((this.endSlice - this.startSlice) / 2);
 		
 		if(isMin) {
 			// Cycle through slices from central slice, first down; then up.
@@ -213,7 +274,7 @@ public class ShaftGuesser implements PlugIn {
 					break;
 				}
 			}
-			for(int i = centralSlice; i < this.iss; i++) {
+			for(int i = centralSlice; i < this.endSlice; i++) {
 				if(Math.abs(boneStack[i]) < shaftLimit) {
 					shaftEnds[1] = i - 1;
 					break;
@@ -228,7 +289,7 @@ public class ShaftGuesser implements PlugIn {
 					break;
 				}
 			}
-			for(int i = centralSlice; i < this.iss; i++) {
+			for(int i = centralSlice; i < this.endSlice; i++) {
 				if(Math.abs(boneStack[i]) > shaftLimit) {
 					shaftEnds[1] = i - 1;
 					break;
@@ -347,5 +408,24 @@ public class ShaftGuesser implements PlugIn {
 		else {
 			return (b[mid - 1] + b[mid]) / 2;
 		}
+	}
+	
+	/**
+	 * Calculate the variance of a double[]
+	 * 
+	 * @param a
+	 * @return variance
+	 */
+	public static double variance(double[] a) {
+		
+		double mean = Centroid.getCentroid(a);
+		
+		double ssdm = 0;
+		for(int i = 0; i < a.length; i++) {
+			ssdm += (a[i] - mean) * (a[i] - mean);
+		}
+		
+		double variance = ssdm / a.length;
+		return variance;
 	}
 }
