@@ -45,7 +45,7 @@ public class ShaftGuillotine implements PlugIn {
 	
 	private double shaftSD, boneSD, gradSD, meanMFD, shaftCutOff, min, max, medianMeanCort;
 	private double[] slices, feretMax, feretMin, shaft, boneGradientNoNaNs, feretMinOnMax, eccentricity, perimeter, smoothPerim, meanCortThick2D, sortedMCT2D, smoothE, smoothFMOM, smoothFMax, normFMOMPerim;
-	private double[] boneGradient, perimeterGradient, FMOMGradient, normFMOMPerimGradient;
+	private double[] boneGradient, perimeterGradient, FMOMGradient, normFMOMPerimGradient, multGradients;
 	
 	private int al, startSlice, iss, centralSlice, gradSlices, smoothSlices;
 	private int[] shaftPosition;			// Contains first and last shaft slices
@@ -81,8 +81,8 @@ public class ShaftGuillotine implements PlugIn {
 		gd.addCheckbox("Graph output", true);
 //		gd.addCheckbox("Crop ends", true);
 		gd.addChoice("Shaft selection via", shaftViaChoices, opt_0);
-		gd.addNumericField("Smooth over # slices (+/-): ", Math.round(this.al / 75), 0);
-		gd.addNumericField("Calculate gradient over # slices: ", Math.round(this.al / 75), 0);
+		gd.addNumericField("Smooth over # slices (+/-): ", Math.round(this.al / 50), 0);
+		gd.addNumericField("Calculate gradient over # slices: ", Math.round(this.al / 50), 0);
 //		gd.addCheckbox("Show 3D Markers at end of shaft", true);
 		gd.addCheckbox("Manually threshold", false);
 		gd.addNumericField("Manually threshold: min", 30, 0);
@@ -122,14 +122,7 @@ public class ShaftGuillotine implements PlugIn {
 		this.feretMin = sg.getFeretMin();
 		this.perimeter = sg.getPerimeter();
 		this.emptySlices = sg.getEmptySlices();
-
-		SliceGeometry sg2 = new SliceGeometry();
-		sg2.setParameters(imp);
-		sg2.calculateCentroids(imp, min, max);
-		sg2.roiMeasurements(imp, min, max);
-		sg2.calculateMoments(imp, min, max);
-		sg2.calculateThickness2D(imp, min, max);
-		this.meanCortThick2D = sg2.getMeanCorticalThickness2D();
+		this.meanCortThick2D = sg.getMeanCorticalThickness2D();
 		
 		// Median of means of cortical thickness
 		this.medianMeanCort = median(sg.getMeanCorticalThickness2D());
@@ -164,6 +157,8 @@ public class ShaftGuillotine implements PlugIn {
 		this.perimeterGradient = gradient2(perimeter, gradSlices);
 		this.FMOMGradient = gradient2(feretMinOnMax, gradSlices);
 		this.normFMOMPerimGradient = gradient2(normFMOMPerim, smoothSlices);
+		
+		this.multGradients = smooth(perimeterGradient, smoothSlices);
 		
 		this.shaftPosition = new int[2];
 		
@@ -263,6 +258,9 @@ public class ShaftGuillotine implements PlugIn {
 			
 			Plot gradNormFMOMPerimPlot = new Plot("Gradient(Norm FMOM wrt Perim)", "Slice", "Gradient (over " + gradSlices *2 + " slices)", this.slices, this.normFMOMPerimGradient);
 			gradNormFMOMPerimPlot.show();
+			
+			Plot multGradsPlot = new Plot("Multiplied Gradients (3)", "Slice", "Result", this.slices, this.multGradients);
+			multGradsPlot.show();
 		}
 		
 		return;
@@ -417,7 +415,7 @@ public class ShaftGuillotine implements PlugIn {
 	}
 	
 	/**
-	 * Find the gradient of a double[] by averaging over the surrounding slices.
+	 * Smooth a double[] by averaging over the surrounding slices.
 	 * Near the ends, only uses available slices.
 	 * 
 	 * @param x
@@ -514,14 +512,37 @@ public class ShaftGuillotine implements PlugIn {
 	 */
 	public static double median(double[] a) {
 		
-		int mid = a.length / 2;
-		Arrays.sort(a);
+		double[] b = a.clone();
+		int mid = b.length / 2;
+		Arrays.sort(b);
 		
 		if(a.length%2 == 1) {
-			return a[mid];
+			return b[mid];
 		}
 		else {
-			return (a[mid - 1] + a[mid]) / 2;
+			return (b[mid - 1] + b[mid]) / 2;
 		}
+	}
+	
+	/**
+	 * Find the maximum value of a double[] and return this
+	 * as well as its position in the array.
+	 */
+	private double[] findMax(double[] a) {
+		
+		double max[] = new double[2];
+		double maxValue = a[0];
+		int maxPos = 0;
+		
+		for (int i = 1; i < a.length; i++) {
+			if(a[i] > maxValue) {
+				maxValue = a[i];
+				maxPos += 1;
+			}
+		}
+		
+		max[0] = maxValue;
+		max[1] = maxPos;
+		return max;
 	}
 }
