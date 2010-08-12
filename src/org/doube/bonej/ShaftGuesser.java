@@ -17,7 +17,7 @@ import ij.plugin.PlugIn;
 /**
  * <p>
  * Make an informed guess at which slices of an image stack contain the
- * proximal and distal "ends" of a femoral shaft.
+ * proximal and distal "ends" of a femoral shaft. Currently requires 8-bit image stacks.
  * </p>
  * 
  * @author Nick Powell
@@ -33,10 +33,12 @@ public class ShaftGuesser implements PlugIn {
 	private int smoothOver;
 	/** Calculate the gradient over this number of slices */
 	private int gradientOver;
+	/** Possible first and last slice numbers of the femoral shaft, from perimeter, eccentricity, mean cortical thickness (2D) */
+	private int[][] shaftPositions;
+	/** Lower and upper ranges in which the shaft begins and ends */
+	private int[][] shaftRange;
 	/** First and last slice numbers of the femoral shaft */
 	private int[] shaftPosition = new int[2];
-	/** First and last slice numbers of the femoral shaft, from perimeter, eccentricity, mean cortical thickness (2D) */
-	private int[][] shaftPositions;
 	
 	/** Median values */
 	private double mEccentricity, mMeanCort, mFeretMax, mFeretMin, mPerimeter;
@@ -174,8 +176,6 @@ public class ShaftGuesser implements PlugIn {
 		 * Peak detection for lesser and greater trochanter?
 		 */
 		
-		/* Run 1: possible outer limits of shaft: by size */	
-		
 		/* Reset start and end slices based on outer limits calculated above */
 //		this.startSlice = shaftPosition[0];
 //		this.endSlice = shaftPosition[1];
@@ -185,50 +185,34 @@ public class ShaftGuesser implements PlugIn {
 //			
 //		}
 		
+		/* Run 1: possible outer limits of shaft: by size */
 		this.shaftPositions = new int[3][2];
 		this.shaftPositions[0] = shaftLimiter(sPerimeter, mPerimeter, false);
 		this.shaftPositions[1] = shaftLimiter(sEccentricity, mEccentricity, false);
 		this.shaftPositions[2] = shaftLimiter(sMeanCort, mMeanCort, true);
 		
-		this.shaftPosition = inRange(shaftPositions[0], smoothOver);
-//		this.shaftPosition[1] = inRange(shaftPositions[0][0], shaftPositions[1][0], smoothOver);
+		/* Switch columns and rows for inRange, below */
+		this.shaftRange = new int[2][3];
+		shaftRange[0][0] = shaftPositions[0][0];
+		shaftRange[0][1] = shaftPositions[1][0];
+		shaftRange[0][2] = shaftPositions[2][0];
+		shaftRange[1][0] = shaftPositions[0][1];
+		shaftRange[1][1] = shaftPositions[1][1];
+		shaftRange[1][2] = shaftPositions[2][1];
 		
-		/* Are shaft positions at all correlated already? */
-//		if(Math.abs(shaftPositions[0][0] - shaftPositions[1][0]) <= this.smoothOver) {
-//			if(shaftPositions[0][0] <= shaftPositions[1][0]) {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//			else if(shaftPositions[1][0] <= shaftPositions[0][0]) {
-//				this.shaftPosition[0] = shaftPositions[1][0];
-//			}
-//			else {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//		}
-//		if(Math.abs(shaftPositions[0][0] - shaftPositions[1][0]) <= this.smoothOver) {
-//			if(shaftPositions[0][0] <= shaftPositions[1][0]) {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//			else if(shaftPositions[1][0] <= shaftPositions[0][0]) {
-//				this.shaftPosition[0] = shaftPositions[1][0];
-//			}
-//			else {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//		}
-//		if(Math.abs(shaftPositions[0][0] - shaftPositions[1][0]) <= this.smoothOver) {
-//			if(shaftPositions[0][0] <= shaftPositions[1][0]) {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//			else if(shaftPositions[1][0] <= shaftPositions[0][0]) {
-//				this.shaftPosition[0] = shaftPositions[1][0];
-//			}
-//			else {
-//				this.shaftPosition[0] = shaftPositions[0][0];
-//			}
-//		}
+		/* inRange tests for 'close by' numbers, and returns the pair it finds.
+		 * Here, get max value of proximal end; min value of distal end (conservative),
+		 * but could switch to liberal (i.e. longer shaft), or average the pair. */
+		this.shaftPosition[0] = inRange(shaftRange[0], smoothOver)[1];
+		this.shaftPosition[1] = inRange(shaftRange[1], smoothOver)[0];
 		
-		
+		/* If inRange fails to find a pair, average the values from perimeter, etc. */
+		if(shaftPosition[0] == 0) {
+			shaftPosition[0] = Centroid.getCentroid(shaftRange[0]);
+		}
+		if(shaftPosition[1] == 0) {
+			
+		}
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
@@ -238,20 +222,20 @@ public class ShaftGuesser implements PlugIn {
 		rt.addValue("Median Perimeter", mPerimeter);
 		rt.addValue("Median Mean Cortical Thickness (2D)", mMeanCort);
 		
-		rt.addValue("Shaft start slice (Ecc)", shaftPositions[0][0]);
-		rt.addValue("Shaft end slice (Ecc)", shaftPositions[0][1]);
-		rt.addValue("Shaft start gradient (Ecc)", gEccentricity[shaftPositions[0][0]]);
-		rt.addValue("Shaft end gradient (Ecc)", gEccentricity[shaftPositions[0][1]]);
+		rt.addValue("Shaft start slice (Perim)", shaftPositions[0][0]);
+		rt.addValue("Shaft end slice (Perim)", shaftPositions[0][1]);
+		rt.addValue("Shaft start gradient (Perim)", gPerimeter[shaftPositions[0][0]]);
+		rt.addValue("Shaft end gradient (Perim)", gPerimeter[shaftPositions[0][1]]);
 		
-		rt.addValue("Shaft start slice (Cort)", shaftPositions[1][0]);
-		rt.addValue("Shaft end slice (Cort)", shaftPositions[1][1]);
-		rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPositions[1][0]]);
-		rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPositions[1][1]]);
+		rt.addValue("Shaft start slice (Ecc)", shaftPositions[1][0]);
+		rt.addValue("Shaft end slice (Ecc)", shaftPositions[1][1]);
+		rt.addValue("Shaft start gradient (Ecc)", gEccentricity[shaftPositions[1][0]]);
+		rt.addValue("Shaft end gradient (Ecc)", gEccentricity[shaftPositions[1][1]]);
 		
-		rt.addValue("Shaft start slice (Perim)", shaftPositions[2][0]);
-		rt.addValue("Shaft end slice (Perim)", shaftPositions[2][1]);
-		rt.addValue("Shaft start gradient (Perim)", gPerimeter[shaftPositions[2][0]]);
-		rt.addValue("Shaft end gradient (Perim)", gPerimeter[shaftPositions[2][1]]);
+		rt.addValue("Shaft start slice (Cort)", shaftPositions[2][0]);
+		rt.addValue("Shaft end slice (Cort)", shaftPositions[2][1]);
+		rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPositions[2][0]]);
+		rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPositions[2][1]]);
 		
 		rt.addValue("Shaft start", shaftPosition[1]);
 		
@@ -424,11 +408,13 @@ public class ShaftGuesser implements PlugIn {
 	}
 	
 	/**
-	 * Discover whether two ints are within a given range
+	 * Tests for 'close' numbers. Discover whether two ints are within 
+	 * a given range. Will theoretically work for any int[] length.
+	 * Here testing three at a time.
 	 * 
 	 * @param a
-	 * @param diff range
-	 * @return sortedList, the furthest-apart pair within range; zeros if none.
+	 * @param diff, the inclusive range
+	 * @return sortedList, the furthest-apart pair within the range, lowest first; zeros if none.
 	 */
 	private int[] inRange(int[] a, int diff) {
 		
@@ -442,40 +428,12 @@ public class ShaftGuesser implements PlugIn {
 			for(int j = 0; j < (z.length - i); j++) {
 				if(Math.abs(z[z.length - (j+1)] - z[i]) <= diff) {
 					sortedList[0] = z[i];
-					sortedList[1] = z[j];
+					sortedList[1] = z[z.length - (j+1)];
 					break;
 				}
 			}
 		}
 		return sortedList;
-	}
-	
-	/**
-	 * Discover whether two ints are within a given range
-	 * 
-	 * @param a
-	 * @param b
-	 * @param d range
-	 * @param wantLower true if the lower (correlating) int is desired.
-	 * @return the lower number; zero if none.
-	 */
-	private int inRange2(int a, int b, int d, boolean wantLower) {
-		
-		int[] z = new int[2];
-		
-		if(Math.abs(b - a) <= d) {
-			z[0] = a;
-			z[1] = b;
-			Arrays.sort(z);
-		}
-		
-		if(wantLower) {
-			return z[0];
-		}
-		else {
-			return z[1];
-		}
-		
 	}
 	
 	/**
