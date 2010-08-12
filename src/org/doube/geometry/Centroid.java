@@ -132,4 +132,19 @@ public class Centroid {
 		}
 		return sum / nPoints;
 	}
+	
+	/**
+	 * Return the centroid of a 1D int[] array, which is its mean value (rounded down)
+	 * 
+	 * @param points
+	 * @return the mean value of the points
+	 */
+	public static int getCentroid(int[] points){
+		final int nPoints = points.length;
+		double sum = 0;
+		for (int n = 0; n < nPoints; n++){
+			sum += points[n];
+		}
+		return (int) Math.round(sum / nPoints);
+	}
 }
