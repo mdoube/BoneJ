@@ -17,7 +17,9 @@ import ij.plugin.PlugIn;
 /**
  * <p>
  * Make an informed guess at which slices of an image stack contain the
- * proximal and distal "ends" of a femoral shaft. Currently requires 8-bit image stacks.
+ * proximal and distal "ends" of a femoral shaft.
+ * <br><br>
+ * Currently requires 8-bit image stacks. May want to align the bone first.
  * </p>
  * 
  * @author Nick Powell
@@ -168,8 +170,6 @@ public class ShaftGuesser implements PlugIn {
 		 * 
 		 * Poss: don't count slices with NaN...?
 		 * 
-		 * If the positions agree to within +/- the smoothing number of slices... average these?
-		 * 
 		 * Poss: gradient for reliability: low is no; high is yes.
 		 * The gradients actually tell me something about how significant the features at that particular point are.
 		 * 
@@ -211,7 +211,7 @@ public class ShaftGuesser implements PlugIn {
 			shaftPosition[0] = Centroid.getCentroid(shaftRange[0]);
 		}
 		if(shaftPosition[1] == 0) {
-			
+			shaftPosition[1] = Centroid.getCentroid(shaftRange[1]);
 		}
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
@@ -237,7 +237,12 @@ public class ShaftGuesser implements PlugIn {
 		rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPositions[2][0]]);
 		rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPositions[2][1]]);
 		
-		rt.addValue("Shaft start", shaftPosition[1]);
+		rt.addValue("Proximal shaft end", shaftPosition[0]);
+		rt.addValue("Distal shaft end", shaftPosition[1]);
+		
+//		rt.addValue("checkSR[0]", checkSR[0]);
+//		rt.addValue("checkSR[1]", checkSR[1]);
+//		rt.addValue("checkSR[2]", checkSR[2]);
 		
 		rt.show("Results");
 		
@@ -411,6 +416,7 @@ public class ShaftGuesser implements PlugIn {
 	 * Tests for 'close' numbers. Discover whether two ints are within 
 	 * a given range. Will theoretically work for any int[] length.
 	 * Here testing three at a time.
+	 * Currently finds the highest pair.
 	 * 
 	 * @param a
 	 * @param diff, the inclusive range
@@ -425,11 +431,10 @@ public class ShaftGuesser implements PlugIn {
 		Arrays.sort(z);
 		
 		for(int i = 0; i < z.length; i++) {
-			for(int j = 0; j < (z.length - i); j++) {
-				if(Math.abs(z[z.length - (j+1)] - z[i]) <= diff) {
+			for(int j = 0; j < (z.length - (i + 1)); j++) {
+				if(z[z.length - (j+1)] - z[i] <= diff) {
 					sortedList[0] = z[i];
 					sortedList[1] = z[z.length - (j+1)];
-					break;
 				}
 			}
 		}
