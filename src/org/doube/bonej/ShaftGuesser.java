@@ -429,15 +429,26 @@ public class ShaftGuesser implements PlugIn {
 		
 		// Sort first as this will break out of the loop when it finds the pair widest apart.
 		Arrays.sort(z);
+		int pairCount = 0;
 		
 		for(int i = 0; i < z.length; i++) {
 			for(int j = 0; j < (z.length - (i + 1)); j++) {
 				if(z[z.length - (j+1)] - z[i] <= diff) {
-					sortedList[0] = z[i];
-					sortedList[1] = z[z.length - (j+1)];
+					
+					if(z[z.length - (j+1)] - z[i] >= sortedList[1] - sortedList[0]) {
+						
+					}
+					sortedList[0] = sortedList[0] + z[i];
+					sortedList[1] = sortedList[1] + z[z.length - (j+1)];
+					pairCount ++;
 				}
 			}
 		}
+		if(pairCount > 0) {
+			sortedList[0] = Math.round(sortedList[0] / pairCount);
+			sortedList[1] = Math.round(sortedList[1] / pairCount);
+		}
+		
 		return sortedList;
 	}
 	
