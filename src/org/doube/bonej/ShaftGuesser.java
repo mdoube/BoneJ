@@ -28,7 +28,9 @@ import ij.plugin.PlugIn;
 
 public class ShaftGuesser implements PlugIn {
 	
-	private boolean proximalLow, doGraph;
+	
+	private boolean proximalLow;
+	private boolean doGraph;
 	
 	private int al, startSlice, endSlice, ss, iss;
 	/** Smooth over this number of slices. Initially set to 1/50th of stack size */
@@ -416,7 +418,7 @@ public class ShaftGuesser implements PlugIn {
 	 * Tests for 'close' numbers. Discover whether two ints are within 
 	 * a given range. Will theoretically work for any int[] length.
 	 * Here testing three at a time.
-	 * Currently finds the highest pair.
+	 * Currently finds the pair furthest apart.
 	 * 
 	 * @param a
 	 * @param diff, the inclusive range
@@ -433,22 +435,14 @@ public class ShaftGuesser implements PlugIn {
 		
 		for(int i = 0; i < z.length; i++) {
 			for(int j = 0; j < (z.length - (i + 1)); j++) {
-				if(z[z.length - (j+1)] - z[i] <= diff) {
+				if(z[z.length - (j+1)] - z[i] <= diff
+						&& z[z.length - (j+1)] - z[i] >= sortedList[1] - sortedList[0]) {
 					
-					if(z[z.length - (j+1)] - z[i] >= sortedList[1] - sortedList[0]) {
-						
-					}
 					sortedList[0] = sortedList[0] + z[i];
 					sortedList[1] = sortedList[1] + z[z.length - (j+1)];
-					pairCount ++;
 				}
 			}
 		}
-		if(pairCount > 0) {
-			sortedList[0] = Math.round(sortedList[0] / pairCount);
-			sortedList[1] = Math.round(sortedList[1] / pairCount);
-		}
-		
 		return sortedList;
 	}
 	
