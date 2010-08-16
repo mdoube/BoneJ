@@ -1,5 +1,6 @@
 package org.doube.bonej;
 
+import java.awt.Frame;
 import java.util.Arrays;
 
 import org.doube.geometry.Centroid;
@@ -9,8 +10,10 @@ import org.doube.util.ThresholdGuesser;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.WindowManager;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
+import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 
@@ -28,11 +31,19 @@ import ij.plugin.PlugIn;
 
 public class ShaftGuesser implements PlugIn {
 	
+	private Calibration cal;
+	private String units, bone, title;
+	/** Trabeculae feature size range, 'min-max', in 'unit's */
+	private String trabRange;
 	
+	/** Flip the z-axis if this is false. May be possible to automate detection, 
+	 * as distal end of femur generally has a greater volume */
 	private boolean proximalLow;
+	/** Looks for a longer diaphysis if true */
+	private boolean beGenerous;
 	private boolean doGraph;
 	
-	private int al, startSlice, endSlice, ss, iss;
+	private int al, startSlice, endSlice, ss, iss, boneID;
 	/** Smooth over this number of slices. Initially set to 1/50th of stack size */
 	private int smoothOver;
 	/** Calculate the gradient over this number of slices */
@@ -44,8 +55,14 @@ public class ShaftGuesser implements PlugIn {
 	/** First and last slice numbers of the femoral shaft */
 	private int[] shaftPosition = new int[2];
 	
+	/** Measured length, in 'unit's */
+	private double boneLength, shaftLength;
+	/** Pixel dimensions */
+	private double vW, vH, vD;
+	/** Trabeculae feature sizes, in 'unit's */
+	private double trabMax, trabMin;
 	/** Median values */
-	private double mEccentricity, mMeanCort, mFeretMax, mFeretMin, mPerimeter;
+	private double mEccentricity, mMeanCort, mFeretMax, mFeretMin, mPerimeter, mTrabeculae;
 	/** List of eccentricities, based on Feret's min and max */
 	private double[] eccentricity;
 	/** List of maximum diameters */
@@ -58,12 +75,12 @@ public class ShaftGuesser implements PlugIn {
 	private double[] perimeter;
 	/** List of slice numbers */
 	private double[] slices;
-	/** First and last slices of shaft */
-	private double[] shaft;
+	/** List of number of trabeculae features per slice */
+	private double[] trabeculae;
 	/** List of gradients at each slice, based on values +/- from that slice */
 	private double[] gFeretMax, gFeretMin, gPerimeter, gEccentricity, gMeanCort;
 	/** List of smoothed values */
-	private double[] sFeretMax, sFeretMin, sPerimeter, sEccentricity, sMeanCort;
+	private double[] sFeretMax, sFeretMin, sPerimeter, sEccentricity, sMeanCort, sTrabeculae;
 	
 	public void run(String arg) {
 		
@@ -76,6 +93,18 @@ public class ShaftGuesser implements PlugIn {
 			return;
 		}
 		
+		/* Seems to be necessary for everything; certainly necessary for AnalyzeParticles */
+		if(imp.getBitDepth() != 8) {
+			IJ.run("8-bit");
+		}
+		
+		/* Copied from SliceGeometry */
+		this.boneID = BoneList.guessBone(imp);
+		this.cal = imp.getCalibration();
+		this.vW = cal.pixelWidth;
+		this.vH = cal.pixelHeight;
+		this.vD = cal.pixelDepth;
+		this.units = cal.getUnits();
 		this.al = imp.getStackSize() + 1;
 		this.iss = imp.getImageStackSize();
 		
@@ -83,21 +112,38 @@ public class ShaftGuesser implements PlugIn {
 		double min = thresholds[0];
 		double max = thresholds[1];
 		
+		this.trabMin = vW * imp.getWidth() / 200;
+		this.trabMax = trabMin * 40;
+		
 		GenericDialog gd = new GenericDialog("Shaft Guesser Options");
+		String[] bones = BoneList.get();
+		gd.addChoice("Bone: ", bones, bones[boneID]);
+		
 		gd.addCheckbox("Proximal end of bone has lower slice number", true);
 		gd.addNumericField("Bone start slice", 1, 0);
 		gd.addNumericField("Bone end slice", this.iss, 0);
 		gd.addMessage("Choose how to estimate the shaft parameters: ");
+		gd.addCheckbox("Look for longer shaft", false);
 		gd.addNumericField("Smooth over +/-", Math.round(this.al / 50), 0, 3, "slices");
 		gd.addNumericField("Calculate gradient over +/-", Math.round(this.al / 50), 0, 3, "slices");
+		gd.addMessage("Choose trabeculae parameters: ");
+		gd.addNumericField("Min particle size", trabMin, 0, 3, units);
+		gd.addNumericField("Max particle size", trabMax, 0, 3, units);
 		gd.addCheckbox("Graph output", true);
 		gd.showDialog();
+		
+		this.bone = gd.getNextChoice();
+		this.boneID = BoneList.guessBone(bone);
 		
 		this.proximalLow = gd.getNextBoolean();
 		this.startSlice = (int) gd.getNextNumber();
 		this.endSlice = (int) gd.getNextNumber();
+		this.beGenerous = gd.getNextBoolean();
 		this.smoothOver = (int) gd.getNextNumber();
 		this.gradientOver = (int) gd.getNextNumber();
+		this.trabMin = gd.getNextNumber();
+		this.trabMax = gd.getNextNumber();
+		this.trabRange = trabMin + "-" + trabMax;
 		this.doGraph = gd.getNextBoolean();
 		if (gd.wasCanceled())
 			return;
@@ -121,12 +167,6 @@ public class ShaftGuesser implements PlugIn {
 			this.iss = imp.getImageStackSize();
 		}
 		
-		/* For plotting */
-		this.slices = new double[imp.getStackSize() + 1];
-		for (int s = this.startSlice; s <= this.iss; s++) {
-			slices[s] = (double) s;
-		}
-		
 		/* Get values from SliceGeometry */
 		SliceGeometry sg = new SliceGeometry();
 		sg.setParameters(imp);
@@ -138,6 +178,10 @@ public class ShaftGuesser implements PlugIn {
 		this.feretMin = sg.getFeretMin();
 		this.perimeter = sg.getPerimeter();
 		this.meanCortThick2D = sg.getMeanCorticalThickness2D();
+		/*Ideal addition would be: cortical vs. trabecular fraction */
+		
+		/* Trabecular calculations */
+//		this.trabeculae = quanitfyTrabeculae(imp, trabMin, trabMax);
 		
 		/* Calculate the eccentricities of each slice */
 		this.eccentricity = eccentricity(feretMin, feretMax);
@@ -148,6 +192,7 @@ public class ShaftGuesser implements PlugIn {
 		this.sFeretMin = smooth(feretMin, smoothOver);
 		this.sPerimeter = smooth(perimeter, smoothOver);
 		this.sMeanCort = smooth(meanCortThick2D, smoothOver);
+		this.sTrabeculae = smooth(trabeculae, smoothOver);
 		
 		/* Calculate 'gradients' (changes over a number of slices), preferably after smoothing */
 		this.gEccentricity = gradient(sEccentricity, gradientOver);
@@ -163,7 +208,6 @@ public class ShaftGuesser implements PlugIn {
 		this.mPerimeter = median(sPerimeter);
 		this.mMeanCort = median(sMeanCort);
 		
-		/* Possible outer limits of shaft */
 		/* Perimeter measures relative size;
 		 * Cortical thickness is an actual bone property;
 		 * Eccentricity measures shape.
@@ -182,31 +226,62 @@ public class ShaftGuesser implements PlugIn {
 //		this.startSlice = shaftPosition[0];
 //		this.endSlice = shaftPosition[1];
 		
+		/* Run 1: possible outer limits of shaft */
+		this.shaftPositions = new int[4][2];
+		this.shaftPositions[0] = shaftLimiter(sPerimeter, mPerimeter, false);
+		this.shaftPositions[1] = shaftLimiter(sEccentricity, mEccentricity, false);
+		this.shaftPositions[2] = shaftLimiter(sMeanCort, mMeanCort, true);
+//		this.shaftPositions[3] = shaftLimiter(sTrabeculae, mTrabeculae, false);
+		
 		/* Run 2: refine shaft limits: by shape */
 //		if(this.eccentricity[shaftPosition[0]] > mEccentricity) {
 //			
 //		}
 		
-		/* Run 1: possible outer limits of shaft: by size */
-		this.shaftPositions = new int[3][2];
-		this.shaftPositions[0] = shaftLimiter(sPerimeter, mPerimeter, false);
-		this.shaftPositions[1] = shaftLimiter(sEccentricity, mEccentricity, false);
-		this.shaftPositions[2] = shaftLimiter(sMeanCort, mMeanCort, true);
+		/* Check for broken values: proximal greater than distal */
+		for(int i = 0; i < shaftPositions.length; i++) {
+			this.shaftPositions[i] = checkShaftSanity(shaftPositions[i]);
+		}
+		
+		/* Attempt to get over notches in the shaft.
+		 * If we're being generous, increase or decrease the median by 10% 
+		 * - if this increases the shaft length by >= 10%, keep the new values */
+//		if(beGenerous) {
+//			this.mPerimeter = this.mPerimeter * 1.1;
+//			this.mEccentricity = this.mEccentricity * 1.1;
+//			this.mMeanCort = this.mMeanCort * 1.1;
+//			
+//			if(shaftLimiter(sPerimeter, mPerimeter, false)[1] - shaftLimiter(sPerimeter, mPerimeter, false)[0] >= 1.1 * (this.shaftPositions[0][1] - this.shaftPositions[0][0])) {
+//				this.shaftPositions[0] = shaftLimiter(sPerimeter, mPerimeter, false);
+//			}
+//			if(shaftLimiter(sEccentricity, mEccentricity, false)[1] - shaftLimiter(sEccentricity, mEccentricity, false)[0] >= 1.1 * (this.shaftPositions[1][1] - this.shaftPositions[1][0])) {
+//				this.shaftPositions[1] = shaftLimiter(sEccentricity, mEccentricity, false);
+//			}
+//			if(shaftLimiter(sMeanCort, mMeanCort, false)[1] - shaftLimiter(sMeanCort, mMeanCort, false)[0] >= 1.1 * (this.shaftPositions[2][1] - this.shaftPositions[2][0])) {
+//				this.shaftPositions[2] = shaftLimiter(sMeanCort, mMeanCort, false);
+//			}
+//		}
 		
 		/* Switch columns and rows for inRange, below */
-		this.shaftRange = new int[2][3];
-		shaftRange[0][0] = shaftPositions[0][0];
-		shaftRange[0][1] = shaftPositions[1][0];
-		shaftRange[0][2] = shaftPositions[2][0];
-		shaftRange[1][0] = shaftPositions[0][1];
-		shaftRange[1][1] = shaftPositions[1][1];
-		shaftRange[1][2] = shaftPositions[2][1];
+		this.shaftRange = new int[shaftPositions[0].length][shaftPositions.length];
+		for(int i = 0; i < shaftRange.length; i++) {
+			for(int j = 0; j < shaftRange[0].length; j++) {
+				shaftRange[i][j] = shaftPositions[j][i];
+			}
+		}
 		
 		/* inRange tests for 'close by' numbers, and returns the pair it finds.
-		 * Here, get max value of proximal end; min value of distal end (conservative),
-		 * but could switch to liberal (i.e. longer shaft), or average the pair. */
-		this.shaftPosition[0] = inRange(shaftRange[0], smoothOver)[1];
-		this.shaftPosition[1] = inRange(shaftRange[1], smoothOver)[0];
+		 * beGenerous: gives min value (lower slice num) of proximal end and 
+		 * max value of distal end (i.e. longer shaft); otherwise vice versa.
+		 * Could also average the pair. */
+		if(beGenerous) {
+			this.shaftPosition[0] = inRange(shaftRange[0], smoothOver)[0];
+			this.shaftPosition[1] = inRange(shaftRange[1], smoothOver)[1];
+		}
+		else {
+			this.shaftPosition[0] = inRange(shaftRange[0], smoothOver)[1];
+			this.shaftPosition[1] = inRange(shaftRange[1], smoothOver)[0];
+		}
 		
 		/* If inRange fails to find a pair, average the values from perimeter, etc. */
 		if(shaftPosition[0] == 0) {
@@ -216,8 +291,14 @@ public class ShaftGuesser implements PlugIn {
 			shaftPosition[1] = Centroid.getCentroid(shaftRange[1]);
 		}
 		
+		this.shaftLength = (shaftPosition[1] - shaftPosition[0]) * vD;
+		this.boneLength = this.iss * vD;
+		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
+		rt.addLabel("Title", title);
+		rt.addValue("Bone Code", boneID);
+		
 		rt.addValue("Median Eccentricity", mEccentricity);
 		rt.addValue("Median Feret Max", mFeretMax);
 		rt.addValue("Median Feret Min", mFeretMin);
@@ -241,14 +322,19 @@ public class ShaftGuesser implements PlugIn {
 		
 		rt.addValue("Proximal shaft end", shaftPosition[0]);
 		rt.addValue("Distal shaft end", shaftPosition[1]);
-		
-//		rt.addValue("checkSR[0]", checkSR[0]);
-//		rt.addValue("checkSR[1]", checkSR[1]);
-//		rt.addValue("checkSR[2]", checkSR[2]);
+		rt.addValue("Diaphysis length (" + units + ")", shaftLength);
+		rt.addValue("Bone length (" + units + ")", boneLength);
+		rt.addValue("Diaphysis proportion", shaftLength / boneLength);
 		
 		rt.show("Results");
 		
 		if(doGraph) {
+			
+			/* For plotting */
+			this.slices = new double[imp.getStackSize() + 1];
+			for (int s = this.startSlice; s <= this.iss; s++) {
+				slices[s] = (double) s;
+			}
 			
 			Plot sEccPlot = new Plot("Smoothed eccentricity", "Slice", "Eccentricity", this.slices, this.sEccentricity);
 			sEccPlot.show();
@@ -274,7 +360,8 @@ public class ShaftGuesser implements PlugIn {
 	 * Estimates at which slices the shaft begins and ends, based on numerical limits.
 	 * Cycles through slices from the centre, first down, then up, until 
 	 * a condition is met (shaftLimit).
-	 * Main weakness: assumes the central slice is part of the shaft.
+	 * Main weaknesses: assumes the central slice is part of the shaft. Also assumes
+	 * a distinctive "u-shaped" profile of the shaft (or inverse when isMin is true).
 	 * 
 	 * @param boneStack
 	 * @param shaftLimit
@@ -287,34 +374,25 @@ public class ShaftGuesser implements PlugIn {
 		// Find the central slice. (For stacks with odd number of slices, should round up ImageStackSize/2.)
 		int centralSlice = Math.round((this.endSlice - this.startSlice) / 2);
 		
-		if(isMin) {
-			// Cycle through slices from central slice, first down; then up.
-			for(int i = centralSlice; i >= this.startSlice; i--) {
-				if(Math.abs(boneStack[i]) < shaftLimit) {
-					shaftEnds[0] = i + 1;
-					break;
-				}
+		// Cycle through slices from central slice, first down; then up.
+		for(int i = centralSlice; i >= this.startSlice; i--) {
+			if(isMin && Math.abs(boneStack[i]) < shaftLimit) {
+				shaftEnds[0] = i + 1;
+				break;
 			}
-			for(int i = centralSlice; i < this.endSlice; i++) {
-				if(Math.abs(boneStack[i]) < shaftLimit) {
-					shaftEnds[1] = i - 1;
-					break;
-				}
+			else if(!isMin && Math.abs(boneStack[i]) > shaftLimit) {
+				shaftEnds[0] = i + 1;
+				break;
 			}
 		}
-		else {
-			// Cycle through slices from central slice, first down; then up.
-			for(int i = centralSlice; i >= this.startSlice; i--) {
-				if(Math.abs(boneStack[i]) > shaftLimit) {
-					shaftEnds[0] = i + 1;
-					break;
-				}
+		for(int i = centralSlice; i < this.endSlice; i++) {
+			if(isMin && Math.abs(boneStack[i]) < shaftLimit) {
+				shaftEnds[1] = i - 1;
+				break;
 			}
-			for(int i = centralSlice; i < this.endSlice; i++) {
-				if(Math.abs(boneStack[i]) > shaftLimit) {
-					shaftEnds[1] = i - 1;
-					break;
-				}
+			else if(!isMin && Math.abs(boneStack[i]) > shaftLimit) {
+				shaftEnds[1] = i - 1;
+				break;
 			}
 		}
 		
@@ -322,8 +400,71 @@ public class ShaftGuesser implements PlugIn {
 	}
 	
 	/**
-	 * Eccentricity, 0 < e < 1 (0 is a circle), for a pair of doubles[]
-	 * Based on Feret's min and max.
+	 * Checks whether a shaft's start and end points are the wrong way around.
+	 * 
+	 * @param a
+	 * @return b, empty array, if so. (Else return input array a).
+	 */
+	private int[] checkShaftSanity(int[] a) {
+		
+		if(a[0] > a[1]) {
+			int[] b = new int[a.length];
+			return b;
+		}
+		else return a;
+	}
+	
+	/* 
+	 * Want: maximum ROI ie outer region of bone
+	 * - could go: here's the centroid of the shaft
+	 * - here's the average shaft diameter or max over whole shaft,
+	 * - ROI is circular region with this diameter from centroid
+	 * Ideally though, select outer edge of bone, or even mid-cortical(!?) as ROI border.
+	 * 
+	 * Need to guess at size of trabeculae relative to size of image or bone iself
+	 * 
+	 * Actually want: count of  holes formed by trabeculae ("shafts"? "connecting bits")
+	 * on each slice.
+	 * Plot by slice. See what it looks like.
+	 * 
+	 * Possible? to then draw an outer region around all the points it finds, so:
+	 * - within this region: trabeculae;
+	 * - nb medullary canal: use distance between points? so want doughnut around medullary canal
+	 * - then compare total cortical area with total trabeculae area... 
+	 *
+	 * */
+	/**
+	 * Quantify the trabecular particles in each slice.
+	 * Requires a binary image.
+	 * 
+	 * Flow is:
+	 * Set 8-bit
+	 * Binarise (threshold)
+	 * Watershed
+	 * Set min& max particle sizes
+	 * Analyse
+	 * 
+	 * @param imp
+	 * @param min
+	 * @param max
+	 * @return list of numbers of trabecular particles per slice.
+	 */
+	private double[] quanitfyTrabeculae(ImagePlus imp, double trabMin, double trabMax) {
+		
+		double[] trabList = new double[imp.getStackSize()];
+		
+		/* Gives results but can't use them */
+		IJ.run("Analyze Particles...", "size=" + trabMin + "-" + trabMax + "circularity=0.00-1.00 show=Masks display clear include summarize stack");
+		
+		Frame frame = WindowManager.getFrame("Summary");
+		IJ.saveAs("Text", "\\home\\ij_results\\Summary of femur.xls");
+		return trabList;
+	}
+	
+	/**
+	 * Estimate of eccentricity, 0 < e < 1 (0 is a circle), for a pair of doubles[]
+	 * Based on Feret's min and max, so this is not *true* eccentricity,
+	 * which requires the axes to be perpendicular (true anyway in a true ellipse).
 	 * 
 	 * See <a href="http://mathworld.wolfram.com/Eccentricity.html">http://mathworld.wolfram.com/Eccentricity.html</a>
 	 *
@@ -415,10 +556,9 @@ public class ShaftGuesser implements PlugIn {
 	}
 	
 	/**
-	 * Tests for 'close' numbers. Discover whether two ints are within 
+	 * Tests for 'close' number pairs. Discover whether two ints are within 
 	 * a given range. Will theoretically work for any int[] length.
-	 * Here testing three at a time.
-	 * Currently finds the pair furthest apart.
+	 * Currently finds the pair furthest apart (constrained to the range).
 	 * 
 	 * @param a
 	 * @param diff, the inclusive range
@@ -429,17 +569,16 @@ public class ShaftGuesser implements PlugIn {
 		int[] sortedList = new int[2];
 		int[] z = a.clone();
 		
-		// Sort first as this will break out of the loop when it finds the pair widest apart.
+		// Sort first as will break out of loop on finding the pair widest apart.
 		Arrays.sort(z);
-		int pairCount = 0;
 		
 		for(int i = 0; i < z.length; i++) {
 			for(int j = 0; j < (z.length - (i + 1)); j++) {
 				if(z[z.length - (j+1)] - z[i] <= diff
 						&& z[z.length - (j+1)] - z[i] >= sortedList[1] - sortedList[0]) {
 					
-					sortedList[0] = sortedList[0] + z[i];
-					sortedList[1] = sortedList[1] + z[z.length - (j+1)];
+					sortedList[0] = z[i];
+					sortedList[1] = z[z.length - (j+1)];
 				}
 			}
 		}
