@@ -192,7 +192,7 @@ public class ShaftGuesser implements PlugIn {
 		this.sFeretMin = smooth(feretMin, smoothOver);
 		this.sPerimeter = smooth(perimeter, smoothOver);
 		this.sMeanCort = smooth(meanCortThick2D, smoothOver);
-		this.sTrabeculae = smooth(trabeculae, smoothOver);
+//		this.sTrabeculae = smooth(trabeculae, smoothOver);
 		
 		/* Calculate 'gradients' (changes over a number of slices), preferably after smoothing */
 		this.gEccentricity = gradient(sEccentricity, gradientOver);
@@ -371,7 +371,11 @@ public class ShaftGuesser implements PlugIn {
 	private int[] shaftLimiter(double[] boneStack, double shaftLimit, boolean isMin) {
 		
 		int[] shaftEnds = new int[2];
-		// Find the central slice. (For stacks with odd number of slices, should round up ImageStackSize/2.)
+		/* Find the central slice. (For stacks with odd number of slices, 
+		 * should round up ImageStackSize/2.)
+		 * An improvement would be to start at the slice containing the centroid
+		 * of the bone, but slower to run.
+		 */
 		int centralSlice = Math.round((this.endSlice - this.startSlice) / 2);
 		
 		// Cycle through slices from central slice, first down; then up.
@@ -438,6 +442,7 @@ public class ShaftGuesser implements PlugIn {
 	 * Requires a binary image.
 	 * 
 	 * Flow is:
+	 * Copy to new image
 	 * Set 8-bit
 	 * Binarise (threshold)
 	 * Watershed
@@ -445,19 +450,21 @@ public class ShaftGuesser implements PlugIn {
 	 * Analyse
 	 * 
 	 * @param imp
-	 * @param min
-	 * @param max
-	 * @return list of numbers of trabecular particles per slice.
+	 * @param trabMin
+	 * @param trabMax
+	 * @return list of numbers of trabecular particles, within the given range, per slice.
 	 */
 	private double[] quanitfyTrabeculae(ImagePlus imp, double trabMin, double trabMax) {
+		
+		
 		
 		double[] trabList = new double[imp.getStackSize()];
 		
 		/* Gives results but can't use them */
-		IJ.run("Analyze Particles...", "size=" + trabMin + "-" + trabMax + "circularity=0.00-1.00 show=Masks display clear include summarize stack");
+//		IJ.run("Analyze Particles...", "size=" + trabMin + "-" + trabMax + "circularity=0.00-1.00 show=Masks display clear include summarize stack");
 		
-		Frame frame = WindowManager.getFrame("Summary");
-		IJ.saveAs("Text", "\\home\\ij_results\\Summary of femur.xls");
+//		Frame frame = WindowManager.getFrame("Summary");
+//		IJ.saveAs("Text", "\\home\\ij_results\\Summary of femur.xls");
 		return trabList;
 	}
 	
