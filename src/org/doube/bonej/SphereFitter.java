@@ -21,22 +21,31 @@ package org.doube.bonej;
 import java.awt.AWTEvent;
 import java.awt.Checkbox;
 import java.awt.TextField;
+import java.util.ArrayList;
 import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
 
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.process.ImageProcessor;
+import ij.process.StackConverter;
 import ij.plugin.PlugIn;
 import ij.gui.*;
 import ij.plugin.frame.*;
 import ij.measure.Calibration;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 import org.doube.geometry.FitSphere;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+
+import customnode.CustomPointMesh;
 
 /**
  *<p>
@@ -114,6 +123,10 @@ public class SphereFitter implements PlugIn, DialogListener {
 			copyInnerCube(imp, cropFactor, sphereDim).show();
 		if (doOuterCube)
 			copyOuterCube(imp, cropFactor, sphereDim).show();
+		
+		// Show 3D with axes
+		show3DAxes(imp, sphereDim);
+		
 		return;
 	}
 
@@ -320,6 +333,57 @@ public class SphereFitter implements PlugIn, DialogListener {
 		target.setDisplayRange(imp.getDisplayRangeMin(), imp
 				.getDisplayRangeMax());
 		return target;
+	}
+	
+	/**
+	 * Show axes about the sphere in 3D. Copied from Moments.
+	 * @param imp
+	 * @param sphereDim
+	 */
+	private void show3DAxes(ImagePlus imp, double[] sphereDim) {
+		
+		final double xC = sphereDim[0];
+		final double yC = sphereDim[1];
+		final double zC = sphereDim[2];
+		final double r = sphereDim[3];
+		
+		Point3f cent = new Point3f();
+		cent.x = (float) xC;
+		cent.y = (float) yC;
+		cent.z = (float) zC;
+		
+		// initialise and show the 3D universe
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		
+		// show the centroid
+		ArrayList<Point3f> point = new ArrayList<Point3f>();
+		point.add(cent);
+		CustomPointMesh mesh = new CustomPointMesh(point);
+		mesh.setPointSize(5.0f);
+		float red = 0.0f;
+		float green = 0.5f;
+		float blue = 1.0f;
+		Color3f cColour = new Color3f(red, green, blue);
+		mesh.setColor(cColour);
+		try {
+			univ.addCustomMesh(mesh, "Centroid").setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		
+		// show the stack
+		try {
+			new StackConverter(imp).convertToGray8();				// was: roiImp
+			Content c = univ.addVoltex(imp);						// was: roiImp
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		
+		return;
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {

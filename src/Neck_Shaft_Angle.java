@@ -72,7 +72,7 @@ import org.doube.util.ThresholdGuesser;
 public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 
 	private ImageCanvas canvas;
-
+	/** Holds (x, y, z) centre and radius */
 	private double[] headCentre;
 
 	private double[][] shaftVector;
@@ -119,6 +119,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 				.addMessage("Only pixels >= bone min\n"
 						+ "and <= bone max are used.");
 		gd.addCheckbox("Calculate curvature", true);
+		gd.addCheckbox("Show annotations in 3D", true);
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -134,6 +135,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 			max = cal.getRawValue(max);
 		}
 		final boolean doCurvature = gd.getNextBoolean();
+		final boolean doShow3D = gd.getNextBoolean();
 
 		// get coordinates from the ROI manager and fit a sphere
 		RoiManager roiMan = RoiManager.getInstance();
@@ -178,6 +180,10 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 		if (doCurvature)
 			calculateCurvature(imp, this.shaftVector, this.headCentre,
 					centroid, startSlice, endSlice, min, max);
+		
+		if(doShow3D) {
+			
+		}
 
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
