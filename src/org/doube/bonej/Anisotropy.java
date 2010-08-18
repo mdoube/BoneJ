@@ -43,6 +43,7 @@ import ij3d.Image3DUniverse;
 import ij3d.Content;
 
 import org.doube.geometry.FitEllipsoid;
+import org.doube.geometry.Vectors;
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.util.ImageCheck;
@@ -185,7 +186,7 @@ public class Anisotropy implements PlugIn {
 			double tolerance, boolean doPlot) {
 		final int minIterations = minSpheres;
 		final int maxIterations = maxSpheres;
-		final double[][] vectorList = randomVectors(nVectors);
+		final double[][] vectorList = Vectors.randomVectors(nVectors);
 		double variance = Double.NaN;
 		double anisotropy = Double.NaN;
 		double[][] centroidList = new double[1][3];
@@ -330,26 +331,6 @@ public class Anisotropy implements PlugIn {
 		double coeffVariation = stDev / mean;
 		return coeffVariation;
 	}
-
-	/**
-	 * Generate an array of randomly-oriented 3D unit vectors
-	 * 
-	 * @param nVectors
-	 *            number of vectors to generate
-	 * @return 2D array (nVectors x 3) containing unit vectors
-	 */
-	private double[][] randomVectors(int nVectors) {
-		double[][] randomVectors = new double[nVectors][3];
-		for (int n = 0; n < nVectors; n++) {
-			final double z = 2 * Math.random() - 1;
-			final double rho = Math.sqrt(1 - z * z);
-			final double phi = Math.PI * (2 * Math.random() - 1);
-			randomVectors[n][0] = rho * Math.cos(phi);
-			randomVectors[n][1] = rho * Math.sin(phi);
-			randomVectors[n][2] = z;
-		}
-		return randomVectors;
-	} /* end randomVectors */
 
 	/*-------------------------------------------------------------------*/
 	/**

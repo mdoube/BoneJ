@@ -89,7 +89,7 @@ public class PlateRod implements PlugIn {
 		}
 		if (gd.wasCanceled())
 			return;
-		double[][] randomVectors = Vectors.random3D(nVectors);
+		double[][] randomVectors = Vectors.randomVectors(nVectors);
 		double[][] skeletonPoints = skeletonPoints(imp);
 		double[][] localEigenValues = localEigenValues(imp, randomVectors,
 				skeletonPoints, samplingIncrement);

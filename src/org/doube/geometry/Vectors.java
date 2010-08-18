@@ -112,7 +112,7 @@ public class Vectors {
 	 *            number of vectors to generate
 	 * @return 2D array (nVectors x 3) containing unit vectors
 	 */
-	public static double[][] random3D(int nVectors) {
+	public static double[][] randomVectors(int nVectors) {
 		double[][] randomVectors = new double[nVectors][3];
 		for (int n = 0; n < nVectors; n++) {
 			final double z = 2 * Math.random() - 1;
