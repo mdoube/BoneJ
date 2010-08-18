@@ -525,7 +525,7 @@ public class ShaftGuesser implements PlugIn {
 	 * @param a number of slices +/- over which to average
 	 * @return gradient[]
 	 */
-	private double[] smooth(double[] x, int a) {
+	public double[] smooth(double[] x, int a) {
 		
 		double[] average = new double[x.length];
 		
