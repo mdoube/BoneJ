@@ -4,11 +4,13 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Random;
 
+import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.RoiMan;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.gui.GenericDialog;
 import ij.gui.ImageCanvas;
 import ij.gui.ImageWindow;
@@ -43,6 +45,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[][] pixelValues;
 	/** User's chosen start point */
 	private double[] initialPoint = new double[3];
+	
+	/** Random unit vectors (x, y, z) */
+	private double[][] unitVectors;
+	
 	/** Fill with random edge points */
 	private double[][] edgePoints;
 	/** List of x, y, z coordinates at each point along each line */
@@ -114,6 +120,51 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		GenericDialog gd = new GenericDialog("Info");
 		gd.addMessage("Hello " + initialPoint[2] + " bye!");
 		gd.showDialog();
+		
+		
+		/* Create array of random 3D unit vectors */
+		this.unitVectors = Vectors.random3D(100);
+		
+		ImageStack stack = imp.getStack();
+		
+		/* Set up array of ImageProcessors for refernce later */
+		ImageProcessor[] ipStack = new ImageProcessor[imp.getStackSize() + 1];
+		for(int s = 1; s < ipStack.length; s++) {
+			ipStack[s] = stack.getProcessor(s);
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		final int w = (int) Math.floor(imp.getWidth() * vW);
 		final int h = (int) Math.floor(imp.getHeight() * vH);
@@ -212,34 +263,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		}
 		Plot omgPlot = new Plot("OMG startpoint" + iX + " " + iY + " " + iZ + " endpoint" + edgePoints[1][0] + " " + edgePoints[1][1] + " " + edgePoints[1][2] + " ", "distance", "value", xValues, pixelValues[1]);
 		omgPlot.show();
-		
-		this.xValues = new double[pixelValues[2].length];
-		for (int j = 0; j < xValues.length; j++) {
-			xValues[j] = (double) j;
-		}
-		Plot omgPlot2 = new Plot("OMG", "distance", "value", xValues, pixelValues[2]);
-		omgPlot2.show();
-		
-		this.xValues = new double[pixelValues[3].length];
-		for (int j = 0; j < xValues.length; j++) {
-			xValues[j] = (double) j;
-		}
-		Plot omgPlot3 = new Plot("OMG", "distance", "value", xValues, pixelValues[3]);
-		omgPlot3.show();
-		
-		this.xValues = new double[pixelValues[4].length];
-		for (int j = 0; j < xValues.length; j++) {
-			xValues[j] = (double) j;
-		}
-		Plot omgPlot4 = new Plot("OMG", "distance", "value", xValues, pixelValues[4]);
-		omgPlot4.show();
-		
-		this.xValues = new double[pixelValues[5].length];
-		for (int j = 0; j < xValues.length; j++) {
-			xValues[j] = (double) j;
-		}
-		Plot omgPlot5 = new Plot("OMG", "distance", "value", xValues, pixelValues[5]);
-		omgPlot5.show();
 		
 		this.profile = new ProfilePlot(imp).getProfile();
 		
