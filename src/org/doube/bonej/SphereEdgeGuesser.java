@@ -2,6 +2,7 @@ package org.doube.bonej;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.ArrayList;
 import java.util.Random;
 
 import org.doube.geometry.Vectors;
@@ -37,12 +38,25 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	private int currentSlice;
 	
+	/** Initial (iX), current (nX) and final (fX) positions */
+	private int iX, iY, iZ, nX, nY, nZ, fX, fY, fZ;
+	/** Unit vector sizes */
+	private double uX, uY, uZ;
+	
+	/** List of distances */
+	
+	/** Pixel values along a vector. Expands for vector length. */
+	private ArrayList<Integer> vectorPixelValues;
+	/** Array (known length) of ArrayLists (different lengths) 
+	 * containing pixel values along each vector */
+	private ArrayList[] pixelValues;
+	
 	private double[] sphereDim = new double[4];
 	private double[] profile;
 	private double[] xValues;
 	/** List of total lengths */
 	private double[] distances;
-	private double[][] pixelValues;
+	private double[][] pixelValues2;
 	/** User's chosen start point */
 	private double[] initialPoint = new double[3];
 	
@@ -83,10 +97,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			return;
 //		}
 		
-		ImageWindow win = imp.getWindow();
-		this.canvas = win.getCanvas();
+//		ImageWindow win = imp.getWindow();
+//		this.canvas = win.getCanvas();
 		
-		Roi roi = imp.getRoi();
+//		Roi roi = imp.getRoi();
 		Calibration cal = imp.getCalibration();
 		ImageProcessor ip = imp.getProcessor();
 		
@@ -117,92 +131,132 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 //		final double[] iP = getInitialPoint();
 		
+		final int iX = (int) Math.floor(initialPoint[0]);
+		final int iY = (int) Math.floor(initialPoint[1]);
+		final int iZ = (int) Math.floor(initialPoint[2]);
+		
+		/* Confirm initial point */
 		GenericDialog gd = new GenericDialog("Info");
-		gd.addMessage("Hello " + initialPoint[2] + " bye!");
+		gd.addMessage("Initial[0] " + iX + " 1 " + iY + " 2 " + iZ + "");
 		gd.showDialog();
 		
+		ImageStack stack = imp.getStack();
 		
 		/* Create array of random 3D unit vectors */
 		this.unitVectors = Vectors.random3D(100);
 		
-		ImageStack stack = imp.getStack();
-		
-		/* Set up array of ImageProcessors for refernce later */
-		ImageProcessor[] ipStack = new ImageProcessor[imp.getStackSize() + 1];
-		for(int s = 1; s < ipStack.length; s++) {
-			ipStack[s] = stack.getProcessor(s);
+		/* Set up array of ImageProcessors for reference later */
+		ImageProcessor[] sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
+		for(int s = 1; s < sliceProcessors.length; s++) {
+			sliceProcessors[s] = stack.getProcessor(s);
 		}
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
 		
 		final int w = (int) Math.floor(imp.getWidth() * vW);
 		final int h = (int) Math.floor(imp.getHeight() * vH);
 		final int d = (int) Math.floor(imp.getStackSize() * vD);
 		
-		/* List random points along stack edges */
-		this.edgePoints = new double[100][3];
-		Random r = new Random();
-		for(int i = 0; i < edgePoints.length; i++) {
-			// top edge, y = 0
-			if(i < edgePoints.length * 0.25) {
-				edgePoints[i][0] = r.nextInt(w);
-				edgePoints[i][1] = 0;
-				edgePoints[i][2] = r.nextInt(d);
+		/* Array of ArrayLists */
+		this.pixelValues = new ArrayList[unitVectors.length];
+		
+		/* Cycle through all vectors */
+		for(int i = 0; i < unitVectors.length; i++) {
+			
+			uX = unitVectors[i][0];
+			uY = unitVectors[i][1];
+			uZ = unitVectors[i][2];
+			
+			/* Use ArrayList as we don't know how long each line (j) will be.
+			 * Unfortunately, ArrayList can only be filled with Objects. */
+			vectorPixelValues = new ArrayList<Integer>();
+			
+			int j = 0;
+			while(j > -1) {
+				
+				nX = (int) Math.floor(iX + (j * uX));
+				nY = (int) Math.floor(iY + (j * uY));
+				nZ = (int) Math.floor(iZ + (j * uZ));
+				
+				/* Break out if outside the image */
+				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 0 || nZ > d) {
+					j = -2;
+					break;
+				}
+				
+//				Integer uKK = new Integer(sliceProcessors[nZ].getPixel(nX, nY));
+				// may not work
+//				pixelValues2[i][j] = aL.add(uKK);
+				
+				vectorPixelValues.add(sliceProcessors[nZ].getPixel(nX, nY));
+				j++;
 			}
-			// bottom edge, y = height
-			else if(i < edgePoints.length * 0.5) {
-				edgePoints[i][0] = r.nextInt(w);
-				edgePoints[i][1] = h;
-				edgePoints[i][2] = r.nextInt(d);
-			}
-			// left edge, x = 0
-			else if(i < edgePoints.length * 0.75) {
-				edgePoints[i][0] = 0;
-				edgePoints[i][1] = r.nextInt(h);
-				edgePoints[i][2] = r.nextInt(d);
-			}
-			// right edge, x = width
-			else {
-				edgePoints[i][0] = w;
-				edgePoints[i][1] = r.nextInt(h);
-				edgePoints[i][2] = r.nextInt(d);
-			}
+			
+			pixelValues[i] = vectorPixelValues;
 		}
 		
-		final double iX = initialPoint[0];
-		final double iY = initialPoint[1];
-		final double iZ = initialPoint[2];
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+//		/* List random points along stack edges */
+//		this.edgePoints = new double[100][3];
+//		Random r = new Random();
+//		for(int i = 0; i < edgePoints.length; i++) {
+//			// top edge, y = 0
+//			if(i < edgePoints.length * 0.25) {
+//				edgePoints[i][0] = r.nextInt(w);
+//				edgePoints[i][1] = 0;
+//				edgePoints[i][2] = r.nextInt(d);
+//			}
+//			// bottom edge, y = height
+//			else if(i < edgePoints.length * 0.5) {
+//				edgePoints[i][0] = r.nextInt(w);
+//				edgePoints[i][1] = h;
+//				edgePoints[i][2] = r.nextInt(d);
+//			}
+//			// left edge, x = 0
+//			else if(i < edgePoints.length * 0.75) {
+//				edgePoints[i][0] = 0;
+//				edgePoints[i][1] = r.nextInt(h);
+//				edgePoints[i][2] = r.nextInt(d);
+//			}
+//			// right edge, x = width
+//			else {
+//				edgePoints[i][0] = w;
+//				edgePoints[i][1] = r.nextInt(h);
+//				edgePoints[i][2] = r.nextInt(d);
+//			}
+//		}
+		
+		
 		
 		/** Total distances */
 		double xD, yD, zD;
