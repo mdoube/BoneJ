@@ -60,6 +60,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Ragged array of x-axis values for plotting pixel value profiles along vectors */
 	private int[][] xValues;
 	
+	private double[][] xValues2;
+	private double[][] pxVals2;
+	
 	
 	/** List of total lengths */
 	private double[] distances;
@@ -104,12 +107,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			return;
 //		}
 		
-//		ImageWindow win = imp.getWindow();
-//		this.canvas = win.getCanvas();
-		
+		ImageWindow win = imp.getWindow();
+		this.canvas = win.getCanvas();
 //		Roi roi = imp.getRoi();
+		
 		Calibration cal = imp.getCalibration();
-		ImageProcessor ip = imp.getProcessor();
 		
 		/** Pixel dimensions */
 		final double vW = cal.pixelWidth;
@@ -132,8 +134,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		}
 		// add a new MouseListener
 		this.canvas.addMouseListener(this);
-		new WaitForUserDialog("Click inside the femoral head.\n" 
-				+ "Then hit \'OK\'").show();
+		new WaitForUserDialog("Click inside the femoral head,\n" 
+				+ "then hit \'OK\'").show();
 		this.canvas.removeMouseListener(this);
 		
 //		final double[] iP = getInitialPoint();
@@ -144,7 +146,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		/* Confirm initial point */
 		GenericDialog gd = new GenericDialog("Info");
-		gd.addMessage("Initial[0] " + iX + " 1 " + iY + " 2 " + iZ + "");
+		gd.addMessage("Initial point (x,y,z): (" + iX + "," + iY + "," + iZ + ")");
 		gd.showDialog();
 		
 		ImageStack stack = imp.getStack();
@@ -161,6 +163,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		final int w = (int) Math.floor(imp.getWidth() * vW);
 		final int h = (int) Math.floor(imp.getHeight() * vH);
 		final int d = (int) Math.floor(imp.getStackSize() * vD);
+		
+		GenericDialog gd2 = new GenericDialog("Info");
+		gd2.addMessage("(w,h,d): (" + w + "," + h + "," + d + ")");
+		gd2.showDialog();
 		
 		/* Array of ArrayLists */
 		this.pixelValues = new ArrayList[unitVectors.length];
@@ -184,27 +190,25 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				nZ = (int) Math.floor(iZ + (j * uZ));
 				
 				/* Break out if outside the image */
-				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 0 || nZ > d) {
+				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 2 || nZ > d - 1) {
 					j = -2;
 					break;
 				}
 				
-				vectorPixelValues.add(sliceProcessors[nZ].getPixel(nX, nY));
+				this.currentSlice = (int) Math.floor(nZ / vD);
+				
+//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + ")");
+				
+				Integer integer = new Integer(sliceProcessors[currentSlice].getPixel(nX, nY));
+				
+				vectorPixelValues.add(integer);
 				j++;
 			}
 			
 			pixelValues[i] = vectorPixelValues;
-			
-//			pxVals[i] = new int[vectorPixelValues.size()];
-//			for(int k = 0; k < pxVals.length; k++) {
-//				pxVals[i][k] = (int) (Integer) vectorPixelValues.toArray()[k];
-//			}
-			
-//			Integer[] ia = new Integer[vectorPixelValues.size()];
-//			ArrayUtils.toPrimitive(vectorPixelValues.toArray());
 		}
 		
-		/* Ragged array of pixel values for each vector */
+		/* Ragged array of int pixel values for each vector */
 		this.pxVals = new int[pixelValues.length][];
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new int[pixelValues[i].size()];
@@ -216,12 +220,31 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* For plotting */
 		this.xValues = new int[pixelValues.length][];
 		for(int i = 0; i < xValues.length; i++) {
+			xValues[i] = new int[pixelValues[i].size()];
 			for (int j = 0; j < pixelValues[i].size(); j++) {
 				xValues[i][j] = j;
 			}
 		}
 		
-		Plot aPlot = new Plot("Pixel Values along vector 1", "Distance (mm)", "Pixel value", xValues[0], pxVals[0]);
+		/* Ragged array of int pixel values for each vector */
+		this.pxVals2 = new double[pixelValues.length][];
+		for(int i = 0; i < pxVals2.length; i++) {
+			pxVals2[i] = new double[pixelValues[i].size()];
+			for(int j = 0; j < pixelValues[i].size(); j++) {
+				pxVals2[i][j] = (double) (Integer) pixelValues[i].toArray()[j];
+			}
+		}
+		
+		/* For plotting */
+		this.xValues2 = new double[pixelValues.length][];
+		for(int i = 0; i < xValues2.length; i++) {
+			xValues2[i] = new double[pixelValues[i].size()];
+			for (int j = 0; j < pixelValues[i].size(); j++) {
+				xValues2[i][j] = j;
+			}
+		}
+		
+		Plot aPlot = new Plot("Pixel Values along 1st vector", "Distance (mm)", "Pixel value", xValues2[0], pxVals2[0]);
 		aPlot.show();
 		
 		
@@ -248,57 +271,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		
 		
+
 		
 		
-		
-		
-//		/* List random points along stack edges */
-//		this.edgePoints = new double[100][3];
-//		Random r = new Random();
-//		for(int i = 0; i < edgePoints.length; i++) {
-//			// top edge, y = 0
-//			if(i < edgePoints.length * 0.25) {
-//				edgePoints[i][0] = r.nextInt(w);
-//				edgePoints[i][1] = 0;
-//				edgePoints[i][2] = r.nextInt(d);
-//			}
-//			// bottom edge, y = height
-//			else if(i < edgePoints.length * 0.5) {
-//				edgePoints[i][0] = r.nextInt(w);
-//				edgePoints[i][1] = h;
-//				edgePoints[i][2] = r.nextInt(d);
-//			}
-//			// left edge, x = 0
-//			else if(i < edgePoints.length * 0.75) {
-//				edgePoints[i][0] = 0;
-//				edgePoints[i][1] = r.nextInt(h);
-//				edgePoints[i][2] = r.nextInt(d);
-//			}
-//			// right edge, x = width
-//			else {
-//				edgePoints[i][0] = w;
-//				edgePoints[i][1] = r.nextInt(h);
-//				edgePoints[i][2] = r.nextInt(d);
-//			}
-//		}
-		
-		
-		
-//		/** Total distances */
-//		double xD, yD, zD;
-//		
-//		this.distances = new double[edgePoints.length];
-//		for(int i = 0; i < edgePoints.length; i++) {
-//			xD = edgePoints[i][0] - iX;
-//			yD = edgePoints[i][1] - iY;
-//			zD = edgePoints[i][2] - iZ;
-//			
-//			distances[i] = Math.sqrt((xD * xD) + (yD * yD) + (zD * zD));
-//		}
-//		
-//		/** Interpolatable step distances - can be negative */
-//		double dX, dY, dZ;
-//		
 //		/* Ragged array */
 //		this.pixelValues = new double[edgePoints.length][];		// Array of rows
 //		this.coOrdinates = new double[edgePoints.length][][];
@@ -336,30 +311,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			}
 //		}
 		
-//		/* For plotting */
-//		this.xValues = new double[pixelValues[1].length];
-//		for (int j = 0; j < xValues.length; j++) {
-//			xValues[j] = (double) j;
-//		}
-//		Plot omgPlot = new Plot("OMG startpoint" + iX + " " + iY + " " + iZ + " endpoint" + edgePoints[1][0] + " " + edgePoints[1][1] + " " + edgePoints[1][2] + " ", "distance", "value", xValues, pixelValues[1]);
-//		omgPlot.show();
-		
-		this.profile = new ProfilePlot(imp).getProfile();
-		
-//		/* For plotting */
-//		this.xValues = new double[profile.length];
-//		for (int j = 0; j < xValues.length; j++) {
-//			xValues[j] = (double) j;
-//		}
-		
-//		ProfilePlot pp = new ProfilePlot();
-//		Profiler p = new Profiler();
-//		this.profile = pp.getProfile();
-//		Plot profilePlot = new Plot("Profile plot", "distance", "value", xValues, profile);
-//		profilePlot.show();
-		
-//		pp.getStraightLineProfile(roi, cal, ip);
-		
 		return;
 	}
 	
@@ -386,11 +337,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int z = imp.getCurrentSlice();
 		final double[] initialPoint = { x * cal.pixelWidth, y * cal.pixelHeight,
 				z * cal.pixelDepth };
-//		IJ.log("neckPoint: (" + initialPoint[0] + "," + initialPoint[1] + ", "
-//				+ initialPoint[2] + ")");
 		setInitialPoint(initialPoint);
-//		calculateAngles(imp, neckPoint);
-//		canvas.removeMouseListener(this);
 	}
 
 	public void mouseReleased(MouseEvent e) { }
