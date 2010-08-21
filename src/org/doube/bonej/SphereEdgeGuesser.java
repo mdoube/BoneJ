@@ -20,10 +20,16 @@ import ij.gui.ProfilePlot;
 import ij.gui.Roi;
 import ij.gui.WaitForUserDialog;
 import ij.measure.Calibration;
+import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.filter.Profiler;
 import ij.plugin.frame.RoiManager;
+import ij.process.BinaryProcessor;
+import ij.process.ByteProcessor;
+import ij.process.ColorProcessor;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import ij.process.ShortProcessor;
 
 /**
  * Aims to drastically reduce the complexity of and time take to fit a sphere.
@@ -34,34 +40,41 @@ import ij.process.ImageProcessor;
  */
 public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
+	private double fill_value;
+	private double get;
+	private double getpx;
+	private double getpxval;
+	private double btdpth;
+	
+	private ImageProcessor[] sliceProcessors = null;
+	private ImageProcessor ip = null;
 	private ImageCanvas canvas;
 	
-	private int currentSlice;
-	
-	/** Initial (iX), current (nX) and final (fX) coordinates */
+	/** Pixel dimensions in 'unit's */
+	private double vH, vW, vD;
+	/** Initial (iX), current (nX) and final (fX) coordinates in 'unit's */
 	private int iX, iY, iZ, nX, nY, nZ, fX, fY, fZ;
-	/** Unit vector sizes */
+	/** Unit vector sizes, -1 < value < 1 */
 	private double uX, uY, uZ;
+	/** Slice number of current z coordinate, nZ */
+	private int currentSlice;
 	
 	/** List of distances */
 	
 	/** Pixel values along a vector. Expands for vector length. */
-	private ArrayList<Integer> vectorPixelValues;
-	/** Array (known length) of ArrayLists (different lengths) 
+	private ArrayList<Float> vectorPixelValues;
+//	private ArrayList<Float> vectorPixelValues;
+	/** Array (known length) of ArrayLists (differing lengths) 
 	 * containing pixel values along each vector */
 	private ArrayList[] pixelValues;
-	
 	
 	private double[] sphereDim = new double[4];
 	private double[] profile;
 	
 	/** Ragged array of pixel values for each vector */
-	private int[][] pxVals;
+	private double[][] pxVals;
 	/** Ragged array of x-axis values for plotting pixel value profiles along vectors */
-	private int[][] xValues;
-	
-	private double[][] xValues2;
-	private double[][] pxVals2;
+	private double[][] xValues;
 	
 	
 	/** List of total lengths */
@@ -100,32 +113,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			return;
 //		}
 		
-		/* Don't throw an error if RoiManager isn't open; just open it */
-//		RoiManager roiMan = RoiManager.getInstance();
-//		if (roiMan == null && imp != null) {
-//			IJ.run("ROI Manager...");
-//			return;
-//		}
-		
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
-//		Roi roi = imp.getRoi();
-		
 		Calibration cal = imp.getCalibration();
 		
-		/** Pixel dimensions */
-		final double vW = cal.pixelWidth;
-		final double vH = cal.pixelHeight;
-		final double vD = cal.pixelDepth;
-		
-//		GenericDialog gd = new GenericDialog("Options");
-//		gd.showDialog();
-//		if (gd.wasCanceled()) {
-//			return;
-//		}
-		
-		/* Fill initialPoint with the coordinates of the first point in RoiMan */
-//		this.initialPoint = RoiMan.getRoiManPoints(imp, roiMan)[0];
+		vW = cal.pixelWidth;
+		vH = cal.pixelHeight;
+		vD = cal.pixelDepth;
 		
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
@@ -135,37 +129,62 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		// add a new MouseListener
 		this.canvas.addMouseListener(this);
 		new WaitForUserDialog("Click inside the femoral head,\n" 
-				+ "then hit \'OK\'").show();
+									+ "then hit \'OK\'").show();
 		this.canvas.removeMouseListener(this);
 		
-//		final double[] iP = getInitialPoint();
-		
-		final int iX = (int) Math.floor(initialPoint[0]);
-		final int iY = (int) Math.floor(initialPoint[1]);
-		final int iZ = (int) Math.floor(initialPoint[2]);
+		iX = (int) Math.floor(initialPoint[0]);
+		iY = (int) Math.floor(initialPoint[1]);
+		iZ = (int) Math.floor(initialPoint[2]);
 		
 		/* Confirm initial point */
 		GenericDialog gd = new GenericDialog("Info");
 		gd.addMessage("Initial point (x,y,z): (" + iX + "," + iY + "," + iZ + ")");
+		gd.addMessage("Pixel sizes (vW,vH,vD): (" + vW + "," + vH + "," + vD + ")");
+		gd.addMessage("imp.getCurrentSlice" + imp.getCurrentSlice() + "");
 		gd.showDialog();
 		
 		ImageStack stack = imp.getStack();
 		
 		/* Create array of random 3D unit vectors */
-		this.unitVectors = Vectors.random3D(100);
+		this.unitVectors = Vectors.random3D(1);
 		
 		/* Set up array of ImageProcessors for reference later */
-		ImageProcessor[] sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
+		this.sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
 		for(int s = 1; s < sliceProcessors.length; s++) {
 			sliceProcessors[s] = stack.getProcessor(s);
 		}
 		
+//		int bitDepth = imp.getBitDepth();
+//		switch (bitDepth) {
+//			case 8: sliceProcessors = new ByteProcessor[imp.getStackSize() + 1]; 
+//				for(int s = 1; s < sliceProcessors.length; s++) {
+//					sliceProcessors[s] = (ByteProcessor) stack.getProcessor(s);
+//				}
+//				break;  
+//			case 16: sliceProcessors = new ShortProcessor[imp.getStackSize() + 1]; 
+//				for(int s = 1; s < sliceProcessors.length; s++) {
+//					sliceProcessors[s] = (ShortProcessor) stack.getProcessor(s);
+//				}
+//				break;  
+//			case 32: sliceProcessors = new FloatProcessor[imp.getStackSize() + 1]; 
+//				for(int s = 1; s < sliceProcessors.length; s++) {
+//					sliceProcessors[s] = (FloatProcessor) stack.getProcessor(s);
+//				}
+//				break;
+//			case 24: sliceProcessors = new ColorProcessor[imp.getStackSize() + 1]; 
+//				for(int s = 1; s < sliceProcessors.length; s++) {
+//					sliceProcessors[s] = (ColorProcessor) stack.getProcessor(s);
+//				}
+//				break;
+//		}
+		
+		/** Image dimensions in 'unit's */
 		final int w = (int) Math.floor(imp.getWidth() * vW);
 		final int h = (int) Math.floor(imp.getHeight() * vH);
 		final int d = (int) Math.floor(imp.getStackSize() * vD);
 		
 		GenericDialog gd2 = new GenericDialog("Info");
-		gd2.addMessage("(w,h,d): (" + w + "," + h + "," + d + ")");
+		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
 		gd2.showDialog();
 		
 		/* Array of ArrayLists */
@@ -176,11 +195,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			
 			uX = unitVectors[i][0];
 			uY = unitVectors[i][1];
-			uZ = unitVectors[i][2];
+//			uZ = unitVectors[i][2];
+			uZ = 0;
 			
 			/* Use ArrayList as we don't know how long each line (j) will be.
 			 * Unfortunately, ArrayList can only be filled with Objects. */
-			vectorPixelValues = new ArrayList<Integer>();
+			vectorPixelValues = new ArrayList<Float>();
 			
 			int j = 0;
 			while(j > -1) {
@@ -190,127 +210,47 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				nZ = (int) Math.floor(iZ + (j * uZ));
 				
 				/* Break out if outside the image */
-				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 2 || nZ > d - 1) {
+				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
 					j = -2;
 					break;
 				}
 				
+				int nowX = (int) Math.floor(nX / vW);
+				int nowY = (int) Math.floor(nY / vH);
+				
 				this.currentSlice = (int) Math.floor(nZ / vD);
+				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + ", slice: " + currentSlice + "; nowX, nowY: " + nowX + "," + nowY + "");
+				Float floating = new Float(sliceProcessors[currentSlice].getPixelValue(nowX, nowY));
 				
-//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + ")");
+				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "); slice: " + currentSlice + "; int: " + floating + "");
 				
-				Integer integer = new Integer(sliceProcessors[currentSlice].getPixel(nX, nY));
-				
-				vectorPixelValues.add(integer);
+				vectorPixelValues.add(floating);
 				j++;
 			}
-			
+
 			pixelValues[i] = vectorPixelValues;
 		}
-		
-		/* Ragged array of int pixel values for each vector */
-		this.pxVals = new int[pixelValues.length][];
-		for(int i = 0; i < pxVals.length; i++) {
-			pxVals[i] = new int[pixelValues[i].size()];
-			for(int j = 0; j < pixelValues[i].size(); j++) {
-				pxVals[i][j] = (int) (Integer) pixelValues[i].toArray()[j];
-			}
-		}
-		
+
 		/* For plotting */
-		this.xValues = new int[pixelValues.length][];
+		this.xValues = new double[pixelValues.length][];
 		for(int i = 0; i < xValues.length; i++) {
-			xValues[i] = new int[pixelValues[i].size()];
+			xValues[i] = new double[pixelValues[i].size()];
 			for (int j = 0; j < pixelValues[i].size(); j++) {
 				xValues[i][j] = j;
 			}
 		}
-		
-		/* Ragged array of int pixel values for each vector */
-		this.pxVals2 = new double[pixelValues.length][];
-		for(int i = 0; i < pxVals2.length; i++) {
-			pxVals2[i] = new double[pixelValues[i].size()];
+		/* Ragged array of (double) pixel values for each vector */
+		this.pxVals = new double[pixelValues.length][];
+		for(int i = 0; i < pxVals.length; i++) {
+			pxVals[i] = new double[pixelValues[i].size()];
 			for(int j = 0; j < pixelValues[i].size(); j++) {
-				pxVals2[i][j] = (double) (Integer) pixelValues[i].toArray()[j];
+				pxVals[i][j] = (double) (Float) pixelValues[i].toArray()[j];
 			}
 		}
 		
-		/* For plotting */
-		this.xValues2 = new double[pixelValues.length][];
-		for(int i = 0; i < xValues2.length; i++) {
-			xValues2[i] = new double[pixelValues[i].size()];
-			for (int j = 0; j < pixelValues[i].size(); j++) {
-				xValues2[i][j] = j;
-			}
-		}
-		
-		Plot aPlot = new Plot("Pixel Values along 1st vector", "Distance (mm)", "Pixel value", xValues2[0], pxVals2[0]);
+		Plot aPlot = new Plot("Pixel Values along 1st vector", "Distance (mm)", "Pixel value", xValues[0], pxVals[0]);
 		aPlot.show();
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
 
-		
-		
-//		/* Ragged array */
-//		this.pixelValues = new double[edgePoints.length][];		// Array of rows
-//		this.coOrdinates = new double[edgePoints.length][][];
-//		
-//		for(int i = 0; i < pixelValues.length; i++) {
-//			
-//			pixelValues[i] = new double[(int) distances[i]];	// One row, nb. cast to int
-//			// consider rounding with: int number = Convert.ToInt32(doubleValue);
-//			coOrdinates[i] = new double[pixelValues[i].length][3];
-//			
-//			dX = (edgePoints[i][0] - iX) * 1/pixelValues[i].length;
-//			dY = (edgePoints[i][1] - iY) * 1/pixelValues[i].length;
-//			dZ = (edgePoints[i][2] - iZ) * 1/pixelValues[i].length;
-//			
-//			for(int j = 0; j < pixelValues[i].length; j++) {
-//				
-//				coOrdinates[i][j][0] = iX + (j * dX);
-//				coOrdinates[i][j][1] = iY + (j * dY);
-//				coOrdinates[i][j][2] = iZ + (j * dZ);
-//				
-//				IJ.log("line length: " + pixelValues[i].length + "; coOrdinates: (" + coOrdinates[i][j][0] + "," + coOrdinates[i][j][1] + ", "
-//						+ coOrdinates[i][j][2] + ")");
-//				
-//				// This may be messy
-//				if(edgePoints[i][2] - iZ < 0) {
-//					currentSlice = (int) Math.floor((iZ - (j * dZ)) / vD);
-//				}
-//				else {
-//					currentSlice = (int) Math.floor((iZ + (j * dZ)) / vD);
-//				}
-//				
-//				ImageProcessor sliceIP = imp.getImageStack().getProcessor(currentSlice);
-//				
-//				pixelValues[i][j] = sliceIP.getInterpolatedPixel(coOrdinates[i][j][0], coOrdinates[i][j][1]);
-//			}
-//		}
-		
 		return;
 	}
 	
@@ -321,10 +261,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	public double[] getSphereDim() {
 		return this.sphereDim;
 	}
-	
-//	public double[] getInitialPoint() {
-//		return this.initialPoint;
-//	}
 	public void setInitialPoint(double[] a) {
 		this.initialPoint = a;
 	}
@@ -335,8 +271,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int x = canvas.offScreenX(e.getX());
 		int y = canvas.offScreenY(e.getY());
 		int z = imp.getCurrentSlice();
-		final double[] initialPoint = { x * cal.pixelWidth, y * cal.pixelHeight,
-				z * cal.pixelDepth };
+		final double[] initialPoint = { x * vW, y * vH, z * vD };
 		setInitialPoint(initialPoint);
 	}
 
