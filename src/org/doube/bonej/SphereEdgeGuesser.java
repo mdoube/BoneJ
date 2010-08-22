@@ -82,7 +82,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double adjustedLimit;
 	
 	/** Number of vectors to create */
-	private int numVectors;
+	private int numVectors = 1;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -126,7 +126,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		vD = cal.pixelDepth;
 		
 		GenericDialog gd = new GenericDialog("Options");
-		gd.addNumericField("Create", 1, 0, 4, "vectors");
+		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
 		gd.showDialog();
 		if(gd.wasCanceled()) {
 			return;
@@ -163,9 +163,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			sliceProcessors[s] = stack.getProcessor(s);
 		}
 		
-		w = (int) Math.floor(imp.getWidth() * vW);
-		h = (int) Math.floor(imp.getHeight() * vH);
-		d = (int) Math.floor(imp.getStackSize() * vD);
+//		w = (int) Math.floor(imp.getWidth() * vW);			// for 'unit' resolution
+//		h = (int) Math.floor(imp.getHeight() * vH);
+//		d = (int) Math.floor(imp.getStackSize() * vD);
+		w = imp.getWidth();
+		h = imp.getHeight();
+		d = imp.getStackSize();
 		
 		GenericDialog gd2 = new GenericDialog("Info");
 		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
@@ -183,6 +186,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			uX = unitVectors[i][0];
 			uY = unitVectors[i][1];
 			uZ = unitVectors[i][2];
+//			uZ = 0;						// for testing with single slice
 			
 			/* Use ArrayList as we don't know how long each line (j) will be.
 			 * Unfortunately, ArrayList can only be filled with Objects. */
@@ -201,9 +205,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					break;
 				}
 				
-				int nowX = (int) Math.floor(nX / vW);
-				int nowY = (int) Math.floor(nY / vH);
-				this.currentSlice = (int) Math.floor(nZ / vD);
+//				int nowX = (int) Math.floor(nX / vW);		// for 'unit' resolution
+//				int nowY = (int) Math.floor(nY / vH);
+//				this.currentSlice = (int) Math.floor(nZ / vD);
+				int nowX = nX;
+				int nowY = nY;
+				this.currentSlice = nZ;
 				
 				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "), slice: " + currentSlice + "; nowX, nowY: " + nowX + "," + nowY + "");
 				
@@ -273,7 +280,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		}
 		
 		// Currently, fZ is below by 1.
-		// Currently, major issue is mm jumping instead of pixel jumping.
 		
 		GenericDialog gd4 = new GenericDialog("Median at");
 		gd4.addMessage("median: " + medianValues[0] + "");
@@ -301,7 +307,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int x = canvas.offScreenX(e.getX());
 		int y = canvas.offScreenY(e.getY());
 		int z = imp.getCurrentSlice();
-		final double[] initialPoint = { x * vW, y * vH, z * vD };
+		final double[] initialPoint = { x, y, z };
+//		final double[] initialPoint = { x * vW, y * vH, z * vD };	// for 'unit' resolution
 		setInitialPoint(initialPoint);
 	}
 
