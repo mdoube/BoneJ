@@ -33,10 +33,14 @@ import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
 
 /**
- * Aims to drastically reduce the complexity of and time take to fit a sphere.
- * Requires one input point inside the sphere.
+ * <p>Aims to drastically reduce the complexity of, and time taken to, 
+ * fit a sphere to a sphere-like object such as a femoral head.  Requires 
+ * one input point inside the sphere.</p>
  * 
- * Potential issues: false positives such as holes, well-defined trabeculae, etc.
+ * <p>Potential issues: false positives such as holes, well-defined trabeculae, etc.
+ * There is some attempt to account for these, as well as image artefacts.</p>
+ * 
+ * <p>Can switch resolution to 'unit's (generally mm) with commented out lines.</p>
  * 
  * @author Nick Powell
  *
@@ -50,12 +54,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private String units;
 	/** Pixel dimensions in 'unit's */
 	private double vH, vW, vD;
-	/** Initial (iX), current (nX) and final (fX) coordinates in 'unit's */
+	/** Unit vector sizes, -1 < value < 1 */
+	private double uX, uY, uZ;
+	/** Initial (iX), current (nX) and final (fX) coordinates (in pixels or 'unit's) */
 	private int iX, iY, iZ, nX, nY, nZ, fX, fY, fZ;
 	/** Image dimensions in 'unit's */
 	private int d, h, w;
-	/** Unit vector sizes, -1 < value < 1 */
-	private double uX, uY, uZ;
 	/** Slice number of current z coordinate, nZ */
 	private int currentSlice;
 	
@@ -82,7 +86,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double adjustedLimit;
 	
 	/** Number of vectors to create */
-	private int numVectors = 1;
+	private int numVectors = 100;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -92,7 +96,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	/** Coordinates x, y, z  of the boundary  */
 	private int[] coOrds;
-	/** ArrayList (of length limited by meanDistance) of boundary coordinates */
+	/** ArrayList (of length limited by meanDistance) of boundary coordinates x, y, z */
 	private ArrayList<int[]> coOrdinates;
 	
 	public void run(String arg) {
@@ -124,14 +128,16 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		vW = cal.pixelWidth;
 		vH = cal.pixelHeight;
 		vD = cal.pixelDepth;
+		units = cal.getUnits();
 		
-		GenericDialog gd = new GenericDialog("Options");
-		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
-		gd.showDialog();
-		if(gd.wasCanceled()) {
-			return;
-		}
-		this.numVectors = (int) gd.getNextNumber();
+		/* Optionally show a dialogue */
+//		GenericDialog gd = new GenericDialog("Options");
+//		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+//		gd.showDialog();
+//		if(gd.wasCanceled()) {
+//			return;
+//		}
+//		this.numVectors = (int) gd.getNextNumber();
 		
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
@@ -150,8 +156,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		/* Confirm initial point */
 		GenericDialog gd1 = new GenericDialog("Info");
-		gd1.addMessage("Initial point (x,y,z): (" + iX + "," + iY + "," + iZ + ")");
-		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + "," + vH + "," + vD + ")");
+		gd1.addMessage("Initial point (x,y,z): (" + iX + ", " + iY + ", " + iZ + ")");
+		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + ", " + vH + ", " + vD + ")");
 		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
 		gd1.showDialog();
 		
@@ -163,12 +169,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			sliceProcessors[s] = stack.getProcessor(s);
 		}
 		
-//		w = (int) Math.floor(imp.getWidth() * vW);			// for 'unit' resolution
-//		h = (int) Math.floor(imp.getHeight() * vH);
-//		d = (int) Math.floor(imp.getStackSize() * vD);
 		w = imp.getWidth();
 		h = imp.getHeight();
 		d = imp.getStackSize();
+//		w = (int) Math.floor(imp.getWidth() * vW);			// for 'unit' resolution
+//		h = (int) Math.floor(imp.getHeight() * vH);
+//		d = (int) Math.floor(imp.getStackSize() * vD);
 		
 		GenericDialog gd2 = new GenericDialog("Info");
 		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
@@ -199,24 +205,24 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				nY = (int) Math.floor(iY + (j * uY));
 				nZ = (int) Math.round(iZ + (j * uZ));
 				
-				/* Break out if outside the image */
-				if(nX < 0 || nX > w || nY < 0 || nY > h || (nZ / vD) < 1 || nZ > d) {
+				/* Break out if outside the image */		// also || (nZ / vD) < 1 if using 'unit's resolution
+				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
 					j = -2;
 					break;
 				}
 				
-//				int nowX = (int) Math.floor(nX / vW);		// for 'unit' resolution
-//				int nowY = (int) Math.floor(nY / vH);
-//				this.currentSlice = (int) Math.floor(nZ / vD);
 				int nowX = nX;
 				int nowY = nY;
 				this.currentSlice = nZ;
+//				int nowX = (int) Math.floor(nX / vW);		// for 'unit' resolution
+//				int nowY = (int) Math.floor(nY / vH);
+//				this.currentSlice = (int) Math.floor(nZ / vD);
 				
-				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "), slice: " + currentSlice + "; nowX, nowY: " + nowX + "," + nowY + "");
+//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "), slice: " + currentSlice + "; nowX, nowY: " + nowX + "," + nowY + "");
 				
 				Float nowValue = new Float(sliceProcessors[currentSlice].getPixelValue(nowX, nowY));
 				
-				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "); slice: " + currentSlice + "; int: " + nowValue + "");
+//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "); slice: " + currentSlice + "; int: " + nowValue + "");
 				
 				vectorPixelValues.add(nowValue);
 				j++;
@@ -240,6 +246,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		/* Ragged array of (double) pixel values for each vector */
 		this.pxVals = new double[pixelValues.length][];
+		
+		/*  */
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
 			for(int j = 0; j < pixelValues[i].size(); j++) {
@@ -256,9 +264,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			distances[i] = boundarySteps[i] * Math.sqrt((unitVectors[i][0] * unitVectors[i][0]) + (unitVectors[i][1] * unitVectors[i][1]) + (unitVectors[i][2] * unitVectors[i][2]));
 		}
 		
-		Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (mm)", "Pixel value", xValues[0], pxVals[0]);
+		Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (" + units + ")", "Pixel value", xValues[0], pxVals[0]);
 		aPlot.show();
 		
+		/* */
 		coOrdinates = new ArrayList<int[]>();
 		this.coOrds = new int[3];
 		this.meanDistance = Centroid.getCentroid(distances);
@@ -268,14 +277,19 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		for(int i = 0; i < distances.length; i++) {
 			if(distances[i] <= meanDistance) {
 				
-				fX = (int) Math.floor(iX + (i * unitVectors[i][0]));
-				fY = (int) Math.floor(iY + (i * unitVectors[i][1]));
-				fZ = (int) Math.floor((iZ + (i * unitVectors[i][2])) / vD);
+				fX = (int) Math.floor(iX + (distances[i] * unitVectors[i][0]));
+				fY = (int) Math.floor(iY + (distances[i] * unitVectors[i][1]));
+				fZ = (int) Math.floor(iZ + (distances[i] * unitVectors[i][2]));
 				
-				coOrds[0] = (int) Math.floor(fX / vW);
-				coOrds[1] = (int) Math.floor(fY / vH);
+				coOrds[0] = fX;
+				coOrds[1] = fY;
 				coOrds[2] = fZ;
+//				coOrds[0] = (int) Math.floor(fX / vW);	// for 'unit' resolution
+//				coOrds[1] = (int) Math.floor(fY / vH);
+//				coOrds[2] = (int) Math.floor(fZ / vD);
 				coOrdinates.add(coOrds);
+				
+				IJ.log("(fX,fY,fZ): (" + fX + ", " + fY + ", " + fZ + ")");
 			}
 		}
 		
@@ -283,8 +297,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		GenericDialog gd4 = new GenericDialog("Median at");
 		gd4.addMessage("median: " + medianValues[0] + "");
-		gd4.addMessage("distance: " + distances[0] + "");
-		gd4.addMessage("fZ: " + fZ + "");
+		gd4.addMessage("distance: " + distances[0] + " (pixels)");
+//		gd4.addMessage("distance: " + distances[0] + " (" + units + ")");
+		gd4.addMessage("fX, fY, fZ: " + fX + ", " + fY + ", " + fZ + "");
 		gd4.showDialog();
 
 		return;
