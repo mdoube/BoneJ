@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import org.doube.geometry.Centroid;
+import org.doube.geometry.FitSphere;
 import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.RoiMan;
@@ -69,6 +70,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * containing pixel values along each vector */
 	private ArrayList[] pixelValues;
 	
+	/** Holds (x, y, z) centre and radius */
 	private double[] sphereDim = new double[4];
 	
 	/** List of distances along each vector from initial point, before median is crossed */
@@ -77,16 +79,21 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[] initialPoint = new double[3];
 	/** List of median pixel values of each vector */
 	private double[] medianValues;
-	/** List of steps to bone boundary (median crossing) */
+	/** List of number of steps to bone boundary (median crossing). */
 	private int[] boundarySteps;
 	
 	/** Mean distance */
 	private double meanDistance;
+	/** Mean steps */
+	private double meanSteps;
 	/** Adjusted limit (from median) */
 	private double adjustedLimit;
 	
 	/** Number of vectors to create */
-	private int numVectors = 100;
+	private int numVectors = 200;
+	/** Only use vectors which take <= this multiple of the mean number of steps 
+	 * taken by all vectors to reach the bone surface. */
+	private double stepLimit = 1;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -95,9 +102,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[][] xValues;
 	
 	/** Coordinates x, y, z  of the boundary  */
-	private int[] coOrds;
+	private double[] coOrds;
 	/** ArrayList (of length limited by meanDistance) of boundary coordinates x, y, z */
-	private ArrayList<int[]> coOrdinates;
+	private ArrayList<double[]> coOrdinates;
 	
 	public void run(String arg) {
 		
@@ -133,11 +140,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* Optionally show a dialogue */
 //		GenericDialog gd = new GenericDialog("Options");
 //		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+//		gd.addNumericField("Use vectors with <=", stepLimit, 0, 2, "* mean steps");
 //		gd.showDialog();
 //		if(gd.wasCanceled()) {
 //			return;
 //		}
 //		this.numVectors = (int) gd.getNextNumber();
+//		this.stepLimit = (int) gd.getNextNumber();
 		
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
@@ -155,11 +164,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		iZ = (int) Math.floor(initialPoint[2]);
 		
 		/* Confirm initial point */
-		GenericDialog gd1 = new GenericDialog("Info");
-		gd1.addMessage("Initial point (x,y,z): (" + iX + ", " + iY + ", " + iZ + ")");
-		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + ", " + vH + ", " + vD + ")");
-		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
-		gd1.showDialog();
+//		GenericDialog gd1 = new GenericDialog("Info");
+//		gd1.addMessage("Initial point (x,y,z): (" + iX + ", " + iY + ", " + iZ + ")");
+//		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + ", " + vH + ", " + vD + ")");
+//		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
+//		gd1.showDialog();
 		
 		ImageStack stack = imp.getStack();
 		
@@ -176,9 +185,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		h = (int) Math.floor(imp.getHeight() * vH);
 //		d = (int) Math.floor(imp.getStackSize() * vD);
 		
-		GenericDialog gd2 = new GenericDialog("Info");
-		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
-		gd2.showDialog();
+//		GenericDialog gd2 = new GenericDialog("Info");
+//		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
+//		gd2.showDialog();
 		
 		/* Create array of random 3D unit vectors */
 		this.unitVectors = Vectors.random3D(numVectors);
@@ -247,7 +256,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* Ragged array of (double) pixel values for each vector */
 		this.pxVals = new double[pixelValues.length][];
 		
-		/*  */
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
 			for(int j = 0; j < pixelValues[i].size(); j++) {
@@ -268,18 +276,21 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		aPlot.show();
 		
 		/* */
-		coOrdinates = new ArrayList<int[]>();
-		this.coOrds = new int[3];
-		this.meanDistance = Centroid.getCentroid(distances);
+		coOrdinates = new ArrayList<double[]>();
+//		this.meanDistance = Centroid.getCentroid(distances);
+		this.meanSteps = Centroid.getCentroid(boundarySteps);
 		
-		/* Get list of boundary coordinates (limited by meanDistance to them:
+		/* Get list of boundary coordinates (limited by meanSteps to them:
 		 * here using those distances <= the mean). */
-		for(int i = 0; i < distances.length; i++) {
-			if(distances[i] <= meanDistance) {
+		for(int i = 0; i < boundarySteps.length; i++) {
+			if(boundarySteps[i] <= (meanSteps * stepLimit)) {
 				
-				fX = (int) Math.floor(iX + (distances[i] * unitVectors[i][0]));
-				fY = (int) Math.floor(iY + (distances[i] * unitVectors[i][1]));
-				fZ = (int) Math.floor(iZ + (distances[i] * unitVectors[i][2]));
+				this.coOrds = new double[3];
+				
+				fX = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
+				fY = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
+				fZ = (int) Math.floor(iZ + (boundarySteps[i] * unitVectors[i][2]));
+//				fZ = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
 				
 				coOrds[0] = fX;
 				coOrds[1] = fY;
@@ -289,18 +300,46 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //				coOrds[2] = (int) Math.floor(fZ / vD);
 				coOrdinates.add(coOrds);
 				
-				IJ.log("(fX,fY,fZ): (" + fX + ", " + fY + ", " + fZ + ")");
+//				IJ.log("(fX,fY,fZ): (" + fX + ", " + fY + ", " + fZ + ")");
+//				IJ.log("coOrdinates.size(): " + coOrdinates.size() + "; values: " + coOrdinates.get(i)[0] + "");
 			}
 		}
 		
-		// Currently, fZ is below by 1.
+//		double[][] coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 		
-		GenericDialog gd4 = new GenericDialog("Median at");
-		gd4.addMessage("median: " + medianValues[0] + "");
-		gd4.addMessage("distance: " + distances[0] + " (pixels)");
-//		gd4.addMessage("distance: " + distances[0] + " (" + units + ")");
-		gd4.addMessage("fX, fY, fZ: " + fX + ", " + fY + ", " + fZ + "");
-		gd4.showDialog();
+//		int[][] coOrdArrayInts = new int[coOrdinates.size()][3];
+//		double[][] coOrdArray = new double[coOrdinates.size()][];
+//		for(int i = 0; i < coOrdArray.length; i++) {
+//			
+//			int[] coOrdArrayIntsThree = new int[3];
+//			coOrdArrayIntsThree[0] = coOrdinates.get(i)[0];
+//			coOrdArrayIntsThree[1] = coOrdinates.get(i)[1];
+//			coOrdArrayIntsThree[2] = coOrdinates.get(i)[2];
+//			
+//			coOrdArrayInts[i] = coOrdArrayIntsThree;
+//			
+////			coOrdArray[i][0] = (double) coOrdinates.get(i)[0];
+////			coOrdArray[i][1] = (double) coOrdinates.get(i)[1];
+////			coOrdArray[i][2] = (double) coOrdinates.get(i)[2];
+//			
+////			coOrdArrayInts[i] = coOrdinates.get(i);
+//			
+//			IJ.log("(x,y,z): (" + i + ", " + coOrdArrayIntsThree[0] + ", " + coOrdArrayIntsThree[1] + ", " + coOrdArrayIntsThree[2] + ")");
+//		}
+		
+//		GenericDialog gd4 = new GenericDialog("Median at");
+//		gd4.addMessage("median: " + medianValues[0] + "");
+//		gd4.addMessage("steps: " + boundarySteps[0] + " (steps)");
+////		gd4.addMessage("distance: " + distances[0] + " (" + units + ")");
+//		gd4.addMessage("fX, fY, fZ: " + fX + ", " + fY + ", " + fZ + "");
+//		gd4.showDialog();
+		
+		/* Fit sphere to points */
+		this.sphereDim = FitSphere.fitSphere((double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]));
+		
+		GenericDialog gdSphereDims = new GenericDialog("Sphere dimensions");
+		gdSphereDims.addMessage("Centre (x, y, z): " + sphereDim[0] + ", " + sphereDim[1] + ", " + sphereDim[2] + "; radius: " + sphereDim[3] + "");
+		gdSphereDims.showDialog();
 
 		return;
 	}
