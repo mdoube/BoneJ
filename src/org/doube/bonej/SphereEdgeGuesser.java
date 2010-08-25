@@ -56,7 +56,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Only measure a single slice of a multi-slice image */
 	private boolean singleSlice = false;
 	/** Show the final points used to generate the sphere */
-	private boolean showPoints = false;
+	private boolean showPoints = true;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -97,10 +97,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double adjustedLimit;
 	
 	/** Number of vectors to create */
-	private int numVectors = 1000;
+	private int numVectors = 400;
 	/** Only use vectors which take <= this multiple of the mean number of steps 
 	 * taken by all vectors to reach the bone surface. */
-	private double stepLimit = 0.5;
+	private double stepLimit = 0.75;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -213,7 +213,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			
 			uX = unitVectors[i][0];
 			uY = unitVectors[i][1];
-			uZ = unitVectors[i][2];
+			uZ = unitVectors[i][2] * 0.2;
 			if(singleSlice) {
 				uZ = 0;					// for testing with single slice
 			}
@@ -300,20 +300,32 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		IJ.log("meanSteps: " + meanSteps + "");
 		
 		/* Get complete ArrayList of boundary coordinates */
+//		coOrdinates = new ArrayList<double[]>();
+//		for(int i = 0; i < boundarySteps.length; i++) {
+//			fX = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
+//			fY = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
+//			fZ = (int) Math.floor(iZ + (boundarySteps[i] * unitVectors[i][2]));
+//			
+//			if(singleSlice) {
+//				fZ = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
+//			}
+//			
+//			this.coOrds = new double[3];
+//			coOrds[0] = fX;
+//			coOrds[1] = fY;
+//			coOrds[2] = fZ;
+//			coOrdinates.add(coOrds);
+//		}
+		
 		coOrdinates = new ArrayList<double[]>();
 		for(int i = 0; i < boundarySteps.length; i++) {
-			fX = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
-			fY = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
-			fZ = (int) Math.floor(iZ + (boundarySteps[i] * unitVectors[i][2]));
-			
-			if(singleSlice) {
-				fZ = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
-			}
-			
 			this.coOrds = new double[3];
-			coOrds[0] = fX;
-			coOrds[1] = fY;
-			coOrds[2] = fZ;
+			coOrds[0] = iX + (boundarySteps[i] * unitVectors[i][0]);
+			coOrds[1] = iY + (boundarySteps[i] * unitVectors[i][1]);
+			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * 0.2);
+			if(singleSlice) {
+				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
+			}
 			coOrdinates.add(coOrds);
 		}
 		
@@ -324,7 +336,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* More refinement: standard deviations */
 		double sdX = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[0]));
 		double sdY = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[1]));
-		double sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));
+		double sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));	// May not work for Z as have slice numbers rather than distances
 		
 		double[] meanCoOrds = new double[3];
 		meanCoOrds[0] = Centroid.getCentroid(coOrdArrayT[0]);
@@ -341,29 +353,27 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int i = 0;
 		while (it.hasNext()) {
 			double[] a = it.next();
-//			if(boundarySteps[i] > (meanSteps * stepLimit)
-//					|| boundarySteps[i] < (meanSteps * stepLimit * 0.5)) {
-//				it.remove();
-//			}
-//			else if(Math.abs(a[0] - medianCoOrds[0]) < 0
-//					|| Math.abs(a[1] - medianCoOrds[1]) < 0
-//					|| Math.abs(a[2] - medianCoOrds[2]) < 0) {
-//				it.remove();
-//			}
-			if(Math.abs(a[0] - meanCoOrds[0]) > sdX * 2
-					|| Math.abs(a[1] - meanCoOrds[1]) > sdY * 2
-					|| Math.abs(a[2] - meanCoOrds[2]) > sdZ * 2) {
+			if(boundarySteps[i] > (meanSteps * stepLimit)
+					|| boundarySteps[i] < (meanSteps * stepLimit * 0.5)) {
 				it.remove();
 			}
+//			else if(distances[i] > (meanDistance)) {
+//				it.remove();
+//			}
+//			if(a[0] - medianCoOrds[0] > 0
+//					|| a[1] - medianCoOrds[1] > 0
+//					|| a[2] - medianCoOrds[2] > 0) {
+//				it.remove();
+//			}
+//			if(Math.abs(a[0] - meanCoOrds[0]) > sdX * 2
+//					|| Math.abs(a[1] - meanCoOrds[1]) > sdY * 2
+//					|| Math.abs(a[2] - meanCoOrds[2]) > sdZ / 2) {		// N.B. sdZ may not be reliable
+//				it.remove();
+//			}
 			i ++;
 		}
 		
 		this.coOrdArrayRef = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
-		
-		/* Add points to image */
-		if(showPoints) {
-			
-		}
 		
 		/* Fit sphere to points.
 		 * Nb. This feeds fitSphere with pixels, whereas SphereFitter feeds it 'unit's.
@@ -387,8 +397,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		rt.addValue("mZ (slice)", meanCoOrds[2]);
 		rt.show("Results");
 		
-		annotateImage(imp, coOrdArray).show();
-		annotateImage(imp, coOrdArrayRef).show();
+		/* Add points to image */
+		if(showPoints) {
+			/* Show all detected boundaries */
+//			annotateImage(imp, coOrdArray).show();
+			/* Show points used by FitSphere */
+			annotateImage(imp, coOrdArrayRef).show();
+		}
 
 		return;
 	}
@@ -451,23 +466,23 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
 				/* Look 5% ahead */
-//				if(i - fivePc > 0 && pxlValues[i - fivePc] > limit) {
+				if(i - fivePc > 0 && pxlValues[i - fivePc] > limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
+				}
+//				if(i - tenPc > 0 && pxlValues[i - tenPc] > limit&& pxlValues[i - fivePc] > limit) {
 //					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
 //				}
-				if(i - tenPc > 0 && pxlValues[i - tenPc] > limit&& pxlValues[i - fivePc] > limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - tenPc), isMin);
-				}
 				else { break; }
 			}
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
 				/* Look 5% ahead */
-//				if(i - fivePc > 0 && pxlValues[i - fivePc] < limit) {
+				if(i - fivePc > 0 && pxlValues[i - fivePc] < limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
+				}
+//				if(i - tenPc > 0 && pxlValues[i - tenPc] < limit && pxlValues[i - fivePc] < limit) {
 //					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
 //				}
-				if(i - tenPc > 0 && pxlValues[i - tenPc] < limit && pxlValues[i - fivePc] < limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - tenPc), isMin);
-				}
 				else { break; }
 			}
 		}
