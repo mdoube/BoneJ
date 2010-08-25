@@ -53,7 +53,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private ImageProcessor[] sliceProcessors = null;
 	private ImageCanvas canvas;
 	
-	/** Only measure a single slice of a multi-slice image */
+	/** For testing: only measure a single slice of a multi-slice image */
 	private boolean singleSlice = false;
 	/** Show the final points used to generate the sphere */
 	private boolean showPoints = true;
@@ -97,10 +97,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double adjustedLimit;
 	
 	/** Number of vectors to create */
-	private int numVectors = 400;
+	private int numVectors = 1000;
 	/** Only use vectors which take <= this multiple of the mean number of steps 
 	 * taken by all vectors to reach the bone surface. */
-	private double stepLimit = 0.75;
+	private double stepLimit = 1;
+	/** Weight uZ by this factor */
+	private double bias_uZ = 1;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -153,13 +155,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd.addCheckbox("Process single slice only", this.singleSlice);
 //		gd.addCheckbox("Show points", this.showPoints);
 //		gd.showDialog();
-//		if(gd.wasCanceled()) {
-//			return;
-//		}
+//		if(gd.wasCanceled()) { return; }
 //		this.numVectors = (int) gd.getNextNumber();
 //		this.stepLimit = (int) gd.getNextNumber();
 //		this.singleSlice = gd.getNextChoice();
 //		this.showPoints = gd.getNextChoice();
+		
+		if(singleSlice) {
+			bias_uZ = 0;
+		}
 		
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
@@ -213,10 +217,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			
 			uX = unitVectors[i][0];
 			uY = unitVectors[i][1];
-			uZ = unitVectors[i][2] * 0.2;
-			if(singleSlice) {
-				uZ = 0;					// for testing with single slice
-			}
+			uZ = unitVectors[i][2] * bias_uZ;
 			
 			/* Use ArrayList as we don't know how long each line (j) will be.
 			 * Unfortunately, ArrayList can only be filled with Objects. */
@@ -235,18 +236,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					break;
 				}
 				
-				int nowX = nX;
-				int nowY = nY;
-				this.currentSlice = nZ;
-//				int nowX = (int) Math.floor(nX / vW);		// for 'unit' resolution
-//				int nowY = (int) Math.floor(nY / vH);
-//				this.currentSlice = (int) Math.floor(nZ / vD);
+//				nX = (int) Math.floor(nX / vW);		// for 'unit' resolution
+//				nY = (int) Math.floor(nY / vH);
+//				nZ = (int) Math.floor(nZ / vD);
 				
-//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "), slice: " + currentSlice + "; nowX, nowY: " + nowX + "," + nowY + "");
-				
-				Float nowValue = new Float(sliceProcessors[currentSlice].getPixelValue(nowX, nowY));
-				
-//				IJ.log("(nX,nY,nZ): (" + nX + "," + nY + "," + nZ + "); slice: " + currentSlice + "; int: " + nowValue + "");
+				Float nowValue = new Float(sliceProcessors[nZ].getPixelValue(nX, nY));
 				
 				vectorPixelValues.add(nowValue);
 				j++;
@@ -277,20 +271,21 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			for(int j = 0; j < pixelValues[i].size(); j++) {
 				pxVals[i][j] = (double) (Float) pixelValues[i].toArray()[j];
 			}
-			medianValues[i] = ShaftGuesser.median(pxVals[i]);
 			
-			/* Adjust our guessing limit based on the typical plots seen */
+			/* Guessing limit and adjustment based on the typical plots seen */
+			medianValues[i] = ShaftGuesser.median(pxVals[i]);
 			if(medianValues[i] < 0) {
 				adjustedLimit = medianValues[i] * 0.5;
 			}
 			else {
 				adjustedLimit = medianValues[i] * 1.25;
 			}
+			
 			boundarySteps[i] = boundaryLimiter(pxVals[i], adjustedLimit, (pxVals[i].length - 1), false);
 			distances[i] = boundarySteps[i] * Math.sqrt((unitVectors[i][0] * unitVectors[i][0]) + (unitVectors[i][1] * unitVectors[i][1]) + (unitVectors[i][2] * unitVectors[i][2]));
 		}
 		
-		Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (" + units + ")", "Pixel value", xValues[0], pxVals[0]);
+		Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
 		aPlot.show();
 		
 		/* */
@@ -300,7 +295,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		IJ.log("meanSteps: " + meanSteps + "");
 		
 		/* Get complete ArrayList of boundary coordinates */
-//		coOrdinates = new ArrayList<double[]>();
+		coOrdinates = new ArrayList<double[]>();
 //		for(int i = 0; i < boundarySteps.length; i++) {
 //			fX = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
 //			fY = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
@@ -317,17 +312,43 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			coOrdinates.add(coOrds);
 //		}
 		
-		coOrdinates = new ArrayList<double[]>();
 		for(int i = 0; i < boundarySteps.length; i++) {
+			
 			this.coOrds = new double[3];
 			coOrds[0] = iX + (boundarySteps[i] * unitVectors[i][0]);
 			coOrds[1] = iY + (boundarySteps[i] * unitVectors[i][1]);
-			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * 0.2);
+			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ);
+			
 			if(singleSlice) {
-				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
+				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * bias_uZ));
 			}
 			coOrdinates.add(coOrds);
 		}
+		/* Back into 'unit's */
+//		for(int i = 0; i < boundarySteps.length; i++) {
+//			
+//			this.coOrds = new double[3];
+//			coOrds[0] = (iX + (boundarySteps[i] * unitVectors[i][0])) / vW;
+//			coOrds[1] = (iY + (boundarySteps[i] * unitVectors[i][1])) / vH;
+//			coOrds[2] = (iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ)) / vD;
+//			
+//			if(singleSlice) {
+//				coOrds[2] = (int) Math.floor((iZ + (boundarySteps[i] * bias_uZ)) / vD);
+//			}
+//			coOrdinates.add(coOrds);
+//		}
+//		for(int i = 0; i < distances.length; i++) {
+//			
+//			this.coOrds = new double[3];
+//			coOrds[0] = iX + distances[i];
+//			coOrds[1] = iY + distances[i];
+//			coOrds[2] = iZ + distances[i] * bias_uZ;
+//			
+//			if(singleSlice) {
+//				coOrds[2] = (int) Math.floor(iZ + (distances[i] * bias_uZ));
+//			}
+//			coOrdinates.add(coOrds);
+//		}
 		
 		/* Transfer to array (and transpose) for math (need rows) */
 		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
@@ -357,7 +378,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					|| boundarySteps[i] < (meanSteps * stepLimit * 0.5)) {
 				it.remove();
 			}
-//			else if(distances[i] > (meanDistance)) {
+//			if(distances[i] > (meanDistance)) {
 //				it.remove();
 //			}
 //			if(a[0] - medianCoOrds[0] > 0
@@ -409,8 +430,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	}
 	
 	/**
-	 * 
-	 * @return
+	 * @return sphereDim[4] Sphere centre x, y, z coordinates and radius.
 	 */
 	public double[] getSphereDim() {
 		return this.sphereDim;
@@ -491,12 +511,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	}
 	
 	/**
-	 * Provided a 2D inputArray[][] with constant number of columns per row,
+	 * Provided a 2D inputArray[a][b] with constant number of columns per row,
 	 * i.e. not a ragged array, transposes this array so that row and column 
 	 * values are switched.
 	 * 
 	 * @param inputArray
-	 * @return transposedArray[][]
+	 * @return transposedArray[b][a]
 	 */
 	public double[][] transposeArray(double[][] inputArray) {
 		
@@ -517,6 +537,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * Modified from SliceGeometry.
 	 * 
 	 * @param imp
+	 * @param coOrdinateArray double[n][3] containing n (x, y, z) coordinates.
 	 * @return ImagePlus with points drawn
 	 */
 	private ImagePlus annotateImage(ImagePlus imp, double[][] coOrdinateArray) {
