@@ -55,8 +55,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	/** For testing: only measure a single slice of a multi-slice image */
 	private boolean singleSlice = false;
-	/** Show the final points used to generate the sphere */
+	/** Show the final points used to generate the sphere on a new image */
 	private boolean showPoints = true;
+	/** Show a sample plot */
+	private boolean doPlot = false;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -64,6 +66,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double vH, vW, vD;
 	/** Unit vector sizes, -1 < value < 1 */
 	private double uX, uY, uZ;
+	
 	/** Initial (iX), current (nX) and final (fX) coordinates (in pixels or 'unit's) */
 	private int iX, iY, iZ, nX, nY, nZ, fX, fY, fZ;
 	/** Image dimensions in 'unit's */
@@ -79,7 +82,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	/** Holds (x, y, z) centre and radius, in same units as those given to fitSphere */
 	private double[] sphereDim = new double[4];
-	
 	/** List of distances along each vector from initial point, before median is crossed */
 	private double[] distances;
 	/** User's chosen start point */
@@ -95,12 +97,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double meanSteps;
 	/** Adjusted limit (from median) */
 	private double adjustedLimit;
-	
-	/** Number of vectors to create */
-	private int numVectors = 1000;
 	/** Only use vectors which take <= this multiple of the mean number of steps 
 	 * taken by all vectors to reach the bone surface. */
 	private double stepLimit = 1;
+	
+	/** Number of vectors to create */
+	private int numVectors = 1000;
 	/** Weight uZ by this factor */
 	private double bias_uZ = 1;
 	/** Random unit vectors (x, y, z) */
@@ -110,20 +112,14 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Ragged array of x-axis values for plotting pixel value profiles along vectors */
 	private double[][] xValues;
 	
-	/** Coordinates x, y, z  of the boundary  */
+	/** Single set of boundary coordinates x, y, z */
 	private double[] coOrds;
 	/** ArrayList (of length limited by meanDistance) of boundary coordinates x, y, z */
 	private ArrayList<double[]> coOrdinates;
-	/** Array of x, y, z coordinates. T: transposed; Ref: refined. */
+	/** Array of boundary coordinates x, y, z. T: transposed; Ref: refined. */
 	private double[][] coOrdArray, coOrdArrayT, coOrdArrayRef;
 	
 	public void run(String arg) {
-		
-		/**
-		 * Copy image
-		 * Binarise???
-		 * 
-		 */
 		
 		/* Copied from SphereFitter */
 		if (!ImageCheck.checkEnvironment())
@@ -154,12 +150,14 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd.addNumericField("Use vectors with <=", stepLimit, 0, 2, "* mean steps");
 //		gd.addCheckbox("Process single slice only", this.singleSlice);
 //		gd.addCheckbox("Show points", this.showPoints);
+//		gd.addCheckbox("Plot a vector's profile", this.doPlot);
 //		gd.showDialog();
 //		if(gd.wasCanceled()) { return; }
 //		this.numVectors = (int) gd.getNextNumber();
 //		this.stepLimit = (int) gd.getNextNumber();
 //		this.singleSlice = gd.getNextChoice();
 //		this.showPoints = gd.getNextChoice();
+//		this.doPlot = gd.getNextChoice();
 		
 		if(singleSlice) {
 			bias_uZ = 0;
@@ -204,6 +202,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 //		GenericDialog gd2 = new GenericDialog("Info");
 //		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
+//		gd2.addMessage("vW, vH, vD: " + vW + ", " + vH + ", " + vD + "; ratio of vD / vW: " + vD / vW + "");
 //		gd2.showDialog();
 		
 		/* Create array of random 3D unit vectors */
@@ -230,7 +229,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				nY = (int) Math.floor(iY + (j * uY));
 				nZ = (int) Math.round(iZ + (j * uZ));
 				
-				/* Break out if outside the image */		// also || (nZ / vD) < 1 if using 'unit's resolution
+				/* Break out if outside the image */
 				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
 					j = -2;
 					break;
@@ -285,70 +284,22 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			distances[i] = boundarySteps[i] * Math.sqrt((unitVectors[i][0] * unitVectors[i][0]) + (unitVectors[i][1] * unitVectors[i][1]) + (unitVectors[i][2] * unitVectors[i][2]));
 		}
 		
-		Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
-		aPlot.show();
+		if(doPlot) {
+			Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
+			aPlot.show();
+		}
 		
 		/* */
 		this.meanDistance = Centroid.getCentroid(distances);
 		this.meanSteps = Centroid.getCentroid(boundarySteps);
-		
-		IJ.log("meanSteps: " + meanSteps + "");
+//		IJ.log("meanSteps: " + meanSteps + "");
 		
 		/* Get complete ArrayList of boundary coordinates */
-		coOrdinates = new ArrayList<double[]>();
-//		for(int i = 0; i < boundarySteps.length; i++) {
-//			fX = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
-//			fY = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
-//			fZ = (int) Math.floor(iZ + (boundarySteps[i] * unitVectors[i][2]));
-//			
-//			if(singleSlice) {
-//				fZ = (int) Math.floor(iZ + (boundarySteps[i] * 0));		// for testing with single slice
-//			}
-//			
-//			this.coOrds = new double[3];
-//			coOrds[0] = fX;
-//			coOrds[1] = fY;
-//			coOrds[2] = fZ;
-//			coOrdinates.add(coOrds);
-//		}
-		
-		for(int i = 0; i < boundarySteps.length; i++) {
-			
-			this.coOrds = new double[3];
-			coOrds[0] = iX + (boundarySteps[i] * unitVectors[i][0]);
-			coOrds[1] = iY + (boundarySteps[i] * unitVectors[i][1]);
-			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ);
-			
-			if(singleSlice) {
-				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * bias_uZ));
-			}
-			coOrdinates.add(coOrds);
+		if(coOrdinates == null) {
+			coOrdinates = new ArrayList<double[]>();
 		}
-		/* Back into 'unit's */
-//		for(int i = 0; i < boundarySteps.length; i++) {
-//			
-//			this.coOrds = new double[3];
-//			coOrds[0] = (iX + (boundarySteps[i] * unitVectors[i][0])) / vW;
-//			coOrds[1] = (iY + (boundarySteps[i] * unitVectors[i][1])) / vH;
-//			coOrds[2] = (iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ)) / vD;
-//			
-//			if(singleSlice) {
-//				coOrds[2] = (int) Math.floor((iZ + (boundarySteps[i] * bias_uZ)) / vD);
-//			}
-//			coOrdinates.add(coOrds);
-//		}
-//		for(int i = 0; i < distances.length; i++) {
-//			
-//			this.coOrds = new double[3];
-//			coOrds[0] = iX + distances[i];
-//			coOrds[1] = iY + distances[i];
-//			coOrds[2] = iZ + distances[i] * bias_uZ;
-//			
-//			if(singleSlice) {
-//				coOrds[2] = (int) Math.floor(iZ + (distances[i] * bias_uZ));
-//			}
-//			coOrdinates.add(coOrds);
-//		}
+		/* Send method a new ArrayList and append the whole thing to coOrdinates */
+		coOrdinates.addAll(addCoOrdinatesToArrayList(new ArrayList<double[]>()));
 		
 		/* Transfer to array (and transpose) for math (need rows) */
 		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
@@ -396,10 +347,19 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		this.coOrdArrayRef = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 		
+		if(showPoints) {
+			/* Show all detected boundaries */
+//			annotateImage(imp, coOrdArray).show();
+			/* Show points used by FitSphere */
+			annotateImage(imp, coOrdArrayRef).show();
+		}
+		
 		/* Fit sphere to points.
 		 * Nb. This feeds fitSphere with pixels, whereas SphereFitter feeds it 'unit's.
 		 * The output is thus in pixels. */
-		this.sphereDim = FitSphere.fitSphere((double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]));
+		if(!singleSlice) {
+			this.sphereDim = FitSphere.fitSphere(coOrdArrayRef);
+		}
 		
 		/* Show results */
 		ResultsTable rt = ResultsTable.getResultsTable();
@@ -418,13 +378,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		rt.addValue("mZ (slice)", meanCoOrds[2]);
 		rt.show("Results");
 		
-		/* Add points to image */
-		if(showPoints) {
-			/* Show all detected boundaries */
-//			annotateImage(imp, coOrdArray).show();
-			/* Show points used by FitSphere */
-			annotateImage(imp, coOrdArrayRef).show();
-		}
+//		this.run(arg);
 
 		return;
 	}
@@ -455,7 +409,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	public void mouseClicked(MouseEvent e) { }
 	public void mouseEntered(MouseEvent e) { }
 	public void mouseMoved(MouseEvent e) { }
-
+	
 	/**
 	 * <p>Along a vector containing pixel values beginning within the suspected 
 	 * sphere (femoral head), finds where the median pixel value (of this vector) 
@@ -508,6 +462,33 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		}
 		
 		return boundaryPosition;
+	}
+	
+	/**
+	 * Get complete ArrayList of boundary coordinates. Fills a new ArrayList; 
+	 * append it to an existing one outside the method, if necessary, using 
+	 * arrayListName.addAll(addCoOrdinatesToArrayList(new ArrayList<double[]>()))
+	 * 
+	 * @param coOrdinates
+	 * @return ArrayList<double[]> coOrdinates with new coordinates appended.
+	 */
+	private ArrayList<double[]> addCoOrdinatesToArrayList(ArrayList<double[]> newCoOrdinates) {
+		
+		/* Fill, or add to, ArrayList of boundary coordinates */
+		for(int i = 0; i < this.boundarySteps.length; i++) {
+			
+			this.coOrds = new double[3];
+			coOrds[0] = iX + (boundarySteps[i] * unitVectors[i][0]);
+			coOrds[1] = iY + (boundarySteps[i] * unitVectors[i][1]);
+			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ);
+			
+			if(singleSlice) {
+				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * bias_uZ));
+			}
+			newCoOrdinates.add(coOrds);
+		}
+		
+		return newCoOrdinates;
 	}
 	
 	/**
