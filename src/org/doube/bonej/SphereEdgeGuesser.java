@@ -66,6 +66,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double vH, vW, vD;
 	/** Unit vector sizes, -1 < value < 1 */
 	private double uX, uY, uZ;
+	/** Standard deviation values */
+	private double sdX, sdY, sdZ;
 	
 	/** Initial (iX), current (nX) and final (fX) coordinates (in pixels or 'unit's) */
 	private int iX, iY, iZ, nX, nY, nZ, fX, fY, fZ;
@@ -82,14 +84,16 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	/** Holds (x, y, z) centre and radius, in same units as those given to fitSphere */
 	private double[] sphereDim = new double[4];
-	/** List of distances along each vector from initial point, before median is crossed */
-	private double[] distances;
 	/** User's chosen start point */
 	private double[] initialPoint = new double[3];
 	/** List of median pixel values of each vector */
 	private double[] medianValues;
 	/** List of number of steps to bone boundary (median crossing). */
 	private int[] boundarySteps;
+	/** Distance in 'unit's to the bone boundary given by boundarySteps */
+	private double[] boundaryDistances;
+	/** List of magnitudes of each unit vector, in 'unit's  */
+	private double[] magnitudes;
 	
 	/** Mean distance */
 	private double meanDistance;
@@ -104,7 +108,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Number of vectors to create */
 	private int numVectors = 1000;
 	/** Weight uZ by this factor */
-	private double bias_uZ = 1;
+	private double bias_uZ = 0.5;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -135,6 +139,17 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			return;
 //		}
 		
+		/* Set up array of ImageProcessors for reference later */
+		ImageStack stack = imp.getStack();
+		this.sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
+		for(int s = 1; s < sliceProcessors.length; s++) {
+			sliceProcessors[s] = stack.getProcessor(s);
+		}
+		
+		w = imp.getWidth();
+		h = imp.getHeight();
+		d = imp.getStackSize();
+		
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
 		Calibration cal = imp.getCalibration();
@@ -148,7 +163,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		GenericDialog gd = new GenericDialog("Options");
 //		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
 //		gd.addNumericField("Use vectors with <=", stepLimit, 0, 2, "* mean steps");
-//		gd.addCheckbox("Process single slice only", this.singleSlice);
+//		gd.addCheckbox("Single slice (don't fit sphere)", this.singleSlice);
 //		gd.addCheckbox("Show points", this.showPoints);
 //		gd.addCheckbox("Plot a vector's profile", this.doPlot);
 //		gd.showDialog();
@@ -163,6 +178,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			bias_uZ = 0;
 		}
 		
+		/* User clicks to set initial point */
+		
 		// remove stale MouseListeners
 		MouseListener[] l = this.canvas.getMouseListeners();
 		for (int n = 0; n < l.length; n++) {
@@ -170,13 +187,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		}
 		// add a new MouseListener
 		this.canvas.addMouseListener(this);
-		new WaitForUserDialog("Click inside the femoral head,\n" 
-									+ "then hit \'OK\'").show();
+		new WaitForUserDialog("Click (roughly) in the centre of\n" 
+									+ "the femoral head, then hit \'OK\'").show();
 		this.canvas.removeMouseListener(this);
-		
-		iX = (int) Math.floor(initialPoint[0]);
-		iY = (int) Math.floor(initialPoint[1]);
-		iZ = (int) Math.floor(initialPoint[2]);
 		
 		/* Confirm initial point */
 //		GenericDialog gd1 = new GenericDialog("Info");
@@ -184,131 +197,41 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + ", " + vH + ", " + vD + ")");
 //		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
 //		gd1.showDialog();
-		
-		ImageStack stack = imp.getStack();
-		
-		/* Set up array of ImageProcessors for reference later */
-		this.sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
-		for(int s = 1; s < sliceProcessors.length; s++) {
-			sliceProcessors[s] = stack.getProcessor(s);
-		}
-		
-		w = imp.getWidth();
-		h = imp.getHeight();
-		d = imp.getStackSize();
-//		w = (int) Math.floor(imp.getWidth() * vW);			// for 'unit' resolution
-//		h = (int) Math.floor(imp.getHeight() * vH);
-//		d = (int) Math.floor(imp.getStackSize() * vD);
-		
-//		GenericDialog gd2 = new GenericDialog("Info");
-//		gd2.addMessage("w,h,d: " + w + "," + h + "," + d + "");
-//		gd2.addMessage("vW, vH, vD: " + vW + ", " + vH + ", " + vD + "; ratio of vD / vW: " + vD / vW + "");
-//		gd2.showDialog();
-		
-		/* Create array of random 3D unit vectors */
-		this.unitVectors = Vectors.random3D(numVectors);
-		
-		/* Array of ArrayLists */
-		this.pixelValues = new ArrayList[unitVectors.length];
-		
-		/* Cycle through all vectors */
-		for(int i = 0; i < unitVectors.length; i++) {
-			
-			uX = unitVectors[i][0];
-			uY = unitVectors[i][1];
-			uZ = unitVectors[i][2] * bias_uZ;
-			
-			/* Use ArrayList as we don't know how long each line (j) will be.
-			 * Unfortunately, ArrayList can only be filled with Objects. */
-			vectorPixelValues = new ArrayList<Float>();
-			
-			int j = 0;
-			while(j > -1) {
-				
-				nX = (int) Math.floor(iX + (j * uX));
-				nY = (int) Math.floor(iY + (j * uY));
-				nZ = (int) Math.round(iZ + (j * uZ));
-				
-				/* Break out if outside the image */
-				if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
-					j = -2;
-					break;
-				}
-				
-//				nX = (int) Math.floor(nX / vW);		// for 'unit' resolution
-//				nY = (int) Math.floor(nY / vH);
-//				nZ = (int) Math.floor(nZ / vD);
-				
-				Float nowValue = new Float(sliceProcessors[nZ].getPixelValue(nX, nY));
-				
-				vectorPixelValues.add(nowValue);
-				j++;
-			}
 
-			pixelValues[i] = vectorPixelValues;
-		}
-
-		/* For plotting */
-		this.xValues = new double[pixelValues.length][];
-		for(int i = 0; i < xValues.length; i++) {
-			xValues[i] = new double[pixelValues[i].size()];
-			for (int j = 0; j < pixelValues[i].size(); j++) {
-				xValues[i][j] = j;
-			}
-		}
 		
-		/* Some analysis possible on each vector */
-		this.medianValues = new double[pixelValues.length];
-		this.boundarySteps = new int[pixelValues.length];
-		this.distances = new double[pixelValues.length];
 		
-		/* Ragged array of (double) pixel values for every vector */
-		this.pxVals = new double[pixelValues.length][];
 		
-		for(int i = 0; i < pxVals.length; i++) {
-			pxVals[i] = new double[pixelValues[i].size()];
-			for(int j = 0; j < pixelValues[i].size(); j++) {
-				pxVals[i][j] = (double) (Float) pixelValues[i].toArray()[j];
-			}
-			
-			/* Guessing limit and adjustment based on the typical plots seen */
-			medianValues[i] = ShaftGuesser.median(pxVals[i]);
-			if(medianValues[i] < 0) {
-				adjustedLimit = medianValues[i] * 0.5;
-			}
-			else {
-				adjustedLimit = medianValues[i] * 1.25;
-			}
-			
-			boundarySteps[i] = boundaryLimiter(pxVals[i], adjustedLimit, (pxVals[i].length - 1), false);
-			distances[i] = boundarySteps[i] * Math.sqrt((unitVectors[i][0] * unitVectors[i][0]) + (unitVectors[i][1] * unitVectors[i][1]) + (unitVectors[i][2] * unitVectors[i][2]));
-		}
+		/* First run: current slice only */
 		
-		if(doPlot) {
-			Plot aPlot = new Plot("Pixel Values along vector " + 1 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
-			aPlot.show();
-		}
+		projectVectors(numVectors, bias_uZ);
+		
+		findBoundaries();
 		
 		/* */
-		this.meanDistance = Centroid.getCentroid(distances);
+		this.meanDistance = Centroid.getCentroid(boundaryDistances);
 		this.meanSteps = Centroid.getCentroid(boundarySteps);
-//		IJ.log("meanSteps: " + meanSteps + "");
 		
-		/* Get complete ArrayList of boundary coordinates */
+		/* Add boundary coordinates to ArrayList */
 		if(coOrdinates == null) {
 			coOrdinates = new ArrayList<double[]>();
 		}
 		/* Send method a new ArrayList and append the whole thing to coOrdinates */
 		coOrdinates.addAll(addCoOrdinatesToArrayList(new ArrayList<double[]>()));
 		
+		
+		
+		
+		
+		/* Math for refinement */
+		
 		/* Transfer to array (and transpose) for math (need rows) */
 		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 		this.coOrdArrayT = transposeArray(coOrdArray);
 		
 		/* More refinement: standard deviations */
-		double sdX = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[0]));
-		double sdY = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[1]));
-		double sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));	// May not work for Z as have slice numbers rather than distances
+		sdX = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[0]));
+		sdY = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[1]));
+		sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));	// May not work for Z as have slice numbers rather than distances
 		
 		double[] meanCoOrds = new double[3];
 		meanCoOrds[0] = Centroid.getCentroid(coOrdArrayT[0]);
@@ -320,18 +243,21 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		medianCoOrds[1] = ShaftGuesser.median(coOrdArrayT[1]);
 		medianCoOrds[2] = ShaftGuesser.median(coOrdArrayT[2]);
 		
+		/* Refinement */
+		
 		/* Iterate through coOrdinates ArrayList and refine */
 		Iterator<double[]> it = coOrdinates.iterator();
 		int i = 0;
 		while (it.hasNext()) {
 			double[] a = it.next();
-			if(boundarySteps[i] > (meanSteps * stepLimit)
-					|| boundarySteps[i] < (meanSteps * stepLimit * 0.5)) {
-				it.remove();
-			}
-//			if(distances[i] > (meanDistance)) {
+//			if(boundarySteps[i] > (meanSteps * stepLimit * 5)
+//					|| boundarySteps[i] < (meanSteps * stepLimit * 0.75)) {
 //				it.remove();
 //			}
+			if(boundaryDistances[i] > meanDistance * 0.75
+					 || boundaryDistances[i] < meanDistance * 0.25) {
+				it.remove();
+			}
 //			if(a[0] - medianCoOrds[0] > 0
 //					|| a[1] - medianCoOrds[1] > 0
 //					|| a[2] - medianCoOrds[2] > 0) {
@@ -342,8 +268,29 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //					|| Math.abs(a[2] - meanCoOrds[2]) > sdZ / 2) {		// N.B. sdZ may not be reliable
 //				it.remove();
 //			}
-			i ++;
+//			for(int s = 1; s < imp.getStackSize() + 1; s++) {
+//				if(s == (int) it.next()[2]) {
+//					
+//				}
+//			}
+			i++;
 		}
+		
+		/* Reset initial point (?) */
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		this.coOrdArrayRef = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 		
@@ -378,6 +325,20 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		rt.addValue("mZ (slice)", meanCoOrds[2]);
 		rt.show("Results");
 		
+		if(doPlot) {
+			/* For plotting */
+			this.xValues = new double[pixelValues.length][];
+			for(int j = 0; j < xValues.length; j++) {
+				xValues[j] = new double[pixelValues[j].size()];
+				for (int k = 0; k < pixelValues[j].size(); k++) {
+					xValues[j][k] = k;
+				}
+			}
+			
+			Plot aPlot = new Plot("Pixel Values along vector " + 0 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
+			aPlot.show();
+		}
+		
 //		this.run(arg);
 
 		return;
@@ -389,9 +350,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	public double[] getSphereDim() {
 		return this.sphereDim;
 	}
-	public void setInitialPoint(double[] a) {
-		this.initialPoint = a;
-	}
 	
 	public void mousePressed(MouseEvent e) {
 		ImagePlus imp = IJ.getImage();
@@ -399,9 +357,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int x = canvas.offScreenX(e.getX());
 		int y = canvas.offScreenY(e.getY());
 		int z = imp.getCurrentSlice();
-		final double[] initialPoint = { x, y, z };
 //		final double[] initialPoint = { x * vW, y * vH, z * vD };	// for 'unit' resolution
-		setInitialPoint(initialPoint);
+		setInitialPoint(x, y, z);
 	}
 
 	public void mouseReleased(MouseEvent e) { }
@@ -409,6 +366,124 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	public void mouseClicked(MouseEvent e) { }
 	public void mouseEntered(MouseEvent e) { }
 	public void mouseMoved(MouseEvent e) { }
+	
+	public void setInitialPoint(int x, int y, int z) {
+		this.initialPoint[0] = x;
+		this.initialPoint[1] = y;
+		this.initialPoint[2] = z;
+		
+		this.iX = (int) Math.floor(initialPoint[0]);
+		this.iY = (int) Math.floor(initialPoint[1]);
+		this.iZ = (int) Math.floor(initialPoint[2]);
+	}
+	
+	/**
+	 * <p>Create random 3D unit vectors, with the Z direction weighted 
+	 * by multiplying by bias_uZ (so for single slice, set bias_uZ = 0).</p>
+	 * 
+	 * <p>Fills both pixelValues and magnitudes.</p>
+	 * 
+	 * @param numVectors number of vectors to create
+	 * @param bias_uZ weighting given to uZ
+	 */
+	private void projectVectors(int numVectors, double bias_uZ) {
+		
+		/* Create array of random 3D unit vectors */
+		this.unitVectors = Vectors.random3D(numVectors);
+		
+		/* Array of ArrayLists */
+		this.pixelValues = new ArrayList[unitVectors.length];
+		
+		this.magnitudes = new double[unitVectors.length];
+		
+		/* Cycle through all vectors */
+		for(int i = 0; i < unitVectors.length; i++) {
+			
+			uX = unitVectors[i][0];
+			uY = unitVectors[i][1];
+			uZ = unitVectors[i][2] * bias_uZ;
+			
+			this.pixelValues[i] = getPixelsAlongVector(uX, uY, uZ);
+			
+			this.magnitudes[i] = Math.sqrt(Math.pow(uX * vW, 2) + Math.pow(uY * vH, 2) + Math.pow(uZ * vD, 2));
+		}
+	}
+	
+	
+	/**
+	 * <p>Find pixel values at all pixels along a vector, from the initial point 
+	 * determined by the user, to the border of the image.</p>
+	 * 
+	 * <p>Uses getPixelValue(int x, int y).</p>
+	 * 
+	 * @param uX unit vector in X direction
+	 * @param uY unit vector in Y direction
+	 * @param uZ unit vector in Z direction
+	 * @return ArrayList<Float> vectorPixelValues
+	 */
+	private ArrayList<Float> getPixelsAlongVector(double uX, double uY, double uZ) {
+		
+		/* Use ArrayList as we don't know how long each line (j) will be.
+		 * Unfortunately, ArrayList can only be filled with Objects. */
+		this.vectorPixelValues = new ArrayList<Float>();
+		
+		int j = 0;
+		while(j > -1) {
+			
+			nX = (int) Math.floor(iX + (j * uX));		// for 'unit' resolution, divide by vW, etc.
+			nY = (int) Math.floor(iY + (j * uY));
+			nZ = (int) Math.round(iZ + (j * uZ));
+			
+			/* Break out if outside the image */
+			if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
+				j = -2;
+				break;
+			}
+			
+			Float nowValue = new Float(sliceProcessors[nZ].getPixelValue(nX, nY));
+			
+			vectorPixelValues.add(nowValue);
+			j++;
+		}
+		
+		return vectorPixelValues;
+	}
+	
+	
+	/**
+	 * <p>Find the bone boundaries along each vector, based on the median 
+	 * pixel values encountered by each individual vector.</p>
+	 */
+	private void findBoundaries() {
+		
+		/* Some analysis possible on each vector */
+		this.boundarySteps = new int[pixelValues.length];
+		this.medianValues = new double[pixelValues.length];
+		this.boundaryDistances = new double[pixelValues.length];
+		
+		/* Ragged array of (double) pixel values for every vector */
+		this.pxVals = new double[pixelValues.length][];
+		for(int i = 0; i < pxVals.length; i++) {
+			pxVals[i] = new double[pixelValues[i].size()];
+			for(int j = 0; j < pixelValues[i].size(); j++) {
+				pxVals[i][j] = (double) (Float) pixelValues[i].toArray()[j];
+			}
+			
+			/* Guessing limit and adjustment based on the typical plots seen */
+			medianValues[i] = ShaftGuesser.median(pxVals[i]);
+			if(medianValues[i] < 0) {
+				adjustedLimit = medianValues[i] * 0.5;
+			}
+			else {
+				adjustedLimit = medianValues[i] * 1.25;
+			}
+			
+			boundarySteps[i] = boundaryLimiter(pxVals[i], adjustedLimit, (pxVals[i].length - 1), false);
+			boundaryDistances[i] = boundarySteps[i] * magnitudes[i];
+		}
+	}
+	
+	
 	
 	/**
 	 * <p>Along a vector containing pixel values beginning within the suspected 
@@ -429,9 +504,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param isMin Specify whether the limit is a minimum (true) or a maximum (false).
 	 * @return
 	 */
-	public int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
+	private int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
 		
 		int boundaryPosition = 0;
+		int twoPc = (int) Math.floor(pxlValues.length * 0.02);
 		int fivePc = (int) Math.floor(pxlValues.length * 0.05);
 		int tenPc = (int) Math.floor(pxlValues.length * 0.1);
 		
@@ -439,24 +515,18 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		for(int i = startPoint; i >= 0; i--) {
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
-				/* Look 5% ahead */
-				if(i - fivePc > 0 && pxlValues[i - fivePc] > limit) {
+				/* Look ahead */
+				if(i - tenPc > 0 && (pxlValues[i - tenPc] > limit || pxlValues[i - fivePc] > limit || pxlValues[i - twoPc] > limit)) {
 					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
 				}
-//				if(i - tenPc > 0 && pxlValues[i - tenPc] > limit&& pxlValues[i - fivePc] > limit) {
-//					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
-//				}
 				else { break; }
 			}
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
-				/* Look 5% ahead */
-				if(i - fivePc > 0 && pxlValues[i - fivePc] < limit) {
+				/* Look ahead */
+				if(i - tenPc > 0 && (pxlValues[i - tenPc] < limit || pxlValues[i - fivePc] < limit ||  pxlValues[i - twoPc] < limit)) {
 					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
 				}
-//				if(i - tenPc > 0 && pxlValues[i - tenPc] < limit && pxlValues[i - fivePc] < limit) {
-//					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
-//				}
 				else { break; }
 			}
 		}
@@ -478,9 +548,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		for(int i = 0; i < this.boundarySteps.length; i++) {
 			
 			this.coOrds = new double[3];
-			coOrds[0] = iX + (boundarySteps[i] * unitVectors[i][0]);
-			coOrds[1] = iY + (boundarySteps[i] * unitVectors[i][1]);
-			coOrds[2] = iZ + (boundarySteps[i] * unitVectors[i][2] * bias_uZ);
+			coOrds[0] = (int) Math.floor(iX + (boundarySteps[i] * unitVectors[i][0]));
+			coOrds[1] = (int) Math.floor(iY + (boundarySteps[i] * unitVectors[i][1]));
+			coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * unitVectors[i][2]) * bias_uZ);
 			
 			if(singleSlice) {
 				coOrds[2] = (int) Math.floor(iZ + (boundarySteps[i] * bias_uZ));
