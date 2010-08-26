@@ -94,11 +94,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[] boundaryDistances;
 	/** List of magnitudes of each unit vector, in 'unit's  */
 	private double[] magnitudes;
+	/** 3D centroid */
+	private double[] centroid;
 	
 	/** Mean distance */
 	private double meanDistance;
 	/** Mean steps */
 	private double meanSteps;
+	/** Standard deviation of all the distances */
+	private double sdDistance;
 	/** Adjusted limit (from median) */
 	private double adjustedLimit;
 	/** Only use vectors which take <= this multiple of the mean number of steps 
@@ -108,7 +112,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Number of vectors to create */
 	private int numVectors = 1000;
 	/** Weight uZ by this factor */
-	private double bias_uZ = 0.5;
+	private double bias_uZ = 0;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -119,7 +123,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Single set of boundary coordinates x, y, z */
 	private double[] coOrds;
 	/** ArrayList (of length limited by meanDistance) of boundary coordinates x, y, z */
-	private ArrayList<double[]> coOrdinates;
+	private ArrayList<double[]> coOrdinates, newCoOrdinates;
 	/** Array of boundary coordinates x, y, z. T: transposed; Ref: refined. */
 	private double[][] coOrdArray, coOrdArrayT, coOrdArrayRef;
 	
@@ -191,7 +195,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 									+ "the femoral head, then hit \'OK\'").show();
 		this.canvas.removeMouseListener(this);
 		
-		/* Confirm initial point */
+		/* Confirm initial point and measurements */
 //		GenericDialog gd1 = new GenericDialog("Info");
 //		gd1.addMessage("Initial point (x,y,z): (" + iX + ", " + iY + ", " + iZ + ")");
 //		gd1.addMessage("Pixel sizes (vW,vH,vD): (" + vW + ", " + vH + ", " + vD + ")");
@@ -199,104 +203,59 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd1.showDialog();
 
 		
-		
-		
 		/* First run: current slice only */
+		bias_uZ = 0;
 		
 		projectVectors(numVectors, bias_uZ);
 		
 		findBoundaries();
 		
-		/* */
-		this.meanDistance = Centroid.getCentroid(boundaryDistances);
-		this.meanSteps = Centroid.getCentroid(boundarySteps);
-		
 		/* Add boundary coordinates to ArrayList */
 		if(coOrdinates == null) {
 			coOrdinates = new ArrayList<double[]>();
 		}
-		/* Send method a new ArrayList and append the whole thing to coOrdinates */
-		coOrdinates.addAll(addCoOrdinatesToArrayList(new ArrayList<double[]>()));
+		newCoOrdinates = new ArrayList<double[]>();
 		
+		/* Send method a new ArrayList */
+		newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>());
 		
+		refineCoOrdinates(newCoOrdinates, 1);
+		refineCoOrdinates(newCoOrdinates, 2);
 		
+		/* Append the refined newCoOrdinates to coOrdinates */
+		coOrdinates.addAll(newCoOrdinates);
 		
+//		GenericDialog gd1 = new GenericDialog("Info");
+//		gd1.addMessage(": " + coOrdinates.size() + "");
+//		gd1.addMessage("bd: " + boundaryDistances.length + "");
+//		gd1.addMessage("sdD: " + sdDistance + "");
+//		gd1.showDialog();
 		
-		/* Math for refinement */
+		/* Reset initial point based on the above */
+		setInitialPoint((int) centroid[0], (int) centroid[1], (int) centroid[2]);
 		
-		/* Transfer to array (and transpose) for math (need rows) */
-		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
-		this.coOrdArrayT = transposeArray(coOrdArray);
+		/* Second run: 3D */
+		bias_uZ = 1;
 		
-		/* More refinement: standard deviations */
-		sdX = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[0]));
-		sdY = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[1]));
-		sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));	// May not work for Z as have slice numbers rather than distances
+		projectVectors(numVectors, bias_uZ);
 		
-		double[] meanCoOrds = new double[3];
-		meanCoOrds[0] = Centroid.getCentroid(coOrdArrayT[0]);
-		meanCoOrds[1] = Centroid.getCentroid(coOrdArrayT[1]);
-		meanCoOrds[2] = Centroid.getCentroid(coOrdArrayT[2]);
+		findBoundaries();
 		
-		double[] medianCoOrds = new double[3];
-		medianCoOrds[0] = ShaftGuesser.median(coOrdArrayT[0]);
-		medianCoOrds[1] = ShaftGuesser.median(coOrdArrayT[1]);
-		medianCoOrds[2] = ShaftGuesser.median(coOrdArrayT[2]);
+		newCoOrdinates = new ArrayList<double[]>();
 		
-		/* Refinement */
+		/* Add new coordinates to existing ArrayList */
+		newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>());
 		
-		/* Iterate through coOrdinates ArrayList and refine */
-		Iterator<double[]> it = coOrdinates.iterator();
-		int i = 0;
-		while (it.hasNext()) {
-			double[] a = it.next();
-//			if(boundarySteps[i] > (meanSteps * stepLimit * 5)
-//					|| boundarySteps[i] < (meanSteps * stepLimit * 0.75)) {
-//				it.remove();
-//			}
-			if(boundaryDistances[i] > meanDistance * 0.75
-					 || boundaryDistances[i] < meanDistance * 0.25) {
-				it.remove();
-			}
-//			if(a[0] - medianCoOrds[0] > 0
-//					|| a[1] - medianCoOrds[1] > 0
-//					|| a[2] - medianCoOrds[2] > 0) {
-//				it.remove();
-//			}
-//			if(Math.abs(a[0] - meanCoOrds[0]) > sdX * 2
-//					|| Math.abs(a[1] - meanCoOrds[1]) > sdY * 2
-//					|| Math.abs(a[2] - meanCoOrds[2]) > sdZ / 2) {		// N.B. sdZ may not be reliable
-//				it.remove();
-//			}
-//			for(int s = 1; s < imp.getStackSize() + 1; s++) {
-//				if(s == (int) it.next()[2]) {
-//					
-//				}
-//			}
-			i++;
-		}
+		refineCoOrdinates(newCoOrdinates, 1);
+		refineCoOrdinates(newCoOrdinates, 2);
 		
-		/* Reset initial point (?) */
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		coOrdinates.addAll(newCoOrdinates);
 		
 		this.coOrdArrayRef = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 		
 		if(showPoints) {
 			/* Show all detected boundaries */
-//			annotateImage(imp, coOrdArray).show();
+			annotateImage(imp, coOrdArray).show();
 			/* Show points used by FitSphere */
 			annotateImage(imp, coOrdArrayRef).show();
 		}
@@ -304,9 +263,18 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* Fit sphere to points.
 		 * Nb. This feeds fitSphere with pixels, whereas SphereFitter feeds it 'unit's.
 		 * The output is thus in pixels. */
-		if(!singleSlice) {
-			this.sphereDim = FitSphere.fitSphere(coOrdArrayRef);
-		}
+//		if(!singleSlice) {
+//			try {
+//				this.sphereDim = FitSphere.fitSphere(coOrdArrayRef);
+//			} catch (IllegalArgumentException ia) {
+//				IJ.showMessage(ia.getMessage());
+//				return;
+//			} catch (RuntimeException re) {
+//				IJ.showMessage("Can't fit sphere to points.\n"
+//							+ "Rules may be too strict. Try again.");
+//				return;
+//			}
+//		}
 		
 		/* Show results */
 		ResultsTable rt = ResultsTable.getResultsTable();
@@ -320,13 +288,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		rt.addValue("sdX (pixels)", sdX);
 		rt.addValue("sdY (pixels)", sdY);
 		rt.addValue("sdZ (pixels)", sdZ);
-		rt.addValue("mX (mm)", meanCoOrds[0] * vW);
-		rt.addValue("mY (mm)", meanCoOrds[1] * vH);
-		rt.addValue("mZ (slice)", meanCoOrds[2]);
+//		rt.addValue("mX (mm)", meanCoOrds[0] * vW);
+//		rt.addValue("mY (mm)", meanCoOrds[1] * vH);
+//		rt.addValue("mZ (slice)", meanCoOrds[2]);
 		rt.show("Results");
 		
-		if(doPlot) {
-			/* For plotting */
+		if(true) {
+			/* For plotting pixel values */
 			this.xValues = new double[pixelValues.length][];
 			for(int j = 0; j < xValues.length; j++) {
 				xValues[j] = new double[pixelValues[j].size()];
@@ -484,7 +452,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	}
 	
 	
-	
 	/**
 	 * <p>Along a vector containing pixel values beginning within the suspected 
 	 * sphere (femoral head), finds where the median pixel value (of this vector) 
@@ -516,16 +483,16 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - tenPc > 0 && (pxlValues[i - tenPc] > limit || pxlValues[i - fivePc] > limit || pxlValues[i - twoPc] > limit)) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
+				if(i - tenPc > 0 && (pxlValues[i - tenPc] > limit || pxlValues[i - fivePc] > limit) && pxlValues[i - twoPc] > limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - twoPc), isMin);
 				}
 				else { break; }
 			}
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - tenPc > 0 && (pxlValues[i - tenPc] < limit || pxlValues[i - fivePc] < limit ||  pxlValues[i - twoPc] < limit)) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - fivePc), isMin);
+				if(i - tenPc > 0 && (pxlValues[i - tenPc] < limit || pxlValues[i - fivePc] < limit) &&  pxlValues[i - twoPc] < limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - twoPc), isMin);
 				}
 				else { break; }
 			}
@@ -533,6 +500,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		return boundaryPosition;
 	}
+	
 	
 	/**
 	 * Get complete ArrayList of boundary coordinates. Fills a new ArrayList; 
@@ -542,7 +510,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param coOrdinates
 	 * @return ArrayList<double[]> coOrdinates with new coordinates appended.
 	 */
-	private ArrayList<double[]> addCoOrdinatesToArrayList(ArrayList<double[]> newCoOrdinates) {
+	private ArrayList<double[]> addNewCoOrdinatesToArrayList(ArrayList<double[]> newCoOrdinates) {
 		
 		/* Fill, or add to, ArrayList of boundary coordinates */
 		for(int i = 0; i < this.boundarySteps.length; i++) {
@@ -560,6 +528,116 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		return newCoOrdinates;
 	}
+	
+	
+	/**
+	 * <p>Includes math for refinement.</p>
+	 * 
+	 * <p><b>caseNum 1:</b> Single slice.</p>
+	 * 
+	 * @param caseNum Run number, sets which math to use on the data
+	 */
+	private void refineCoOrdinates(ArrayList<double[]> coOrdinates, int caseNum) {
+		
+		/* Math for refinement */
+		
+//		this.meanSteps = Centroid.getCentroid(this.boundarySteps);
+		
+//		double[] meanCoOrds = new double[3];
+//		meanCoOrds[0] = Centroid.getCentroid(coOrdArrayT[0]);
+//		meanCoOrds[1] = Centroid.getCentroid(coOrdArrayT[1]);
+//		meanCoOrds[2] = Centroid.getCentroid(coOrdArrayT[2]);
+//		
+//		double[] medianCoOrds = new double[3];
+//		medianCoOrds[0] = ShaftGuesser.median(coOrdArrayT[0]);
+//		medianCoOrds[1] = ShaftGuesser.median(coOrdArrayT[1]);
+//		medianCoOrds[2] = ShaftGuesser.median(coOrdArrayT[2]);
+		
+		/* Refinement */
+		
+		Iterator<double[]> it = coOrdinates.iterator();
+		
+		/* Do different things based on which run this is */
+		switch (caseNum) {
+		
+		case 1 : {
+			
+			/* Set overall head dimensions for 3D later */
+			this.meanDistance = Centroid.getCentroid(this.boundaryDistances);
+			this.sdDistance = Math.sqrt(ShaftGuesser.variance(this.boundaryDistances));
+			
+			/* Iterate through coOrdinates ArrayList and refine */
+			int i = 0;
+			while (it.hasNext()) {
+				double[] a = it.next();
+				if(boundaryDistances[i] > meanDistance + (sdDistance * 0)
+						 || boundaryDistances[i] < meanDistance + (sdDistance * -1)) {
+					it.remove();
+				}
+				i++;
+			}
+			
+			break;
+		}
+		
+		case 2 : {
+			
+			/* Iterate through coOrdinates ArrayList and refine */
+			int i = 0;
+			while (it.hasNext() && i < boundaryDistances.length) {
+				if(boundaryDistances[i] > (meanDistance + (sdDistance * 1))
+						 || boundaryDistances[i] < (meanDistance + (sdDistance * -1))) {
+					it.remove();
+				}
+				IJ.log("" + i + "");
+				i++;
+			}
+			
+			break;
+		}
+		
+		
+		
+		default: break;
+		}
+		
+		/* Transfer to array (and transpose) for math (need rows) */
+		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
+		this.coOrdArrayT = transposeArray(coOrdArray);
+		
+		/* Centroid */
+		this.centroid = Centroid.getCentroid(coOrdArray);
+		
+		/* Standard deviations of entire coordinate set */
+		sdX = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[0]));
+		sdY = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[1]));
+		sdZ = Math.sqrt(ShaftGuesser.variance(coOrdArrayT[2]));
+			
+//			if(boundarySteps[i] > (meanSteps * stepLimit * 5)
+//					|| boundarySteps[i] < (meanSteps * stepLimit * 0.75)) {
+//				it.remove();
+//			}
+//		if(boundaryDistances[i] > meanDistance * 0.75
+//				 || boundaryDistances[i] < meanDistance * 0.25) {
+//			it.remove();
+//		}
+//			if(a[0] - medianCoOrds[0] > 0
+//					|| a[1] - medianCoOrds[1] > 0
+//					|| a[2] - medianCoOrds[2] > 0) {
+//				it.remove();
+//			}
+//			if(Math.abs(a[0] - meanCoOrds[0]) > sdX * 2
+//					|| Math.abs(a[1] - meanCoOrds[1]) > sdY * 2
+//					|| Math.abs(a[2] - meanCoOrds[2]) > sdZ / 2) {		// N.B. sdZ may not be reliable
+//				it.remove();
+//			}
+//			for(int s = 1; s < imp.getStackSize() + 1; s++) {
+//				if(s == (int) it.next()[2]) {
+//					
+//				}
+//			}
+	}
+	
 	
 	/**
 	 * Provided a 2D inputArray[a][b] with constant number of columns per row,
@@ -582,6 +660,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		return transposedArray;
 	}
+	
 	
 	/**
 	 * Draw points used to calculate the sphere on a copy of the original image.
