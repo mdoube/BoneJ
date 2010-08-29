@@ -5,15 +5,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Random;
 
 import org.doube.geometry.Centroid;
-import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
-import org.doube.util.RoiMan;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -22,20 +19,11 @@ import ij.gui.GenericDialog;
 import ij.gui.ImageCanvas;
 import ij.gui.ImageWindow;
 import ij.gui.Plot;
-import ij.gui.ProfilePlot;
-import ij.gui.Roi;
 import ij.gui.WaitForUserDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
-import ij.plugin.filter.Profiler;
-import ij.plugin.frame.RoiManager;
-import ij.process.BinaryProcessor;
-import ij.process.ByteProcessor;
-import ij.process.ColorProcessor;
-import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.process.ShortProcessor;
 
 /**
  * <p>Aims to drastically reduce the complexity of, and time taken to, 
@@ -62,13 +50,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	private ImageProcessor[] sliceProcessors = null;
 	private ImageCanvas canvas;
-	private ImagePlus imp;
 	
-	/** For testing: only measure a single slice of a multi-slice image */
+	/** Only measure a single slice of a multi-slice image */
 	private boolean singleSlice = false;
 	/** Show the final points used to generate the sphere on a new image */
-	private boolean showPoints = true;
-	/** Show a sample plot */
+	private boolean showPoints = false;
+	/** Show a sample plot of getPixelValue at each point along a vector */
 	private boolean doPlot = false;
 	
 	/** Linear unit of measure */
@@ -77,7 +64,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double vH, vW, vD;
 	/** Unit vector sizes, -1 < value < 1 */
 	private double uX, uY, uZ;
-	/** Standard deviation values */
+	/** Standard deviation values of the centre point and radius */
 	private double sdX, sdY, sdZ, sdR;
 	
 	/** Initial (iX), current (nX) coordinates (in pixels or 'unit's) */
@@ -85,7 +72,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Image dimensions in 'unit's */
 	private int d, h, w;
 	/** Number of times to re-run the code */
-	private int runNum = 4;
+	private int runNum = 10;
 	
 	/** Pixel values along a vector. Expands for vector length. */
 	private ArrayList<Float> vectorPixelValues;
@@ -105,17 +92,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[] boundaryDistances;
 	/** List of magnitudes of each unit vector, in 'unit's  */
 	private double[] magnitudes;
-	/** 3D centroid */
-	private double[] centroid;
 	/** List of distances to coordinates from a centroid */
 	private double[] coOrdDistances;
 	/** List of biases to apply to uZ */
 	private double[] biases;
 	
-	/** Mean distance */
-	private double meanDistance, meanCoOrdDistance;
+	/** Mean of distances to each coordinate */
+	private double meanCoOrdDistance;
 	/** Standard deviation of all the distances */
-	private double sdDistance, sdCoOrdDistance;
+	private double sdCoOrdDistance;
 	/** Adjusted limit (from median) */
 	private double adjustedLimit;
 	
@@ -174,21 +159,19 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		units = cal.getUnits();
 		
 		/* Optionally show a dialogue */
-//		GenericDialog gd = new GenericDialog("Options");
-//		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
-//		gd.addNumericField("Use vectors with <=", stepLimit, 0, 2, "* mean steps");
-//		gd.addNumericField("Run (to refine)", runNum, 0, 2, "times");
-//		gd.addCheckbox("Single slice (don't fit sphere)", this.singleSlice);
-//		gd.addCheckbox("Show points", this.showPoints);
-//		gd.addCheckbox("Plot a vector's profile", this.doPlot);
-//		gd.showDialog();
-//		if(gd.wasCanceled()) { return; }
-//		this.numVectors = (int) gd.getNextNumber();
-//		this.stepLimit = (int) gd.getNextNumber();
-//		this.runNum = (int) gd.getNextNumber();
-//		this.singleSlice = gd.getNextChoice();
-//		this.showPoints = gd.getNextChoice();
-//		this.doPlot = gd.getNextChoice();
+		GenericDialog gd = new GenericDialog("Options");
+		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
+		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
+		gd.addCheckbox("Show points", showPoints);
+		gd.addCheckbox("Plot a vector's profile", doPlot);
+		gd.showDialog();
+		if(gd.wasCanceled()) { return; }
+		this.numVectors = (int) gd.getNextNumber();
+		this.runNum = (int) gd.getNextNumber();
+		this.singleSlice = gd.getNextBoolean();
+		this.showPoints = gd.getNextBoolean();
+		this.doPlot = gd.getNextBoolean();
 		
 		if(singleSlice) {
 			bias_uZ = 0;
@@ -220,98 +203,144 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		biases[0] = 0;			// Run 1: vectors in current slice only (2D)
 		biases[1] = 1;			// Run 2: 3D vectors
 		
-//		findSphere(initialPoint, runNum, true);
+		double[][] sphereDims = new double[runNum][4];
 		
-		/* Results from 2D, relying upon the user's guess at the centroid, 
-		 * are used for 3D - by limiting coordinate distances. */
-		for(int i = 0; i < biases.length; i++) {
+		
+		/* Run a number of times, based on the same initial point */
+		for(int r = 0; r < runNum; r++) {
 			
-			bias_uZ = biases[i];
-			
-			projectVectors(numVectors, bias_uZ);
-			
-			findBoundaries();
-			
-			/* Add boundary coordinates to ArrayList (send method a new ArrayList) */
-			newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>(), bias_uZ);
-			
-			switch (i) {
-				case 0 : {
-					coOrdinateDistances(newCoOrdinates);
-					
-					/* Calculate mean coordinate distance (weighted by outliers). */
-					meanCoOrdDistance = Centroid.getCentroid(this.coOrdDistances);
-					sdCoOrdDistance = Math.sqrt(ShaftGuesser.variance(this.coOrdDistances));
-					
-					refineCoOrdinates(newCoOrdinates, i);
-					coOrdinateDistances(newCoOrdinates);
-					
-					/* Recalculate mean coordinate distance (less weighted by outliers). */
-					meanCoOrdDistance = Centroid.getCentroid(this.coOrdDistances);
-					sdCoOrdDistance = Math.sqrt(ShaftGuesser.variance(this.coOrdDistances));
-					
-					/* Fill with new values from 2D; append 3D values. */
-					coOrdinates = new ArrayList<double[]>();
-					
-					break;
+			/* Results from 2D, relying upon the user's guess at the centroid, 
+			 * are used for 3D - by limiting coordinate distances. */
+			for(int i = 0; i < biases.length; i++) {
+				
+				bias_uZ = biases[i];
+				
+				projectVectors(numVectors, bias_uZ);
+				
+				findBoundaries();
+				
+				/* Add boundary coordinates to ArrayList (send method a new ArrayList) */
+				newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>(), bias_uZ);
+				
+				switch (i) {
+					case 0 : {
+						coOrdinateDistances(newCoOrdinates);
+						
+						/* Calculate mean coordinate distance (weighted by outliers). */
+						meanCoOrdDistance = Centroid.getCentroid(this.coOrdDistances);
+						sdCoOrdDistance = Math.sqrt(ShaftGuesser.variance(this.coOrdDistances));
+						
+						refineCoOrdinates(newCoOrdinates, i);
+						coOrdinateDistances(newCoOrdinates);
+						
+						/* Recalculate mean coordinate distance (less weighted by outliers). */
+						meanCoOrdDistance = Centroid.getCentroid(this.coOrdDistances);
+						sdCoOrdDistance = Math.sqrt(ShaftGuesser.variance(this.coOrdDistances));
+						
+						/* Fill with new values from 2D; append 3D values. */
+						coOrdinates = new ArrayList<double[]>();
+						
+						break;
+					}
+					case 1 : {
+						coOrdinateDistances(newCoOrdinates);
+						refineCoOrdinates(newCoOrdinates, i);
+						break;
+					}
 				}
-				case 1 : {
-					coOrdinateDistances(newCoOrdinates);
-					refineCoOrdinates(newCoOrdinates, i);
-					break;
+				
+				/* Append the refined newCoOrdinates to coOrdinates */
+				coOrdinates.addAll(newCoOrdinates);
+			}
+			
+			/* Copy to array */
+			this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
+			
+			if(showPoints) {
+				/* Show all detected boundaries */
+//				annotateImage(imp, coOrdArray).show();
+				/* Show points used by FitSphere */
+				annotateImage(imp, coOrdArray).show();
+			}
+			
+			/* Give fitSphere something it can understand. */
+			for(int n = 0; n < coOrdArray.length; n++) {
+				coOrdArray[n][0] = coOrdArray[n][0] * vW;
+				coOrdArray[n][1] = coOrdArray[n][1] * vH;
+				coOrdArray[n][2] = coOrdArray[n][2] * vD;
+//				IJ.log("Feeding fitSphere: " + coOrdArray[n][0] + ", " + coOrdArray[n][1] + ", " + coOrdArray[n][2] + "");
+			}
+			
+			/* Fit sphere to points.
+			 * Nb. This feeds fitSphere with units, like SphereFitter. 
+			 * See ResultsTable for the current output format. */
+			if(!singleSlice) {
+				try {
+					sphereDim = FitSphere.fitSphere(coOrdArray);
+				} catch (IllegalArgumentException ia) {
+					IJ.showMessage(ia.getMessage());
+					return;
+				} catch (RuntimeException re) {
+					IJ.showMessage("Can't fit sphere to points.\n"
+								+ "Rules may be too strict. Try again.");
+					return;
 				}
 			}
 			
-			/* Append the refined newCoOrdinates to coOrdinates */
-			coOrdinates.addAll(newCoOrdinates);
+			/* Show results for each run */
+			ResultsTable rt = ResultsTable.getResultsTable();
+			rt.incrementCounter();
+			rt.addLabel("Type", "run " + r + "");
+			rt.addValue("Points used", coOrdinates.size());
+			rt.addValue("X centroid (" + units + ")", sphereDim[0]);
+			rt.addValue("Y centroid (" + units + ")", sphereDim[1]);
+			rt.addValue("Z centroid (approx. slice)", sphereDim[2] / vD);
+			rt.addValue("Radius (" + units + ")", sphereDim[3]);
+			rt.addValue("sdX (" + units + ")", sdX);
+			rt.addValue("sdY (" + units + ")", sdY);
+			rt.addValue("sdZ (" + units + ")", sdZ);
+			rt.addValue("sdR (" + units + ")", sdR);
+			rt.show("Results");
+			
+			sphereDims[r] = sphereDim;
+			
+			
+			/* Recursion doesn't seem to work. */
+//			if(true) {
+//				/* Set initial point based on fitSphere's output */
+//				setInitialPoint(sphereDims[r][0] * vW, sphereDims[r][1] * vH, Math.floor(sphereDims[r][2]));
+//			}
+		
 		}
 		
-		/* Copy to array */
-		this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
+		double[][] sphereDimsT = new double[4][runNum];
+		sphereDimsT = transposeArray(sphereDims);
+		sphereDim[0] = Centroid.getCentroid(sphereDimsT[0]);
+		sphereDim[1] = Centroid.getCentroid(sphereDimsT[1]);
+		sphereDim[2] = Centroid.getCentroid(sphereDimsT[2]);
+		sphereDim[3] = Centroid.getCentroid(sphereDimsT[3]);
 		
-		if(showPoints) {
-			/* Show all detected boundaries */
-//			annotateImage(imp, coOrdArray).show();
-			/* Show points used by FitSphere */
-			annotateImage(imp, coOrdArray).show();
-		}
+		sdX = Math.sqrt(ShaftGuesser.variance(sphereDimsT[0]));
+		sdY = Math.sqrt(ShaftGuesser.variance(sphereDimsT[1]));
+		sdZ = Math.sqrt(ShaftGuesser.variance(sphereDimsT[2]));
+		sdR = Math.sqrt(ShaftGuesser.variance(sphereDimsT[3]));
 		
-		/* Give fitSphere something it can understand. */
-		for(int n = 0; n < coOrdArray.length; n++) {
-			coOrdArray[n][0] = coOrdArray[n][0] * vW;
-			coOrdArray[n][1] = coOrdArray[n][1] * vH;
-			coOrdArray[n][2] = coOrdArray[n][2] * vD;
-//			IJ.log("Feeding fitSphere: " + coOrdArray[n][0] + ", " + coOrdArray[n][1] + ", " + coOrdArray[n][2] + "");
-		}
+		/* Show statistical results */
+		ResultsTable rt2 = ResultsTable.getResultsTable();
+		rt2.incrementCounter();
+		rt2.addLabel("Type", "stats");
+		rt2.addValue("Points used", coOrdinates.size());
+		rt2.addValue("X centroid (" + units + ")", sphereDim[0]);
+		rt2.addValue("Y centroid (" + units + ")", sphereDim[1]);
+		rt2.addValue("Z centroid (approx. slice)", sphereDim[2] / vD);
+		rt2.addValue("Radius (" + units + ")", sphereDim[3]);
+		rt2.addValue("sdX (" + units + ")", sdX);
+		rt2.addValue("sdY (" + units + ")", sdY);
+		rt2.addValue("sdZ (" + units + ")", sdZ);
+		rt2.addValue("sdR (" + units + ")", sdR);
+		rt2.show("Results");
 		
-		/* Fit sphere to points.
-		 * Nb. This feeds fitSphere with units, like SphereFitter. 
-		 * See ResultsTable for the current output format. */
-		if(!singleSlice) {
-			try {
-				sphereDim = FitSphere.fitSphere(coOrdArray);
-			} catch (IllegalArgumentException ia) {
-				IJ.showMessage(ia.getMessage());
-//				return;
-			} catch (RuntimeException re) {
-				IJ.showMessage("Can't fit sphere to points.\n"
-							+ "Rules may be too strict. Try again.");
-//				return;
-			}
-		}
-		
-		/* Show results */
-		ResultsTable rt = ResultsTable.getResultsTable();
-		rt.incrementCounter();
-		rt.addValue("Points used", coOrdinates.size());
-		rt.addValue("X centroid (" + units + ")", sphereDim[0]);
-		rt.addValue("Y centroid (" + units + ")", sphereDim[1]);
-		rt.addValue("Z centroid (approx. slice)", sphereDim[2] / vD);
-		rt.addValue("sdX (" + units + ")", sdX);
-		rt.addValue("sdY (" + units + ")", sdY);
-		rt.addValue("sdZ (" + units + ")", sdZ);
-		rt.addValue("sdZ (" + units + ")", sdZ);
-		rt.show("Results");
+		annotateCentre(imp).show();
 		
 		if(doPlot) {
 			/* For plotting pixel values, which are helpful if the wrong shapes 
@@ -327,43 +356,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			Plot aPlot = new Plot("Pixel Values along vector " + 0 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
 			aPlot.show();
 		}
-		
-//		this.run(arg);
 
 		return;
 	}
-	
-	
-	public double[] findSphere(double[] initialPoint, int runNum, boolean recursive) {
-		
-		double[][] sphereDims = new double[runNum][4];
-		
-		for(int r = 0; r < runNum; r++) {
-			
-			if(recursive) {
-				/* Set initial point based on fitSphere's output */
-				setInitialPoint(sphereDims[r][0] * vW, sphereDims[r][1] * vH, sphereDims[r][2]);
-			}
-		}
-		
-		double[][] sphereDimsT = new double[4][runNum];
-		sphereDimsT = transposeArray(sphereDims);
-		
-		sphereDim[0] = Centroid.getCentroid(sphereDimsT[0]);
-		sphereDim[1] = Centroid.getCentroid(sphereDimsT[1]);
-		sphereDim[2] = Centroid.getCentroid(sphereDimsT[2]);
-		sphereDim[3] = Centroid.getCentroid(sphereDimsT[3]);
-		
-		sdX = Math.sqrt(ShaftGuesser.variance(sphereDimsT[0]));
-		sdY = Math.sqrt(ShaftGuesser.variance(sphereDimsT[1]));
-		sdZ = Math.sqrt(ShaftGuesser.variance(sphereDimsT[2]));
-		sdR = Math.sqrt(ShaftGuesser.variance(sphereDimsT[3]));
-		
-		return this.sphereDim;
-	}
-	
-	
-	
 	
 	
 	/**
@@ -718,6 +713,45 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					annIP.drawOval((int) Math.floor(coOrdinateArray[i][0]), 
 							(int) Math.floor(coOrdinateArray[i][1]), 4, 4);
 				}
+			}
+			
+			annStack.addSlice(stack.getSliceLabel(s), annIP);
+		}
+		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
+		ann.setCalibration(imp.getCalibration());
+		return ann;
+	}
+	
+	/**
+	 * Draw lines showing centre and radius of the sphere on a copy of the 
+	 * original image.
+	 * 
+	 * @param imp
+	 * @param coOrdinateArray
+	 * @return
+	 */
+	private ImagePlus annotateCentre(ImagePlus imp) {
+		ImageStack stack = imp.getImageStack();
+		int w = stack.getWidth();
+		int h = stack.getHeight();
+		ImageStack annStack = new ImageStack(w, h);
+		for (int s = 1; s < imp.getStackSize() + 1; s++) {
+			ImageProcessor annIP = stack.getProcessor(s).duplicate();
+			annIP.setColor(Color.white);
+			
+			if(s == (int) Math.round(sphereDim[2] / vD)) {
+				
+				int x1 = (int) Math.floor((sphereDim[0] / vW) - sphereDim[3] / vW);
+				int y1 = (int) Math.floor(sphereDim[1] / vH);
+				int x2 = (int) Math.floor((sphereDim[0] / vW) + sphereDim[3] / vW);
+				int y2 = (int) Math.floor(sphereDim[1] / vH);
+				annIP.drawLine(x1, y1, x2, y2);
+
+				x1 = (int) Math.floor(sphereDim[0] / vW);
+				y1 = (int) Math.floor((sphereDim[1] / vH) + sphereDim[3] / vH);
+				x2 = (int) Math.floor(sphereDim[0] / vW);
+				y2 = (int) Math.floor((sphereDim[1] / vH) - sphereDim[3] / vH);
+				annIP.drawLine(x1, y1, x2, y2);
 			}
 			
 			annStack.addSlice(stack.getSliceLabel(s), annIP);
