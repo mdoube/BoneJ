@@ -159,19 +159,19 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		units = cal.getUnits();
 		
 		/* Optionally show a dialogue */
-		GenericDialog gd = new GenericDialog("Options");
-		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
-		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
-		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
-		gd.addCheckbox("Show points", showPoints);
-		gd.addCheckbox("Plot a vector's profile", doPlot);
-		gd.showDialog();
-		if(gd.wasCanceled()) { return; }
-		this.numVectors = (int) gd.getNextNumber();
-		this.runNum = (int) gd.getNextNumber();
-		this.singleSlice = gd.getNextBoolean();
-		this.showPoints = gd.getNextBoolean();
-		this.doPlot = gd.getNextBoolean();
+//		GenericDialog gd = new GenericDialog("Options");
+//		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+//		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
+//		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
+//		gd.addCheckbox("Show points", showPoints);
+//		gd.addCheckbox("Plot a vector's profile", doPlot);
+//		gd.showDialog();
+//		if(gd.wasCanceled()) { return; }
+//		this.numVectors = (int) gd.getNextNumber();
+//		this.runNum = (int) gd.getNextNumber();
+//		this.singleSlice = gd.getNextBoolean();
+//		this.showPoints = gd.getNextBoolean();
+//		this.doPlot = gd.getNextBoolean();
 		
 		if(singleSlice) {
 			bias_uZ = 0;
