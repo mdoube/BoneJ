@@ -57,6 +57,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private boolean showPoints = false;
 	/** Show a sample plot of getPixelValue at each point along a vector */
 	private boolean doPlot = false;
+	/** Use the centre found from run 1 as the initial point for run 2 (etc.) */
+	private boolean doRecursion = true;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -72,7 +74,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Image dimensions in 'unit's */
 	private int d, h, w;
 	/** Number of times to re-run the code */
-	private int runNum = 10;
+	private int runNum = 100;
+	/** Number of vectors to create */
+	private int numVectors = 500;
+	/** Weight uZ by this factor */
+	private double bias_uZ = 0;
+	/** Multiple of standard deviation from the mean, within which the 3D points 
+	 * may fluctuate their values +/-. If the code finds too few points, increase 
+	 * this value. */
+	private double sd3DMult = 1;
 	
 	/** Pixel values along a vector. Expands for vector length. */
 	private ArrayList<Float> vectorPixelValues;
@@ -104,10 +114,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Adjusted limit (from median) */
 	private double adjustedLimit;
 	
-	/** Number of vectors to create */
-	private int numVectors = 500;
-	/** Weight uZ by this factor */
-	private double bias_uZ = 0;
 	/** Random unit vectors (x, y, z) */
 	private double[][] unitVectors;
 	/** Ragged array of pixel values for each vector */
@@ -159,19 +165,23 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		units = cal.getUnits();
 		
 		/* Optionally show a dialogue */
-//		GenericDialog gd = new GenericDialog("Options");
-//		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
-//		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
-//		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
-//		gd.addCheckbox("Show points", showPoints);
-//		gd.addCheckbox("Plot a vector's profile", doPlot);
-//		gd.showDialog();
-//		if(gd.wasCanceled()) { return; }
-//		this.numVectors = (int) gd.getNextNumber();
-//		this.runNum = (int) gd.getNextNumber();
-//		this.singleSlice = gd.getNextBoolean();
-//		this.showPoints = gd.getNextBoolean();
-//		this.doPlot = gd.getNextBoolean();
+		GenericDialog gd = new GenericDialog("Options");
+		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
+		gd.addNumericField("Multiple of standard deviation", sd3DMult, 2);
+		gd.addCheckbox("Use recursion", doRecursion);
+		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
+		gd.addCheckbox("Show points", showPoints);
+		gd.addCheckbox("Plot a vector's profile", doPlot);
+		gd.showDialog();
+		if(gd.wasCanceled()) { return; }
+		this.numVectors = (int) gd.getNextNumber();
+		this.runNum = (int) gd.getNextNumber();
+		this.sd3DMult = gd.getNextNumber();
+		this.doRecursion = gd.getNextBoolean();
+		this.singleSlice = gd.getNextBoolean();
+		this.showPoints = gd.getNextBoolean();
+		this.doPlot = gd.getNextBoolean();
 		
 		if(singleSlice) {
 			bias_uZ = 0;
@@ -206,8 +216,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		double[][] sphereDims = new double[runNum][4];
 		
 		
-		/* Run a number of times, based on the same initial point */
+		/* Run a number of times, based on either the same initial point, or 
+		 * an updating one (doRecursion). */
 		for(int r = 0; r < runNum; r++) {
+			
+//			IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
 			
 			/* Results from 2D, relying upon the user's guess at the centroid, 
 			 * are used for 3D - by limiting coordinate distances. */
@@ -290,26 +303,25 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			/* Show results for each run */
 			ResultsTable rt = ResultsTable.getResultsTable();
 			rt.incrementCounter();
-			rt.addLabel("Type", "run " + r + "");
-			rt.addValue("Points used", coOrdinates.size());
-			rt.addValue("X centroid (" + units + ")", sphereDim[0]);
-			rt.addValue("Y centroid (" + units + ")", sphereDim[1]);
-			rt.addValue("Z centroid (approx. slice)", sphereDim[2] / vD);
-			rt.addValue("Radius (" + units + ")", sphereDim[3]);
-			rt.addValue("sdX (" + units + ")", sdX);
-			rt.addValue("sdY (" + units + ")", sdY);
-			rt.addValue("sdZ (" + units + ")", sdZ);
-			rt.addValue("sdR (" + units + ")", sdR);
+			rt.addLabel("Type", "run_" + r + "");
+			rt.addValue("Points_used", coOrdinates.size());
+			rt.addValue("X_centroid_(" + units + ")", sphereDim[0]);
+			rt.addValue("Y_centroid_(" + units + ")", sphereDim[1]);
+			rt.addValue("Z_centroid_(approx._slice)", sphereDim[2] / vD);
+			rt.addValue("Radius_(" + units + ")", sphereDim[3]);
+			rt.addValue("sdX_(" + units + ")", sdX);
+			rt.addValue("sdY_(" + units + ")", sdY);
+			rt.addValue("sdZ_(" + units + ")", sdZ);
+			rt.addValue("sdR_(" + units + ")", sdR);
 			rt.show("Results");
 			
 			sphereDims[r] = sphereDim;
 			
-			
 			/* Recursion doesn't seem to work. */
-//			if(true) {
-//				/* Set initial point based on fitSphere's output */
-//				setInitialPoint(sphereDims[r][0] * vW, sphereDims[r][1] * vH, Math.floor(sphereDims[r][2]));
-//			}
+			if(doRecursion) {
+				/* Set initial point based on fitSphere's output */
+				setInitialPoint(sphereDims[r][0] / vW, sphereDims[r][1] / vH, Math.floor(sphereDims[r][2] / vD));
+			}
 		
 		}
 		
@@ -329,15 +341,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		ResultsTable rt2 = ResultsTable.getResultsTable();
 		rt2.incrementCounter();
 		rt2.addLabel("Type", "stats");
-		rt2.addValue("Points used", coOrdinates.size());
-		rt2.addValue("X centroid (" + units + ")", sphereDim[0]);
-		rt2.addValue("Y centroid (" + units + ")", sphereDim[1]);
-		rt2.addValue("Z centroid (approx. slice)", sphereDim[2] / vD);
-		rt2.addValue("Radius (" + units + ")", sphereDim[3]);
-		rt2.addValue("sdX (" + units + ")", sdX);
-		rt2.addValue("sdY (" + units + ")", sdY);
-		rt2.addValue("sdZ (" + units + ")", sdZ);
-		rt2.addValue("sdR (" + units + ")", sdR);
+		rt2.addValue("Points_used", coOrdinates.size());
+		rt2.addValue("X_centroid_(" + units + ")", sphereDim[0]);
+		rt2.addValue("Y_centroid_(" + units + ")", sphereDim[1]);
+		rt2.addValue("Z_centroid_(approx._slice)", sphereDim[2] / vD);
+		rt2.addValue("Radius_(" + units + ")", sphereDim[3]);
+		rt2.addValue("sdX_(" + units + ")", sdX);
+		rt2.addValue("sdY_(" + units + ")", sdY);
+		rt2.addValue("sdZ_(" + units + ")", sdZ);
+		rt2.addValue("sdR_(" + units + ")", sdR);
 		rt2.show("Results");
 		
 		annotateCentre(imp).show();
@@ -634,7 +646,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			int j = 0;
 			while (itB.hasNext()) {
 				double[] b = itB.next();
-				if(coOrdDistances[j] > meanCoOrdDistance + (sdCoOrdDistance * 0.5)) {
+				if(coOrdDistances[j] > meanCoOrdDistance + (sdCoOrdDistance * -0.3)) {
 					itB.remove();
 				}
 				j++;
@@ -651,8 +663,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			int i = 0;
 			while (itC.hasNext()) {
 				double[] c = itC.next();
-				if(coOrdDistances[i] > meanCoOrdDistance + (sdCoOrdDistance * 1)
-						 || coOrdDistances[i] < meanCoOrdDistance + (sdCoOrdDistance * -1)) {
+				if(coOrdDistances[i] > meanCoOrdDistance + (sdCoOrdDistance * sd3DMult)
+						 || coOrdDistances[i] < meanCoOrdDistance + (sdCoOrdDistance * -sd3DMult)) {
 					itC.remove();
 				}
 				i++;
