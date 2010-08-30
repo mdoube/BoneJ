@@ -621,7 +621,7 @@ public class Skeletonize3D implements PlugIn {
 	 * @param LUT Euler LUT
 	 * @return true or false if the point is Euler invariant or not
 	 */
-	boolean isEulerInvariant(byte[] neighbors, int [] LUT)
+	private boolean isEulerInvariant(byte[] neighbors, int [] LUT)
 	{
 		// Calculate Euler characteristic for each octant and sum up
 		int eulerChar = 0;
