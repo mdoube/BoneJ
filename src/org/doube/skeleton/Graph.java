@@ -1,4 +1,4 @@
-package org.doube.skeleton;
+package skeleton_analysis;
 
 import ij.IJ;
 
