@@ -26,8 +26,7 @@ import org.doube.util.ImageCheck;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.plugin.filter.PlugInFilter;
-import ij.process.ImageProcessor;
+import ij.plugin.PlugIn;
 
 /**
  * Main class.
