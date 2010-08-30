@@ -181,7 +181,7 @@ public class Skeletonize3D implements PlugInFilter
 	 * 
 	 * @param outputImage output image stack
 	 */
-	public void computeThinImage(ImageStack outputImage) 
+	public ImagePlus computeThinImage(ImageStack outputImage) 
 	{
 		//IJ.write("Compute Thin Image Start");
 		IJ.showStatus("Computing thin image ...");
@@ -318,6 +318,9 @@ public class Skeletonize3D implements PlugInFilter
 
 		//IJ.write("Compute Thin Image End");
 		IJ.showStatus("Computed thin image.");
+		ImagePlus impOut = new ImagePlus();
+		impOut.setStack(outputImage);
+		return impOut;
 	} /* end computeThinImage */	
 	
 	/* -----------------------------------------------------------------------*/
