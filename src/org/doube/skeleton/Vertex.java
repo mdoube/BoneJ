@@ -23,7 +23,8 @@ import java.util.ArrayList;
 /**
  * This class represents a vertex or node in a graph.
  */
-public class Vertex {
+public class Vertex 
+{
 	/** list of points belonging to the vertex */
 	private ArrayList<Point> points = null;
 	/** list of projecting edges from this vertex */
@@ -34,94 +35,90 @@ public class Vertex {
 	private Edge precedessor = null;
 	/** DFS visit order */
 	private int visitOrder = -1;
-
+	
+	
 	// --------------------------------------------------------------------------
 	/**
 	 * Create empty vertex.
 	 */
-	public Vertex() {
-		this.points = new ArrayList<Point>();
+	public Vertex()
+	{
+		this.points = new ArrayList < Point > ();
 		this.branches = new ArrayList<Edge>();
 	}
-
+	
 	// --------------------------------------------------------------------------
 	/**
 	 * Add point to the vertex.
-	 * 
-	 * @param p
-	 *            input point
+	 * @param p input point
 	 */
-	public void addPoint(Point p) {
+	public void addPoint(Point p)
+	{
 		this.points.add(p);
 	}
-
 	// --------------------------------------------------------------------------
 	/**
 	 * Check if a point belongs to the vertex list of points.
-	 * 
-	 * @param p
-	 *            input points
+	 * @param p input points
 	 * @return true if the point is in the vertex point list
 	 */
-	public boolean isVertexPoint(Point p) {
+	public boolean isVertexPoint(Point p)
+	{
 		if (points == null)
 			return false;
 		return points.contains(p);
 	}
-
 	// --------------------------------------------------------------------------
 	/**
 	 * Convert list of points to String.
-	 * 
 	 * @return printable version of the list of points
 	 */
-	public String pointsToString() {
+	public String pointsToString()
+	{
 		StringBuilder sb = new StringBuilder();
-		for (final Point p : this.points)
+		for(final Point p : this.points)
 			sb.append(p.toString() + " ");
-
+		
 		return sb.toString();
 	}
-
 	// --------------------------------------------------------------------------
 	/**
 	 * Get list of points.
-	 * 
 	 * @return list of points
 	 */
-	public ArrayList<Point> getPoints() {
+	public ArrayList < Point > getPoints()
+	{
 		return this.points;
 	}
-
 	// --------------------------------------------------------------------------
 	/**
 	 * Add a new branch to the vertex.
 	 * 
-	 * @param e
-	 *            neighbor edge
+	 * @param e neighbor edge
 	 */
-	public void setBranch(Edge e) {
+	public void setBranch(Edge e)
+	{
 		this.branches.add(e);
 	}
-
+	
 	// --------------------------------------------------------------------------
 	/**
 	 * Get branch list.
 	 * 
 	 * @return list of branch vertices
 	 */
-	public ArrayList<Edge> getBranches() {
+	public ArrayList<Edge> getBranches()
+	{
 		return this.branches;
 	}
-
 	// --------------------------------------------------------------------------
 	/**
 	 * Set vertex as visited or not.
 	 * 
-	 * @param b
-	 *            boolean flag
+	 * @param b boolean flag 
 	 */
-	public void setVisited(boolean b) {
+	public void setVisited(boolean b)
+	{
 		this.visited = b;
 	}
 
@@ -129,49 +126,44 @@ public class Vertex {
 	/**
 	 * Set vertex as visited or not.
 	 * 
-	 * @param b
-	 *            boolean flag
+	 * @param b boolean flag 
 	 */
-	public void setVisited(boolean b, int visitOrder) {
+	public void setVisited(boolean b, int visitOrder)
+	{
 		this.visited = b;
 		this.visitOrder = visitOrder;
-	}
-
+	}	
 	/**
 	 * Check visit status.
-	 * 
 	 * @return true if the vertex was already visited (DFS)
 	 */
-	public boolean isVisited() {
+	public boolean isVisited()
+	{
 		return this.visited;
 	}
-
 	/**
 	 * Set predecessor (for DFS).
-	 * 
-	 * @param pred
-	 *            predecessor edge in DFS visit.
+	 * @param pred predecessor edge in DFS visit.
 	 */
-	public void setPredecessor(Edge pred) {
+	public void setPredecessor(Edge pred)
+	{
 		this.precedessor = pred;
 	}
-
 	/**
 	 * Get predecessor edge.
-	 * 
 	 * @return predecessor edge.
 	 */
-	public Edge getPredecessor() {
+	public Edge getPredecessor()
+	{
 		return this.precedessor;
 	}
-
 	/**
 	 * Get DFS visit order.
-	 * 
 	 * @return visit order
 	 */
-	public int getVisitOrder() {
+	public int getVisitOrder()
+	{
 		return this.visitOrder;
 	}
-
+	
 }// end class Vertex
