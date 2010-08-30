@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.ListIterator;
 
+import org.doube.util.ImageCheck;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -212,6 +214,8 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 */
 	public void run(ImageProcessor ip) 
 	{
+		if (!ImageCheck.checkEnvironment())
+			return;
 		GenericDialog gd = new GenericDialog("Analyze Skeleton");
 		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes, 
 										AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
