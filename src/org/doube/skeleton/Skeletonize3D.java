@@ -109,6 +109,34 @@ public class Skeletonize3D implements PlugInFilter
 
 	} /* end run */
 
+	/**
+	 * Gets a medial axis skeleton from a binary imp using a topology-preserving
+	 * iterative algorithm
+	 * 
+	 * @param imp
+	 *            input image
+	 * @return skeletonised image
+	 */
+	public ImagePlus getSkeleton(ImagePlus imp) {
+		ImageStack inputImage = imp.getStack();
+
+		// Prepare data
+		ImageStack outputImage = prepareData(inputImage);
+
+		// Compute Thinning
+		ImagePlus imp2 = computeThinImage(outputImage);
+
+		ImageStack stack2 = imp2.getImageStack();
+
+		// Convert image to binary 0-255
+		for (int i = 1; i <= stack2.getSize(); i++)
+			stack2.getProcessor(i).multiply(255);
+
+		imp2.setCalibration(imp.getCalibration());
+		imp2.setTitle("Skeleton of " + imp.getTitle());
+		return imp2;
+	}
+	
 	/* -----------------------------------------------------------------------*/
 	/**
 	 * Prepare data for computation.
