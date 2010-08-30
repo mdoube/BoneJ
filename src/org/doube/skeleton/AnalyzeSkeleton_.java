@@ -1,4 +1,4 @@
-package skeleton_analysis;
+package org.doube.skeleton;
 
 import java.util.ArrayList;
 import java.util.Collections;
