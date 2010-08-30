@@ -21,6 +21,8 @@ package org.doube.skeleton;
 
 import java.util.ArrayList;
 
+import org.doube.util.ImageCheck;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -33,15 +35,28 @@ import ij.process.ImageProcessor;
  * (skeletonization) of binary images (2D/3D).
  *
  * <p>
- * This work is an implementation by Ignacio Arganda-Carreras of the
- * 3D thinning algorithm from Lee et al. "Building skeleton models via 3-D 
- * medial surface/axis thinning algorithms. Computer Vision, Graphics, and 
- * Image Processing, 56(6):462–478, 1994." Based on the ITK version from
- * Hanno Homann <a href="http://hdl.handle.net/1926/1292"> http://hdl.handle.net/1926/1292</a>
- * <p>
- *  More information at Skeletonize3D homepage:
- *  http://imagejdocu.tudor.lu/doku.php?id=plugin:morphology:skeletonize3d:start
- *
+ * This work is an implementation by Ignacio Arganda-Carreras of the 3D thinning
+ * algorithm from Lee et al.
+ * </p>
+ * 
+ * @see <p>
+ *      Lee, Kashyap and Chu (1994) Building skeleton models via 3-D medial
+ *      surface/axis thinning algorithms. Computer Vision, Graphics, and Image
+ *      Processing, 56(6):462–478 <a
+ *      href="http://dx.doi.org/10.1006/cgip.1994.1042"
+ *      >doi:10.1006/cgip.1994.1042</a>.
+ *      </p>
+ *      <p>
+ *      Based on the ITK version from Hanno Homann <a
+ *      href="http://hdl.handle.net/1926/1292">
+ *      http://hdl.handle.net/1926/1292</a>
+ *      </p>
+ *      <p>
+ *      <a href=
+ *      "http://imagejdocu.tudor.lu/doku.php?id=plugin:morphology:skeletonize3d:start"
+ *      >Skeletonize3D homepage</a>
+ *      </p>
+ * 
  * @version 1.0 11/19/2008
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
