@@ -60,68 +60,24 @@ import ij.plugin.PlugIn;
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
  */
-public class Skeletonize3D implements PlugInFilter 
-{
-	/** working image plus */
-	private ImagePlus imRef;
+public class Skeletonize3D implements PlugIn {
 
-	/** working image width */
-	private int width = 0;
-	/** working image height */
-	private int height = 0;
-	/** working image depth */
-	private int depth = 0;
-	/** working image stack*/
-	private ImageStack inputImage = null;
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * This method is called once when the filter is loaded.
-	 * 
-	 * @param arg argument specified for this plugin
-	 * @param imp currently active image
-	 * @return flag word that specifies the filters capabilities
-	 */
-	public int setup(String arg, ImagePlus imp) 
-	{
-		this.imRef = imp;
-		
-		if (arg.equals("about")) {
-			showAbout();
-			return DONE;
+	public void run(String run) {
+		if (!ImageCheck.checkEnvironment())
+			return;
+		ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
 		}
 
-		return DOES_8G;
-	} /* end setup */
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Process the image.
-	 * 
-	 * @see ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)
-	 */
-	public void run(ImageProcessor ip) 
-	{
-		
-		this.width = this.imRef.getWidth();
-		this.height = this.imRef.getHeight();
-		this.depth = this.imRef.getStackSize();
-		this.inputImage = this.imRef.getStack();
-							
-		// Prepare data
-		prepareData(this.inputImage);
-		
-		// Compute Thinning	
-		computeThinImage(this.inputImage);
-		
-		// Convert image to binary 0-255
-		for(int i = 1; i <= this.inputImage.getSize(); i++)
-			this.inputImage.getProcessor(i).multiply(255);
-		
-		this.inputImage.update(ip);
-		
+		ImagePlus skeleton = getSkeleton(imp);
 
-	} /* end run */
+		skeleton.show();
+		if (imp.isInvertedLut() && !skeleton.isInvertedLut())
+			IJ.run("Invert LUT");
+		return;
+	}
 
 	/**
 	 * Gets a medial axis skeleton from a binary imp using a topology-preserving
