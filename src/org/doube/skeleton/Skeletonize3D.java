@@ -145,22 +145,32 @@ public class Skeletonize3D implements PlugInFilter
 	 * 
 	 * @param outputImage output image stack
 	 */
-	private void prepareData(ImageStack outputImage) 
+	private ImageStack prepareData(ImageStack inputImage) 
 	{
-	
+		final int width = inputImage.getWidth();
+		final int height = inputImage.getHeight();
+		final int depth = inputImage.getSize();
 		//IJ.write("Prepare Data: Copy input to output");
 		IJ.showStatus("Prepare Data: Copy input to output ...");
 		
+		ImageStack outputImage = new ImageStack(width, height, depth);
 		// Copy the input to the output, changing all foreground pixels to
         // have value 1 in the process.
-		for (int z = 0; z < depth; z++) 
+		for (int z = 0; z < depth; z++){
+			byte[] pixels = (byte[]) inputImage.getPixels(z + 1);
+			outputImage.setPixels(pixels.clone(), z + 1);
+			outputImage.setSliceLabel(inputImage.getSliceLabel(z + 1), z + 1);
 			for (int x = 0; x < width; x++) 
 				for (int y = 0; y < height; y++)
-					if ( ((byte[]) this.inputImage.getPixels(z + 1))[x + y * width] != 0 )
+					if ( ((byte[]) inputImage.getPixels(z + 1))[x + y * width] != 0 ){
 						((byte[]) outputImage.getPixels(z + 1))[x + y * width] = 1;
-				
+					} else {
+						((byte[]) outputImage.getPixels(z + 1))[x + y * width] = 0;
+					}
+		}
 		//IJ.write("Prepare Data End");
 		IJ.showStatus("Prepare Data End.");
+		return outputImage;
 	} /* end prepareData */
 	
 	
