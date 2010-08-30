@@ -155,9 +155,12 @@ public class Skeletonize3D implements PlugIn {
 	{
 		//IJ.write("Compute Thin Image Start");
 		IJ.showStatus("Computing thin image ...");
-		
-		ArrayList <int[]> simpleBorderPoints = new ArrayList<int[]>();
-		
+		final int w = outputImage.getWidth();
+		final int h = outputImage.getHeight();
+		final int d = outputImage.getSize();
+
+		ArrayList<int[]> simpleBorderPoints = new ArrayList<int[]>();
+
 		// Prepare Euler LUT [Lee94]
 		int eulerLUT[] = new int[256]; 
 		fillEulerLUT( eulerLUT );
@@ -174,36 +177,36 @@ public class Skeletonize3D implements PlugIn {
 				IJ.showStatus("Thinning iteration " + iter + " (" + currentBorder +"/6 borders) ...");
 				
 				// Loop through the image.				 
-				for (int z = 0; z < depth; z++)
+				for (int z = 0; z < d; z++)
 				{
-					for (int y = 0; y < height; y++)
+					for (int y = 0; y < h; y++)
 					{
-						for (int x = 0; x < width; x++)						
+						for (int x = 0; x < w; x++)						
 						{
 							// check if point is foreground
-					        if ( getPixel(outputImage, x, y, z) != 1 )
+					        if ( getPixel(outputImage, x, y, z, w, h, d) != 1 )
 					        {
 					          continue;         // current point is already background 
 					        }
 					        // check 6-neighbors if point is a border point of type currentBorder
 					        boolean isBorderPoint = false;
 					        // North
-					        if( currentBorder == 1 && N(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 1 && N(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        // South
-					        if( currentBorder == 2 && S(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 2 && S(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        // East
-					        if( currentBorder == 3 && E(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 3 && E(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        // West
-					        if( currentBorder == 4 && W(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 4 && W(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        // Up
-					        if( currentBorder == 5 && U(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 5 && U(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        // Bottom
-					        if( currentBorder == 6 && B(outputImage, x, y, z) <= 0 )
+					        if( currentBorder == 6 && B(outputImage, x, y, z, w, h, d) <= 0 )
 					          isBorderPoint = true;
 					        
 					        if( !isBorderPoint )
@@ -213,7 +216,7 @@ public class Skeletonize3D implements PlugIn {
 					        
 					        // check if point is the end of an arc
 					        int numberOfNeighbors = -1;   // -1 and not 0 because the center pixel will be counted as well
-					        byte[] neighbor = getNeighborhood(outputImage, x, y, z);
+					        byte[] neighbor = getNeighborhood(outputImage, x, y, z, w, h, d);
 					        for( int i = 0; i < 27; i++ ) // i =  0..26
 					        {					        	
 					          if( neighbor[i] == 1 )
@@ -226,12 +229,12 @@ public class Skeletonize3D implements PlugIn {
 					        }
 					        
 					        // Check if point is Euler invariant
-					        if( !isEulerInvariant( getNeighborhood(outputImage, x, y, z), eulerLUT ) )
+					        if( !isEulerInvariant( getNeighborhood(outputImage, x, y, z, w, h, d), eulerLUT ) )
 					        {
 					          continue;         // current point is not deletable
 					        }
 					        // Check if point is simple (deletion does not change connectivity in the 3x3x3 neighborhood)
-					        if( !isSimplePoint(getNeighborhood(outputImage, x, y, z) ) )
+					        if( !isSimplePoint(getNeighborhood(outputImage, x, y, z, w, h, d) ) )
 					        {
 					          continue;         // current point is not deletable
 					        }
@@ -243,7 +246,7 @@ public class Skeletonize3D implements PlugIn {
 					        simpleBorderPoints.add(index);
 						}
 					}					
-					IJ.showProgress(z, this.depth);				
+					IJ.showProgress(z, d);				
 				}							
 				
 				// sequential re-checking to preserve connectivity when
@@ -254,13 +257,13 @@ public class Skeletonize3D implements PlugIn {
 				{
 					index = simpleBorderPoints.get(i);
 					// 1. Set simple border point to 0
-					setPixel( outputImage, index[0], index[1], index[2], (byte) 0);
+					setPixel( outputImage, index[0], index[1], index[2], w, h, d, (byte) 0);
 					
 					// 2. Check if neighborhood is still connected
-					if( !isSimplePoint( getNeighborhood(outputImage, index[0], index[1], index[2]) ) )
+					if( !isSimplePoint( getNeighborhood(outputImage, index[0], index[1], index[2], w, h, d) ) )
 					{
 						// we cannot delete current point, so reset
-						setPixel( outputImage, index[0], index[1], index[2], (byte) 1);
+						setPixel( outputImage, index[0], index[1], index[2], w, h, d, (byte) 1);
 					}
 					else
 					{
@@ -303,45 +306,45 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private byte[] getNeighborhood(ImageStack image, int x, int y, int z)
+	private byte[] getNeighborhood(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
 		byte[] neighborhood = new byte[27];
 		
-		neighborhood[ 0] = getPixel(image, x-1, y-1, z-1);
-		neighborhood[ 1] = getPixel(image, x  , y-1, z-1);
-		neighborhood[ 2] = getPixel(image, x+1, y-1, z-1);
+		neighborhood[ 0] = getPixel(image, x-1, y-1, z-1, w, h, d);
+		neighborhood[ 1] = getPixel(image, x  , y-1, z-1, w, h, d);
+		neighborhood[ 2] = getPixel(image, x+1, y-1, z-1, w, h, d);
 		
-		neighborhood[ 3] = getPixel(image, x-1, y,   z-1);
-		neighborhood[ 4] = getPixel(image, x,   y,   z-1);
-		neighborhood[ 5] = getPixel(image, x+1, y,   z-1);
+		neighborhood[ 3] = getPixel(image, x-1, y,   z-1, w, h, d);
+		neighborhood[ 4] = getPixel(image, x,   y,   z-1, w, h, d);
+		neighborhood[ 5] = getPixel(image, x+1, y,   z-1, w, h, d);
 		
-		neighborhood[ 6] = getPixel(image, x-1, y+1, z-1);
-		neighborhood[ 7] = getPixel(image, x,   y+1, z-1);
-		neighborhood[ 8] = getPixel(image, x+1, y+1, z-1);
+		neighborhood[ 6] = getPixel(image, x-1, y+1, z-1, w, h, d);
+		neighborhood[ 7] = getPixel(image, x,   y+1, z-1, w, h, d);
+		neighborhood[ 8] = getPixel(image, x+1, y+1, z-1, w, h, d);
 		
-		neighborhood[ 9] = getPixel(image, x-1, y-1, z  );
-		neighborhood[10] = getPixel(image, x,   y-1, z  );
-		neighborhood[11] = getPixel(image, x+1, y-1, z  );
+		neighborhood[ 9] = getPixel(image, x-1, y-1, z  , w, h, d);
+		neighborhood[10] = getPixel(image, x,   y-1, z  , w, h, d);
+		neighborhood[11] = getPixel(image, x+1, y-1, z  , w, h, d);
 		
-		neighborhood[12] = getPixel(image, x-1, y,   z  );
-		neighborhood[13] = getPixel(image, x,   y,   z  );
-		neighborhood[14] = getPixel(image, x+1, y,   z  );
+		neighborhood[12] = getPixel(image, x-1, y,   z  , w, h, d);
+		neighborhood[13] = getPixel(image, x,   y,   z  , w, h, d);
+		neighborhood[14] = getPixel(image, x+1, y,   z  , w, h, d);
 		
-		neighborhood[15] = getPixel(image, x-1, y+1, z  );
-		neighborhood[16] = getPixel(image, x,   y+1, z  );
-		neighborhood[17] = getPixel(image, x+1, y+1, z  );
+		neighborhood[15] = getPixel(image, x-1, y+1, z  , w, h, d);
+		neighborhood[16] = getPixel(image, x,   y+1, z  , w, h, d);
+		neighborhood[17] = getPixel(image, x+1, y+1, z  , w, h, d);
 		
-		neighborhood[18] = getPixel(image, x-1, y-1, z+1);
-		neighborhood[19] = getPixel(image, x,   y-1, z+1);
-		neighborhood[20] = getPixel(image, x+1, y-1, z+1);
+		neighborhood[18] = getPixel(image, x-1, y-1, z+1, w, h, d);
+		neighborhood[19] = getPixel(image, x,   y-1, z+1, w, h, d);
+		neighborhood[20] = getPixel(image, x+1, y-1, z+1, w, h, d);
 		
-		neighborhood[21] = getPixel(image, x-1, y,   z+1);
-		neighborhood[22] = getPixel(image, x,   y,   z+1);
-		neighborhood[23] = getPixel(image, x+1, y,   z+1);
+		neighborhood[21] = getPixel(image, x-1, y,   z+1, w, h, d);
+		neighborhood[22] = getPixel(image, x,   y,   z+1, w, h, d);
+		neighborhood[23] = getPixel(image, x+1, y,   z+1, w, h, d);
 		
-		neighborhood[24] = getPixel(image, x-1, y+1, z+1);
-		neighborhood[25] = getPixel(image, x,   y+1, z+1);
-		neighborhood[26] = getPixel(image, x+1, y+1, z+1);
+		neighborhood[24] = getPixel(image, x-1, y+1, z+1, w, h, d);
+		neighborhood[25] = getPixel(image, x,   y+1, z+1, w, h, d);
+		neighborhood[26] = getPixel(image, x+1, y+1, z+1, w, h, d);
 		
 		return neighborhood;
 	} /* end getNeighborhood */
@@ -356,10 +359,10 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private byte getPixel(ImageStack image, int x, int y, int z)
+	private byte getPixel(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			return ((byte[]) image.getPixels(z + 1))[x + y * this.width];
+		if(x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
+			return ((byte[]) image.getPixels(z + 1))[x + y * w];
 		else return 0;
 	} /* end getPixel */
 	
@@ -373,10 +376,10 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @param value pixel value
 	 */
-	private void setPixel(ImageStack image, int x, int y, int z, byte value)
+	private void setPixel(ImageStack image, int x, int y, int z, int w, int h, int d, byte value)
 	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			((byte[]) image.getPixels(z + 1))[x + y * this.width] = value;
+		if(x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
+			((byte[]) image.getPixels(z + 1))[x + y * w] = value;
 	} /* end getPixel */
 	
 	/* -----------------------------------------------------------------------*/
@@ -389,9 +392,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding north pixel
 	 */
-	private byte N(ImageStack image, int x, int y, int z)
+	private byte N(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x, y-1, z);
+		return getPixel(image, x, y-1, z, w, h, d);
 	} /* end N */
 	
 	/* -----------------------------------------------------------------------*/
@@ -404,9 +407,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding south pixel
 	 */
-	private byte S(ImageStack image, int x, int y, int z)
+	private byte S(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x, y+1, z);
+		return getPixel(image, x, y+1, z, w, h, d);
 	} /* end S */
 	
 	/* -----------------------------------------------------------------------*/
@@ -419,9 +422,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding east pixel
 	 */
-	private byte E(ImageStack image, int x, int y, int z)
+	private byte E(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x+1, y, z);
+		return getPixel(image, x+1, y, z, w, h, d);
 	} /* end E */
 	
 	/* -----------------------------------------------------------------------*/
@@ -434,9 +437,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding west pixel
 	 */
-	private byte W(ImageStack image, int x, int y, int z)
+	private byte W(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x-1, y, z);
+		return getPixel(image, x-1, y, z, w, h, d);
 	} /* end W */
 	
 	/* -----------------------------------------------------------------------*/
@@ -449,9 +452,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding up pixel
 	 */
-	private byte U(ImageStack image, int x, int y, int z)
+	private byte U(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x, y, z+1);
+		return getPixel(image, x, y, z+1, w, h, d);
 	} /* end U */
 	
 	/* -----------------------------------------------------------------------*/
@@ -464,9 +467,9 @@ public class Skeletonize3D implements PlugIn {
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding bottom pixel
 	 */
-	private byte B(ImageStack image, int x, int y, int z)
+	private byte B(ImageStack image, int x, int y, int z, int w, int h, int d)
 	{
-		return getPixel(image, x, y, z-1);
+		return getPixel(image, x, y, z-1, w, h, d);
 	} /* end N */
 	
 	/* -----------------------------------------------------------------------*/
