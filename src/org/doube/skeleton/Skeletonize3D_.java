@@ -1,3 +1,5 @@
+package org.doube.skeleton;
+
 /**
  * Skeletonize3D plugin for ImageJ(C).
  * Copyright (C) 2008 Ignacio Arganda-Carreras 
