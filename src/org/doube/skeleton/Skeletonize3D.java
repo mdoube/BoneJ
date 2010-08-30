@@ -46,7 +46,7 @@ import ij.process.ImageProcessor;
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
  */
-public class Skeletonize3D_ implements PlugInFilter 
+public class Skeletonize3D implements PlugInFilter 
 {
 	/** working image plus */
 	private ImagePlus imRef;
