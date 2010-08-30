@@ -70,6 +70,11 @@ public class Skeletonize3D implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+		ImageCheck ic = new ImageCheck();
+		if (!ic.isBinary(imp)) {
+			IJ.error("Skeletonise 3D requires a binary image");
+			return;
+		}
 
 		ImagePlus skeleton = getSkeleton(imp);
 
