@@ -356,6 +356,10 @@ public class ShaftGuesser implements PlugIn {
 		}
 	}
 	
+	public int[] getShaftPosition() {
+		return this.shaftPosition;
+	}
+	
 	/**
 	 * Estimates at which slices the shaft begins and ends, based on numerical limits.
 	 * Cycles through slices from the centre, first down, then up, until 

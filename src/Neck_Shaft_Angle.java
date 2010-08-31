@@ -182,7 +182,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 					centroid, startSlice, endSlice, min, max);
 		
 		if(doShow3D) {
-			
+			/* Nothing here */
 		}
 
 		// remove stale MouseListeners
@@ -282,7 +282,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 	 *      on Ask Dr Math</a>
 	 * 
 	 */
-	private double[][] regression3D(ImagePlus imp, double[] centroid,
+	public double[][] regression3D(ImagePlus imp, double[] centroid,
 			int startSlice, int endSlice, double min, double max) {
 		IJ.showStatus("Calculating SVD");
 		ImageStack stack = imp.getImageStack();

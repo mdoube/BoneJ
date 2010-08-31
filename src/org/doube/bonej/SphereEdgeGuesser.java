@@ -1,20 +1,28 @@
 package org.doube.bonej;
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
 import java.awt.Color;
+import java.awt.TextField;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Vector;
 
 import org.doube.geometry.Centroid;
 import org.doube.geometry.FitSphere;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.ThresholdGuesser;
 
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.ImageCanvas;
 import ij.gui.ImageWindow;
@@ -50,6 +58,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	private ImageProcessor[] sliceProcessors = null;
 	private ImageCanvas canvas;
+	private Calibration cal;
 	
 	/** Only measure a single slice of a multi-slice image */
 	private boolean singleSlice = false;
@@ -59,6 +68,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private boolean doPlot = false;
 	/** Use the centre found from run 1 as the initial point for run 2 (etc.) */
 	private boolean doRecursion = true;
+	/** Use method of looking away from the centroid of the bone */
+	private boolean ignoreCentroidDirection = false;
+	/** For HU units (copied from Neck Shaft Angle) */
+	private boolean fieldUpdated = false;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -66,9 +79,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double vH, vW, vD;
 	/** Unit vector sizes, -1 < value < 1 */
 	private double uX, uY, uZ;
+	/** Unit vectors of the vector joining initialPoint - Centroid */
+	private double uCX, uCY, uCZ;
 	/** Standard deviation values of the centre point and radius */
 	private double sdX, sdY, sdZ, sdR;
 	
+	/** Midslice for Moments to get centroid of the near half the bone */
+	private int midSlice;
 	/** Initial (iX), current (nX) coordinates (in pixels or 'unit's) */
 	private int iX, iY, iZ, nX, nY, nZ;
 	/** Image dimensions in 'unit's */
@@ -81,8 +98,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double bias_uZ = 0;
 	/** Multiple of standard deviation from the mean, within which the 3D points 
 	 * may fluctuate their values +/-. If the code finds too few points, increase 
-	 * this value. */
+	 * this value. Default is 1; sometimes set to 2. */
 	private double sd3DMult = 1;
+	/** Multiple of standard deviation from the mean to subtract from the mean 
+	 * in order to limit the radius of the points in 2D. Default is 0.3: increase 
+	 * to restrict rules further. */
+	private double sd2DMult = 0.3;
 	
 	/** Pixel values along a vector. Expands for vector length. */
 	private ArrayList<Float> vectorPixelValues;
@@ -90,10 +111,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * containing pixel values along each vector */
 	private ArrayList[] pixelValues;
 	
+	/** Centroid of the bone */
+	private double[] centroid;
 	/** Holds (x, y, z) centre and radius, in same units as those given to fitSphere */
 	private double[] sphereDim = new double[4];
 	/** User's chosen start point */
 	private double[] initialPoint = new double[3];
+	private double[] initialPointUser = new double[3];
 	/** List of median pixel values of each vector */
 	private double[] medianValues;
 	/** List of number of steps to bone boundary (median crossing). */
@@ -106,6 +130,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private double[] coOrdDistances;
 	/** List of biases to apply to uZ */
 	private double[] biases;
+	/** So far, these haven't needed adjustment, but they could be, for large 
+	 * variations in trabeculae sizes. Sample (get pixel values) ahead along 
+	 * vectors these percentages of the vector. 
+	 * To jump ahead, the pixel values at the two lowest percentages must be beneath 
+	 * the limit - or just the largest value. */
+	private double[] sampleAheadPc = {2,5,10};
 	
 	/** Mean of distances to each coordinate */
 	private double meanCoOrdDistance;
@@ -157,27 +187,58 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
-		Calibration cal = imp.getCalibration();
+		cal = imp.getCalibration();
 		
 		vW = cal.pixelWidth;
 		vH = cal.pixelHeight;
 		vD = cal.pixelDepth;
 		units = cal.getUnits();
 		
+		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		double min = thresholds[0];
+		double max = thresholds[1];
+		String pixUnits;
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
+		
 		/* Optionally show a dialogue */
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
 		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
-		gd.addNumericField("Multiple of standard deviation", sd3DMult, 2);
+		gd.addNumericField("Limit 2D: mean - ", sd2DMult, 2, 5, "standard deviations");
+		gd.addNumericField("Limit 3D: mean +/-", sd3DMult, 2 , 5, "standard deviations");
+//		gd.addNumericField("Sample ahead along vector by", sampleAheadPc[0], 0, 4, "% ");
+//		gd.addNumericField("and", sampleAheadPc[1], 0, 4, "% ");
+//		gd.addNumericField("or", sampleAheadPc[2], 0, 4, "% ");
+		gd.addCheckbox("Use centroid method", ignoreCentroidDirection);
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
 		gd.addCheckbox("Use recursion", doRecursion);
 		gd.addCheckbox("Single slice (don't fit sphere)", singleSlice);
 		gd.addCheckbox("Show points", showPoints);
 		gd.addCheckbox("Plot a vector's profile", doPlot);
+//		gd.addDialogListener();
 		gd.showDialog();
 		if(gd.wasCanceled()) { return; }
 		this.numVectors = (int) gd.getNextNumber();
 		this.runNum = (int) gd.getNextNumber();
+		this.sd2DMult = gd.getNextNumber();
 		this.sd3DMult = gd.getNextNumber();
+//		this.sampleAheadPc[0] = gd.getNextNumber();
+//		this.sampleAheadPc[1] = gd.getNextNumber();
+//		this.sampleAheadPc[2] = gd.getNextNumber();
+		this.ignoreCentroidDirection = gd.getNextBoolean();
+		boolean isHUCalibrated = gd.getNextBoolean();
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
+		min = gd.getNextNumber();
+		max = gd.getNextNumber();
 		this.doRecursion = gd.getNextBoolean();
 		this.singleSlice = gd.getNextBoolean();
 		this.showPoints = gd.getNextBoolean();
@@ -207,11 +268,44 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
 //		gd1.showDialog();
 //		IJ.log("Pixel sizes (vW,vH,vD): " + vW + ", " + vH + ", " + vD + "");
-//		IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
-
-		this.biases = new double[2];
+		IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
+		
+		if(ignoreCentroidDirection) {
+			/* Find centroid location (of this half of the stack) */
+			Moments m = new Moments();
+			this.midSlice = imp.getImageStackSize() / 2;
+			if(iZ < midSlice) {
+				centroid = m.getCentroid3D(imp, 1, midSlice, min, max, 0, 1);
+			}
+			else {
+				centroid = m.getCentroid3D(imp, midSlice, imp.getImageStackSize(), min, max, 0, 1);
+			}
+			if (centroid[0] < 0) {
+				IJ.error("Empty Stack", "No voxels available for calculation."
+						+ "\nCheck your ROI and threshold.");
+				return;
+			}
+			
+			/* Get unit vectors of initialPoint-Centroid direction */
+			double iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroid[0], centroid[1], centroid[2]);
+			uCX = (iX * vW - centroid[0]) / iCDist;
+			uCY = (iY * vH - centroid[1]) / iCDist;
+			uCZ = (iZ * vD - centroid[2]) / iCDist;
+			
+			/* Essentially, to discard a 3D hemisphere of vectors around this vector, 
+			 * just discard if acos(uC (dot) uV) > 90 degrees (pi radians). */
+			
+			IJ.log("Centroid: " + centroid[0] + ", " + centroid[1] + ", " + centroid[2] + "");
+			IJ.log("unit Vectors: " + uCX + ", " + uCY + ", " + uCZ + "");
+			IJ.log("iCDist: " + iCDist + "");
+		}
+		
+		
+		
+		this.biases = new double[3];
 		biases[0] = 0;			// Run 1: vectors in current slice only (2D)
 		biases[1] = 1;			// Run 2: 3D vectors
+		biases[2] = 1;			// Or: ignore vectors towards the centroid
 		
 		double[][] sphereDims = new double[runNum][4];
 		
@@ -225,6 +319,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			/* Results from 2D, relying upon the user's guess at the centroid, 
 			 * are used for 3D - by limiting coordinate distances. */
 			for(int i = 0; i < biases.length; i++) {
+				
+				if(ignoreCentroidDirection) {
+					i = 2;
+				}
 				
 				bias_uZ = biases[i];
 				
@@ -258,6 +356,15 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					case 1 : {
 						coOrdinateDistances(newCoOrdinates);
 						refineCoOrdinates(newCoOrdinates, i);
+						break;
+					}
+					
+					case 2 : {
+						
+						refineCoOrdinates(newCoOrdinates, i);
+						
+						/* Fill with new values. */
+						coOrdinates = new ArrayList<double[]>();
 						break;
 					}
 				}
@@ -317,10 +424,25 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			
 			sphereDims[r] = sphereDim;
 			
-			/* Recursion doesn't seem to work. */
+			/* Recursion */
 			if(doRecursion) {
 				/* Set initial point based on fitSphere's output */
 				setInitialPoint(sphereDims[r][0] / vW, sphereDims[r][1] / vH, Math.floor(sphereDims[r][2] / vD));
+
+				/* Check new sphere covers user's chosen initial point: 
+				 * if not, reset to user's chosen initial point. Z is the most 
+				 * likely axis to require adjustment. */
+				if(r > 0) {
+					if(sphereDims[r][0] - sphereDims[r][3] > initialPointUser[0] * vW
+						|| sphereDims[r][1] - sphereDims[r][3] > initialPointUser[1] * vH
+						|| sphereDims[r][2] - sphereDims[r][3] > initialPointUser[2] * vD
+						|| sphereDims[r][2] + sphereDims[r][3] < initialPointUser[2] * vD) {
+						
+						IJ.log("Initial point reset (run " + r + ").");
+						
+						setInitialPoint(initialPointUser[0], initialPointUser[1], Math.floor(initialPointUser[2]));
+					}
+				}
 			}
 		
 		}
@@ -386,6 +508,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int y = canvas.offScreenY(e.getY());
 		int z = imp.getCurrentSlice();
 		setInitialPoint(x, y, z);
+		setInitialPointUser(x, y, z);
 	}
 
 	public void mouseReleased(MouseEvent e) { }
@@ -402,6 +525,12 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		this.iX = (int) Math.floor(initialPoint[0]);
 		this.iY = (int) Math.floor(initialPoint[1]);
 		this.iZ = (int) Math.floor(initialPoint[2]);
+	}
+	
+	public void setInitialPointUser(double x, double y, double z) {
+		this.initialPointUser[0] = x;
+		this.initialPointUser[1] = y;
+		this.initialPointUser[2] = z;
 	}
 	
 	/**
@@ -538,26 +667,33 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 */
 	private int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
 		
+		/* Old method */
 		int boundaryPosition = 0;
 		int twoPc = (int) Math.floor(pxlValues.length * 0.02);
 		int fivePc = (int) Math.floor(pxlValues.length * 0.05);
 		int tenPc = (int) Math.floor(pxlValues.length * 0.1);
+		
+		/* New method can use user input */
+		Arrays.sort(sampleAheadPc);
+		int pcOne = (int) Math.floor((pxlValues.length) * sampleAheadPc[0] / 100);
+		int pcTwo = (int) Math.floor((pxlValues.length) * sampleAheadPc[1] / 100);
+		int pcThree = (int) Math.floor((pxlValues.length) * sampleAheadPc[2] / 100);
 		
 		/* Start from the end of the vector */
 		for(int i = startPoint; i >= 0; i--) {
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - tenPc > 0 && (pxlValues[i - tenPc] > limit || pxlValues[i - fivePc] > limit) && pxlValues[i - twoPc] > limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - twoPc), isMin);
+				if(i - pcThree > 0 && (pxlValues[i - pcThree] > limit || pxlValues[i - pcTwo] > limit) && pxlValues[i - pcOne] > limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pcOne), isMin);
 				}
 				else { break; }
 			}
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - tenPc > 0 && (pxlValues[i - tenPc] < limit || pxlValues[i - fivePc] < limit) &&  pxlValues[i - twoPc] < limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - twoPc), isMin);
+				if(i - pcThree > 0 && (pxlValues[i - pcThree] < limit || pxlValues[i - pcTwo] < limit) &&  pxlValues[i - pcOne] < limit) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pcOne), isMin);
 				}
 				else { break; }
 			}
@@ -595,7 +731,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	}
 	
 	/**
-	 * <p>Calculate coordinate distances (will be slightly lower than boundaryDistances 
+	 * <p>Calculate coordinate distances in 2D (will be slightly lower than boundaryDistances 
 	 * as coOrdinates are Math.floored). <i>Must</i> be re-done every time coOrdinates 
 	 * is refined, as this sets up an array.</p>
 	 * 
@@ -638,6 +774,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		/* Do different things based on which run this is */
 		switch (caseNum) {
 		
+		/* Refine based on distance to the points */
+		
 		/* 2D */
 		case 0 : {
 			
@@ -646,7 +784,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			int j = 0;
 			while (itB.hasNext()) {
 				double[] b = itB.next();
-				if(coOrdDistances[j] > meanCoOrdDistance + (sdCoOrdDistance * -0.3)) {
+				if(coOrdDistances[j] > meanCoOrdDistance + (sdCoOrdDistance * -sd2DMult)) {
 					itB.remove();
 				}
 				j++;
@@ -672,7 +810,42 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			
 			break;
 		}
-
+		
+		/* Or, refine based upon vector directions being not within a hemisphere (90 
+		 * degrees in all directions) of the vector connecting the initialPoint with 
+		 * the centroid (of this half of the bone, so it's not too exaggerated). */
+		
+		case 2 : {
+			
+			/* Haven't removed any generated coOrdinates at this point (still have 
+			 * numVectors), so must still have numVectors unit vectors. */
+			Iterator<double[]> itD = coOrdinates.iterator();
+			int i = 0;
+			int count = 0;
+			while (itD.hasNext()) {
+				double[] d = itD.next();
+				if(Math.acos(uCX * unitVectors[i][0]
+				            + uCY * unitVectors[i][1] 
+				            + uCZ * unitVectors[i][2]) > Math.PI / 2) {
+					itD.remove();
+					
+					double toACos = uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2];
+					IJ.log("I am removing a coordinate!");
+					IJ.log("MathdotPI / 2: " + (Math.PI / 2) + "");
+					IJ.log("uC; uV: " + uCX + ", " + uCY + ", " + uCZ + "; " + unitVectors[i][0] + ", " + unitVectors[i][1] + ", " + unitVectors[i][2] + "");
+					IJ.log("Pre-Math.acos: " + toACos + "");
+					IJ.log("Math.acos: " + Math.acos(uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2]) + "");
+					count++;
+					IJ.log("count: " + count + "");
+				}
+				
+				i++;
+			}
+			
+			break;
+		}
+		
+		
 		default: break;
 		}
 	}
@@ -771,5 +944,39 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		ann.setCalibration(imp.getCalibration());
 		return ann;
+	}
+	
+	/* Copied from Neck Shaft Angle: only .get(#)s changed */
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+		Checkbox box0 = (Checkbox) checkboxes.get(1);
+		boolean isHUCalibrated = box0.getState();
+		double min = 0;
+		double max = 0;
+		TextField minT = (TextField) nFields.get(4);
+		TextField maxT = (TextField) nFields.get(5);
+		try{
+			min = Double.parseDouble(minT.getText());
+			max = Double.parseDouble(maxT.getText());
+		} catch (Exception ex){
+			IJ.error("You put text in a number field");
+		}
+		if (isHUCalibrated && !fieldUpdated) {
+			minT.setText("" + cal.getCValue(min));
+			maxT.setText("" + cal.getCValue(max));
+			fieldUpdated = true;
+		}
+		if (!isHUCalibrated && fieldUpdated) {
+			minT.setText("" + cal.getRawValue(min));
+			maxT.setText("" + cal.getRawValue(max));
+			fieldUpdated = false;
+		}
+		if (isHUCalibrated)
+			DialogModifier.replaceUnitString(gd, "grey", "HU");
+		else
+			DialogModifier.replaceUnitString(gd, "HU", "grey");
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
+		return true;
 	}
 }
