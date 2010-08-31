@@ -111,8 +111,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * containing pixel values along each vector */
 	private ArrayList[] pixelValues;
 	
-	/** Centroid of the bone */
-	private double[] centroid;
+	/** Centroid of the bone. W: whole stack; S: slice. */
+	private double[] centroidW, centroidS;
 	/** Holds (x, y, z) centre and radius, in same units as those given to fitSphere */
 	private double[] sphereDim = new double[4];
 	/** User's chosen start point */
@@ -271,31 +271,32 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
 		
 		if(ignoreCentroidDirection) {
-			/* Find centroid location (of this half of the stack) */
+			/* Find centroid (of whole stack) */
 			Moments m = new Moments();
-			this.midSlice = imp.getImageStackSize() / 2;
+			this.midSlice = imp.getImageStackSize();
 			if(iZ < midSlice) {
-				centroid = m.getCentroid3D(imp, 1, midSlice, min, max, 0, 1);
+				centroidW = m.getCentroid3D(imp, 1, midSlice, min, max, 0, 1);
 			}
 			else {
-				centroid = m.getCentroid3D(imp, midSlice, imp.getImageStackSize(), min, max, 0, 1);
+				centroidW = m.getCentroid3D(imp, midSlice, imp.getImageStackSize(), min, max, 0, 1);
 			}
-			if (centroid[0] < 0) {
+			if (centroidW[0] < 0) {
 				IJ.error("Empty Stack", "No voxels available for calculation."
 						+ "\nCheck your ROI and threshold.");
 				return;
 			}
 			
 			/* Get unit vectors of initialPoint-Centroid direction */
-			double iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroid[0], centroid[1], centroid[2]);
-			uCX = (iX * vW - centroid[0]) / iCDist;
-			uCY = (iY * vH - centroid[1]) / iCDist;
-			uCZ = (iZ * vD - centroid[2]) / iCDist;
+			double iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroidW[0], centroidW[1], centroidW[2]);
+			uCX = (iX * vW - centroidW[0]) / iCDist;
+			uCY = (iY * vH - centroidW[1]) / iCDist;
+			uCZ = (iZ * vD - centroidW[2]) / iCDist;
 			
 			/* Essentially, to discard a 3D hemisphere of vectors around this vector, 
-			 * just discard if acos(uC (dot) uV) > 90 degrees (pi radians). */
+			 * just discard if acos(uC (dot) uV) > 90 degrees (pi/2 radians). */
 			
-			IJ.log("Centroid: " + centroid[0] + ", " + centroid[1] + ", " + centroid[2] + "");
+			IJ.log("Centroid (whole stack): " + centroidW[0] + ", " + centroidW[1] + ", " + centroidW[2] + "");
+			IJ.log("Centroid (initial slice): " + centroidW[0] + ", " + centroidW[1] + ", " + centroidW[2] + "");
 			IJ.log("unit Vectors: " + uCX + ", " + uCY + ", " + uCZ + "");
 			IJ.log("iCDist: " + iCDist + "");
 		}
@@ -322,6 +323,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				
 				if(ignoreCentroidDirection) {
 					i = 2;
+				}
+				if(!ignoreCentroidDirection && i == 2) {
+					break;
 				}
 				
 				bias_uZ = biases[i];
@@ -434,7 +438,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				 * likely axis to require adjustment. */
 				if(r > 0) {
 					if(sphereDims[r][0] - sphereDims[r][3] > initialPointUser[0] * vW
+						|| sphereDims[r][0] + sphereDims[r][3] < initialPointUser[0] * vW
 						|| sphereDims[r][1] - sphereDims[r][3] > initialPointUser[1] * vH
+						|| sphereDims[r][1] + sphereDims[r][3] < initialPointUser[1] * vH
 						|| sphereDims[r][2] - sphereDims[r][3] > initialPointUser[2] * vD
 						|| sphereDims[r][2] + sphereDims[r][3] < initialPointUser[2] * vD) {
 						
@@ -821,7 +827,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			 * numVectors), so must still have numVectors unit vectors. */
 			Iterator<double[]> itD = coOrdinates.iterator();
 			int i = 0;
-			int count = 0;
 			while (itD.hasNext()) {
 				double[] d = itD.next();
 				if(Math.acos(uCX * unitVectors[i][0]
@@ -830,13 +835,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 					itD.remove();
 					
 					double toACos = uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2];
-					IJ.log("I am removing a coordinate!");
-					IJ.log("MathdotPI / 2: " + (Math.PI / 2) + "");
-					IJ.log("uC; uV: " + uCX + ", " + uCY + ", " + uCZ + "; " + unitVectors[i][0] + ", " + unitVectors[i][1] + ", " + unitVectors[i][2] + "");
-					IJ.log("Pre-Math.acos: " + toACos + "");
-					IJ.log("Math.acos: " + Math.acos(uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2]) + "");
-					count++;
-					IJ.log("count: " + count + "");
+//					IJ.log("I am removing a coordinate!");
+//					IJ.log("MathdotPI / 2: " + (Math.PI / 2) + "");
+//					IJ.log("uC; uV: " + uCX + ", " + uCY + ", " + uCZ + "; " + unitVectors[i][0] + ", " + unitVectors[i][1] + ", " + unitVectors[i][2] + "");
+//					IJ.log("Pre-Math.acos: " + toACos + "");
+//					IJ.log("Math.acos: " + Math.acos(uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2]) + "");
 				}
 				
 				i++;
