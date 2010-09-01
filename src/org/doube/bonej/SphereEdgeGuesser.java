@@ -71,6 +71,8 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private boolean ignoreCentroidDirection = false;
 	/** For HU units (copied from Neck Shaft Angle) */
 	private boolean fieldUpdated = false;
+	/** Exclude vectors pointing towards the centroid of the entire bone */
+	private boolean useBoneCentroid = true;
 	/** Also exclude vectors pointing towards centroid of slice containing initialPoint */
 	private boolean useSliceCentroid = false;
 	/** Attempt to fit an ellipsoid rather than a sphere. Uses FitEllipsoid.yuryPetrov(points). */
@@ -85,7 +87,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Unit vectors of the vector joining initialPoint - Centroid */
 	private double[] uCW, uCS;
 	/** Standard deviation values of the centre point and radius */
-	private double sdX, sdY, sdZ, sdR;
+	private double[] sd;
+	/** Exclude vectors within this multiple of pi radians from the vector joining the initial point to the centroid of the entire bone. (0.5 is a hemisphere.) */
+	private double excludeWholeC = 0.5;
+	/** Exclude vectors within this multiple of pi radians from the vector joining the initial point to the centroid of the slice containing the initial point. (0.5 is a hemisphere.) */
+	private double excludeSliceC = 0.75;
 	
 	/** Initial (iX), current (nX) coordinates (in pixels or 'unit's) */
 	private int iX, iY, iZ, nX, nY, nZ;
@@ -114,10 +120,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	
 	/** Centroid of the bone. W: whole stack; S: slice containing initialPoint. */
 	private double[] centroidW, centroidS;
-	/** Holds (x, y, z) centre and radius, in same units as those given to fitSphere */
-	private double[] sphereDim = new double[4];
-	/** Holds ellipse dimensions */
-	double[] ellipseCentroid, ellipseRadii;
+	/** When sphere fitting, holds (x, y, z) centre and radius, in same units as those given to fitSphere. 
+	 * When ellipsoid fitting, holds (x, y, z) centre and 3 radii. */
+	private double[] dimensions;
+	/** Fill with mean dimensions from all runs */
+	private double[] meanDimensions;
 	/** User's chosen start point */
 	private double[] initialPoint = new double[3];
 	private double[] initialPointUser = new double[3];
@@ -136,7 +143,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	/** Sample (get pixel values) ahead along vectors these percentages of the vector. 
 	 * To jump ahead, the pixel values at the two lowest percentages must be beneath 
 	 * the limit - or just the largest value. */
-	private double[] sampleAheadPc = {2,5,10}; // So far, these haven't needed adjustment, but they could be, for large variations in trabeculae sizes.
+	private double[] sampleAheadPc = {5,10,20}; // So far, these haven't needed adjustment, but they could be, for large variations in trabeculae sizes.
 	
 	/** Mean of distances to each coordinate */
 	private double meanCoOrdDistance;
@@ -215,7 +222,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd.addNumericField("and", sampleAheadPc[1], 0, 4, "% ");
 //		gd.addNumericField("or", sampleAheadPc[2], 0, 4, "% ");
 		gd.addCheckbox("Use centroid method", ignoreCentroidDirection);
-		gd.addCheckbox("(include iP centroid)", useSliceCentroid);
+		gd.addCheckbox("...include whole bone centroid", useBoneCentroid);
+		gd.addNumericField("& exclude vectors +/-", excludeWholeC, 2 , 5, "pi radians from...");
+		gd.addCheckbox("...include initial slice centroid", useSliceCentroid);
+		gd.addNumericField("& exclude vectors +/-", excludeSliceC, 2 , 5, "pi radians from...");
+		gd.addMessage("...the respective vectors joining the initial point and these centroids.");
 		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
@@ -234,7 +245,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		this.sampleAheadPc[1] = gd.getNextNumber();
 //		this.sampleAheadPc[2] = gd.getNextNumber();
 		this.ignoreCentroidDirection = gd.getNextBoolean();
+		this.useBoneCentroid = gd.getNextBoolean();
+		this.excludeWholeC = gd.getNextNumber();
 		this.useSliceCentroid = gd.getNextBoolean();
+		this.excludeSliceC = gd.getNextNumber();
 		boolean isHUCalibrated = gd.getNextBoolean();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
@@ -247,24 +261,20 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		this.doPlot = gd.getNextBoolean();
 		this.fitEllipsoid = gd.getNextBoolean();
 		
-		if(fitEllipsoid && !ignoreCentroidDirection) {
-			IJ.log("Switching to centroid-based method.");
-			ignoreCentroidDirection = true;
+		if(fitEllipsoid) {
+			if(!ignoreCentroidDirection) {
+				IJ.log("Switching to centroid-based method.");
+				ignoreCentroidDirection = true;
+			}
+			if(doRecursion) {
+				IJ.log("Switching off recursion.");
+				doRecursion = false;
+			}
 		}
 		
 		/* User clicks to set initial point */
-		
-		// remove stale MouseListeners
-		MouseListener[] l = this.canvas.getMouseListeners();
-		for (int n = 0; n < l.length; n++) {
-			this.canvas.removeMouseListener(l[n]);
-		}
-		// add a new MouseListener
-		this.canvas.addMouseListener(this);
-		new WaitForUserDialog("Click (roughly) in the centre of\n" 
-									+ "the femoral head, then hit \'OK\'").show();
-		this.canvas.removeMouseListener(this);
-		
+		getInitialPointUser(canvas);
+
 		/* Confirm initial point and measurements */
 //		GenericDialog gd1 = new GenericDialog("Info");
 //		gd1.addMessage("Initial point (x,y,z): (" + iX + ", " + iY + ", " + iZ + ")");
@@ -272,49 +282,121 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //		gd1.addMessage("imp.getCurrentSlice: " + imp.getCurrentSlice() + "");
 //		gd1.showDialog();
 //		IJ.log("Pixel sizes (vW,vH,vD): " + vW + ", " + vH + ", " + vD + "");
-		IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
+//		IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
 		
 		if(ignoreCentroidDirection) {
-			Moments m = new Moments();
-			/* Find centroid (of whole stack) */
-			centroidW = m.getCentroid3D(imp, 1, imp.getImageStackSize(), min, max, 0, 1);
-			/* Find centroid (of slice containing initialPoint) */
-			centroidS = m.getCentroid3D(imp, iZ, iZ, min, max, 0, 1);
-			if (centroidW[0] < 0 || centroidS[0] < 0) {
-				IJ.error("Empty Stack", "No voxels available for calculation."
-						+ "\nCheck your ROI and threshold.");
-				return;
+			findCentroids(imp, min, max);
+		}
+		
+		findSphere(imp, runNum, numVectors, fitEllipsoid, ignoreCentroidDirection);
+
+		/* Show statistical results */
+		fillResultsTable("stats", meanDimensions, sd, fitEllipsoid).show("Results");
+		
+		annotateCentre(imp, meanDimensions).show();
+		
+		if(doPlot) {
+			/* For plotting pixel values, which are helpful if the wrong shapes 
+			 * are being included (i.e. boundaryLimiter needs adjusting). */
+			this.xValues = new double[pixelValues.length][];
+			for(int j = 0; j < xValues.length; j++) {
+				xValues[j] = new double[pixelValues[j].size()];
+				for (int k = 0; k < pixelValues[j].size(); k++) {
+					xValues[j][k] = k;
+				}
 			}
 			
-			/* Get unit vectors of initialPoint-Centroid direction */
-			double iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroidW[0], centroidW[1], centroidW[2]);
-			uCW = new double[3];
-			uCW[0] = (iX * vW - centroidW[0]) / iCDist;
-			uCW[1] = (iY * vH - centroidW[1]) / iCDist;
-			uCW[2] = (iZ * vD - centroidW[2]) / iCDist;
-		
-			iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroidS[0], centroidS[1], centroidS[2]);
-			uCS = new double[3];
-			uCS[0] = (iX * vW - centroidS[0]) / iCDist;
-			uCS[1] = (iY * vH - centroidS[1]) / iCDist;
-			uCS[2] = (iZ * vD - centroidS[2]) / iCDist;
-			
-			/* Essentially, to discard a 3D hemisphere of vectors around this vector, 
-			 * just discard if acos(uC (dot) uV) > 90 degrees (pi/2 radians). */
-			
-			IJ.log("Centroid (whole stack): " + centroidW[0] + ", " + centroidW[1] + ", " + centroidW[2] + "");
-			IJ.log("Centroid (initial slice): " + centroidS[0] + ", " + centroidS[1] + ", " + centroidS[2] + "");
-//			IJ.log("unit Vectors: " + uCW[0] + ", " + uCW[1] + ", " + uCW[2] + "");
+			Plot aPlot = new Plot("Pixel Values along vector " + 0 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
+			aPlot.show();
 		}
 		
 		
+		return;
+	}
+	
+	
+	/**
+	 * @return sphereDim[4] Sphere centre x, y, z coordinates and radius.
+	 */
+	public double[] getMeanDimensions() {
+		return this.meanDimensions;
+	}
+	
+	/**
+	 * Run this method to pop up a dialog and set up a MouseListener so the user
+	 * can set an initial point from which to project vectors.
+	 * 
+	 * @param x
+	 * @param y
+	 * @param z
+	 */
+	public void getInitialPointUser(ImageCanvas canvas) {
+		// remove stale MouseListeners
+		MouseListener[] l = canvas.getMouseListeners();
+		for (int n = 0; n < l.length; n++) {
+			canvas.removeMouseListener(l[n]);
+		}
+		// add a new MouseListener
+		canvas.addMouseListener(this);
+		new WaitForUserDialog("Click (roughly) in the centre of\n" 
+									+ "the femoral head, then hit \'OK\'").show();
+		canvas.removeMouseListener(this);
+	}
+	
+	public void mousePressed(MouseEvent e) {
+		ImagePlus imp = IJ.getImage();
+		int x = canvas.offScreenX(e.getX());
+		int y = canvas.offScreenY(e.getY());
+		int z = imp.getCurrentSlice();
+		setInitialPoint(x, y, z);
+		setInitialPointUser(x, y, z);
+	}
+
+	public void mouseReleased(MouseEvent e) { }
+	public void mouseExited(MouseEvent e) { }
+	public void mouseClicked(MouseEvent e) { }
+	public void mouseEntered(MouseEvent e) { }
+	public void mouseMoved(MouseEvent e) { }
+	
+	public void setInitialPoint(double x, double y, double z) {
+		this.initialPoint[0] = x;
+		this.initialPoint[1] = y;
+		this.initialPoint[2] = z;
+		
+		this.iX = (int) Math.floor(initialPoint[0]);
+		this.iY = (int) Math.floor(initialPoint[1]);
+		this.iZ = (int) Math.floor(initialPoint[2]);
+	}
+	
+	public void setInitialPointUser(double x, double y, double z) {
+		this.initialPointUser[0] = x;
+		this.initialPointUser[1] = y;
+		this.initialPointUser[2] = z;
+	}
+	
+	/**
+	 * Method to run most of the code.
+	 * 
+	 * @param imp
+	 * @param runNum
+	 * @param numVectors
+	 * @param fitEllipsoid
+	 * @param ignoreCentroidDirection
+	 */
+	public void findSphere(ImagePlus imp, int runNum, int numVectors, boolean fitEllipsoid, boolean ignoreCentroidDirection) {
 		
 		this.biases = new double[3];
 		biases[0] = 0;			// Run 1: vectors in current slice only (2D)
 		biases[1] = 1;			// Run 2: 3D vectors
 		biases[2] = 1;			// Or: ignore vectors towards the centroid
 		
-		double[][] sphereDims = new double[runNum][4];
+		if(fitEllipsoid) {
+			dimensions = new double[6];
+		}
+		else {
+			dimensions = new double[4];
+		}
+		double[][] allDimensions = new double[runNum][dimensions.length];
 		
 		/* Run a number of times, based on either the same initial point, or 
 		 * an updating one (doRecursion). */
@@ -402,7 +484,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			 * SphereFitter. See ResultsTable for the current output format. */
 			if(!fitEllipsoid) {
 				try {
-					sphereDim = FitSphere.fitSphere(coOrdArray);
+					dimensions = FitSphere.fitSphere(coOrdArray);
 				} catch (IllegalArgumentException ia) {
 					IJ.showMessage(ia.getMessage());
 					return;
@@ -424,54 +506,39 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 							+ "Rules may be too strict. Add more points and try again.");
 					return;
 				}
-				ellipseCentroid = (double[]) ellipsoid[0];
-				ellipseRadii = (double[]) ellipsoid[1];
+				
+				double[] ellipseCentroid = (double[]) ellipsoid[0];
+				double[] ellipseRadii = (double[]) ellipsoid[1];
+				dimensions[0] = ellipseCentroid[0];
+				dimensions[1] = ellipseCentroid[1];
+				dimensions[2] = ellipseCentroid[2];
+				dimensions[3] = ellipseRadii[0];
+				dimensions[4] = ellipseRadii[1];
+				dimensions[5] = ellipseRadii[2];
 			}
 			
 			
 			/* Show results for each run */
-			ResultsTable rt = ResultsTable.getResultsTable();
-			rt.incrementCounter();
-			rt.addLabel("Type", "run_" + r + "");
-			rt.addValue("Points_used", coOrdinates.size());
-			if(!fitEllipsoid) {
-				rt.addValue("X_centroid_(" + units + ")", sphereDim[0]);
-				rt.addValue("Y_centroid_(" + units + ")", sphereDim[1]);
-				rt.addValue("Z_centroid_(approx._slice)", sphereDim[2] / vD);
-				rt.addValue("Radius_(" + units + ")", sphereDim[3]);
-			}
-			else {
-				rt.addValue("X_centroid_(" + units + ")", ellipseCentroid[0]);
-				rt.addValue("Y_centroid_(" + units + ")", ellipseCentroid[1]);
-				rt.addValue("Z_centroid_(approx._slice)", ellipseCentroid[2] / vD);
-				rt.addValue("Radius_1_(" + units + ")", ellipseRadii[0]);
-				rt.addValue("Radius_1_(" + units + ")", ellipseRadii[1]);
-				rt.addValue("Radius_1_(" + units + ")", ellipseRadii[2]);
-			}
-			rt.addValue("sdX_(" + units + ")", sdX);
-			rt.addValue("sdY_(" + units + ")", sdY);
-			rt.addValue("sdZ_(" + units + ")", sdZ);
-			rt.addValue("sdR_(" + units + ")", sdR);
-			rt.show("Results");
+			fillResultsTable("run_" + r + "", dimensions, new double[dimensions.length], fitEllipsoid).show("Results");
 			
-			sphereDims[r] = sphereDim;
+			allDimensions[r] = dimensions;
 			
 			/* Recursion */
 			if(doRecursion) {
 				/* Set initial point based on fitSphere's output */
-				setInitialPoint(sphereDims[r][0] / vW, sphereDims[r][1] / vH, Math.floor(sphereDims[r][2] / vD));
+				setInitialPoint(allDimensions[r][0] / vW, allDimensions[r][1] / vH, Math.floor(allDimensions[r][2] / vD));
 
 				/* Check new sphere covers user's chosen initial point: 
 				 * if not, reset to user's chosen initial point. Z is the most 
 				 * likely axis to require adjustment. */
 				if(r > 0) {
-					if(Math.abs(sphereDims[r][0] - initialPointUser[0] * vW) > sphereDims[r][3]
-					    || Math.abs(sphereDims[r][1] - initialPointUser[1] * vH) > sphereDims[r][3]
-					    || Math.abs(sphereDims[r][2] - initialPointUser[2] * vD) > sphereDims[r][3]
-					    || Math.abs(sphereDims[r][1] - initialPointUser[1] * vH) > sphereDims[r][3]	
-						|| sphereDims[r][2] < 0 || sphereDims[r][2] > imp.getStackSize() * vD
-						|| sphereDims[r][0] < 0 || sphereDims[r][0] > w
-						|| sphereDims[r][1] < 0 || sphereDims[r][1] > h) {
+					if(Math.abs(allDimensions[r][0] - initialPointUser[0] * vW) > allDimensions[r][3]
+					    || Math.abs(allDimensions[r][1] - initialPointUser[1] * vH) > allDimensions[r][3]
+					    || Math.abs(allDimensions[r][2] - initialPointUser[2] * vD) > allDimensions[r][3]
+					    || Math.abs(allDimensions[r][1] - initialPointUser[1] * vH) > allDimensions[r][3]	
+						|| allDimensions[r][2] < 0 || allDimensions[r][2] > imp.getStackSize() * vD
+						|| allDimensions[r][0] < 0 || allDimensions[r][0] > w
+						|| allDimensions[r][1] < 0 || allDimensions[r][1] > h) {
 						
 						IJ.log("Initial point reset (run " + r + ").");
 						
@@ -482,91 +549,56 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		
 		}	// end multiple runs
 		
-		double[][] sphereDimsT = new double[4][runNum];
-		sphereDimsT = transposeArray(sphereDims);
-		sphereDim[0] = Centroid.getCentroid(sphereDimsT[0]);
-		sphereDim[1] = Centroid.getCentroid(sphereDimsT[1]);
-		sphereDim[2] = Centroid.getCentroid(sphereDimsT[2]);
-		sphereDim[3] = Centroid.getCentroid(sphereDimsT[3]);
-		
-		sdX = Math.sqrt(ShaftGuesser.variance(sphereDimsT[0]));
-		sdY = Math.sqrt(ShaftGuesser.variance(sphereDimsT[1]));
-		sdZ = Math.sqrt(ShaftGuesser.variance(sphereDimsT[2]));
-		sdR = Math.sqrt(ShaftGuesser.variance(sphereDimsT[3]));
-		
-		/* Show statistical results */
-		ResultsTable rt2 = ResultsTable.getResultsTable();
-		rt2.incrementCounter();
-		rt2.addLabel("Type", "stats");
-		rt2.addValue("Points_used", coOrdinates.size());
-		rt2.addValue("X_centroid_(" + units + ")", sphereDim[0]);
-		rt2.addValue("Y_centroid_(" + units + ")", sphereDim[1]);
-		rt2.addValue("Z_centroid_(approx._slice)", sphereDim[2] / vD);
-		rt2.addValue("Radius_(" + units + ")", sphereDim[3]);
-		rt2.addValue("sdX_(" + units + ")", sdX);
-		rt2.addValue("sdY_(" + units + ")", sdY);
-		rt2.addValue("sdZ_(" + units + ")", sdZ);
-		rt2.addValue("sdR_(" + units + ")", sdR);
-		rt2.show("Results");
-		
-		annotateCentre(imp).show();
-		
-		if(doPlot) {
-			/* For plotting pixel values, which are helpful if the wrong shapes 
-			 * are being included (i.e. boundaryLimiter needs adjusting). */
-			this.xValues = new double[pixelValues.length][];
-			for(int j = 0; j < xValues.length; j++) {
-				xValues[j] = new double[pixelValues[j].size()];
-				for (int k = 0; k < pixelValues[j].size(); k++) {
-					xValues[j][k] = k;
-				}
-			}
-			
-			Plot aPlot = new Plot("Pixel Values along vector " + 0 + "", "Distance (pixels)", "Pixel value", xValues[0], pxVals[0]);
-			aPlot.show();
+		/* Math for stats */
+		double[][] allDimensionsT = new double[dimensions.length][runNum];
+		sd = new double[dimensions.length];
+		this.meanDimensions = new double[dimensions.length];
+		allDimensionsT = transposeArray(allDimensions);
+		for(int i = 0; i < dimensions.length; i++) {
+			meanDimensions[i] = Centroid.getCentroid(allDimensionsT[i]);
+			sd[i] = Math.sqrt(ShaftGuesser.variance(allDimensionsT[i]));
 		}
-
-		return;
 	}
 	
 	
-	/**
-	 * @return sphereDim[4] Sphere centre x, y, z coordinates and radius.
-	 */
-	public double[] getSphereDim() {
-		return this.sphereDim;
-	}
-	
-	public void mousePressed(MouseEvent e) {
-		ImagePlus imp = IJ.getImage();
-		int x = canvas.offScreenX(e.getX());
-		int y = canvas.offScreenY(e.getY());
-		int z = imp.getCurrentSlice();
-		setInitialPoint(x, y, z);
-		setInitialPointUser(x, y, z);
-	}
-
-	public void mouseReleased(MouseEvent e) { }
-	public void mouseExited(MouseEvent e) { }
-	public void mouseClicked(MouseEvent e) { }
-	public void mouseEntered(MouseEvent e) { }
-	public void mouseMoved(MouseEvent e) { }
-	
-	public void setInitialPoint(double x, double y, double z) {
-		this.initialPoint[0] = x;
-		this.initialPoint[1] = y;
-		this.initialPoint[2] = z;
+	public void findCentroids(ImagePlus imp, double min, double max) {
 		
-		this.iX = (int) Math.floor(initialPoint[0]);
-		this.iY = (int) Math.floor(initialPoint[1]);
-		this.iZ = (int) Math.floor(initialPoint[2]);
+		Moments m = new Moments();
+		/* Find centroid (of whole stack) */
+		this.centroidW = m.getCentroid3D(imp, 1, imp.getImageStackSize(), min, max, 0, 1);
+		/* Find centroid (of slice containing initialPoint) */
+		this.centroidS = m.getCentroid3D(imp, iZ, iZ, min, max, 0, 1);
+//		int midSlice = (int) imp.getImageStackSize() / 4;
+//		if(iZ > midSlice) {
+//			centroidS = m.getCentroid3D(imp, imp.getImageStackSize() - midSlice, iZ, min, max, 0, 1);
+//		}
+//		else {
+//			centroidS = m.getCentroid3D(imp, iZ, midSlice, min, max, 0, 1);
+//		}
+		
+		if (centroidW[0] < 0 || centroidS[0] < 0) {
+			IJ.error("Empty Stack", "No voxels available for calculation."
+					+ "\nCheck your ROI and threshold.");
+			return;
+		}
+		
+		/* Get unit vectors of initialPoint-Centroid direction */
+		double iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroidW[0], centroidW[1], centroidW[2]);
+		this.uCW = new double[3];
+		uCW[0] = (iX * vW - centroidW[0]) / iCDist;
+		uCW[1] = (iY * vH - centroidW[1]) / iCDist;
+		uCW[2] = (iZ * vD - centroidW[2]) / iCDist;
+	
+		iCDist = Trig.distance3D(iX * vW, iY * vH, iZ * vD, centroidS[0], centroidS[1], centroidS[2]);
+		this.uCS = new double[3];
+		uCS[0] = (iX * vW - centroidS[0]) / iCDist;
+		uCS[1] = (iY * vH - centroidS[1]) / iCDist;
+		uCS[2] = (iZ * vD - centroidS[2]) / iCDist;
+
+		/* To discard a 3D hemisphere of vectors around this vector, 
+		 * discard if acos(uC (dot) uV) > 90 degrees (pi/2 radians). */
 	}
 	
-	public void setInitialPointUser(double x, double y, double z) {
-		this.initialPointUser[0] = x;
-		this.initialPointUser[1] = y;
-		this.initialPointUser[2] = z;
-	}
 	
 	/**
 	 * <p>Create random 3D unit vectors, with the Z direction weighted 
@@ -702,38 +734,32 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 */
 	private int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
 		
-		/* Old method */
 		int boundaryPosition = 0;
-		int twoPc = (int) Math.floor(pxlValues.length * 0.02);
-		int fivePc = (int) Math.floor(pxlValues.length * 0.05);
-		int tenPc = (int) Math.floor(pxlValues.length * 0.1);
 		
-		/* New method can use user input */
-		Arrays.sort(sampleAheadPc);
-		int pcOne = (int) Math.floor((pxlValues.length) * sampleAheadPc[0] / 100);
-		int pcTwo = (int) Math.floor((pxlValues.length) * sampleAheadPc[1] / 100);
-		int pcThree = (int) Math.floor((pxlValues.length) * sampleAheadPc[2] / 100);
+//		Arrays.sort(sampleAheadPc);
+		int pc1 = (int) Math.floor((pxlValues.length) * sampleAheadPc[0] / 100);
+		int pc2 = (int) Math.floor((pxlValues.length) * sampleAheadPc[1] / 100);
+		int pc3 = (int) Math.floor((pxlValues.length) * sampleAheadPc[2] / 100);
 		
 		/* Start from the end of the vector */
 		for(int i = startPoint; i >= 0; i--) {
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - pcThree > 0 && (pxlValues[i - pcThree] > limit || pxlValues[i - pcTwo] > limit) && pxlValues[i - pcOne] > limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pcOne), isMin);
+				if(i - pc3 > 0 && ((pxlValues[i - pc1] > limit && pxlValues[i - pc2] > limit) || (pxlValues[i - pc3] > limit))) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pc2), isMin);
 				}
-				else { break; }
+				break;
 			}
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - pcThree > 0 && (pxlValues[i - pcThree] < limit || pxlValues[i - pcTwo] < limit) &&  pxlValues[i - pcOne] < limit) {
-					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pcOne), isMin);
+				if(i - pc3 > 0 && ((pxlValues[i - pc1] < limit && pxlValues[i - pc2] < limit) || (pxlValues[i - pc3] < limit))) {
+					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pc2), isMin);
 				}
 				else { break; }
 			}
 		}
-		
 		return boundaryPosition;
 	}
 	
@@ -856,11 +882,11 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				double[] d = itD.next();
 				if(Math.acos(uCW[0] * unitVectors[i][0]
 				            + uCW[1] * unitVectors[i][1] 
-				            + uCW[2] * unitVectors[i][2]) > Math.PI / 2
+				            + uCW[2] * unitVectors[i][2]) > Math.PI * excludeWholeC
 				            || this.useSliceCentroid 
 				            && Math.acos(uCS[0] * unitVectors[i][0]
 				            + uCS[1] * unitVectors[i][1] 
-				            + uCS[2] * unitVectors[i][2]) > Math.PI / 2) {
+				            + uCS[2] * unitVectors[i][2]) > Math.PI * excludeSliceC) {
 					itD.remove();
 					
 //					double toACos = uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2];
@@ -939,6 +965,42 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		return ann;
 	}
 	
+	
+	/**
+	 * Fill a ResultsTable with values.
+	 * 
+	 * @param label
+	 * @param dimensions
+	 * @param deviations
+	 * @param fitEllipsoid
+	 * @return
+	 */
+	private ResultsTable fillResultsTable(String label, double[] dimensions, double[] deviations, boolean fitEllipsoid) {
+		
+		ResultsTable rt = ResultsTable.getResultsTable();
+		rt.incrementCounter();
+		rt.addLabel("Type", label);
+		rt.addValue("Points_used", coOrdinates.size());
+		rt.addValue("X_centroid_(" + this.units + ")", dimensions[0]);
+		rt.addValue("Y_centroid_(" + this.units + ")", dimensions[1]);
+		rt.addValue("Z_centroid_(approx._slice)", dimensions[2] / vD);
+		rt.addValue("Radius_1_(" + this.units + ")", dimensions[3]);
+		if(fitEllipsoid) {
+			rt.addValue("Radius_2_(" + this.units + ")", dimensions[4]);
+			rt.addValue("Radius_3_(" + this.units + ")", dimensions[5]);
+		}
+		rt.addValue("sdX_(" + this.units + ")", deviations[0]);
+		rt.addValue("sdY_(" + this.units + ")", deviations[1]);
+		rt.addValue("sdZ_(" + this.units + ")", deviations[2]);
+		rt.addValue("sdR_(" + this.units + ")", deviations[3]);
+		if(fitEllipsoid) {
+			rt.addValue("sdZ_(" + this.units + ")", deviations[2]);
+			rt.addValue("sdR_(" + this.units + ")", deviations[3]);
+		}
+		return rt;
+	}
+	
+	
 	/**
 	 * Draw lines showing centre and radius of the sphere on a copy of the 
 	 * original image.
@@ -947,7 +1009,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param coOrdinateArray
 	 * @return
 	 */
-	private ImagePlus annotateCentre(ImagePlus imp) {
+	private ImagePlus annotateCentre(ImagePlus imp, double[] dimensions) {
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
 		int h = stack.getHeight();
@@ -956,18 +1018,18 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			ImageProcessor annIP = stack.getProcessor(s).duplicate();
 			annIP.setColor(Color.white);
 			
-			if(s == (int) Math.round(sphereDim[2] / vD)) {
+			if(s == (int) Math.round(dimensions[2] / vD)) {
 				
-				int x1 = (int) Math.floor((sphereDim[0] / vW) - sphereDim[3] / vW);
-				int y1 = (int) Math.floor(sphereDim[1] / vH);
-				int x2 = (int) Math.floor((sphereDim[0] / vW) + sphereDim[3] / vW);
-				int y2 = (int) Math.floor(sphereDim[1] / vH);
+				int x1 = (int) Math.floor((dimensions[0] / vW) - dimensions[3] / vW);
+				int y1 = (int) Math.floor(dimensions[1] / vH);
+				int x2 = (int) Math.floor((dimensions[0] / vW) + dimensions[3] / vW);
+				int y2 = (int) Math.floor(dimensions[1] / vH);
 				annIP.drawLine(x1, y1, x2, y2);
 
-				x1 = (int) Math.floor(sphereDim[0] / vW);
-				y1 = (int) Math.floor((sphereDim[1] / vH) + sphereDim[3] / vH);
-				x2 = (int) Math.floor(sphereDim[0] / vW);
-				y2 = (int) Math.floor((sphereDim[1] / vH) - sphereDim[3] / vH);
+				x1 = (int) Math.floor(dimensions[0] / vW);
+				y1 = (int) Math.floor((dimensions[1] / vH) + dimensions[3] / vH);
+				x2 = (int) Math.floor(dimensions[0] / vW);
+				y2 = (int) Math.floor((dimensions[1] / vH) - dimensions[3] / vH);
 				annIP.drawLine(x1, y1, x2, y2);
 			}
 			
@@ -978,16 +1040,17 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		return ann;
 	}
 	
+	
 	/* Copied from Neck Shaft Angle: only .get(#)s changed */
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Checkbox box0 = (Checkbox) checkboxes.get(2);
+		Checkbox box0 = (Checkbox) checkboxes.get(3);
 		boolean isHUCalibrated = box0.getState();
 		double min = 0;
 		double max = 0;
-		TextField minT = (TextField) nFields.get(4);
-		TextField maxT = (TextField) nFields.get(5);
+		TextField minT = (TextField) nFields.get(6);
+		TextField maxT = (TextField) nFields.get(7);
 		try{
 			min = Double.parseDouble(minT.getText());
 			max = Double.parseDouble(maxT.getText());
