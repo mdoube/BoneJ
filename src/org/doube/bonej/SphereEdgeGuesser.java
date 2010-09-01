@@ -116,7 +116,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	private ArrayList<Float> vectorPixelValues;
 	/** Array (known length) of ArrayLists (differing lengths) 
 	 * containing pixel values along each vector */
-	private ArrayList[] pixelValues;
+	private ArrayList<Float>[] pixelValues;
 	
 	/** Centroid of the bone. W: whole stack; S: slice containing initialPoint. */
 	private double[] centroidW, centroidS;
@@ -182,25 +182,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 //			return;
 //		}
 		
-		/* Set up array of ImageProcessors for reference later */
-		ImageStack stack = imp.getStack();
-		this.sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
-		for(int s = 1; s < sliceProcessors.length; s++) {
-			sliceProcessors[s] = stack.getProcessor(s);
-		}
-		
-		w = imp.getWidth();
-		h = imp.getHeight();
-		d = imp.getStackSize();
-		
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
 		cal = imp.getCalibration();
-		
-		vW = cal.pixelWidth;
-		vH = cal.pixelHeight;
-		vD = cal.pixelDepth;
-		units = cal.getUnits();
 		
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
@@ -331,6 +315,10 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param z
 	 */
 	public void getInitialPointUser(ImageCanvas canvas) {
+		
+		// required for mousePressed to work
+		this.canvas = canvas;
+		
 		// remove stale MouseListeners
 		MouseListener[] l = canvas.getMouseListeners();
 		for (int n = 0; n < l.length; n++) {
@@ -350,6 +338,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int z = imp.getCurrentSlice();
 		setInitialPoint(x, y, z);
 		setInitialPointUser(x, y, z);
+		IJ.log("x: " + x + ", y: " + y + ", z: " + z + "");
 	}
 
 	public void mouseReleased(MouseEvent e) { }
@@ -379,11 +368,37 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * 
 	 * @param imp
 	 * @param runNum
+	 * 				<br /> int, the number of times to re-project vectors and fit a
+	 * 						sphere, from which to take the mean dimensions.
 	 * @param numVectors
+	 * 				<br /> int, the number of vectors to project during each run.
+	 * 						If ignoreCentroidDirection is false, this number of 
+	 * 						vectors will actually be projected in both 2D and 3D.
 	 * @param fitEllipsoid
+	 * 				<br /> boolean, attempt to fit an ellipsoid instead of a sphere
+	 * 						(sphere is default, if this is false).
 	 * @param ignoreCentroidDirection
+	 * 				<br /> boolean, use method of ignoring methods in the direction
+	 * 						of particular centroids.
 	 */
 	public void findSphere(ImagePlus imp, int runNum, int numVectors, boolean fitEllipsoid, boolean ignoreCentroidDirection) {
+		
+		/* Set up array of ImageProcessors for reference later */
+		ImageStack stack = imp.getStack();
+		this.sliceProcessors = new ImageProcessor[imp.getStackSize() + 1];
+		for(int s = 1; s < sliceProcessors.length; s++) {
+			sliceProcessors[s] = stack.getProcessor(s);
+		}
+		
+		w = imp.getWidth();
+		h = imp.getHeight();
+		d = imp.getStackSize();
+		
+		cal = imp.getCalibration();
+		vW = cal.pixelWidth;
+		vH = cal.pixelHeight;
+		vD = cal.pixelDepth;
+		units = cal.getUnits();
 		
 		this.biases = new double[3];
 		biases[0] = 0;			// Run 1: vectors in current slice only (2D)
@@ -417,9 +432,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 				
 				bias_uZ = biases[i];
 				
-				projectVectors(numVectors, bias_uZ);
+				this.pixelValues = projectVectors(numVectors, bias_uZ);
 				
-				findBoundaries();
+				findBoundaries(pixelValues);
 				
 				/* Add boundary coordinates to ArrayList (send method a new ArrayList) */
 				newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>(), bias_uZ);
@@ -609,14 +624,16 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param numVectors number of vectors to create
 	 * @param bias_uZ weighting given to uZ
 	 */
-	private void projectVectors(int numVectors, double bias_uZ) {
+	private ArrayList<Float>[] projectVectors(int numVectors, double bias_uZ) {
 		
 		/* Create array of random 3D unit vectors */
 		this.unitVectors = Vectors.random3D(numVectors);
 		
 		/* Array of ArrayLists */
 		this.pixelValues = new ArrayList[unitVectors.length];
-		
+//		for(int p = 0; p < pixelValues.length; p++) {
+//			pixelValues[p] = new ArrayList<Float>();
+//		}
 		this.magnitudes = new double[unitVectors.length];
 		
 		/* Cycle through all vectors */
@@ -626,11 +643,13 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 			uY = unitVectors[i][1];
 			uZ = unitVectors[i][2] * bias_uZ;
 			
-			this.pixelValues[i] = getPixelsAlongVector(uX, uY, uZ);
+			pixelValues[i] = getPixelsAlongVector(uX, uY, uZ);
 			
 			this.magnitudes[i] = Trig.distance3D(uX * vW, uY * vH, uZ * vD);
 //			this.magnitudes[i] = Math.sqrt(Math.pow(uX * vW, 2) + Math.pow(uY * vH, 2) + Math.pow(uZ * vD, 2));
 		}
+		
+		return pixelValues;
 	}
 	
 	
@@ -654,9 +673,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int j = 0;
 		while(j > -1) {
 			
-			nX = (int) Math.floor(iX + (j * uX));		// for 'unit' resolution, divide by vW, etc.
-			nY = (int) Math.floor(iY + (j * uY));
-			nZ = (int) Math.round(iZ + (j * uZ));
+			this.nX = (int) Math.floor(iX + (j * uX));		// for 'unit' resolution, divide by vW, etc.
+			this.nY = (int) Math.floor(iY + (j * uY));
+			this.nZ = (int) Math.round(iZ + (j * uZ));
 			
 			/* Break out if outside the image */
 			if(nX < 0 || nX > w || nY < 0 || nY > h || nZ < 1 || nZ > d) {
@@ -682,7 +701,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * e.g. large scale image artefacts, adjustedLimit here probably needs 
 	 * further adjusting.</p>
 	 */
-	private void findBoundaries() {
+	private void findBoundaries(ArrayList<Float>[] pixelValues) {
 		
 		/* Some analysis possible on each vector */
 		this.boundarySteps = new int[pixelValues.length];
@@ -693,6 +712,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		this.pxVals = new double[pixelValues.length][];
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
+			
 			for(int j = 0; j < pixelValues[i].size(); j++) {
 				pxVals[i][j] = (double) (Float) pixelValues[i].toArray()[j];
 			}
@@ -1009,7 +1029,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	 * @param coOrdinateArray
 	 * @return
 	 */
-	private ImagePlus annotateCentre(ImagePlus imp, double[] dimensions) {
+	public ImagePlus annotateCentre(ImagePlus imp, double[] dimensions) {
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
 		int h = stack.getHeight();

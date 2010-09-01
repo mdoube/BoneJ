@@ -41,7 +41,7 @@ public class ShaftGuesser implements PlugIn {
 	private boolean proximalLow;
 	/** Looks for a longer diaphysis if true */
 	private boolean beGenerous;
-	private boolean doGraph;
+	private boolean doGraph = false;
 	
 	private int al, startSlice, endSlice, ss, iss, boneID;
 	/** Smooth over this number of slices. Initially set to 1/50th of stack size */
@@ -129,7 +129,7 @@ public class ShaftGuesser implements PlugIn {
 		gd.addMessage("Choose trabeculae parameters: ");
 		gd.addNumericField("Min particle size", trabMin, 0, 3, units);
 		gd.addNumericField("Max particle size", trabMax, 0, 3, units);
-		gd.addCheckbox("Graph output", true);
+		gd.addCheckbox("Graph output", doGraph);
 		gd.showDialog();
 		
 		this.bone = gd.getNextChoice();
@@ -213,10 +213,9 @@ public class ShaftGuesser implements PlugIn {
 		 * Eccentricity measures shape.
 		 * 
 		 * Poss: if we increase the median cutoff by 10%, does this increase the selection length by more than 5% of the bone?
-		 * 
 		 * Poss: don't count slices with NaN...?
-		 * 
 		 * Poss: gradient for reliability: low is no; high is yes.
+		 * 
 		 * The gradients actually tell me something about how significant the features at that particular point are.
 		 * 
 		 * Peak detection for lesser and greater trochanter?
@@ -424,7 +423,7 @@ public class ShaftGuesser implements PlugIn {
 	
 	/* 
 	 * Want: maximum ROI ie outer region of bone
-	 * - could go: here's the centroid of the shaft
+	 * - could say: here's the centroid of the shaft
 	 * - here's the average shaft diameter or max over whole shaft,
 	 * - ROI is circular region with this diameter from centroid
 	 * Ideally though, select outer edge of bone, or even mid-cortical(!?) as ROI border.
@@ -529,7 +528,7 @@ public class ShaftGuesser implements PlugIn {
 	 * @param a number of slices +/- over which to average
 	 * @return gradient[]
 	 */
-	public double[] smooth(double[] x, int a) {
+	public static double[] smooth(double[] x, int a) {
 		
 		double[] average = new double[x.length];
 		
