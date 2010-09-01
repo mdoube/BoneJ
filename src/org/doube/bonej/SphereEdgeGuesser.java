@@ -55,7 +55,7 @@ import ij.process.ImageProcessor;
  * @author Nick Powell
  *
  */
-public class SphereEdgeGuesser implements PlugIn, MouseListener {
+public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener {
 	
 	private ImageProcessor[] sliceProcessors = null;
 	private ImageCanvas canvas;
@@ -200,24 +200,24 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
 		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
+		gd.addMessage("Sphere fitting: ");
 		gd.addNumericField("Limit 2D: mean - ", sd2DMult, 2, 5, "standard deviations");
 		gd.addNumericField("Limit 3D: mean +/-", sd3DMult, 2 , 5, "standard deviations");
 //		gd.addNumericField("Sample ahead along vector by", sampleAheadPc[0], 0, 4, "% ");
 //		gd.addNumericField("and", sampleAheadPc[1], 0, 4, "% ");
 //		gd.addNumericField("or", sampleAheadPc[2], 0, 4, "% ");
-		gd.addCheckbox("Use centroid method", ignoreCentroidDirection);
-		gd.addCheckbox("...include whole bone centroid", useBoneCentroid);
-		gd.addNumericField("& exclude vectors +/-", excludeWholeC, 2 , 5, "pi radians from...");
-		gd.addCheckbox("...include initial slice centroid", useSliceCentroid);
-		gd.addNumericField("& exclude vectors +/-", excludeSliceC, 2 , 5, "pi radians from...");
-		gd.addMessage("...the respective vectors joining the initial point and these centroids.");
+		gd.addCheckbox("Vectors from initial point avoid...", ignoreCentroidDirection);
+		gd.addNumericField("cone +/-", excludeWholeC, 2 , 5, "pi radians from...");
+		gd.addCheckbox("...whole bone centroid", useBoneCentroid);
+		gd.addNumericField("cone +/-", excludeSliceC, 2 , 5, "pi radians from...");
+		gd.addCheckbox("...initial slice centroid", useSliceCentroid);
 		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
 		gd.addCheckbox("Use recursion", doRecursion);
 		gd.addCheckbox("Show points", showPoints);
 		gd.addCheckbox("Plot a vector's profile", doPlot);
-		gd.addCheckbox("Fit an ellipsoid", fitEllipsoid);
+		gd.addCheckbox("Fit an ellipsoid instead of a sphere", fitEllipsoid);
 //		gd.addDialogListener();
 		gd.showDialog();
 		if(gd.wasCanceled()) { return; }
@@ -305,6 +305,9 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 	public double[] getMeanDimensions() {
 		return this.meanDimensions;
 	}
+	public double[] getStandardDeviations() {
+		return this.sd;
+	}
 	
 	/**
 	 * Run this method to pop up a dialog and set up a MouseListener so the user
@@ -338,7 +341,6 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		int z = imp.getCurrentSlice();
 		setInitialPoint(x, y, z);
 		setInitialPointUser(x, y, z);
-		IJ.log("x: " + x + ", y: " + y + ", z: " + z + "");
 	}
 
 	public void mouseReleased(MouseEvent e) { }
@@ -708,7 +710,7 @@ public class SphereEdgeGuesser implements PlugIn, MouseListener {
 		this.medianValues = new double[pixelValues.length];
 		this.boundaryDistances = new double[pixelValues.length];
 		
-		/* Ragged array of (double) pixel values for every vector */
+		/* Ragged array of (double) pixel values for every vector (i) */
 		this.pxVals = new double[pixelValues.length][];
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
