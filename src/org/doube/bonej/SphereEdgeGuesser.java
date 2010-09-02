@@ -18,6 +18,7 @@ import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 import org.doube.util.ThresholdGuesser;
 
 import ij.IJ;
@@ -415,11 +416,25 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		}
 		double[][] allDimensions = new double[runNum][dimensions.length];
 		
+		/* Memory-saving */
+		this.newCoOrdinates = new ArrayList<double[]>();
+		/* Array of ArrayLists */
+		this.pixelValues = new ArrayList[numVectors];
+		this.magnitudes = new double[numVectors];
+		/* Fill with new values (case 0, 2); append values (case 1). */
+		this.coOrdinates = new ArrayList<double[]>();
+		/* Some analysis possible on each vector */
+		this.boundarySteps = new int[pixelValues.length];
+		this.medianValues = new double[pixelValues.length];
+		this.boundaryDistances = new double[pixelValues.length];
+		/* Ragged array of (double) pixel values for every vector (i) */
+		this.pxVals = new double[pixelValues.length][];
+		
 		/* Run a number of times, based on either the same initial point, or 
 		 * an updating one (doRecursion). */
 		for(int r = 0; r < runNum; r++) {
 			
-//			IJ.log("Initial point: " + iX + ", " + iY + ", " + iZ + "");
+			coOrdinates.clear();
 			
 			/* Results from 2D, relying upon the user's guess at the centroid, 
 			 * are used for 3D - by limiting coordinate distances. */
@@ -436,10 +451,14 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				
 				this.pixelValues = projectVectors(numVectors, bias_uZ);
 				
-				findBoundaries(pixelValues);
+				/* N.B. boundaryLimiter is by far the most resource-intensive method. */
+				findBoundaries(pixelValues, i);
+				
+				/* save a bit of memory */
+				newCoOrdinates.clear();
 				
 				/* Add boundary coordinates to ArrayList (send method a new ArrayList) */
-				newCoOrdinates = addNewCoOrdinatesToArrayList(new ArrayList<double[]>(), bias_uZ);
+				newCoOrdinates = addNewCoOrdinatesToArrayList(newCoOrdinates, bias_uZ);
 				
 				switch (i) {
 					case 0 : {	// 2D
@@ -456,9 +475,6 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 						meanCoOrdDistance = Centroid.getCentroid(this.coOrdDistances);
 						sdCoOrdDistance = Math.sqrt(ShaftGuesser.variance(this.coOrdDistances));
 						
-						/* Fill with new values from 2D; append 3D values. */
-						coOrdinates = new ArrayList<double[]>();
-						
 						break;
 					}
 					case 1 : {	// 3D
@@ -470,9 +486,6 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 					case 2 : {	// Ignore centroid direction (for ellipsoids)
 						
 						refineCoOrdinates(newCoOrdinates, i);
-						
-						/* Fill with new values. */
-						coOrdinates = new ArrayList<double[]>();
 						break;
 					}
 				}
@@ -504,10 +517,12 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 					dimensions = FitSphere.fitSphere(coOrdArray);
 				} catch (IllegalArgumentException ia) {
 					IJ.showMessage(ia.getMessage());
+					coOrdinates.clear(); newCoOrdinates.clear();
 					return;
 				} catch (RuntimeException re) {
 					IJ.showMessage("Can't fit sphere to points.\n"
 							+ "Rules may be too strict. Add more points and try again.");
+					coOrdinates.clear(); newCoOrdinates.clear();
 					return;
 				}
 			}
@@ -626,17 +641,12 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @param numVectors number of vectors to create
 	 * @param bias_uZ weighting given to uZ
 	 */
-	private ArrayList<Float>[] projectVectors(int numVectors, double bias_uZ) {
+	private ArrayList<Float>[] projectVectors(int numVectors, final double bias_uZ) {
+		
+//		IJ.log("I am running projectVectors");
 		
 		/* Create array of random 3D unit vectors */
 		this.unitVectors = Vectors.random3D(numVectors);
-		
-		/* Array of ArrayLists */
-		this.pixelValues = new ArrayList[unitVectors.length];
-//		for(int p = 0; p < pixelValues.length; p++) {
-//			pixelValues[p] = new ArrayList<Float>();
-//		}
-		this.magnitudes = new double[unitVectors.length];
 		
 		/* Cycle through all vectors */
 		for(int i = 0; i < unitVectors.length; i++) {
@@ -647,7 +657,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			
 			pixelValues[i] = getPixelsAlongVector(uX, uY, uZ);
 			
-			this.magnitudes[i] = Trig.distance3D(uX * vW, uY * vH, uZ * vD);
+			magnitudes[i] = Trig.distance3D(uX * vW, uY * vH, uZ * vD);
 //			this.magnitudes[i] = Math.sqrt(Math.pow(uX * vW, 2) + Math.pow(uY * vH, 2) + Math.pow(uZ * vD, 2));
 		}
 		
@@ -668,9 +678,12 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private ArrayList<Float> getPixelsAlongVector(double uX, double uY, double uZ) {
 		
+//		IJ.log("I am running getPixelsAlongVector");
+		
 		/* Use ArrayList as we don't know how long each line (j) will be.
 		 * Unfortunately, ArrayList can only be filled with Objects. */
-		this.vectorPixelValues = new ArrayList<Float>();
+//		this.vectorPixelValues = new ArrayList<Float>();
+		vectorPixelValues = new ArrayList<Float>();
 		
 		int j = 0;
 		while(j > -1) {
@@ -702,16 +715,12 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * <p>If final 'boundary points' are found to be incorrectly lying on, 
 	 * e.g. large scale image artefacts, adjustedLimit here probably needs 
 	 * further adjusting.</p>
+	 * 
 	 */
-	private void findBoundaries(ArrayList<Float>[] pixelValues) {
+	private void findBoundaries(final ArrayList<Float>[] pixelValues, int caseNum) {
 		
-		/* Some analysis possible on each vector */
-		this.boundarySteps = new int[pixelValues.length];
-		this.medianValues = new double[pixelValues.length];
-		this.boundaryDistances = new double[pixelValues.length];
+//		IJ.log("I am running findBoundaries");
 		
-		/* Ragged array of (double) pixel values for every vector (i) */
-		this.pxVals = new double[pixelValues.length][];
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
 			
@@ -728,9 +737,33 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				adjustedLimit = medianValues[i] * 1.25;
 			}
 			
-			boundarySteps[i] = boundaryLimiter(pxVals[i], adjustedLimit, (pxVals[i].length - 1), false);
+			int startPoint = 0;
+			
+			/* Drastically reduce work of boundaryLimiter by skipping down to the region of interest in 3D */
+			switch (caseNum) {
+				case 0 : {
+					startPoint = (pxVals[i].length - 1);
+				}	
+				case 1 : {
+					startPoint = (int) ((meanCoOrdDistance + sdCoOrdDistance * sd3DMult) / magnitudes[i]);
+					IJ.log("pxVals[i].length: " + pxVals[i].length + "; startPoint: " + startPoint + "");
+				}
+				case 2 : {
+					startPoint = (pxVals[i].length - 1);
+				}	
+			}
+			boundarySteps[i] = boundaryLimiter(pxVals[i], adjustedLimit, startPoint, false);
 			boundaryDistances[i] = boundarySteps[i] * magnitudes[i];
 		}
+
+//		Thread[] threads = Multithreader.newThreads();
+//		for (int thread = 0; thread < threads.length; thread++) {
+//			threads[thread] = new Thread(new Runnable() {
+//				public void run() {
+//				}
+//			});
+//		}
+//		Multithreader.startAndJoin(threads);
 	}
 	
 	
@@ -756,6 +789,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
 		
+//		IJ.log("I am running boundaryLimiter");
+		
 		int boundaryPosition = 0;
 		
 //		Arrays.sort(sampleAheadPc);
@@ -779,7 +814,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				if(i - pc3 > 0 && ((pxlValues[i - pc1] < limit && pxlValues[i - pc2] < limit) || (pxlValues[i - pc3] < limit))) {
 					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pc2), isMin);
 				}
-				else { break; }
+				break;
 			}
 		}
 		return boundaryPosition;
@@ -795,6 +830,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @return ArrayList<double[]> newCoOrdinates with new coordinates appended.
 	 */
 	private ArrayList<double[]> addNewCoOrdinatesToArrayList(ArrayList<double[]> newCoOrdinates, double bias_uZ) {
+		
+//		IJ.log("I am running addNewCoOrdinatesToArrayList");
 		
 		/* Fill, or add to, ArrayList of boundary coordinates */
 		for(int i = 0; i < this.boundarySteps.length; i++) {
@@ -818,6 +855,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @return
 	 */
 	private double[] coOrdinateDistances(ArrayList<double[]> coOrdinates) {
+		
+//		IJ.log("I am running coOrdinateDistances");
 		
 		this.coOrdDistances = new double[coOrdinates.size()];
 		
@@ -850,6 +889,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private void refineCoOrdinates(ArrayList<double[]> coOrdinates, int caseNum) {
 		
+//		IJ.log("I am running refineCoOrdinates");
+		
 		/* Do different things based on which run this is */
 		switch (caseNum) {
 		
@@ -872,10 +913,9 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			break;
 		}
 		
-		/* 3D relies upon 2D */
+		/* Refine 3D based upon 2D distances */
 		case 1 : {
 			
-			/* Refine based on 2D distances */
 			Iterator<double[]> itC = coOrdinates.iterator();
 			int i = 0;
 			while (itC.hasNext()) {
@@ -941,6 +981,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	public double[][] transposeArray(double[][] inputArray) {
 		
+//		IJ.log("I am running transposeArray");
+		
 		double[][] transposedArray = new double[inputArray[0].length][inputArray.length];
 		
 		/* Cycle through inputArray's rows, then columns */
@@ -998,6 +1040,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @return
 	 */
 	private ResultsTable fillResultsTable(String label, double[] dimensions, double[] deviations, boolean fitEllipsoid) {
+		
+//		IJ.log("I am running fillResultsTable");
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
