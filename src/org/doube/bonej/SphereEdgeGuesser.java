@@ -9,7 +9,11 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
 
 import org.doube.geometry.Centroid;
 import org.doube.geometry.FitEllipsoid;
@@ -20,6 +24,8 @@ import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ThresholdGuesser;
+
+import customnode.CustomPointMesh;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -32,8 +38,12 @@ import ij.gui.Plot;
 import ij.gui.WaitForUserDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
+import ij.plugin.Duplicator;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
+import ij.process.StackConverter;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 /**
  * <p>Aims to drastically reduce the complexity of, and time taken to, 
@@ -78,6 +88,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	private boolean useSliceCentroid = false;
 	/** Attempt to fit an ellipsoid rather than a sphere. Uses FitEllipsoid.yuryPetrov(points). */
 	private boolean fitEllipsoid = false;
+	/** When detecting bone edges, skip ahead if the current point looks like an artefact */
+	private boolean skipAhead = true;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -216,10 +228,11 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
 		gd.addCheckbox("Use recursion", doRecursion);
-		gd.addCheckbox("Show points", showPoints);
+		gd.addCheckbox("Show points from the middle run", showPoints);
 		gd.addCheckbox("Plot a vector's profile", doPlot);
 		gd.addCheckbox("Fit an ellipsoid instead of a sphere", fitEllipsoid);
-//		gd.addDialogListener();
+		gd.addCheckbox("Allow skipping ahead", skipAhead);
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if(gd.wasCanceled()) { return; }
 		this.numVectors = (int) gd.getNextNumber();
@@ -245,6 +258,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		this.showPoints = gd.getNextBoolean();
 		this.doPlot = gd.getNextBoolean();
 		this.fitEllipsoid = gd.getNextBoolean();
+		this.skipAhead = gd.getNextBoolean();
 		
 		if(fitEllipsoid) {
 			if(!ignoreCentroidDirection) {
@@ -273,7 +287,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			findCentroids(imp, min, max);
 		}
 		
-		findSphere(imp, runNum, numVectors, fitEllipsoid, ignoreCentroidDirection);
+		findSphere(imp, runNum, numVectors, sd2DMult, sd3DMult, fitEllipsoid, ignoreCentroidDirection);
 
 		/* Show statistical results */
 		fillResultsTable("stats", meanDimensions, sd, fitEllipsoid).show("Results");
@@ -295,7 +309,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			aPlot.show();
 		}
 		
-		
+		imp.flush();
 		return;
 	}
 	
@@ -377,6 +391,14 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * 				<br /> int, the number of vectors to project during each run.
 	 * 						If ignoreCentroidDirection is false, this number of 
 	 * 						vectors will actually be projected in both 2D and 3D.
+	 * @param sd2DMult
+	 * 				<br /> double. In 2D, refine coordinates by ignoring those 
+	 * 						further away than the mean distance + this multiple of 
+	 * 						the standard deviation distance.
+	 * @param sd3DMult
+	 * 				<br /> double. In 3D, refine coordinates by ignoring those 
+	 * 						further away than and closer than the mean distance +/- 
+	 * 						this multiple of the standard deviation distance.
 	 * @param fitEllipsoid
 	 * 				<br /> boolean, attempt to fit an ellipsoid instead of a sphere
 	 * 						(sphere is default, if this is false).
@@ -384,7 +406,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * 				<br /> boolean, use method of ignoring methods in the direction
 	 * 						of particular centroids.
 	 */
-	public void findSphere(ImagePlus imp, int runNum, int numVectors, boolean fitEllipsoid, boolean ignoreCentroidDirection) {
+	public void findSphere(ImagePlus imp, int runNum, int numVectors, double sd2DMult, double sd3DMult, boolean fitEllipsoid, boolean ignoreCentroidDirection) {
 		
 		/* Set up array of ImageProcessors for reference later */
 		ImageStack stack = imp.getStack();
@@ -407,6 +429,9 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		biases[0] = 0;			// Run 1: vectors in current slice only (2D)
 		biases[1] = 1;			// Run 2: 3D vectors
 		biases[2] = 1;			// Or: ignore vectors towards the centroid
+		
+		this.sd2DMult = sd2DMult;
+		this.sd3DMult = sd3DMult;
 		
 		if(fitEllipsoid) {
 			dimensions = new double[6];
@@ -497,7 +522,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			/* Copy to array */
 			this.coOrdArray = (double[][]) coOrdinates.toArray(new double[coOrdinates.size()][3]);
 			
-			if(showPoints) {
+			/* Just show points from one run */
+			if(showPoints && r == (int) Math.round(runNum / 2)) {
 				/* Show refined points */
 				annotateImage(imp, coOrdArray).show();
 			}
@@ -578,7 +604,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 					}
 				}
 			}
-		
+			
+			IJ.showProgress(r, runNum - 1);
 		}	// end multiple runs
 		
 		/* Math for stats */
@@ -643,7 +670,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private ArrayList<Float>[] projectVectors(int numVectors, final double bias_uZ) {
 		
-//		IJ.log("I am running projectVectors");
+		IJ.showStatus("Projecting vectors...");
 		
 		/* Create array of random 3D unit vectors */
 		this.unitVectors = Vectors.random3D(numVectors);
@@ -678,7 +705,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private ArrayList<Float> getPixelsAlongVector(double uX, double uY, double uZ) {
 		
-//		IJ.log("I am running getPixelsAlongVector");
+		IJ.showStatus("Getting pixel values...");
 		
 		/* Use ArrayList as we don't know how long each line (j) will be.
 		 * Unfortunately, ArrayList can only be filled with Objects. */
@@ -719,7 +746,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private void findBoundaries(final ArrayList<Float>[] pixelValues, int caseNum) {
 		
-//		IJ.log("I am running findBoundaries");
+		IJ.showStatus("Finding boundaries...");
 		
 		for(int i = 0; i < pxVals.length; i++) {
 			pxVals[i] = new double[pixelValues[i].size()];
@@ -746,7 +773,6 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				}	
 				case 1 : {
 					startPoint = (int) ((meanCoOrdDistance + sdCoOrdDistance * sd3DMult) / magnitudes[i]);
-					IJ.log("pxVals[i].length: " + pxVals[i].length + "; startPoint: " + startPoint + "");
 				}
 				case 2 : {
 					startPoint = (pxVals[i].length - 1);
@@ -789,7 +815,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private int boundaryLimiter(double[] pxlValues, double limit, int startPoint, boolean isMin) {
 		
-//		IJ.log("I am running boundaryLimiter");
+//		IJ.log("Running boundaryLimiter");
 		
 		int boundaryPosition = 0;
 		
@@ -803,7 +829,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			if(isMin && pxlValues[i] < limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - pc3 > 0 && ((pxlValues[i - pc1] > limit && pxlValues[i - pc2] > limit) || (pxlValues[i - pc3] > limit))) {
+				if(this.skipAhead && i - pc3 > 0 && ((pxlValues[i - pc1] > limit && pxlValues[i - pc2] > limit) || (pxlValues[i - pc3] > limit))) {
 					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pc2), isMin);
 				}
 				break;
@@ -811,7 +837,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			else if(!isMin && pxlValues[i] > limit) {
 				boundaryPosition = i;
 				/* Look ahead */
-				if(i - pc3 > 0 && ((pxlValues[i - pc1] < limit && pxlValues[i - pc2] < limit) || (pxlValues[i - pc3] < limit))) {
+				if(this.skipAhead && i - pc3 > 0 && ((pxlValues[i - pc1] < limit && pxlValues[i - pc2] < limit) || (pxlValues[i - pc3] < limit))) {
 					boundaryPosition = boundaryLimiter(pxlValues, limit, (i - pc2), isMin);
 				}
 				break;
@@ -831,7 +857,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private ArrayList<double[]> addNewCoOrdinatesToArrayList(ArrayList<double[]> newCoOrdinates, double bias_uZ) {
 		
-//		IJ.log("I am running addNewCoOrdinatesToArrayList");
+		IJ.showStatus("Adding coordinates to ArrayList...");
 		
 		/* Fill, or add to, ArrayList of boundary coordinates */
 		for(int i = 0; i < this.boundarySteps.length; i++) {
@@ -856,7 +882,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private double[] coOrdinateDistances(ArrayList<double[]> coOrdinates) {
 		
-//		IJ.log("I am running coOrdinateDistances");
+		IJ.showStatus("Calculating distances...");
 		
 		this.coOrdDistances = new double[coOrdinates.size()];
 		
@@ -889,7 +915,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private void refineCoOrdinates(ArrayList<double[]> coOrdinates, int caseNum) {
 		
-//		IJ.log("I am running refineCoOrdinates");
+		IJ.showStatus("Refining coordinates...");
 		
 		/* Do different things based on which run this is */
 		switch (caseNum) {
@@ -926,7 +952,6 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				}
 				i++;
 			}
-			
 			break;
 		}
 		
@@ -961,10 +986,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 				
 				i++;
 			}
-			
 			break;
 		}
-		
 		
 		default: break;
 		}
@@ -981,7 +1004,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	public double[][] transposeArray(double[][] inputArray) {
 		
-//		IJ.log("I am running transposeArray");
+//		IJ.log("Running transposeArray");
 		
 		double[][] transposedArray = new double[inputArray[0].length][inputArray.length];
 		
@@ -997,14 +1020,21 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	
 	
 	/**
-	 * Draw points used to calculate the sphere on a copy of the original image.
-	 * Modified from SliceGeometry.
+	 * Draw points used to calculate the sphere on a copy of the original image, 
+	 * both in 2D and 3D. Modified from SliceGeometry.
 	 * 
 	 * @param imp
 	 * @param coOrdinateArray double[n][3] containing n (x, y, z) coordinates.
 	 * @return ImagePlus with points drawn
 	 */
 	private ImagePlus annotateImage(ImagePlus imp, double[][] coOrdinateArray) {
+		
+		ImagePlus points3Dimp = new Duplicator().run(imp, 1, imp.getImageStackSize());
+		List<Point3f> points3D = new ArrayList<Point3f>();
+		// initialise and show the 3D universe
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
 		int h = stack.getHeight();
@@ -1019,11 +1049,35 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 							(int) Math.floor(coOrdinateArray[i][1]));
 					annIP.drawOval((int) Math.floor(coOrdinateArray[i][0]), 
 							(int) Math.floor(coOrdinateArray[i][1]), 4, 4);
+					
+					/* Populate 3D with points */
+					Point3f pt = new Point3f();
+					pt.x = (float) (coOrdinateArray[i][0] * vW);
+					pt.y = (float) (coOrdinateArray[i][1] * vH);
+					pt.z = (float) (coOrdinateArray[i][2] * vD);
+					points3D.add(pt);
 				}
 			}
 			
 			annStack.addSlice(stack.getSliceLabel(s), annIP);
 		}
+		
+		CustomPointMesh mesh = new CustomPointMesh(points3D);
+		mesh.setPointSize(5.0f);
+		float red = 0.0f;
+		float green = 0.5f;
+		float blue = 1.0f;
+		Color3f cColour = new Color3f(red, green, blue);
+		mesh.setColor(cColour);
+		try {
+			univ.addCustomMesh(mesh, "Centroid").setLocked(true);
+			new StackConverter(points3Dimp).convertToGray8();
+			Content c = univ.addVoltex(points3Dimp);
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+		}
+		
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		ann.setCalibration(imp.getCalibration());
 		return ann;
@@ -1041,7 +1095,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	private ResultsTable fillResultsTable(String label, double[] dimensions, double[] deviations, boolean fitEllipsoid) {
 		
-//		IJ.log("I am running fillResultsTable");
+//		IJ.showStatus("Filling results table...");
 		
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.incrementCounter();
@@ -1076,6 +1130,9 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @return
 	 */
 	public ImagePlus annotateCentre(ImagePlus imp, double[] dimensions) {
+		
+		IJ.showStatus("Drawing points...");
+		
 		ImageStack stack = imp.getImageStack();
 		int w = stack.getWidth();
 		int h = stack.getHeight();
