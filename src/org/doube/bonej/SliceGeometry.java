@@ -369,9 +369,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * For external calculation of Feret Diameters for each slice.
 	 * Requirements are this.endSlice, this.al, this.vW and this.vH.
 	 */
-	public void setParameters(ImagePlus imp) {
-		this.startSlice = 1;
-		this.endSlice = imp.getImageStackSize();
+	public void setParameters(ImagePlus imp, int startSlice, int endSlice) {
+		this.startSlice = startSlice;
+		this.endSlice = endSlice;
 		this.al = imp.getStackSize() + 1;
 		this.vW = imp.getCalibration().pixelWidth;
 		this.vH = imp.getCalibration().pixelHeight;

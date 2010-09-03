@@ -169,7 +169,7 @@ public class ShaftGuesser implements PlugIn {
 		
 		/* Get values from SliceGeometry */
 		SliceGeometry sg = new SliceGeometry();
-		sg.setParameters(imp);
+		sg.setParameters(imp, 1, imp.getImageStackSize());
 		sg.calculateCentroids(imp, min, max);
 		sg.roiMeasurements(imp, min, max);
 		sg.calculateMoments(imp, min, max);
@@ -358,6 +358,24 @@ public class ShaftGuesser implements PlugIn {
 	public int[] getShaftPosition() {
 		return this.shaftPosition;
 	}
+	
+	
+	private void reverseShaftPosition() {
+		
+		GenericDialog gd = new GenericDialog("Message");
+		gd.addMessage("It looks as though the proximal and distal ends of\n"
+				+ "this bone are switched. Switch respective results?");
+		gd.showDialog();
+		if(gd.wasCanceled()) { return; }
+		
+		int prox = shaftPosition[1];
+		int dist = shaftPosition[0];
+		
+		this.shaftPosition[0] = prox;
+		this.shaftPosition[1] = dist;
+	}
+	
+	
 	
 	/**
 	 * Estimates at which slices the shaft begins and ends, based on numerical limits.

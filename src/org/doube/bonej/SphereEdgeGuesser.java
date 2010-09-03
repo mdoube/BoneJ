@@ -68,9 +68,13 @@ import ij3d.Image3DUniverse;
  */
 public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener {
 	
+	private ImagePlus imp;
 	private ImageProcessor[] sliceProcessors = null;
 	private ImageCanvas canvas;
 	private Calibration cal;
+	private String pixUnits;
+	private double[] thresholds;
+	private double min, max;
 	
 	/** Show the final points used to generate the sphere on a new image */
 	private boolean showPoints = false;
@@ -79,7 +83,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	/** Use the centre found from run 1 as the initial point for run 2 (etc.) */
 	private boolean doRecursion = true;
 	/** Use method of looking away from the centroid of the bone */
-	private boolean ignoreCentroidDirection = false;
+	public boolean ignoreCentroidDirection = false;
 	/** For HU units (copied from Neck Shaft Angle) */
 	private boolean fieldUpdated = false;
 	/** Exclude vectors pointing towards the centroid of the entire bone */
@@ -87,9 +91,11 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	/** Also exclude vectors pointing towards centroid of slice containing initialPoint */
 	private boolean useSliceCentroid = false;
 	/** Attempt to fit an ellipsoid rather than a sphere. Uses FitEllipsoid.yuryPetrov(points). */
-	private boolean fitEllipsoid = false;
+	public boolean fitEllipsoid = false;
 	/** When detecting bone edges, skip ahead if the current point looks like an artefact */
 	private boolean skipAhead = true;
+	/** Show results from every run */
+	private boolean showAllResults = true;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -111,19 +117,19 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	/** Image dimensions in 'unit's */
 	private int d, h, w;
 	/** Number of times to re-run the code */
-	private int runNum = 100;
+	public int runNum = 100;
 	/** Number of vectors to create */
-	private int numVectors = 500;
+	public int numVectors = 500;
 	/** Weight uZ by this factor */
 	private double bias_uZ = 0;
 	/** Multiple of standard deviation from the mean, within which the 3D points 
 	 * may fluctuate their values +/-. If the code finds too few points, increase 
 	 * this value. Default is 1; sometimes set to 2. */
-	private double sd3DMult = 1;
+	public double sd3DMult = 1;
 	/** Multiple of standard deviation from the mean to subtract from the mean 
 	 * in order to limit the radius of the points in 2D. Default is 0.3: increase 
 	 * to restrict rules further. */
-	private double sd2DMult = 0.3;
+	public double sd2DMult = 0.3;
 	
 	/** Pixel values along a vector. Expands for vector length. */
 	private ArrayList<Float> vectorPixelValues;
@@ -181,98 +187,11 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	
 	public void run(String arg) {
 		
-		/* Copied from SphereFitter */
-		if (!ImageCheck.checkEnvironment())
-			return;
-		final ImagePlus imp = IJ.getImage();
-		if (null == imp) {
-			IJ.noImage();
-			return;
-		}
-//		ImageCheck ic = new ImageCheck();
-//		if (ic.isMultiSlice(imp)) {
-//			IJ.error("Stack required for sphere fitting");
-//			return;
-//		}
-		
-		ImageWindow win = imp.getWindow();
-		this.canvas = win.getCanvas();
-		cal = imp.getCalibration();
-		
-		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
-		double min = thresholds[0];
-		double max = thresholds[1];
-		String pixUnits;
-		if (ImageCheck.huCalibrated(imp)) {
-			pixUnits = "HU";
-			fieldUpdated = true;
-		} else
-			pixUnits = "grey";
-		
-		/* Optionally show a dialogue */
-		GenericDialog gd = new GenericDialog("Options");
-		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
-		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
-		gd.addMessage("Sphere fitting: ");
-		gd.addNumericField("Limit 2D: mean - ", sd2DMult, 2, 5, "standard deviations");
-		gd.addNumericField("Limit 3D: mean +/-", sd3DMult, 2 , 5, "standard deviations");
-//		gd.addNumericField("Sample ahead along vector by", sampleAheadPc[0], 0, 4, "% ");
-//		gd.addNumericField("and", sampleAheadPc[1], 0, 4, "% ");
-//		gd.addNumericField("or", sampleAheadPc[2], 0, 4, "% ");
-		gd.addCheckbox("Vectors from initial point avoid...", ignoreCentroidDirection);
-		gd.addNumericField("cone +/-", excludeWholeC, 2 , 5, "pi radians from...");
-		gd.addCheckbox("...whole bone centroid", useBoneCentroid);
-		gd.addNumericField("cone +/-", excludeSliceC, 2 , 5, "pi radians from...");
-		gd.addCheckbox("...initial slice centroid", useSliceCentroid);
-		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
-		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
-		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
-		gd.addCheckbox("Use recursion", doRecursion);
-		gd.addCheckbox("Show points from the middle run", showPoints);
-		gd.addCheckbox("Plot a vector's profile", doPlot);
-		gd.addCheckbox("Fit an ellipsoid instead of a sphere", fitEllipsoid);
-		gd.addCheckbox("Allow skipping ahead", skipAhead);
-		gd.addDialogListener(this);
-		gd.showDialog();
-		if(gd.wasCanceled()) { return; }
-		this.numVectors = (int) gd.getNextNumber();
-		this.runNum = (int) gd.getNextNumber();
-		this.sd2DMult = gd.getNextNumber();
-		this.sd3DMult = gd.getNextNumber();
-//		this.sampleAheadPc[0] = gd.getNextNumber();
-//		this.sampleAheadPc[1] = gd.getNextNumber();
-//		this.sampleAheadPc[2] = gd.getNextNumber();
-		this.ignoreCentroidDirection = gd.getNextBoolean();
-		this.useBoneCentroid = gd.getNextBoolean();
-		this.excludeWholeC = gd.getNextNumber();
-		this.useSliceCentroid = gd.getNextBoolean();
-		this.excludeSliceC = gd.getNextNumber();
-		boolean isHUCalibrated = gd.getNextBoolean();
-		if (isHUCalibrated) {
-			min = cal.getRawValue(min);
-			max = cal.getRawValue(max);
-		}
-		min = gd.getNextNumber();
-		max = gd.getNextNumber();
-		this.doRecursion = gd.getNextBoolean();
-		this.showPoints = gd.getNextBoolean();
-		this.doPlot = gd.getNextBoolean();
-		this.fitEllipsoid = gd.getNextBoolean();
-		this.skipAhead = gd.getNextBoolean();
-		
-		if(fitEllipsoid) {
-			if(!ignoreCentroidDirection) {
-				IJ.log("Switching to centroid-based method.");
-				ignoreCentroidDirection = true;
-			}
-			if(doRecursion) {
-				IJ.log("Switching off recursion.");
-				doRecursion = false;
-			}
-		}
+		/* Show a dialogue */
+		getManualSettings();
 		
 		/* User clicks to set initial point */
-		getInitialPointUser(canvas);
+		getInitialPointUser(imp);
 
 		/* Confirm initial point and measurements */
 //		GenericDialog gd1 = new GenericDialog("Info");
@@ -325,6 +244,104 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	}
 	
 	/**
+	 * Set everything manually using the GenericDialog in this method.
+	 */
+	public void getManualSettings() {
+		
+		/* Copied from SphereFitter */
+		if (!ImageCheck.checkEnvironment())
+			return;
+		final ImagePlus imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+//		ImageCheck ic = new ImageCheck();
+//		if (ic.isMultiSlice(imp)) {
+//			IJ.error("Stack required for sphere fitting");
+//			return;
+//		}
+		
+		ImageWindow win = imp.getWindow();
+		this.canvas = win.getCanvas();
+		cal = imp.getCalibration();
+		
+		this.thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		this.min = thresholds[0];
+		this.max = thresholds[1];
+		
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
+		
+		GenericDialog gd = new GenericDialog("SphereEdgeGuesser Options");
+		gd.addNumericField("Create", numVectors, 0, 4, "vectors");
+		gd.addNumericField("Run (to refine)", runNum, 0, 3, "times");
+		gd.addMessage("Sphere fitting: ");
+		gd.addNumericField("Limit 2D: mean - ", sd2DMult, 2, 5, "standard deviations");
+		gd.addNumericField("Limit 3D: mean +/-", sd3DMult, 2 , 5, "standard deviations");
+//		gd.addNumericField("Sample ahead along vector by", sampleAheadPc[0], 0, 4, "% ");
+//		gd.addNumericField("and", sampleAheadPc[1], 0, 4, "% ");
+//		gd.addNumericField("or", sampleAheadPc[2], 0, 4, "% ");
+		gd.addCheckbox("Vectors from initial point avoid...", ignoreCentroidDirection);
+		gd.addNumericField("cone +/-", excludeWholeC, 2 , 5, "pi radians from...");
+		gd.addCheckbox("...whole bone centroid", useBoneCentroid);
+		gd.addNumericField("cone +/-", excludeSliceC, 2 , 5, "pi radians from...");
+		gd.addCheckbox("...initial slice centroid", useSliceCentroid);
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addNumericField("Bone Min:", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Bone Max:", max, 1, 6, pixUnits + " ");
+		gd.addCheckbox("Use recursion", doRecursion);
+		gd.addCheckbox("Show points from the middle run", showPoints);
+		gd.addCheckbox("Plot a vector's profile", doPlot);
+		gd.addCheckbox("Fit an ellipsoid instead of a sphere", fitEllipsoid);
+		gd.addCheckbox("Allow skipping ahead", skipAhead);
+		gd.addDialogListener(this);
+		gd.showDialog();
+		if(gd.wasCanceled()) { return; }
+		this.numVectors = (int) gd.getNextNumber();
+		this.runNum = (int) gd.getNextNumber();
+		this.sd2DMult = gd.getNextNumber();
+		this.sd3DMult = gd.getNextNumber();
+//		this.sampleAheadPc[0] = gd.getNextNumber();
+//		this.sampleAheadPc[1] = gd.getNextNumber();
+//		this.sampleAheadPc[2] = gd.getNextNumber();
+		this.ignoreCentroidDirection = gd.getNextBoolean();
+		this.useBoneCentroid = gd.getNextBoolean();
+		this.excludeWholeC = gd.getNextNumber();
+		this.useSliceCentroid = gd.getNextBoolean();
+		this.excludeSliceC = gd.getNextNumber();
+		boolean isHUCalibrated = gd.getNextBoolean();
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
+		min = gd.getNextNumber();
+		max = gd.getNextNumber();
+		this.doRecursion = gd.getNextBoolean();
+		this.showPoints = gd.getNextBoolean();
+		this.doPlot = gd.getNextBoolean();
+		this.fitEllipsoid = gd.getNextBoolean();
+		this.skipAhead = gd.getNextBoolean();
+		
+		/* Avoid using settings that don't work well together */
+		if(fitEllipsoid) {
+			if(!ignoreCentroidDirection) {
+				IJ.log("Switching to centroid-based method.");
+				ignoreCentroidDirection = true;
+			}
+			if(doRecursion) {
+				IJ.log("Switching off recursion.");
+				doRecursion = false;
+			}
+		}
+	}
+	
+	
+	
+	/**
 	 * Run this method to pop up a dialog and set up a MouseListener so the user
 	 * can set an initial point from which to project vectors.
 	 * 
@@ -332,7 +349,9 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @param y
 	 * @param z
 	 */
-	public void getInitialPointUser(ImageCanvas canvas) {
+	public void getInitialPointUser(ImagePlus imp) {
+		
+		ImageCanvas canvas = imp.getWindow().getCanvas();
 		
 		// required for mousePressed to work
 		this.canvas = canvas;
