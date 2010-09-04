@@ -96,6 +96,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	private boolean skipAhead = true;
 	/** Show results from every run */
 	private boolean showAllResults = true;
+	/** Show statistical results from all the runs */
+	private boolean showFinalResults = true;
 	
 	/** Linear unit of measure */
 	private String units;
@@ -207,9 +209,6 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		}
 		
 		findSphere(imp, runNum, numVectors, sd2DMult, sd3DMult, fitEllipsoid, ignoreCentroidDirection);
-
-		/* Show statistical results */
-		fillResultsTable("stats", meanDimensions, sd, fitEllipsoid).show("Results");
 		
 		annotateCentre(imp, meanDimensions).show();
 		
@@ -248,10 +247,10 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	public void getManualSettings() {
 		
-		/* Copied from SphereFitter */
+		/* Modified from SphereFitter */
 		if (!ImageCheck.checkEnvironment())
 			return;
-		final ImagePlus imp = IJ.getImage();
+		this.imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
 			return;
@@ -298,6 +297,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		gd.addCheckbox("Plot a vector's profile", doPlot);
 		gd.addCheckbox("Fit an ellipsoid instead of a sphere", fitEllipsoid);
 		gd.addCheckbox("Allow skipping ahead", skipAhead);
+		gd.addCheckbox("Show results from each run", showAllResults);
+		gd.addCheckbox("Show statistical results", showFinalResults);
 		gd.addDialogListener(this);
 		gd.showDialog();
 		if(gd.wasCanceled()) { return; }
@@ -325,6 +326,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		this.doPlot = gd.getNextBoolean();
 		this.fitEllipsoid = gd.getNextBoolean();
 		this.skipAhead = gd.getNextBoolean();
+		this.showAllResults = gd.getNextBoolean();
+		this.showFinalResults = gd.getNextBoolean();
 		
 		/* Avoid using settings that don't work well together */
 		if(fitEllipsoid) {
@@ -351,10 +354,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 */
 	public void getInitialPointUser(ImagePlus imp) {
 		
-		ImageCanvas canvas = imp.getWindow().getCanvas();
-		
 		// required for mousePressed to work
-		this.canvas = canvas;
+		this.canvas = imp.getWindow().getCanvas();
 		
 		// remove stale MouseListeners
 		MouseListener[] l = canvas.getMouseListeners();
@@ -596,7 +597,9 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			
 			
 			/* Show results for each run */
-			fillResultsTable("run_" + r + "", dimensions, new double[dimensions.length], fitEllipsoid).show("Results");
+			if(showAllResults) {
+				fillResultsTable("run_" + r + "", dimensions, new double[dimensions.length], fitEllipsoid).show("Results");
+			}
 			
 			allDimensions[r] = dimensions;
 			
@@ -635,6 +638,11 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 		for(int i = 0; i < dimensions.length; i++) {
 			meanDimensions[i] = Centroid.getCentroid(allDimensionsT[i]);
 			sd[i] = Math.sqrt(ShaftGuesser.variance(allDimensionsT[i]));
+		}
+		
+		if(showFinalResults) {
+			/* Show statistical results */
+			fillResultsTable("stats", meanDimensions, sd, fitEllipsoid).show("Results");
 		}
 	}
 	
@@ -986,7 +994,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			int i = 0;
 			while (itD.hasNext()) {
 				double[] d = itD.next();
-				if(Math.acos(uCW[0] * unitVectors[i][0]
+				if(this.useBoneCentroid && Math.acos(uCW[0] * unitVectors[i][0]
 				            + uCW[1] * unitVectors[i][1] 
 				            + uCW[2] * unitVectors[i][2]) > Math.PI * excludeWholeC
 				            || this.useSliceCentroid 

@@ -42,6 +42,7 @@ public class ShaftGuesser implements PlugIn {
 	/** Looks for a longer diaphysis if true */
 	private boolean beGenerous;
 	private boolean doGraph = false;
+	private boolean showResults = true;
 	
 	private int al, startSlice, endSlice, ss, iss, boneID;
 	/** Smooth over this number of slices. Initially set to 1/50th of stack size */
@@ -111,6 +112,11 @@ public class ShaftGuesser implements PlugIn {
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
+		boolean isHUCalibrated = ImageCheck.huCalibrated(imp);
+		if (isHUCalibrated) {
+			min = cal.getRawValue(min);
+			max = cal.getRawValue(max);
+		}
 		
 		this.trabMin = vW * imp.getWidth() / 200;
 		this.trabMax = trabMin * 40;
@@ -130,7 +136,9 @@ public class ShaftGuesser implements PlugIn {
 		gd.addNumericField("Min particle size", trabMin, 0, 3, units);
 		gd.addNumericField("Max particle size", trabMax, 0, 3, units);
 		gd.addCheckbox("Graph output", doGraph);
+		gd.addCheckbox("Show results table", showResults);
 		gd.showDialog();
+		if(gd.wasCanceled()) { return; }
 		
 		this.bone = gd.getNextChoice();
 		this.boneID = BoneList.guessBone(bone);
@@ -145,6 +153,7 @@ public class ShaftGuesser implements PlugIn {
 		this.trabMax = gd.getNextNumber();
 		this.trabRange = trabMin + "-" + trabMax;
 		this.doGraph = gd.getNextBoolean();
+		this.showResults = gd.getNextBoolean();
 		if (gd.wasCanceled())
 			return;
 		
@@ -293,39 +302,41 @@ public class ShaftGuesser implements PlugIn {
 		this.shaftLength = (shaftPosition[1] - shaftPosition[0]) * vD;
 		this.boneLength = this.iss * vD;
 		
-		ResultsTable rt = ResultsTable.getResultsTable();
-		rt.incrementCounter();
-		rt.addLabel("Title", title);
-		rt.addValue("Bone Code", boneID);
-		
-		rt.addValue("Median Eccentricity", mEccentricity);
-		rt.addValue("Median Feret Max", mFeretMax);
-		rt.addValue("Median Feret Min", mFeretMin);
-		rt.addValue("Median Perimeter", mPerimeter);
-		rt.addValue("Median Mean Cortical Thickness (2D)", mMeanCort);
-		
-		rt.addValue("Shaft start slice (Perim)", shaftPositions[0][0]);
-		rt.addValue("Shaft end slice (Perim)", shaftPositions[0][1]);
-		rt.addValue("Shaft start gradient (Perim)", gPerimeter[shaftPositions[0][0]]);
-		rt.addValue("Shaft end gradient (Perim)", gPerimeter[shaftPositions[0][1]]);
-		
-		rt.addValue("Shaft start slice (Ecc)", shaftPositions[1][0]);
-		rt.addValue("Shaft end slice (Ecc)", shaftPositions[1][1]);
-		rt.addValue("Shaft start gradient (Ecc)", gEccentricity[shaftPositions[1][0]]);
-		rt.addValue("Shaft end gradient (Ecc)", gEccentricity[shaftPositions[1][1]]);
-		
-		rt.addValue("Shaft start slice (Cort)", shaftPositions[2][0]);
-		rt.addValue("Shaft end slice (Cort)", shaftPositions[2][1]);
-		rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPositions[2][0]]);
-		rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPositions[2][1]]);
-		
-		rt.addValue("Proximal shaft end", shaftPosition[0]);
-		rt.addValue("Distal shaft end", shaftPosition[1]);
-		rt.addValue("Diaphysis length (" + units + ")", shaftLength);
-		rt.addValue("Bone length (" + units + ")", boneLength);
-		rt.addValue("Diaphysis proportion", shaftLength / boneLength);
-		
-		rt.show("Results");
+		if(showResults) {
+			ResultsTable rt = ResultsTable.getResultsTable();
+			rt.incrementCounter();
+			rt.addLabel("Title", title);
+			rt.addValue("Bone Code", boneID);
+			
+			rt.addValue("Proximal shaft end", shaftPosition[0]);
+			rt.addValue("Distal shaft end", shaftPosition[1]);
+			rt.addValue("Diaphysis length (" + units + ")", shaftLength);
+			rt.addValue("Bone length (" + units + ")", boneLength);
+			rt.addValue("Diaphysis proportion", shaftLength / boneLength);
+			
+			rt.addValue("Median Eccentricity", mEccentricity);
+			rt.addValue("Median Feret Max", mFeretMax);
+			rt.addValue("Median Feret Min", mFeretMin);
+			rt.addValue("Median Perimeter", mPerimeter);
+			rt.addValue("Median Mean Cortical Thickness (2D)", mMeanCort);
+			
+			rt.addValue("Shaft start slice (Perim)", shaftPositions[0][0]);
+			rt.addValue("Shaft end slice (Perim)", shaftPositions[0][1]);
+			rt.addValue("Shaft start gradient (Perim)", gPerimeter[shaftPositions[0][0]]);
+			rt.addValue("Shaft end gradient (Perim)", gPerimeter[shaftPositions[0][1]]);
+			
+			rt.addValue("Shaft start slice (Ecc)", shaftPositions[1][0]);
+			rt.addValue("Shaft end slice (Ecc)", shaftPositions[1][1]);
+			rt.addValue("Shaft start gradient (Ecc)", gEccentricity[shaftPositions[1][0]]);
+			rt.addValue("Shaft end gradient (Ecc)", gEccentricity[shaftPositions[1][1]]);
+			
+			rt.addValue("Shaft start slice (Cort)", shaftPositions[2][0]);
+			rt.addValue("Shaft end slice (Cort)", shaftPositions[2][1]);
+			rt.addValue("Shaft start gradient (Cort)", gMeanCort[shaftPositions[2][0]]);
+			rt.addValue("Shaft end gradient (Cort)", gMeanCort[shaftPositions[2][1]]);
+			
+			rt.show("Results");
+		}
 		
 		if(doGraph) {
 			
@@ -353,6 +364,8 @@ public class ShaftGuesser implements PlugIn {
 			Plot gMeanCortPlot = new Plot("Gradient Mean Cort Thick (2D)", "Slice", "Mean Cort Thickness", this.slices, this.gMeanCort);
 			gMeanCortPlot.show();
 		}
+		
+		return;
 	}
 	
 	public int[] getShaftPosition() {
@@ -476,8 +489,6 @@ public class ShaftGuesser implements PlugIn {
 	 * @return list of numbers of trabecular particles, within the given range, per slice.
 	 */
 	private double[] quanitfyTrabeculae(ImagePlus imp, double trabMin, double trabMax) {
-		
-		
 		
 		double[] trabList = new double[imp.getStackSize()];
 		

@@ -391,6 +391,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	public boolean[] getEmptySlices() {
 		return this.emptySlices;
 	}
+	public double[][] getSliceCentroids() {
+		return this.sliceCentroids;
+	}
 
 	/**
 	 * Display principal axes on a 3D rendered version of the image
