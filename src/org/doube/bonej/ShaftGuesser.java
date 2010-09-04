@@ -659,4 +659,26 @@ public class ShaftGuesser implements PlugIn {
 		double variance = ssdm / a.length;
 		return variance;
 	}
+	
+	
+	/**
+	 * Find the variance of each column in a double[][] a[n][i] (e.g. the respective variances of x, y and z in a[n][3]).
+	 * 
+	 * @param a
+	 * @return
+	 */
+	public static double[] variance(double[][] a) {
+		
+		double[][] b = SphereEdgeGuesser.transposeArray(a);
+		
+		double[] c = new double[b[0].length];
+		
+		for(int i = 0; i < b[0].length; i++) {
+			
+			c[i] = variance(b[i]);
+			
+		}
+		
+		return c;
+	}
 }

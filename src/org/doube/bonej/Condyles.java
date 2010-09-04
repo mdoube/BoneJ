@@ -9,6 +9,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.gui.WaitForUserDialog;
+import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 
@@ -29,6 +30,15 @@ public class Condyles implements PlugIn {
 	/** The mean cartesian coordinates x,y,z of the centroids of all the ellipsoids found */
 	double[] meanCentroid;
 	
+	/** The mean radii of all the ellipsoids found */
+	double[] meanRadii;
+	
+	/** The volume of the mean ellipsoid, in 'unit's */
+	double meanVolume;
+	
+	/** The standard deviations of the radii */
+	double[] sdRadii = new double[3];
+	
 	public void run(String arg) {
 		
 		/* Modified from SphereFitter */
@@ -42,7 +52,31 @@ public class Condyles implements PlugIn {
 		
 		manualOptions();
 		Object[][] ellipsoids = getEllipsoids(imp, numEllipsoids);
-		meanCentroid = findMeans(ellipsoids);
+		
+		Object[] properties = findMeans(ellipsoids);
+		
+		meanCentroid = (double[]) properties[0];
+		meanRadii = (double[]) properties[1];
+		meanVolume = 4/3 * meanRadii[0] * meanRadii[1] * meanRadii[2] * Math.PI;
+		
+		sdRadii[0] = Math.sqrt(meanRadii[0]);
+		sdRadii[1] = Math.sqrt(meanRadii[1]);
+		sdRadii[2] = Math.sqrt(meanRadii[2]);
+		
+		
+		ResultsTable rt = ResultsTable.getResultsTable();
+		rt.incrementCounter();
+		rt.addValue("Centroid_x", meanCentroid[0]);
+		rt.addValue("Centroid_y", meanCentroid[1]);
+		rt.addValue("Centroid_z", meanCentroid[2]);
+		rt.addValue("Radius_a_(mm)", meanRadii[0]);
+		rt.addValue("Radius_b_(mm)", meanRadii[1]);
+		rt.addValue("Radius_c_(mm)", meanRadii[2]);
+		rt.addValue("SD rad_a_(mm)", sdRadii[0]);
+		rt.addValue("SD rad_b_(mm)", sdRadii[1]);
+		rt.addValue("SD rad_c_(mm)", sdRadii[2]);
+		rt.addValue("Volume_(mm^3)", meanVolume);
+		rt.show("Results");
 		
 		IJ.log("Mean centroid x,y,z: " + meanCentroid[0] + "; " + meanCentroid[1] + "; " + meanCentroid[2] + "; ");
 		
@@ -127,7 +161,14 @@ public class Condyles implements PlugIn {
 		return ellipsoids;
 	}
 	
-	public double[] findMeans(Object[][] ellipsoids) {
+	/**
+	 * Find the mean centroid and radii of several ellipsoids, as well as the 
+	 * standard deviations on the radii.
+	 * 
+	 * @param ellipsoids
+	 * @return
+	 */
+	public Object[] findMeans(Object[][] ellipsoids) {
 		
 		double[][] ellipseCentroids = new double[ellipsoids.length][3];
 		double[][] ellipseRadii = new double[ellipsoids.length][3];
@@ -140,12 +181,22 @@ public class Condyles implements PlugIn {
 		}
 		
 		double[] centroid = Centroid.getCentroid(ellipseCentroids);
+		double[] radii = Centroid.getCentroid(ellipseRadii);
+		double[] sdR = ShaftGuesser.variance(ellipseRadii);
 		
-		return centroid;
+		Object[] properties = new Object[3];
+		properties[0] = centroid;
+		properties[1] = radii;
+		properties[2] = sdR;
+		
+		return properties;
 	}
 	
 	public double[] getMeanCentroid() {
 		return this.meanCentroid;
+	}
+	public double[] getMeanRadii() {
+		return this.meanRadii;
 	}
 	
 	private void showAxes3D() {
