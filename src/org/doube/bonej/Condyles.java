@@ -51,32 +51,19 @@ public class Condyles implements PlugIn {
 		}
 		
 		manualOptions();
-		Object[][] ellipsoids = getEllipsoids(imp, numEllipsoids);
+		Object[][] ellipsoids1 = getEllipsoids(imp, numEllipsoids);
 		
-		Object[] properties = findMeans(ellipsoids);
+		Object[] properties1 = findMeans(ellipsoids1);
 		
-		meanCentroid = (double[]) properties[0];
-		meanRadii = (double[]) properties[1];
+		meanCentroid = (double[]) properties1[0];
+		meanRadii = (double[]) properties1[1];
 		meanVolume = 4/3 * meanRadii[0] * meanRadii[1] * meanRadii[2] * Math.PI;
 		
 		sdRadii[0] = Math.sqrt(meanRadii[0]);
 		sdRadii[1] = Math.sqrt(meanRadii[1]);
 		sdRadii[2] = Math.sqrt(meanRadii[2]);
 		
-		
-		ResultsTable rt = ResultsTable.getResultsTable();
-		rt.incrementCounter();
-		rt.addValue("Centroid_x", meanCentroid[0]);
-		rt.addValue("Centroid_y", meanCentroid[1]);
-		rt.addValue("Centroid_z", meanCentroid[2]);
-		rt.addValue("Radius_a_(mm)", meanRadii[0]);
-		rt.addValue("Radius_b_(mm)", meanRadii[1]);
-		rt.addValue("Radius_c_(mm)", meanRadii[2]);
-		rt.addValue("SD rad_a_(mm)", sdRadii[0]);
-		rt.addValue("SD rad_b_(mm)", sdRadii[1]);
-		rt.addValue("SD rad_c_(mm)", sdRadii[2]);
-		rt.addValue("Volume_(mm^3)", meanVolume);
-		rt.show("Results");
+		showResults(properties1).show("Results");
 		
 		IJ.log("Mean centroid x,y,z: " + meanCentroid[0] + "; " + meanCentroid[1] + "; " + meanCentroid[2] + "; ");
 		
@@ -190,6 +177,32 @@ public class Condyles implements PlugIn {
 		properties[2] = sdR;
 		
 		return properties;
+	}
+	
+	public ResultsTable showResults(Object[] properties) {
+		
+		meanCentroid = (double[]) properties[0];
+		meanRadii = (double[]) properties[1];
+		meanVolume = 4/3 * meanRadii[0] * meanRadii[1] * meanRadii[2] * Math.PI;
+		
+		sdRadii[0] = Math.sqrt(meanRadii[0]);
+		sdRadii[1] = Math.sqrt(meanRadii[1]);
+		sdRadii[2] = Math.sqrt(meanRadii[2]);
+		
+		ResultsTable rt = ResultsTable.getResultsTable();
+		rt.incrementCounter();
+		rt.addValue("Centroid_x", meanCentroid[0]);
+		rt.addValue("Centroid_y", meanCentroid[1]);
+		rt.addValue("Centroid_z", meanCentroid[2]);
+		rt.addValue("Radius_a_(mm)", meanRadii[0]);
+		rt.addValue("Radius_b_(mm)", meanRadii[1]);
+		rt.addValue("Radius_c_(mm)", meanRadii[2]);
+		rt.addValue("SD rad_a_(mm)", sdRadii[0]);
+		rt.addValue("SD rad_b_(mm)", sdRadii[1]);
+		rt.addValue("SD rad_c_(mm)", sdRadii[2]);
+		rt.addValue("Volume_(mm^3)", meanVolume);
+		
+		return rt;
 	}
 	
 	public double[] getMeanCentroid() {

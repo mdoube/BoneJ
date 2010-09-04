@@ -1029,7 +1029,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	 * @param inputArray
 	 * @return transposedArray[b][a]
 	 */
-	public double[][] transposeArray(double[][] inputArray) {
+	public static double[][] transposeArray(double[][] inputArray) {
 		
 //		IJ.log("Running transposeArray");
 		
