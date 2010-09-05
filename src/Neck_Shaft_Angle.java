@@ -100,6 +100,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
+		
+		IJ.log("min: " +min+ "; max: " +max+ "");
 		String pixUnits;
 		if (ImageCheck.huCalibrated(imp)) {
 			pixUnits = "HU";
@@ -136,7 +138,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 		}
 		final boolean doCurvature = gd.getNextBoolean();
 		final boolean doShow3D = gd.getNextBoolean();
-
+		IJ.log("min: " +min+ "; max: " +max+ "");
 		// get coordinates from the ROI manager and fit a sphere
 		RoiManager roiMan = RoiManager.getInstance();
 		if (roiMan == null) {
@@ -160,6 +162,8 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 		}
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
+		
+		IJ.log("min: " +min+ "; max: " +max+ "");
 
 		// work out the centroid and regression vector of the bone
 		Moments m = new Moments();

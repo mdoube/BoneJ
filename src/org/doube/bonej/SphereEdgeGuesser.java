@@ -644,6 +644,8 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			/* Show statistical results */
 			fillResultsTable("stats", meanDimensions, sd, fitEllipsoid).show("Results");
 		}
+		
+		return;
 	}
 	
 	
@@ -994,14 +996,46 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			int i = 0;
 			while (itD.hasNext()) {
 				double[] d = itD.next();
-				if(this.useBoneCentroid && Math.acos(uCW[0] * unitVectors[i][0]
-				            + uCW[1] * unitVectors[i][1] 
-				            + uCW[2] * unitVectors[i][2]) > Math.PI * excludeWholeC
-				            || this.useSliceCentroid 
-				            && Math.acos(uCS[0] * unitVectors[i][0]
-				            + uCS[1] * unitVectors[i][1] 
-				            + uCS[2] * unitVectors[i][2]) > Math.PI * excludeSliceC) {
+				
+				double[] cross = Vectors.crossProduct(uCW, unitVectors[i]);
+				double cross2 = Math.sqrt(Math.pow(cross[0], 2) + Math.pow(cross[1], 2) + Math.pow(cross[2], 2));
+				double dot = (uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2]);
+				double atan2Result = Math.atan2((cross2), dot);
+				
+				/* If the dot product < 0, the angle is obtuse */
+				if(dot < 0.5) {
 					itD.remove();
+				}
+				
+//				if(this.useBoneCentroid && (atan2Result < excludeWholeC || atan2Result > ((2 * Math.PI) - excludeWholeC))) {
+//				if(cross[1] < 0.25 || cross[0] < 0) {
+//					IJ.log("cross: " + cross[0] + "; " + cross[1] + "; " + cross[2] + "");
+//					IJ.log("Removing atan2Result: " + atan2Result + "");
+//					itD.remove();
+//				}
+				
+				IJ.log("dot: " + dot + "");
+					
+				/* Use cross product (two unit vectors here) to check whether vectors are > 180 degrees apart. */
+//				if(Math.sin(Math.acos((uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1]  + uCW[2] * unitVectors[i][2]))) < 0) {
+//					if(Math.PI - Math.acos((uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1]  + uCW[2] * unitVectors[i][2]))
+//				}
+//				
+//				if(this.useBoneCentroid && (2 * Math.PI * (1 - ) < (2 * Math.PI * (1 - Math.cos(excludeWholeC * Math.PI)))) 
+//				            || (this.useSliceCentroid 
+//				            && Math.acos(uCS[0] * unitVectors[i][0]
+//				            + uCS[1] * unitVectors[i][1] 
+//				            + uCS[2] * unitVectors[i][2]) < 2 * Math.PI * excludeSliceC)) {
+//					itD.remove();
+				
+				
+				
+				
+//				IJ.log("Removing: " + (Math.acos(uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2])) + "");
+					
+//					this.useBoneCentroid && (2 * Math.PI * (1 - (uCW[0] * unitVectors[i][0]
+//					                                         				            + uCW[1] * unitVectors[i][1] 
+//					                                         				            + uCW[2] * unitVectors[i][2])) < (2 * Math.PI * (1 - Math.cos(excludeWholeC * Math.PI)))) 
 					
 //					double toACos = uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2];
 //					IJ.log("I am removing a coordinate!");
@@ -1009,7 +1043,24 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 //					IJ.log("uC; uV: " + uCX + ", " + uCY + ", " + uCZ + "; " + unitVectors[i][0] + ", " + unitVectors[i][1] + ", " + unitVectors[i][2] + "");
 //					IJ.log("Pre-Math.acos: " + toACos + "");
 //					IJ.log("Math.acos: " + Math.acos(uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2]) + "");
-				}
+//				}
+				
+//				if(this.useBoneCentroid && Math.acos(uCW[0] * unitVectors[i][0]
+//				                                 				            + uCW[1] * unitVectors[i][1] 
+//				                                 				            + uCW[2] * unitVectors[i][2]) > Math.PI * excludeWholeC
+//				                                 				            || this.useSliceCentroid 
+//				                                 				            && Math.acos(uCS[0] * unitVectors[i][0]
+//				                                 				            + uCS[1] * unitVectors[i][1] 
+//				                                 				            + uCS[2] * unitVectors[i][2]) > Math.PI * excludeSliceC) {
+//				                                 					itD.remove();
+//				                                 					
+////				                                 					double toACos = uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2];
+////				                                 					IJ.log("I am removing a coordinate!");
+////				                                 					IJ.log("MathdotPI / 2: " + (Math.PI / 2) + "");
+////				                                 					IJ.log("uC; uV: " + uCX + ", " + uCY + ", " + uCZ + "; " + unitVectors[i][0] + ", " + unitVectors[i][1] + ", " + unitVectors[i][2] + "");
+////				                                 					IJ.log("Pre-Math.acos: " + toACos + "");
+////				                                 					IJ.log("Math.acos: " + Math.acos(uCX * unitVectors[i][0] + uCY * unitVectors[i][1] + uCZ * unitVectors[i][2]) + "");
+//				                                 				}
 				
 				i++;
 			}

@@ -46,8 +46,8 @@ public class HeadDisplacement implements PlugIn {
 	private double[] displacement;
 	private double[] proximalShaftCentroid;
 	/** Image thresholds */
-	double[] thresholds;
-	double min, max;
+	private double[] thresholds;
+	private double min, max;
 	/** List of slice centroids */
 	private double[][] sliceCentroids;
 	/** Pixel dimensions in 'unit's */

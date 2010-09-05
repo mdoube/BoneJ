@@ -1,17 +1,30 @@
 package org.doube.bonej;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
+
 import org.doube.geometry.Centroid;
 import org.doube.geometry.FitEllipsoid;
+import org.doube.geometry.Trig;
 import org.doube.util.ImageCheck;
 import org.doube.util.RoiMan;
+
+import customnode.CustomPointMesh;
 
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.gui.WaitForUserDialog;
 import ij.measure.ResultsTable;
+import ij.plugin.Duplicator;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
+import ij.process.StackConverter;
+import ij3d.Content;
+import ij3d.Image3DUniverse;
 
 /**
  * Find condyle properties using FitEllipsoid. Takes a mean of a user-determined 
@@ -39,6 +52,12 @@ public class Condyles implements PlugIn {
 	/** The standard deviations of the radii */
 	double[] sdRadii = new double[3];
 	
+	/** The unit vector between the two condyles, as well as the distance */
+	double[] iCV;
+	
+	/** The x,y,z coordinates of the midpoint between the centroids of the condyles */
+	double[] midPoint;
+	
 	public void run(String arg) {
 		
 		/* Modified from SphereFitter */
@@ -52,8 +71,7 @@ public class Condyles implements PlugIn {
 		
 		manualOptions();
 		Object[][] ellipsoids1 = getEllipsoids(imp, numEllipsoids);
-		
-		Object[] properties1 = findMeans(ellipsoids1);
+		Object[] properties1 = findProperties(ellipsoids1);
 		
 		meanCentroid = (double[]) properties1[0];
 		meanRadii = (double[]) properties1[1];
@@ -63,9 +81,19 @@ public class Condyles implements PlugIn {
 		sdRadii[1] = Math.sqrt(meanRadii[1]);
 		sdRadii[2] = Math.sqrt(meanRadii[2]);
 		
-		showResults(properties1).show("Results");
+//		IJ.log("Mean centroid x,y,z: " + meanCentroid[0] + "; " + meanCentroid[1] + "; " + meanCentroid[2] + "; ");
 		
-		IJ.log("Mean centroid x,y,z: " + meanCentroid[0] + "; " + meanCentroid[1] + "; " + meanCentroid[2] + "; ");
+		Object[][] ellipsoids2 = getEllipsoids(imp, numEllipsoids);
+		Object[] properties2 = findProperties(ellipsoids2);
+		
+		showResults(properties1).show("Results");
+		showResults(properties2).show("Results");
+		
+		midPoint = getMidPoint((double[]) properties1[0], (double[]) properties2[0]);
+		
+		iCV = getInterCondylarVector((double[]) properties1[0], (double[]) properties2[0]);
+		
+		annotate3D(imp, (double[]) properties1[0], (double[]) properties2[0], midPoint);
 		
 		return;
 	}
@@ -153,9 +181,12 @@ public class Condyles implements PlugIn {
 	 * standard deviations on the radii.
 	 * 
 	 * @param ellipsoids
-	 * @return
+	 * @return Object[] properties, containing:
+	 * 		properties[0] = centroid[x,y,z];
+			properties[1] = radii[a,b,c];
+			properties[2] = sdR[a,b,c];
 	 */
-	public Object[] findMeans(Object[][] ellipsoids) {
+	public Object[] findProperties(Object[][] ellipsoids) {
 		
 		double[][] ellipseCentroids = new double[ellipsoids.length][3];
 		double[][] ellipseRadii = new double[ellipsoids.length][3];
@@ -177,6 +208,36 @@ public class Condyles implements PlugIn {
 		properties[2] = sdR;
 		
 		return properties;
+	}
+	
+	public double[] getInterCondylarVector(double[] meanCentroid1, double[] meanCentroid2) {
+		
+		double distance = Trig.distance3D(meanCentroid1, meanCentroid2);
+		double[] unitVector = new double[3];
+		unitVector[0] = (meanCentroid1[0] - meanCentroid2[0]) / distance;
+		unitVector[1] = (meanCentroid1[1] - meanCentroid2[1]) / distance;
+		unitVector[2] = (meanCentroid1[2] - meanCentroid2[2]) / distance;
+		
+		double[] interCondylarVector = new double[4];
+		
+		return interCondylarVector;
+	}
+	
+	/**
+	 * Get the centroid of (mid-point between) two points [x,y,z].
+	 * 
+	 * @param meanCentroid1[x,y,z]
+	 * @param meanCentroid2[x,y,z]
+	 * @return midPoint[x,y,z]
+	 */
+	public double[] getMidPoint(double[] meanCentroid1, double[] meanCentroid2) {
+		
+		double[][] centroids = new double[2][3];
+		centroids[0] = meanCentroid1;
+		centroids[1] = meanCentroid2;
+		double[] midPoint = Centroid.getCentroid(centroids);
+		
+		return midPoint;
 	}
 	
 	public ResultsTable showResults(Object[] properties) {
@@ -212,9 +273,79 @@ public class Condyles implements PlugIn {
 		return this.meanRadii;
 	}
 	
-	private void showAxes3D() {
+	/**
+	 * Draw the centroids of each ellipse and a line connecting them. Also show the 
+	 * mid-point of this line.
+	 * 
+	 * @param imp
+	 * @param a
+	 * @param b
+	 */
+	private void annotate3D(ImagePlus imp, double[] a, double[] b, double[] midPoint) {
 		
+		ImagePlus con3Dimp = new Duplicator().run(imp, 1, imp.getImageStackSize());
+		List<Point3f> line = new ArrayList<Point3f>();
+		List<Point3f> centrePoints = new ArrayList<Point3f>();
 		
+		/* initialise and show the 3D universe */
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		
+		/* Draw line connecting the two points */
+		Point3f start1 = new Point3f();
+		start1.x = (float) a[0];
+		start1.y = (float) a[1];
+		start1.z = (float) a[2];
+		line.add(start1);
+
+		Point3f end1 = new Point3f();
+		end1.x = (float) b[0];
+		end1.y = (float) b[1];
+		end1.z = (float) b[2];
+		line.add(end1);
+		
+		/* Draw centroids */
+		Point3f cent1 = new Point3f();
+		cent1.x = (float) a[0];
+		cent1.y = (float) a[1];
+		cent1.z = (float) a[2];
+		centrePoints.add(cent1);
+		
+		Point3f cent2 = new Point3f();
+		cent2.x = (float) b[0];
+		cent2.y = (float) b[1];
+		cent2.z = (float) b[2];
+		centrePoints.add(cent2);
+		
+		Point3f mid = new Point3f();
+		mid.x = (float) midPoint[0];
+		mid.y = (float) midPoint[1];
+		mid.z = (float) midPoint[2];
+		centrePoints.add(mid);
+		
+		/* Line properties */
+		float red1 = 0.0f;
+		float green1 = 0.5f;
+		float blue1 = 1.0f;
+		Color3f Colour1 = new Color3f(red1, green1, blue1);
+		
+		/* Point properties */
+		CustomPointMesh points = new CustomPointMesh(centrePoints);
+		points.setPointSize(5.0f);
+		Color3f Colour2 = new Color3f(0.0f, 1.0f, 0.5f);
+		points.setColor(Colour2);
+		
+		try {
+			univ.addLineMesh(line, Colour1, "Inter condylar axis", false).setLocked(true);
+			univ.addCustomMesh(points, "Centroid").setLocked(true);
+			
+			new StackConverter(con3Dimp).convertToGray8();
+			Content c = univ.addVoltex(con3Dimp);
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
 		
 		return;
 	}
