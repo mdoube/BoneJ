@@ -213,6 +213,7 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 			return;
 		}
 
+		/* This returns the longitudinal axis of the diaphysis */
 		this.shaftVector = regression3D(imp, centroid, startSlice, endSlice,
 				min, max);
 		if (this.shaftVector == null)
@@ -264,7 +265,9 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	/**
 	 * Calculate the vector associated with the projection plane from the
 	 * regression vector and the vector connecting the centroid and the femoral
-	 * head centre
+	 * head centre.
+	 * 
+	 * [cHVec is the unit vector from the centroid to the femoral head.]
 	 * 
 	 * @param shaftVector
 	 *            double[][]
@@ -276,9 +279,8 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	 */
 	private double[][] getProjectionPlane(double[][] shaftVector,
 			double[] headCentre, double[] centroid) {
-		// have to calculate distance between points
-		// so that we find a unit vector
-
+		
+		// calculate distance between points for a unit vector
 		double d = Trig.distance3D(headCentre, centroid);
 		double[][] cHVec = new double[3][1];
 		cHVec[0][0] = (headCentre[0] - centroid[0]) / d;

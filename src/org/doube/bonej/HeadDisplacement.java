@@ -226,5 +226,19 @@ public class HeadDisplacement implements PlugIn {
 		
 		return;
 	}
+	
+	
+	/**
+	 * Measure the offset in 'unit's of the femoral head centre from the diaphyseal 
+	 * axis, using the minimum perpendicular distance to this axis.
+	 * 
+	 * @return
+	 */
+//	public double[] femoralHeadOffset() {
+//		
+//		
+//		
+//		return offset;
+//	}
 
 }
