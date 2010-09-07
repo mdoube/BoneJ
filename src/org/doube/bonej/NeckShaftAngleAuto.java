@@ -94,9 +94,6 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	/** Holds the regression vector of the diaphysis in double[3][1] format */
 	private double[][] shaftVector;
 	
-	/** The bicondylar angle between the shaftVector and the interCondylarVector */
-	private double bicondylarAngle;
-	
 	/** The frontal (coronal) plane contains the diaphysis axis and the intercondylar line. (Defined here by the unit vector normal to the plane.) */
 	private double[] frontalPlane;
 	
@@ -106,9 +103,15 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	/** The sagittal plane is perpendicular to both the frontal and transverse planes, and parallel to the diaphysis axis. (Defined here by the unit vector normal to the plane.) */
 	private double[] sagittalPlane;
 	
+	/** Plane containing the diaphysis vector and the femoral head centre. Otherwise known as the projection plane. */
+	private double[] anteversionPlane;
+	
 	/** The anteversion angle is measured between the line joining the diaphysis axis and the centre of the femoral head, and the interCondylarVector, in the transverse plane (aka frontal plane of the axial view). */
 	/** "The anteversion angle is formed by the inclination of the proximal femoral head and neck from the transcondylar axis of the distal femur in the frontal plane of the axial view." (Kuo et al. 1997)*/
 	private double anteversionAngle;
+	
+	/** The bicondylar angle between the shaftVector and the interCondylarVector */
+	private double bicondylarAngle;
 	
 	/** The Neck-Shaft Angle is the angle the femoral neck forms with the diaphysis axis, in the anteversion plane. */
 	private double neckShaftAngle;
@@ -116,13 +119,16 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	/** The centroid of the diaphysis */
 	private double[] centroid;
 	
+	/** The centroid of the proximal epiphysis of the femur */
+	private double[] proxEpiphysisC;
+	
 	/** double[4] inter-condylar Vector holds the unit vector and distance of the line joining the centroids of each condyle */
 	private double[] iCV;
 	
 	/** double[4] diaphysis-head vector holds the unit vector and distance of the line joining the centroid of the diaphysis with the centre of the femoral head */
 	private double[] dHV;
 	
-	/** double[4] neck vector holds the unit vector and distance of the line joining the centroid of the diaphysis with the centre of the femoral head */
+	/** double[4] neck vector holds the unit vector and distance of the line joining the centroid of the proximal epiphysis with the centre of the femoral head */
 	private double[] neckVector;
 	
 	/** The femoral head offset in the frontal plane, which is the perpendicular distance from the femoral head centre to the sagittal plane (which is parallel to the diaphysis and runs through the centroid of the diaphysis).*/
@@ -193,7 +199,7 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		IJ.log("min: " +min+ "; max: " +max+ "");
 		
 		Moments mtest = new Moments();
-		final double[] testCentroid = mtest.getCentroid3D(imp, (int) (imp.getStackSize() / 2), (int) (imp.getStackSize() / 2), min, max, 0, 1);
+		final double[] testCentroid = mtest.getCentroid3D(imp, (int) (1 + imp.getStackSize() / 2), (int) (imp.getStackSize() / 2), min, max, 0, 1);
 		if (testCentroid[0] < 0) {
 			IJ.error("Empty Stack", "No voxels available for calculation."
 					+ "\nCheck your ROI and threshold.");
@@ -213,6 +219,10 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		final int endSlice = shaftEndSlices[1];
 		
 		this.centroid = fa.getShaftCentroid();
+		if(centroid == null) { 
+			IJ.error("Centroid returned null: aborting.");
+			return;
+			}
 		
 		/* End find shaft */
 		
@@ -279,7 +289,13 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		
 		/* Neck */
 		
+		// Define the neck vector as the line connecting the femoral head centre and another point...
 		
+		proxEpiphysisC = fa.findCentroidBetweenSlices(imp, endSlice, imp.getImageStackSize(), min, max);
+		double[] neckPoint = proxEpiphysisC;
+		neckVector = cons.getUnitVector(neckPoint, headCentre);
+		
+		double neckVector1 = 0;
 		
 		/* End neck */
 		
@@ -289,19 +305,27 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		
 		/* Planes defined by their normal unit vectors */
 		// shaftVector may need to be converted to a unitVector
+		// N.b. all of these may need conversion to unitVectors
 		IJ.log("shaftVector:" + shaftVector[0] + "; " + shaftVector[1] + "; " + shaftVector[2] + "; ");
 		
 		frontalPlane = Vectors.crossProduct(iCV, linearVector(shaftVector));
 		transversePlane = Vectors.crossProduct(frontalPlane, linearVector(shaftVector));
 		sagittalPlane = Vectors.crossProduct(frontalPlane, transversePlane);
+		anteversionPlane = Vectors.crossProduct(dHV, linearVector(shaftVector));
+		
+		double[] neckPlane = Vectors.crossProduct(anteversionPlane, neckVector);
+		double[] intersectionPlane = Vectors.crossProduct(anteversionPlane, neckPlane);
 		
 		/* End planes */
 		
 		
 		/* Distances */
+		// Can also find offset of neck point from diaphysis axis
 		
 		headOffset = getPerpDistance(headCentre, sagittalPlane, centroid);
 		double headAVOffset = getPerpDistance(headCentre, frontalPlane, centroid);
+		double neckOffset = getPerpDistance(neckPoint, sagittalPlane, centroid);
+		double neckAVOffset = getPerpDistance(neckPoint, frontalPlane, centroid);
 		
 		IJ.log("Femoral head offset: " + headOffset + "");
 		
@@ -313,14 +337,30 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		
 		anteversionAngle = Math.asin(dotProduct(dHV, frontalPlane));
 		bicondylarAngle = Math.acos(dotProduct(iCV, linearVector(shaftVector)));
-		neckShaftAngle = 0;
+		neckShaftAngle = Math.acos(dotProduct(intersectionPlane, linearVector(shaftVector)));
+		
+		/* Skew is the difference */
+		double neckShaftSkew = Math.acos(dotProduct(intersectionPlane, neckVector));
+		
+		// NeckPoint - HeadCentre - DiaphysisCentroid angle
+		// AngleFromTriangle should be zero.
+		double angleFromTriangle = Math.PI - neckShaftAngle - Math.acos(dotProduct(dHV, linearVector(shaftVector)));
+		double testAngle1 = Math.acos(dotProduct(linearVector(shaftVector), neckVector));
 		
 		IJ.log("BA: " + bicondylarAngle + " rad (" + bicondylarAngle * 180 / Math.PI + " deg)");
 		
 		/* End angles */
 		
 		
+		/* Annotate nearly everything in 3D */
 		
+		if(doShow3D) {
+			showEverything(imp, centroid, neckPoint, headCentre, linearVector(shaftVector), 
+					neckVector, dHV, iCV, frontalPlane, sagittalPlane, transversePlane, 
+					anteversionPlane, neckPlane, intersectionPlane);
+		}
+		
+		/* End 3D annotation */
 		
 		
 		
@@ -456,6 +496,9 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	}
 
 	/**
+	 * (This is just the normal unit vector associated with the plane 
+	 * perpendicular to both the neck vector and the projection plane).
+	 * 
 	 * Calculate the vector associated with the plane formed between neckVector
 	 * and the normal to projectionPlane from the regression vector and the
 	 * vector connecting the centroid and the femoral head centre
@@ -575,7 +618,7 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	}/* end Regression3D */
 
 	/**
-	 * Calculate the unit vector 
+	 * Calculate the unit vector of the 
 	 * 
 	 * @param headCentre
 	 * @param neckPoint
@@ -612,11 +655,13 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		Matrix nV = new Matrix(neckVector);
 		nV.printToIJLog("neckVector");
 
+		// this is the dot product of shaftVector and testVector
 		double cosA1 = sV.get(0, 0) * tV.get(0, 0) + sV.get(1, 0)
 				* tV.get(1, 0) + sV.get(2, 0) * tV.get(2, 0);
 		// printMatrix(cosA1, "cosA1");
 		IJ.log("cosA1: " + cosA1);
 
+		// this is the dot product of neckVector and testVector
 		double cosA2 = nV.get(0, 0) * tV.get(0, 0) + nV.get(1, 0)
 				* tV.get(1, 0) + nV.get(2, 0) * tV.get(2, 0);
 		// printMatrix(cosA2, "cosA2");
@@ -625,7 +670,7 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		double neckShaftAngle = Math.acos(cosA1);
 		double neckShaftSkew = Math.acos(cosA2);
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "Angle (rad)", neckShaftAngle);
+		ri.setResultInRow(imp, "Neck-Shaft Angle (rad)", neckShaftAngle);
 		ri.setResultInRow(imp, "Skew (rad)", neckShaftSkew);
 		ri.updateTable();
 		return;
@@ -937,6 +982,192 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 			
 			new StackConverter(con3Dimp).convertToGray8();
 			Content c = univ.addVoltex(con3Dimp);
+			c.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		
+		return;
+	}
+	
+	
+	
+	private void showEverything(ImagePlus imp, double[] centroid, double[] neckPoint, double[] headCentre, double[] shaftVector, 
+			double[] neckVector, double[] dHV, double[] iCV, double[] frontalPlane, double[] sagittalPlane, double[] transversePlane, 
+			double[] anteversionPlane, double[] neckPlane, double[] intersectionPlane) {
+		
+		ImagePlus all3Dimp = new Duplicator().run(imp, 1, imp.getImageStackSize());
+		
+		List<Point3f> mainVectors = new ArrayList<Point3f>();
+		List<Point3f> orientVectors = new ArrayList<Point3f>();
+		List<Point3f> headVectors = new ArrayList<Point3f>();
+		List<Point3f> centrePoints = new ArrayList<Point3f>();
+		
+		/* initialise and show the 3D universe */
+		Image3DUniverse univ = new Image3DUniverse();
+		univ.show();
+		
+		/* Draw diaphysis vector */
+		Point3f shaftVectorStart1 = new Point3f();
+		shaftVectorStart1.x = (float) centroid[0];
+		shaftVectorStart1.y = (float) centroid[1];
+		shaftVectorStart1.z = (float) centroid[2];
+		mainVectors.add(shaftVectorStart1);
+
+		Point3f shaftVectorEnd1 = new Point3f();
+		shaftVectorEnd1.x = (float) (centroid[0] + shaftVector[0] * h/2);
+		shaftVectorEnd1.y = (float) (centroid[1] + shaftVector[1] * h/2);
+		shaftVectorEnd1.z = (float) (centroid[2] + shaftVector[2] * h/2);
+		mainVectors.add(shaftVectorEnd1);
+		
+		Point3f shaftVectorStart2 = new Point3f();
+		shaftVectorStart2.x = (float) centroid[0];
+		shaftVectorStart2.y = (float) centroid[1];
+		shaftVectorStart2.z = (float) centroid[2];
+		mainVectors.add(shaftVectorStart2);
+
+		Point3f shaftVectorEnd2 = new Point3f();
+		shaftVectorEnd2.x = (float) (centroid[0] - shaftVector[0] * h/2);
+		shaftVectorEnd2.y = (float) (centroid[1] - shaftVector[1] * h/2);
+		shaftVectorEnd2.z = (float) (centroid[2] - shaftVector[2] * h/2);
+		mainVectors.add(shaftVectorEnd2);
+		
+		/* Draw neck vector */
+		Point3f neckVectorStart1 = new Point3f();
+		neckVectorStart1.x = (float) neckPoint[0];
+		neckVectorStart1.y = (float) neckPoint[1];
+		neckVectorStart1.z = (float) neckPoint[2];
+		mainVectors.add(neckVectorStart1);
+
+		Point3f neckVectorEnd1 = new Point3f();
+		neckVectorEnd1.x = (float) (neckPoint[0] + neckVector[0] * neckVector[3]);
+		neckVectorEnd1.y = (float) (neckPoint[1] + neckVector[1] * neckVector[3]);
+		neckVectorEnd1.z = (float) (neckPoint[2] + neckVector[2] * neckVector[3]);
+		mainVectors.add(neckVectorEnd1);
+		
+		/* Draw orientation vectors about centroid - w/2 */
+		Point3f FrontalStart1 = new Point3f();
+		FrontalStart1.x = (float) centroid[0] - w/2;
+		FrontalStart1.y = (float) centroid[1] - w/2;
+		FrontalStart1.z = (float) centroid[2] - w/2;
+		orientVectors.add(FrontalStart1);
+
+		Point3f FrontalEnd1 = new Point3f();
+		FrontalEnd1.x = (float) (centroid[0] - w/2 + frontalPlane[0] * h/2);
+		FrontalEnd1.y = (float) (centroid[1] - w/2 + frontalPlane[1] * h/2);
+		FrontalEnd1.z = (float) (centroid[2] - w/2 + frontalPlane[2] * h/2);
+		orientVectors.add(FrontalEnd1);
+		
+		Point3f SagittalStart1 = new Point3f();
+		SagittalStart1.x = (float) centroid[0] - w/2;
+		SagittalStart1.y = (float) centroid[1] - w/2;
+		SagittalStart1.z = (float) centroid[2] - w/2;
+		orientVectors.add(SagittalStart1);
+
+		Point3f SagittalEnd1 = new Point3f();
+		SagittalEnd1.x = (float) (centroid[0] - w/2 + sagittalPlane[0] * h/2);
+		SagittalEnd1.y = (float) (centroid[1] - w/2 + sagittalPlane[1] * h/2);
+		SagittalEnd1.z = (float) (centroid[2] - w/2 + sagittalPlane[2] * h/2);
+		orientVectors.add(SagittalEnd1);
+		
+		Point3f TransverseStart1 = new Point3f();
+		TransverseStart1.x = (float) centroid[0] - w/2;
+		TransverseStart1.y = (float) centroid[1] - w/2;
+		TransverseStart1.z = (float) centroid[2] - w/2;
+		orientVectors.add(TransverseStart1);
+
+		Point3f TransverseEnd1 = new Point3f();
+		TransverseEnd1.x = (float) (centroid[0] - w/2 + transversePlane[0] * h/2);
+		TransverseEnd1.y = (float) (centroid[1] - w/2 + transversePlane[1] * h/2);
+		TransverseEnd1.z = (float) (centroid[2] - w/2 + transversePlane[2] * h/2);
+		orientVectors.add(TransverseEnd1);
+		
+		/* Draw related vectors about headCentre */
+		Point3f AnteversionStart1 = new Point3f();
+		AnteversionStart1.x = (float) headCentre[0];
+		AnteversionStart1.y = (float) headCentre[1];
+		AnteversionStart1.z = (float) headCentre[2];
+		headVectors.add(AnteversionStart1);
+
+		Point3f AnteversionEnd1 = new Point3f();
+		AnteversionEnd1.x = (float) (headCentre[0] + anteversionPlane[0] * headCentre[3] * 2);
+		AnteversionEnd1.y = (float) (headCentre[1] + anteversionPlane[1] * headCentre[3] * 2);
+		AnteversionEnd1.z = (float) (headCentre[2] + anteversionPlane[2] * headCentre[3] * 2);
+		headVectors.add(AnteversionEnd1);
+		
+		Point3f NeckPlaneStart1 = new Point3f();
+		NeckPlaneStart1.x = (float) headCentre[0];
+		NeckPlaneStart1.y = (float) headCentre[1];
+		NeckPlaneStart1.z = (float) headCentre[2];
+		headVectors.add(NeckPlaneStart1);
+
+		Point3f NeckPlaneEnd1 = new Point3f();
+		NeckPlaneEnd1.x = (float) (headCentre[0] + neckPlane[0] * headCentre[3] * 2);
+		NeckPlaneEnd1.y = (float) (headCentre[1] + neckPlane[1] * headCentre[3] * 2);
+		NeckPlaneEnd1.z = (float) (headCentre[2] + neckPlane[2] * headCentre[3] * 2);
+		headVectors.add(NeckPlaneEnd1);
+		
+		Point3f IntersectionStart1 = new Point3f();
+		IntersectionStart1.x = (float) headCentre[0];
+		IntersectionStart1.y = (float) headCentre[1];
+		IntersectionStart1.z = (float) headCentre[2];
+		headVectors.add(IntersectionStart1);
+
+		Point3f IntersectionEnd1 = new Point3f();
+		IntersectionEnd1.x = (float) (headCentre[0] + intersectionPlane[0] * headCentre[3] * 2);
+		IntersectionEnd1.y = (float) (headCentre[1] + intersectionPlane[1] * headCentre[3] * 2);
+		IntersectionEnd1.z = (float) (headCentre[2] + intersectionPlane[2] * headCentre[3] * 2);
+		headVectors.add(IntersectionEnd1);
+		
+		/* Points */
+		Point3f centroidP = new Point3f();
+		centroidP.x = (float) centroid[0];
+		centroidP.y = (float) centroid[1];
+		centroidP.z = (float) centroid[2];
+		centrePoints.add(centroidP);
+		
+		Point3f neckPointP = new Point3f();
+		neckPointP.x = (float) neckPoint[0];
+		neckPointP.y = (float) neckPoint[1];
+		neckPointP.z = (float) neckPoint[2];
+		centrePoints.add(neckPointP);
+		
+		Point3f headCentreP = new Point3f();
+		headCentreP.x = (float) headCentre[0];
+		headCentreP.y = (float) headCentre[1];
+		headCentreP.z = (float) headCentre[2];
+		centrePoints.add(headCentreP);
+		
+		/* Line properties */
+		float red1 = 0.0f;
+		float green1 = 0.5f;
+		float blue1 = 1.0f;
+		Color3f Colour1 = new Color3f(red1, green1, blue1);
+		float red2 = 0.5f;
+		float green2 = 1.0f;
+		float blue2 = 0.0f;
+		Color3f Colour2 = new Color3f(red2, green2, blue2);
+		float red3 = 1.0f;
+		float green3 = 0.5f;
+		float blue3 = 0.0f;
+		Color3f Colour3 = new Color3f(red3, green3, blue3);
+		
+		/* Point properties */
+		CustomPointMesh points = new CustomPointMesh(centrePoints);
+		points.setPointSize(5.0f);
+		Color3f ColourPoints = new Color3f(0.0f, 1.0f, 0.5f);
+		points.setColor(ColourPoints);
+		
+		try {
+			univ.addLineMesh(mainVectors, Colour1, "Main vectors", false).setLocked(true);
+			univ.addLineMesh(orientVectors, Colour2, "Main vectors", false).setLocked(true);
+			univ.addLineMesh(headVectors, Colour3, "Main vectors", false).setLocked(true);
+			univ.addCustomMesh(points, "Points").setLocked(true);
+			
+			/* Show the stack */
+			new StackConverter(all3Dimp).convertToGray8();
+			Content c = univ.addVoltex(all3Dimp);
 			c.setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");

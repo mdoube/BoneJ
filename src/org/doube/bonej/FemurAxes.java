@@ -108,7 +108,8 @@ public class FemurAxes implements PlugIn {
 		int i = -1;
 		while(i < 0) {
 			this.shaftEndSlices = findShaftEnds();
-			this.shaftCentroid = findShaftCentroid(imp, shaftEndSlices, min, max);
+			this.shaftCentroid = findCentroidBetweenSlices(imp, shaftEndSlices, min, max);
+			if(shaftCentroid == null) { return; }
 			
 			double[] proxCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[0]);
 			double[] distCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[1]);
@@ -169,6 +170,16 @@ public class FemurAxes implements PlugIn {
 		return sliceCentroid;
 	}
 	
+	public double[] findCentroidBetweenSlices(ImagePlus imp, int startSlice, int endSlice, double min, double max) {
+		int[] shaftEnds = new int[2];
+		shaftEnds[0] = startSlice;
+		shaftEnds[1] = endSlice;
+		
+		final double[] centroid = findCentroidBetweenSlices(imp, shaftEnds, min, max);
+		return centroid;
+	}
+	
+	
 	/**
 	 * Use SliceGeometry to get the centroid of the diaphysis.
 	 * 
@@ -178,7 +189,7 @@ public class FemurAxes implements PlugIn {
 	 * @param max
 	 * @return double[3] centroid containing the x,y,z of the centroid.
 	 */
-	public double[] findShaftCentroid(ImagePlus imp, int[] shaftEndSlices, double min, double max) {
+	public double[] findCentroidBetweenSlices(ImagePlus imp, int[] shaftEndSlices, double min, double max) {
 		
 		Moments m = new Moments();
 		final double[] centroid = m.getCentroid3D(imp, shaftEndSlices[0], shaftEndSlices[1], min, max, 0, 1);

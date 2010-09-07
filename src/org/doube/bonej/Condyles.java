@@ -267,7 +267,7 @@ public class Condyles implements PlugIn {
 		unitVector[1] = (point1[1] - point2[1]) / distance;
 		unitVector[2] = (point1[2] - point2[2]) / distance;
 		
-		unitVector[4] = distance;
+		unitVector[3] = distance;
 		
 		return unitVector;
 	}
