@@ -110,6 +110,24 @@ public class Condyles implements PlugIn {
 		return;
 	}
 	
+	/**
+	 * Run getEllipsoids after setting numEllipsoids manually.
+	 * 
+	 * @param imp
+	 * @return
+	 */
+	public Object[][] getEllipsoids(ImagePlus imp) {
+		Object[][] ellipsoids = getEllipsoids(imp, this.numEllipsoids);
+		return ellipsoids;
+	}
+	
+	/**
+	 * getEllipsoids without manual input.
+	 * 
+	 * @param imp
+	 * @param numEllipsoids
+	 * @return
+	 */
 	public Object[][] getEllipsoids(ImagePlus imp, int numEllipsoids) {
 		
 		ImageCheck ic = new ImageCheck();
@@ -210,6 +228,13 @@ public class Condyles implements PlugIn {
 		return properties;
 	}
 	
+	/**
+	 * Get the unit vector of the line connecting the two condyle centroids.
+	 * 
+	 * @param meanCentroid1
+	 * @param meanCentroid2
+	 * @return
+	 */
 	public double[] getInterCondylarVector(double[] meanCentroid1, double[] meanCentroid2) {
 		
 		double distance = Trig.distance3D(meanCentroid1, meanCentroid2);
@@ -240,6 +265,13 @@ public class Condyles implements PlugIn {
 		return midPoint;
 	}
 	
+	/**
+	 * Show the centroid, radii, condyle volume and the standard deviations 
+	 * on each of the radii.
+	 * 
+	 * @param properties
+	 * @return
+	 */
 	public ResultsTable showResults(Object[] properties) {
 		
 		meanCentroid = (double[]) properties[0];
@@ -281,7 +313,7 @@ public class Condyles implements PlugIn {
 	 * @param a
 	 * @param b
 	 */
-	private void annotate3D(ImagePlus imp, double[] a, double[] b, double[] midPoint) {
+	public void annotate3D(ImagePlus imp, double[] a, double[] b, double[] midPoint) {
 		
 		ImagePlus con3Dimp = new Duplicator().run(imp, 1, imp.getImageStackSize());
 		List<Point3f> line = new ArrayList<Point3f>();

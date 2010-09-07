@@ -91,7 +91,11 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	/** Holds (x, y, z) centre and radius */
 	private double[] headCentre;
 
+	/** Holds the regression vector of the diaphysis in double[3][1] format */
 	private double[][] shaftVector;
+	
+	/** The bicondylar angle between the shaftVector and the interCondylarVector */
+	private double bicondylarAngle;
 
 	private double[] centroid;
 
@@ -170,13 +174,16 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		/* End test moments */
 		
 		
-		/* Find shaft */
+		/* Find shaft ends and centroid */
 		
 		FemurAxes fa = new FemurAxes();
-		int[] shaftEndSlices = fa.getShaftEndSlices();
+		fa.findShaftAndConfirm(imp, min, max);
+		int[] shaftEndSlices = fa.getShaftEnds();
 		
 		final int startSlice = shaftEndSlices[0];
 		final int endSlice = shaftEndSlices[1];
+		
+		this.centroid = fa.getShaftCentroid();
 		
 		/* End find shaft */
 		
@@ -185,7 +192,7 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		
 		/* How to use SphereEdgeGuesser */		
 		SphereEdgeGuesser seg = new SphereEdgeGuesser();
-		seg.getManualSettings();
+		seg.getManualSettings(imp);
 		seg.getInitialPointUser(imp);
 		seg.findSphere(imp, seg.runNum, seg.numVectors, seg.sd2DMult, seg.sd3DMult, seg.fitEllipsoid, seg.ignoreCentroidDirection);
 		double[] meanDimensions = seg.getMeanDimensions();
@@ -203,15 +210,6 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		IJ.log("min: " +min+ "; max: " +max+ "");
 
 		// work out the centroid and regression vector of the bone
-		Moments m = new Moments();
-		final double[] centroid = m.getCentroid3D(imp, startSlice, endSlice,
-				min, max, 0, 1);
-		this.centroid = centroid;
-		if (centroid[0] < 0) {
-			IJ.error("Empty Stack", "No voxels available for calculation."
-					+ "\nCheck your ROI and threshold.");
-			return;
-		}
 
 		/* This returns the longitudinal axis of the diaphysis */
 		this.shaftVector = regression3D(imp, centroid, startSlice, endSlice,
@@ -231,6 +229,27 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		}
 		
 		/* End 3D annotation */
+		
+		
+		/* Condyles and intercondylar vector */
+		
+		Condyles cons = new Condyles();
+//		cons.manualOptions();	// set numEllipsoids manually
+		Object[] properties1 = cons.findProperties(cons.getEllipsoids(imp, 3));
+		cons.showResults(properties1).show("Results");
+		Object[] properties2 = cons.findProperties(cons.getEllipsoids(imp, 3));
+		cons.showResults(properties2).show("Results");
+		
+		double[] midPoint = cons.getMidPoint((double[]) properties1[0], (double[]) properties2[0]);
+		double[] iCV = cons. getInterCondylarVector((double[]) properties1[0], (double[]) properties2[0]);
+		
+		cons.annotate3D(imp, (double[]) properties1[0], (double[]) properties2[0], midPoint);
+		
+		/* End condyles */
+		
+		
+		/* Bicondylar Angle */
+		bicondylarAngle = Math.acos(arg0);
 		
 		
 		/* Neck */

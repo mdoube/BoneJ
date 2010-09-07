@@ -189,8 +189,22 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	
 	public void run(String arg) {
 		
+		/* Modified from SphereFitter */
+		if (!ImageCheck.checkEnvironment())
+			return;
+		this.imp = IJ.getImage();
+		if (null == imp) {
+			IJ.noImage();
+			return;
+		}
+//		ImageCheck ic = new ImageCheck();
+//		if (ic.isMultiSlice(imp)) {
+//			IJ.error("Stack required for sphere fitting");
+//			return;
+//		}
+		
 		/* Show a dialogue */
-		getManualSettings();
+		getManualSettings(imp);
 		
 		/* User clicks to set initial point */
 		getInitialPointUser(imp);
@@ -245,21 +259,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 	/**
 	 * Set everything manually using the GenericDialog in this method.
 	 */
-	public void getManualSettings() {
-		
-		/* Modified from SphereFitter */
-		if (!ImageCheck.checkEnvironment())
-			return;
-		this.imp = IJ.getImage();
-		if (null == imp) {
-			IJ.noImage();
-			return;
-		}
-//		ImageCheck ic = new ImageCheck();
-//		if (ic.isMultiSlice(imp)) {
-//			IJ.error("Stack required for sphere fitting");
-//			return;
-//		}
+	public void getManualSettings(ImagePlus imp) {
 		
 		ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
@@ -997,15 +997,24 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			while (itD.hasNext()) {
 				double[] d = itD.next();
 				
-				double[] cross = Vectors.crossProduct(uCW, unitVectors[i]);
-				double cross2 = Math.sqrt(Math.pow(cross[0], 2) + Math.pow(cross[1], 2) + Math.pow(cross[2], 2));
+				IJ.log("uCW[0]: " + uCW[0] + "; uCW[1]:" + uCW[1] + "; uCW[2]: " + uCW[2] + "; unitVectors[i][0]" + unitVectors[i][0] + "; unitVectors[i][1]: " + unitVectors[i][1] + "; unitVectors[i][2]: " + unitVectors[i][2] + "");
 				double dot = (uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2]);
-				double atan2Result = Math.atan2((cross2), dot);
+				double acosdot = Math.acos(dot);
+				IJ.log("dot: " + dot + "; acosdot: " + acosdot + "");
 				
-				/* If the dot product < 0, the angle is obtuse */
-				if(dot < 0.5) {
+				if(acosdot > 1.57) {
 					itD.remove();
 				}
+//				
+//				double[] cross = Vectors.crossProduct(uCW, unitVectors[i]);
+//				double cross2 = Math.sqrt(Math.pow(cross[0], 2) + Math.pow(cross[1], 2) + Math.pow(cross[2], 2));
+//				double dot = (uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2]);
+//				double atan2Result = Math.atan2((cross2), dot);
+//				
+//				/* If the dot product < 0, the angle is obtuse */
+//				if(dot < 0.5) {
+//					itD.remove();
+//				}
 				
 //				if(this.useBoneCentroid && (atan2Result < excludeWholeC || atan2Result > ((2 * Math.PI) - excludeWholeC))) {
 //				if(cross[1] < 0.25 || cross[0] < 0) {
@@ -1014,7 +1023,7 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 //					itD.remove();
 //				}
 				
-				IJ.log("dot: " + dot + "");
+				
 					
 				/* Use cross product (two unit vectors here) to check whether vectors are > 180 degrees apart. */
 //				if(Math.sin(Math.acos((uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1]  + uCW[2] * unitVectors[i][2]))) < 0) {

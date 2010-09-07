@@ -91,7 +91,7 @@ public class HeadDisplacement implements PlugIn {
 //		ImageCanvas canvas = imp.getWindow().getCanvas();
 		
 		SphereEdgeGuesser seg = new SphereEdgeGuesser();
-		seg.getManualSettings();
+		seg.getManualSettings(imp);
 		seg.getInitialPointUser(imp);
 		seg.findSphere(imp, seg.runNum, seg.numVectors, seg.sd2DMult, seg.sd3DMult, seg.fitEllipsoid, seg.ignoreCentroidDirection);
 		double[] meanDimensions = seg.getMeanDimensions();

@@ -73,29 +73,7 @@ public class FemurAxes implements PlugIn {
 		}
 		IJ.log("min: " +min+ "; max: " +max+ "");
 		
-		/* Shaft with visual confirmation */
-		int i = -1;
-		while(i < 0) {
-			shaftEndSlices = getShaftEndSlices();
-			shaftCentroid = getShaftCentroid(imp, shaftEndSlices, min, max);
-			
-			double[] proxCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[0]);
-			double[] distCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[1]);
-			
-			IJ.log("prox: " + proxCentroid[2] + "");
-			IJ.log("dist: " + distCentroid[2] + "");
-			
-			showShaftEnds(imp, proxCentroid, distCentroid);
-			
-			new WaitForUserDialog("Check shaft ends are reasonable, then hit \'OK\'").show();
-			GenericDialog gdOK = new GenericDialog("OK?");
-			gdOK.addCheckbox("These shaft ends look good", true);
-			gdOK.showDialog();
-			if(gdOK.getNextBoolean()) {
-				i = 1;
-			}
-		}
-		
+		findShaftAndConfirm(imp, min, max);
 		
 		/* Condyles */
 		Condyles cons = new Condyles();
@@ -106,36 +84,59 @@ public class FemurAxes implements PlugIn {
 		cons.showResults(properties2).show("Results");
 		
 		
-		shaftVector = BicondylarAngle.regression3D(imp, shaftCentroid, shaftEndSlices[0], shaftEndSlices[1], min, max);
-		if (this.shaftVector == null) { return; }
-		
-		
-		
-		
+//		shaftVector = BicondylarAngle.regression3D(imp, shaftCentroid, shaftEndSlices[0], shaftEndSlices[1], min, max);
+//		if (this.shaftVector == null) { return; }
 		
 		return;
 	}
 	
-//	public void manualOptions() {
-//		
-//		GenericDialog gd = new GenericDialog("Manual femur axes options");
-//		gd.addNumericField("Take mean of", this.numEllipsoids, 0, 3, "ellipsoids");
-//		gd.showDialog();
-//		if(gd.wasCanceled()) { return; }
-//		
-//		this.min = gd.getNextNumber();
-//		this.max = gd.getNextNumber();
-//		
-//		return;
-//	}
+	public int[] getShaftEnds() {
+		return this.shaftEndSlices;
+	}
+	public double[] getShaftCentroid() {
+		return this.shaftCentroid;
+	}
+	
+	public void findShaftAndConfirm(ImagePlus imp, double min, double max) {
+		
+		Calibration cal = imp.getCalibration();
+		vD = cal.pixelDepth;
+		w = imp.getWidth();
+		h = imp.getHeight();
+		
+		/* Shaft with visual confirmation */
+		int i = -1;
+		while(i < 0) {
+			this.shaftEndSlices = findShaftEnds();
+			this.shaftCentroid = findShaftCentroid(imp, shaftEndSlices, min, max);
+			
+			double[] proxCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[0]);
+			double[] distCentroid = getSliceCentroid(imp, min, max, shaftEndSlices[1]);
+			
+			IJ.log("proximal shaft centroid: " + proxCentroid[2] + "; distal: " + distCentroid[2] + "");
+			
+			showShaftEnds3D(imp, proxCentroid, distCentroid);
+			
+			new WaitForUserDialog("Check shaft ends are reasonable, then hit \'OK\'").show();
+			GenericDialog gdOK = new GenericDialog("OK?");
+			gdOK.addCheckbox("These shaft ends look good", true);
+			gdOK.showDialog();
+			if(gdOK.getNextBoolean()) {
+				i = 1;
+			}
+		}
+		
+		return;
+	}
+	
 	
 	/**
-	 * Use ShaftGuesser to get the end slices of the shaft.
+	 * Use ShaftGuesser to get the proximal and distal end slices of the shaft.
 	 * 
 	 * @return shaftPosition
 	 * 				int[2] containing proximal and distal slices of the shaft.
 	 */
-	public int[] getShaftEndSlices() {
+	public int[] findShaftEnds() {
 		
 		ShaftGuesser sg = new ShaftGuesser();
 		sg.run(null);
@@ -151,7 +152,7 @@ public class FemurAxes implements PlugIn {
 	 * @param min
 	 * @param max
 	 * @param shaftSlice
-	 * @return
+	 * @return double[] sliceCentroid, the centroid of the chosen slice.
 	 */
 	public double[] getSliceCentroid(ImagePlus imp, double min, double max, int shaftSlice) {
 		
@@ -168,7 +169,16 @@ public class FemurAxes implements PlugIn {
 		return sliceCentroid;
 	}
 	
-	public double[] getShaftCentroid(ImagePlus imp, int[] shaftEndSlices, double min, double max) {
+	/**
+	 * Use SliceGeometry to get the centroid of the diaphysis.
+	 * 
+	 * @param imp
+	 * @param shaftEndSlices
+	 * @param min
+	 * @param max
+	 * @return double[3] centroid containing the x,y,z of the centroid.
+	 */
+	public double[] findShaftCentroid(ImagePlus imp, int[] shaftEndSlices, double min, double max) {
 		
 		Moments m = new Moments();
 		final double[] centroid = m.getCentroid3D(imp, shaftEndSlices[0], shaftEndSlices[1], min, max, 0, 1);
@@ -181,7 +191,14 @@ public class FemurAxes implements PlugIn {
 		return centroid;
 	}
 	
-	private void showShaftEnds(ImagePlus imp, double[] a, double[] b) {
+	/**
+	 * Annotate 3D image with location of proximal and distal shaft slices.
+	 * 
+	 * @param imp
+	 * @param a
+	 * @param b
+	 */
+	private void showShaftEnds3D(ImagePlus imp, double[] a, double[] b) {
 		
 		ImagePlus line3Dimp = new Duplicator().run(imp, 1, imp.getImageStackSize());
 		List<Point3f> line3Da = new ArrayList<Point3f>();
@@ -258,7 +275,5 @@ public class FemurAxes implements PlugIn {
 		
 		return;
 	}
-	
-//	public Object[] 
 
 }
