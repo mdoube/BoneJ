@@ -37,6 +37,9 @@ public class Condyles implements PlugIn {
 	
 	private ImagePlus imp;
 	
+	/** If we have the centroids already from a previous run, ask for them. */
+	public boolean alreadyHaveCentroids = false;
+	
 	/** Number of ellipsoids to fit (manually), from which to take the mean dimensions */
 	private int numEllipsoids = 3;
 	
@@ -70,6 +73,20 @@ public class Condyles implements PlugIn {
 		}
 		
 		manualOptions();
+//		if(this.alreadyHaveCentroids) {
+//			double[]
+//			
+//			GenericDialog gd = new GenericDialog("Get manual centroids");
+//			for(int i = 0; i < numEllipsoids; i++) {
+//				gd.addNumericField("Centroid 1 x: ", 0.0, 14, 17, " ");
+//			}
+//			gd.showDialog();
+//			if(gd.wasCanceled()) {return;}
+//			for(int i = 0; i < numEllipsoids; i++) {
+//				
+//			}
+//		}
+//		
 		Object[][] ellipsoids1 = getEllipsoids(imp, numEllipsoids);
 		Object[] properties1 = findProperties(ellipsoids1);
 		
@@ -91,7 +108,7 @@ public class Condyles implements PlugIn {
 		
 		midPoint = getMidPoint((double[]) properties1[0], (double[]) properties2[0]);
 		
-		iCV = getInterCondylarVector((double[]) properties1[0], (double[]) properties2[0]);
+		iCV = getUnitVector((double[]) properties1[0], (double[]) properties2[0]);
 		
 		annotate3D(imp, (double[]) properties1[0], (double[]) properties2[0], midPoint);
 		
@@ -102,10 +119,12 @@ public class Condyles implements PlugIn {
 		
 		GenericDialog gd = new GenericDialog("Manual condyle fit options");
 		gd.addNumericField("Take mean of", this.numEllipsoids, 0, 3, "ellipsoids");
+//		gd.addCheckbox("Already have centroids?", this.alreadyHaveCentroids);
 		gd.showDialog();
 		if(gd.wasCanceled()) { return; }
 		
 		this.numEllipsoids = (int) gd.getNextNumber();
+//		this.alreadyHaveCentroids = gd.getNextBoolean();
 		
 		return;
 	}
@@ -229,23 +248,28 @@ public class Condyles implements PlugIn {
 	}
 	
 	/**
-	 * Get the unit vector of the line connecting the two condyle centroids.
+	 * Returns the unit vector of the line connecting two points in 3D space, as 
+	 * well as the distance between them.
 	 * 
-	 * @param meanCentroid1
-	 * @param meanCentroid2
-	 * @return
+	 * (Was: Get the unit vector of the line connecting the two condyle centroids.)
+	 * 
+	 * @param point1
+	 * 				double[3]
+	 * @param point2
+	 * 				double[3]
+	 * @return double[4] containing unitVector (x,y,z) followed by the distance.
 	 */
-	public double[] getInterCondylarVector(double[] meanCentroid1, double[] meanCentroid2) {
+	public double[] getUnitVector(double[] point1, double[] point2) {
 		
-		double distance = Trig.distance3D(meanCentroid1, meanCentroid2);
-		double[] unitVector = new double[3];
-		unitVector[0] = (meanCentroid1[0] - meanCentroid2[0]) / distance;
-		unitVector[1] = (meanCentroid1[1] - meanCentroid2[1]) / distance;
-		unitVector[2] = (meanCentroid1[2] - meanCentroid2[2]) / distance;
+		double distance = Trig.distance3D(point1, point2);
+		double[] unitVector = new double[4];
+		unitVector[0] = (point1[0] - point2[0]) / distance;
+		unitVector[1] = (point1[1] - point2[1]) / distance;
+		unitVector[2] = (point1[2] - point2[2]) / distance;
 		
-		double[] interCondylarVector = new double[4];
+		unitVector[4] = distance;
 		
-		return interCondylarVector;
+		return unitVector;
 	}
 	
 	/**

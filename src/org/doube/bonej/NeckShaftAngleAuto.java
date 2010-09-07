@@ -96,9 +96,38 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	
 	/** The bicondylar angle between the shaftVector and the interCondylarVector */
 	private double bicondylarAngle;
-
+	
+	/** The frontal (coronal) plane contains the diaphysis axis and the intercondylar line. (Defined here by the unit vector normal to the plane.) */
+	private double[] frontalPlane;
+	
+	/** The transverse plane is perpendicular to both the frontal plane and the diaphysis axis. (Defined here by the unit vector normal to the plane.) */
+	private double[] transversePlane;
+	
+	/** The sagittal plane is perpendicular to both the frontal and transverse planes, and parallel to the diaphysis axis. (Defined here by the unit vector normal to the plane.) */
+	private double[] sagittalPlane;
+	
+	/** The anteversion angle is measured between the line joining the diaphysis axis and the centre of the femoral head, and the interCondylarVector, in the transverse plane (aka frontal plane of the axial view). */
+	/** "The anteversion angle is formed by the inclination of the proximal femoral head and neck from the transcondylar axis of the distal femur in the frontal plane of the axial view." (Kuo et al. 1997)*/
+	private double anteversionAngle;
+	
+	/** The Neck-Shaft Angle is the angle the femoral neck forms with the diaphysis axis, in the anteversion plane. */
+	private double neckShaftAngle;
+	
+	/** The centroid of the diaphysis */
 	private double[] centroid;
-
+	
+	/** double[4] inter-condylar Vector holds the unit vector and distance of the line joining the centroids of each condyle */
+	private double[] iCV;
+	
+	/** double[4] diaphysis-head vector holds the unit vector and distance of the line joining the centroid of the diaphysis with the centre of the femoral head */
+	private double[] dHV;
+	
+	/** double[4] neck vector holds the unit vector and distance of the line joining the centroid of the diaphysis with the centre of the femoral head */
+	private double[] neckVector;
+	
+	/** The femoral head offset in the frontal plane, which is the perpendicular distance from the femoral head centre to the sagittal plane (which is parallel to the diaphysis and runs through the centroid of the diaphysis).*/
+	private double headOffset;
+	
 	private Calibration cal;
 
 	private boolean fieldUpdated = false;
@@ -241,15 +270,11 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		cons.showResults(properties2).show("Results");
 		
 		double[] midPoint = cons.getMidPoint((double[]) properties1[0], (double[]) properties2[0]);
-		double[] iCV = cons. getInterCondylarVector((double[]) properties1[0], (double[]) properties2[0]);
+		iCV = cons.getUnitVector((double[]) properties1[0], (double[]) properties2[0]);
 		
 		cons.annotate3D(imp, (double[]) properties1[0], (double[]) properties2[0], midPoint);
 		
 		/* End condyles */
-		
-		
-		/* Bicondylar Angle */
-		bicondylarAngle = Math.acos(arg0);
 		
 		
 		/* Neck */
@@ -257,6 +282,45 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		
 		
 		/* End neck */
+		
+		
+		dHV = cons.getUnitVector(headCentre, centroid);
+		
+		
+		/* Planes defined by their normal unit vectors */
+		// shaftVector may need to be converted to a unitVector
+		IJ.log("shaftVector:" + shaftVector[0] + "; " + shaftVector[1] + "; " + shaftVector[2] + "; ");
+		
+		frontalPlane = Vectors.crossProduct(iCV, linearVector(shaftVector));
+		transversePlane = Vectors.crossProduct(frontalPlane, linearVector(shaftVector));
+		sagittalPlane = Vectors.crossProduct(frontalPlane, transversePlane);
+		
+		/* End planes */
+		
+		
+		/* Distances */
+		
+		headOffset = getPerpDistance(headCentre, sagittalPlane, centroid);
+		double headAVOffset = getPerpDistance(headCentre, frontalPlane, centroid);
+		
+		IJ.log("Femoral head offset: " + headOffset + "");
+		
+		/* End distances */
+		
+		
+		/* Angles */
+		// NB might need to Math.acos these; see how they look...
+		
+		anteversionAngle = Math.asin(dotProduct(dHV, frontalPlane));
+		bicondylarAngle = Math.acos(dotProduct(iCV, linearVector(shaftVector)));
+		neckShaftAngle = 0;
+		
+		IJ.log("BA: " + bicondylarAngle + " rad (" + bicondylarAngle * 180 / Math.PI + " deg)");
+		
+		/* End angles */
+		
+		
+		
 		
 		
 		
@@ -278,13 +342,83 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 	}
 	
 	
+
+	/**
+	 * Copy a vector in double[3][1] format to double[3] format.
+	 */
+	public double[] linearVector(double[][] a) {
+		
+		double[] b = new double[a.length];
+		b[0] = a[0][0];
+		b[1] = a[1][0];
+		b[2] = a[2][0];
+		
+		return b;
+	}
+	
+	/**
+	 * Calculate the dot product of two vectors. If one vector has more elements than 
+	 * the other, only the elements corresponding to those in the shorter vector are 
+	 * used.
+	 * 
+	 * @param a
+	 * @param b
+	 * @return
+	 */
+	public static double dotProduct(double[] a, double[] b) {
+		
+		double shortest = a.length;
+		if(a.length > b.length) {
+			shortest = b.length;
+		}
+		
+		double dotProduct = 0;
+		
+		for(int i = 0; i < shortest; i++) {
+			dotProduct += a[i] * b[i];
+		}
+		
+		return dotProduct;
+	}
+	
+	
+	/**
+	 * Find the perpendicular distance from a point double[3] to a plane, double[3], 
+	 * containing a pointInPlane double[3].
+	 * 
+	 * See:  or 
+	 * 
+	 * 
+	 * @param point
+	 * @param plane
+	 * @return distance
+	 * 
+	 * @see <a href="http://www.math.umn.edu/~nykamp/m2374/readings/planedist/">math.umn.edu</a>
+	 * @see <a href="http://mathworld.wolfram.com/Point-PlaneDistance.html">Wolfram MathWorld</a>
+	 */
+	private double getPerpDistance(double[] point, double[] plane, double[]	pointInPlane) {
+		
+		double[] w = new double[3];
+		w[0] = pointInPlane[0] - point[0];
+		w[1] = pointInPlane[1] - point[1];
+		w[2] = pointInPlane[2] - point[2];
+		
+		double dot = Math.abs(dotProduct(w, plane));
+		
+		double mag = Trig.distance3D(plane);
+		
+		double distance = dot / mag;
+		
+		return distance;
+	}
+	
 	
 	
 
 	/**
-	 * Calculate the vector associated with the projection plane from the
-	 * regression vector and the vector connecting the centroid and the femoral
-	 * head centre.
+	 * Calculate the unit vector associated with the projection plane from the
+	 * regression vector and the vector connecting the centroid of the diaphysis 
+	 * and the femoral head centre.
 	 * 
 	 * [cHVec is the unit vector from the centroid to the femoral head.]
 	 * 
@@ -311,9 +445,9 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 
 		// projectionPlane is the cross product of cHVec and shaftVector
 		double[][] projectionPlane = Vectors.crossProduct(cHVec, shaftVector);
-
-		d = Trig.distance3D(projectionPlane[0][0], projectionPlane[1][0],
-				projectionPlane[2][0]);
+		
+		// calculate d for a unit vector
+		d = Trig.distance3D(projectionPlane[0][0], projectionPlane[1][0], projectionPlane[2][0]);
 		projectionPlane[0][0] /= d;
 		projectionPlane[1][0] /= d;
 		projectionPlane[2][0] /= d;
@@ -440,6 +574,13 @@ public class NeckShaftAngleAuto implements PlugIn, MouseListener, DialogListener
 		return orthogonalDistanceRegression;
 	}/* end Regression3D */
 
+	/**
+	 * Calculate the unit vector 
+	 * 
+	 * @param headCentre
+	 * @param neckPoint
+	 * @return
+	 */
 	private double[][] neckVector(double[] headCentre, double[] neckPoint) {
 		// have to calculate d to make sure that neckVector is a unit vector
 		double d = Trig.distance3D(headCentre, neckPoint);

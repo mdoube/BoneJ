@@ -997,12 +997,16 @@ public class SphereEdgeGuesser implements PlugIn, DialogListener, MouseListener 
 			while (itD.hasNext()) {
 				double[] d = itD.next();
 				
+				double[] cross = Vectors.crossProduct(uCW, unitVectors[i]);
+				double newDot = NeckShaftAngleAuto.dotProduct(cross, unitVectors[i]);
+				double aCosNewDot = Math.acos(newDot);
+				
 				IJ.log("uCW[0]: " + uCW[0] + "; uCW[1]:" + uCW[1] + "; uCW[2]: " + uCW[2] + "; unitVectors[i][0]" + unitVectors[i][0] + "; unitVectors[i][1]: " + unitVectors[i][1] + "; unitVectors[i][2]: " + unitVectors[i][2] + "");
 				double dot = (uCW[0] * unitVectors[i][0] + uCW[1] * unitVectors[i][1] + uCW[2] * unitVectors[i][2]);
 				double acosdot = Math.acos(dot);
 				IJ.log("dot: " + dot + "; acosdot: " + acosdot + "");
 				
-				if(acosdot > 1.57) {
+				if(aCosNewDot > 1.57) {
 					itD.remove();
 				}
 //				
