@@ -219,16 +219,16 @@ public class Moments implements PlugIn, DialogListener {
 	 *         bitDepth
 	 */
 	public static Object getEmptyPixels(int w, int h, int bitDepth) {
-		byte[] bytePixels = new byte[w * h];
-		short[] shortPixels = new short[w * h];
-		float[] floatPixels = new float[w * h];
-
+		
 		Object emptyPixels = new Object();
 		if (bitDepth == 8) {
+			byte[] bytePixels = new byte[w * h];
 			emptyPixels = bytePixels;
 		} else if (bitDepth == 16) {
+			short[] shortPixels = new short[w * h];
 			emptyPixels = shortPixels;
 		} else if (bitDepth == 32) {
+			float[] floatPixels = new float[w * h];
 			emptyPixels = floatPixels;
 		}
 		return emptyPixels;
