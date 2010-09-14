@@ -49,6 +49,7 @@ import java.util.Vector;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.AnatomicAxes;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
@@ -166,7 +167,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			IJ.noImage();
 			return;
 		}
-
+		AnatomicAxes axes = new AnatomicAxes(imp);
+		axes.create();
 		this.cal = imp.getCalibration();
 		this.vW = cal.pixelWidth;
 		this.vH = cal.pixelHeight;
