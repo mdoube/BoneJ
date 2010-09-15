@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -11,6 +12,7 @@ import java.awt.Point;
 import java.awt.Scrollbar;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 
@@ -37,12 +39,17 @@ import ij.plugin.frame.PlugInFrame;
 public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 
 	public static final String LOC_KEY = "aa.loc";
-	private static final String[][] axisLabels = { { "medial", "lateral" },
+	private static final String[][] axisLabelsFull = { { "medial", "lateral" },
 			{ "cranial", "caudal" }, { "rostral", "caudal" },
 			{ "dorsal", "ventral" }, { "anterior", "posterior" },
 			{ "superior", "inferior" }, { "proximal", "distal" },
 			{ "dorsal", "palmar" }, { "dorsal", "plantar" },
 			{ "dorsal", "volar" }, { "axial", "abaxial" } };
+
+	private static final String[][] axisLabels = { { "M", "L" },
+			{ "Cr", "Ca" }, { "Ro", "Ca" }, { "D", "V" }, { "A", "P" },
+			{ "Sup", "Inf" }, { "Pr", "Di" }, { "Do", "Pa" }, { "Do", "Pl" },
+			{ "Do", "Vo" }, { "Ax", "Ab" } };
 
 	private static Frame instance;
 	ImageJ ij;
@@ -59,6 +66,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	private int length;
 	private ImagePlus imp;
 	private ImageCanvas canvas;
+	private Graphics graphics;
 	private Point p;
 	private GeneralPath path;
 	private BasicStroke stroke;
@@ -124,8 +132,18 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		drawCross(p, path);
 		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
 				BasicStroke.JOIN_MITER);
-		this.imp.setOverlay(path, Color.RED, stroke);
+		this.imp.setOverlay(path, Color.BLUE, stroke);
 		canvas.setCustomRoi(true);
+		this.graphics = canvas.getGraphics();
+		graphics.setColor(Color.BLUE);
+		drawLabels();
+	}
+
+	private void drawLabels() {
+		graphics.drawString("A", p.x, p.y - length);
+		graphics.drawString("a", p.x, p.y + length);
+		graphics.drawString("B", p.x + length, p.y);
+		graphics.drawString("b", p.x - length, p.y);
 	}
 
 	public void reflect() {
@@ -144,7 +162,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		transform.rotate(deltaTheta, p.x, p.y);
 		this.theta += deltaTheta;
 		path.transform(transform);
-		this.imp.setOverlay(path, Color.RED, stroke);
+		this.imp.setOverlay(path, Color.BLUE, stroke);
 	}
 
 	public void rotateTo(double newTheta) {
@@ -162,9 +180,22 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		path.lineTo(x, y + length);
 	}
 
+	public void close() {
+		super.close();
+		instance = null;
+		imp.setOverlay(null);
+	}
+
+	public void windowClosing(WindowEvent e) {
+		close();
+		Prefs.saveLocation(LOC_KEY, getLocation());
+	}
+
 	@Override
 	public void adjustmentValueChanged(AdjustmentEvent e) {
-		if (e.getSource().equals(slider))
+		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
+			drawLabels();
+		}
 	}
 }
