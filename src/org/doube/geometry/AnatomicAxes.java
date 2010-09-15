@@ -111,6 +111,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 
 		// show the crosshairs
 		this.imp = WindowManager.getCurrentImage();
+		if (imp == null)
+			return;
 		this.canvas = imp.getCanvas();
 		int w = imp.getWidth();
 		int h = imp.getHeight();

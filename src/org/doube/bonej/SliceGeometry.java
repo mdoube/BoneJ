@@ -167,8 +167,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			IJ.noImage();
 			return;
 		}
-		AnatomicAxes axes = new AnatomicAxes();
-		axes.run("Foo");
 		this.cal = imp.getCalibration();
 		this.vW = cal.pixelWidth;
 		this.vH = cal.pixelHeight;
