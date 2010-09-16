@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
-import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -24,12 +23,10 @@ import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
 import ij.gui.GUI;
-import ij.gui.ImageCanvas;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.gui.ShapeRoi;
 import ij.gui.TextRoi;
-import ij.plugin.frame.ContrastAdjuster;
 import ij.plugin.frame.PlugInFrame;
 
 /**
@@ -72,15 +69,14 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	/** Axis length */
 	private int length;
 	private ImagePlus imp;
-	private ImageCanvas canvas;
-	private Graphics graphics;
 	private Point p;
 	private GeneralPath path;
 	private BasicStroke stroke;
 	private Scrollbar slider;
 
 	private Overlay overlay = new Overlay();
-	
+	private int fontSize = 12;
+
 	public AnatomicAxes() {
 		super("Orientation");
 	}
@@ -130,7 +126,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		this.imp = WindowManager.getCurrentImage();
 		if (imp == null)
 			return;
-		this.canvas = imp.getCanvas();
 		int w = imp.getWidth();
 		int h = imp.getHeight();
 		this.length = Math.min(w, h) / 4;
@@ -142,17 +137,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
 				BasicStroke.JOIN_MITER);
 		this.imp.setOverlay(path, Color.BLUE, stroke);
-//		canvas.setCustomRoi(true);
-//		this.graphics = canvas.getGraphics();
-//		graphics.setColor(Color.BLUE);
-//		drawLabels();
-	}
-
-	private void drawLabels() {
-		graphics.drawString("A", p.x, p.y - length);
-		graphics.drawString("a", p.x, p.y + length);
-		graphics.drawString("B", p.x + length, p.y);
-		graphics.drawString("b", p.x - length, p.y);
+		rotateTo(0);
 	}
 
 	public void reflect() {
@@ -183,27 +168,33 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	}
 
 	private void addLabels() {
-		Font font = new Font("SansSerif", Font.PLAIN, 16);
-		addString("A", p.x, p.y - length, Color.BLUE, font);
-		addString("a", p.x, p.y + length, Color.BLUE, font);
-		addString("B", p.x + length, p.y, Color.BLUE, font);
-		addString("b", p.x - length, p.y, Color.BLUE, font);
+		Font font = new Font("SansSerif", Font.PLAIN, fontSize);
+		final double lsinTheta = (length + fontSize) * Math.sin(theta);
+		final double lcosTheta = (length + fontSize) * Math.cos(theta);
+		addString("A", (int) (p.x + lsinTheta), (int) (p.y - lcosTheta),
+				Color.RED, font);
+		addString("a", (int) (p.x - lsinTheta), (int) (p.y + lcosTheta),
+				Color.BLUE, font);
+		addString("B", (int) (p.x + lcosTheta), (int) (p.y + lsinTheta),
+				Color.BLUE, font);
+		addString("b", (int) (p.x - lcosTheta), (int) (p.y - lsinTheta),
+				Color.BLUE, font);
 	}
 
 	void addPath(Shape shape, Color color, BasicStroke stroke) {
 		Roi roi = new ShapeRoi(shape);
 		roi.setStrokeColor(color);
 		roi.setStroke(stroke);
-    	overlay.add(roi);
+		overlay.add(roi);
 	}
 
 	void addString(String text, int x, int y, Color color, Font font) {
-		TextRoi roi = new TextRoi(x, y-font.getSize(), text, font);
+		TextRoi roi = new TextRoi(x - fontSize / 4, y - fontSize / 2, text,
+				font);
 		roi.setStrokeColor(color);
 		overlay.add(roi);
 	}
 
-	
 	/** draws the crosses in the images */
 	private void drawCross(Point p, GeneralPath path) {
 		float x = p.x;
