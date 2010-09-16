@@ -49,12 +49,18 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 			{ "dorsal", "ventral" }, { "anterior", "posterior" },
 			{ "superior", "inferior" }, { "proximal", "distal" },
 			{ "dorsal", "palmar" }, { "dorsal", "plantar" },
-			{ "dorsal", "volar" }, { "axial", "abaxial" } };
+			{ "dorsal", "volar" }, { "axial", "abaxial" },
+			{ "north", "south" }, { "east", "west" }, { "up", "down" },
+			{ "right", "left" } };
 
 	private static final String[][] axisLabels = { { "M", "L" },
 			{ "Cr", "Ca" }, { "Ro", "Ca" }, { "D", "V" }, { "A", "P" },
 			{ "Sup", "Inf" }, { "Pr", "Di" }, { "Do", "Pa" }, { "Do", "Pl" },
-			{ "Do", "Vo" }, { "Ax", "Ab" } };
+			{ "Do", "Vo" }, { "Ax", "Ab" }, { "N", "S" }, { "E", "W" },
+			{ "Up", "D" }, { "R", "L" } };
+
+	private String[] directions = { axisLabels[1][0], axisLabels[1][1],
+			axisLabels[0][0], axisLabels[0][1] };
 
 	private static Frame instance;
 	ImageJ ij;
@@ -147,9 +153,39 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		// swap the labels
 	}
 
+	/**
+	 * Retrieve the orientation of the named axis. If the axis name is not
+	 * found, the principal axis orientation is returned.
+	 * 
+	 * @param direction
+	 *            Label you wish to match
+	 * @return orientation of the axis in radians clockwise from 12 o'clock
+	 */
 	public double getOrientation(String direction) {
-		double principal = this.theta;
-		return principal;
+		double orientation = this.theta;
+		int quadrant = 0;
+		for (int i = 0; i < 4; i++) {
+			if (directions[i].equals(direction)) {
+				quadrant = i;
+				break;
+			}
+		}
+
+		switch (quadrant) {
+		case 0:
+			return orientation;
+		case 1:
+			orientation += Math.PI; break;
+		case 2:
+			orientation += Math.PI / 2; break;
+		case 3:
+			orientation += 3 * Math.PI / 2; break;
+		}
+
+		if (orientation > 2 * Math.PI)
+			return orientation - 2 * Math.PI;
+		else
+			return orientation;
 	}
 
 	public void rotate(double deltaTheta) {
@@ -172,14 +208,14 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		Font font = new Font("SansSerif", Font.PLAIN, fontSize);
 		final double lsinTheta = (length + fontSize) * Math.sin(theta);
 		final double lcosTheta = (length + fontSize) * Math.cos(theta);
-		addString("AAAAAA", (int) (p.x + lsinTheta), (int) (p.y - lcosTheta),
-				Color.RED, font);
-		addString("aaaaaa", (int) (p.x - lsinTheta), (int) (p.y + lcosTheta),
-				Color.BLUE, font);
-		addString("BBBBBB", (int) (p.x + lcosTheta), (int) (p.y + lsinTheta),
-				Color.BLUE, font);
-		addString("bbbbbb", (int) (p.x - lcosTheta), (int) (p.y - lsinTheta),
-				Color.BLUE, font);
+		addString(directions[0], (int) (p.x + lsinTheta),
+				(int) (p.y - lcosTheta), Color.RED, font);
+		addString(directions[1], (int) (p.x - lsinTheta),
+				(int) (p.y + lcosTheta), Color.BLUE, font);
+		addString(directions[2], (int) (p.x + lcosTheta),
+				(int) (p.y + lsinTheta), Color.BLUE, font);
+		addString(directions[3], (int) (p.x - lcosTheta),
+				(int) (p.y - lsinTheta), Color.BLUE, font);
 	}
 
 	void addPath(Shape shape, Color color, BasicStroke stroke) {
