@@ -3,6 +3,7 @@ package org.doube.geometry;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
@@ -10,6 +11,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Scrollbar;
+import java.awt.Shape;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.WindowEvent;
@@ -23,6 +25,10 @@ import ij.Prefs;
 import ij.WindowManager;
 import ij.gui.GUI;
 import ij.gui.ImageCanvas;
+import ij.gui.Overlay;
+import ij.gui.Roi;
+import ij.gui.ShapeRoi;
+import ij.gui.TextRoi;
 import ij.plugin.frame.ContrastAdjuster;
 import ij.plugin.frame.PlugInFrame;
 
@@ -33,6 +39,7 @@ import ij.plugin.frame.PlugInFrame;
  * be the same position.
  * 
  * @author Michael Doube
+ * @author Wayne Rasband
  * 
  */
 @SuppressWarnings("serial")
@@ -72,6 +79,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	private BasicStroke stroke;
 	private Scrollbar slider;
 
+	private Overlay overlay = new Overlay();
+	
 	public AnatomicAxes() {
 		super("Orientation");
 	}
@@ -88,7 +97,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 			}
 		}
 		instance = this;
-		IJ.register(ContrastAdjuster.class);
+		IJ.register(AnatomicAxes.class);
 		WindowManager.addWindow(this);
 
 		ij = IJ.getInstance();
@@ -133,10 +142,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
 				BasicStroke.JOIN_MITER);
 		this.imp.setOverlay(path, Color.BLUE, stroke);
-		canvas.setCustomRoi(true);
-		this.graphics = canvas.getGraphics();
-		graphics.setColor(Color.BLUE);
-		drawLabels();
+//		canvas.setCustomRoi(true);
+//		this.graphics = canvas.getGraphics();
+//		graphics.setColor(Color.BLUE);
+//		drawLabels();
 	}
 
 	private void drawLabels() {
@@ -162,7 +171,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		transform.rotate(deltaTheta, p.x, p.y);
 		this.theta += deltaTheta;
 		path.transform(transform);
-		this.imp.setOverlay(path, Color.BLUE, stroke);
+		overlay.clear();
+		addPath(path, Color.BLUE, stroke);
+		addLabels();
+		imp.setOverlay(overlay);
 	}
 
 	public void rotateTo(double newTheta) {
@@ -170,6 +182,28 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		this.theta = newTheta;
 	}
 
+	private void addLabels() {
+		Font font = new Font("SansSerif", Font.PLAIN, 16);
+		addString("A", p.x, p.y - length, Color.BLUE, font);
+		addString("a", p.x, p.y + length, Color.BLUE, font);
+		addString("B", p.x + length, p.y, Color.BLUE, font);
+		addString("b", p.x - length, p.y, Color.BLUE, font);
+	}
+
+	void addPath(Shape shape, Color color, BasicStroke stroke) {
+		Roi roi = new ShapeRoi(shape);
+		roi.setStrokeColor(color);
+		roi.setStroke(stroke);
+    	overlay.add(roi);
+	}
+
+	void addString(String text, int x, int y, Color color, Font font) {
+		TextRoi roi = new TextRoi(x, y-font.getSize(), text, font);
+		roi.setStrokeColor(color);
+		overlay.add(roi);
+	}
+
+	
 	/** draws the crosses in the images */
 	private void drawCross(Point p, GeneralPath path) {
 		float x = p.x;
@@ -195,7 +229,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	public void adjustmentValueChanged(AdjustmentEvent e) {
 		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
-			drawLabels();
 		}
 	}
 }
