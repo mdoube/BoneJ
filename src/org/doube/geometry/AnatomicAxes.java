@@ -175,11 +175,14 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		case 0:
 			return orientation;
 		case 1:
-			orientation += Math.PI; break;
+			orientation += Math.PI;
+			break;
 		case 2:
-			orientation += Math.PI / 2; break;
+			orientation += Math.PI / 2;
+			break;
 		case 3:
-			orientation += 3 * Math.PI / 2; break;
+			orientation += 3 * Math.PI / 2;
+			break;
 		}
 
 		if (orientation > 2 * Math.PI)
@@ -188,6 +191,24 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 			return orientation;
 	}
 
+	/**
+	 * Overloaded version of getOrientation that takes no argument
+	 * 
+	 * @return orientation of the principal direction in radians clockwise from
+	 *         12 o'clock
+	 */
+	public double getOrientation() {
+		double orientation = this.theta;
+		return orientation;
+	}
+
+	/**
+	 * Rotate the direction indicator by a given angle
+	 * 
+	 * @param deltaTheta
+	 *            number of radians to rotate by (+ve is clockwise, -ve is
+	 *            anti-clockwise)
+	 */
 	public void rotate(double deltaTheta) {
 		AffineTransform transform = new AffineTransform();
 		transform.rotate(deltaTheta, p.x, p.y);
@@ -199,6 +220,13 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		imp.setOverlay(overlay);
 	}
 
+	/**
+	 * Rotate the principal direction to a new angle
+	 * 
+	 * @param newTheta
+	 *            desired orientation in radians clockwise from 12 o'clock of
+	 *            the principal direction
+	 */
 	public void rotateTo(double newTheta) {
 		rotate(newTheta - this.theta);
 		this.theta = newTheta;
