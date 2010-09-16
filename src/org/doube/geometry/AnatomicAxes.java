@@ -9,6 +9,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Scrollbar;
 import java.awt.Shape;
 import java.awt.event.AdjustmentEvent;
@@ -171,13 +172,13 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		Font font = new Font("SansSerif", Font.PLAIN, fontSize);
 		final double lsinTheta = (length + fontSize) * Math.sin(theta);
 		final double lcosTheta = (length + fontSize) * Math.cos(theta);
-		addString("A", (int) (p.x + lsinTheta), (int) (p.y - lcosTheta),
+		addString("AAAAAA", (int) (p.x + lsinTheta), (int) (p.y - lcosTheta),
 				Color.RED, font);
-		addString("a", (int) (p.x - lsinTheta), (int) (p.y + lcosTheta),
+		addString("aaaaaa", (int) (p.x - lsinTheta), (int) (p.y + lcosTheta),
 				Color.BLUE, font);
-		addString("B", (int) (p.x + lcosTheta), (int) (p.y + lsinTheta),
+		addString("BBBBBB", (int) (p.x + lcosTheta), (int) (p.y + lsinTheta),
 				Color.BLUE, font);
-		addString("b", (int) (p.x - lcosTheta), (int) (p.y - lsinTheta),
+		addString("bbbbbb", (int) (p.x - lcosTheta), (int) (p.y - lsinTheta),
 				Color.BLUE, font);
 	}
 
@@ -189,8 +190,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 	}
 
 	void addString(String text, int x, int y, Color color, Font font) {
-		TextRoi roi = new TextRoi(x - fontSize / 4, y - fontSize / 2, text,
-				font);
+		TextRoi roi = new TextRoi(x, y, text, font);
+		roi.setLocation(x - text.length() * fontSize / 4, y - fontSize / 2);
 		roi.setStrokeColor(color);
 		overlay.add(roi);
 	}
