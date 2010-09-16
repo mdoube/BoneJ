@@ -1,6 +1,8 @@
 package org.doube.geometry;
 
 import java.awt.BasicStroke;
+import java.awt.Checkbox;
+import java.awt.Choice;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -8,12 +10,16 @@ import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Panel;
 import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.Scrollbar;
 import java.awt.Shape;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
@@ -41,27 +47,28 @@ import ij.plugin.frame.PlugInFrame;
  * 
  */
 @SuppressWarnings("serial")
-public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
+public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
+		ItemListener, KeyListener {
 
 	public static final String LOC_KEY = "aa.loc";
-	private static final String[][] axisLabelsFull = { { "medial", "lateral" },
-			{ "cranial", "caudal" }, { "rostral", "caudal" },
-			{ "dorsal", "ventral" }, { "anterior", "posterior" },
-			{ "superior", "inferior" }, { "proximal", "distal" },
-			{ "dorsal", "palmar" }, { "dorsal", "plantar" },
-			{ "dorsal", "volar" }, { "axial", "abaxial" },
-			{ "north", "south" }, { "east", "west" }, { "up", "down" },
-			{ "right", "left" } };
+	private static final String[][] axisLabels = {
+			{ "medial", "lateral", "M", "L" },
+			{ "cranial", "caudal", "Cr", "Ca" },
+			{ "rostral", "caudal", "Ro", "Ca" },
+			{ "dorsal", "ventral", "D", "V" },
+			{ "anterior", "posterior", "A", "P" },
+			{ "superior", "inferior", "Sup", "Inf" },
+			{ "proximal", "distal", "Pr", "Di" },
+			{ "dorsal", "palmar", "Do", "Pa" },
+			{ "dorsal", "plantar", "Do", "Pl" },
+			{ "dorsal", "volar", "Do", "Vo" },
+			{ "axial", "abaxial", "Ax", "Ab" }, { "north", "south", "N", "S" },
+			{ "east", "west", "E", "W" }, { "up", "down", "Up", "D" },
+			{ "right", "left", "R", "L" } };
 
-	private static final String[][] axisLabels = { { "M", "L" },
-			{ "Cr", "Ca" }, { "Ro", "Ca" }, { "D", "V" }, { "A", "P" },
-			{ "Sup", "Inf" }, { "Pr", "Di" }, { "Do", "Pa" }, { "Do", "Pl" },
-			{ "Do", "Vo" }, { "Ax", "Ab" }, { "N", "S" }, { "E", "W" },
-			{ "Up", "D" }, { "R", "L" } };
-
-	private String[] directions = { axisLabels[1][0], axisLabels[1][1],
-			axisLabels[0][0], axisLabels[0][1] };
-
+	private int axis0 = 1, axis1 = 0;
+	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3],
+			axisLabels[axis1][2], axisLabels[axis1][3] };
 	private static Frame instance;
 	ImageJ ij;
 	GridBagLayout gridbag;
@@ -83,9 +90,15 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 
 	private Overlay overlay = new Overlay();
 	private int fontSize = 12;
+	private Panel panel;
+	private Choice axis0Choice;
+	private Choice axis1Choice;
+	private Checkbox reflect;
+	private boolean isReflected = false;
 
 	public AnatomicAxes() {
 		super("Orientation");
+
 	}
 
 	public void run(String arg) {
@@ -103,7 +116,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		IJ.register(AnatomicAxes.class);
 		WindowManager.addWindow(this);
 
-		ij = IJ.getInstance();
 		gridbag = new GridBagLayout();
 		c = new GridBagConstraints();
 		setLayout(gridbag);
@@ -115,10 +127,44 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		gridbag.setConstraints(slider, c);
 		add(slider);
 		slider.addAdjustmentListener(this);
-		slider.addKeyListener(ij);
+		slider.addKeyListener(this);
 		slider.setUnitIncrement(1);
 		slider.setFocusable(false); // prevents blinking on Windows
-		slider.setPreferredSize(new Dimension(180, 16));
+		slider.setPreferredSize(new Dimension(360, 16));
+
+		panel = new Panel();
+		axis0Choice = new Choice();
+		for (int i = 0; i < axisLabels.length; i++)
+			axis0Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
+		axis0Choice.select("cranial - caudal");
+		axis0Choice.addItemListener(this);
+		// methodChoice.addKeyListener(ij);
+		panel.add(axis0Choice);
+
+		reflect = new Checkbox("Reflect");
+		reflect.setState(isReflected);
+		reflect.addItemListener(this);
+		c.gridx = 0;
+		c.gridy = y++;
+		c.gridwidth = 2;
+		c.insets = new Insets(5, 35, 0, 5);
+		add(reflect, c);
+
+		axis1Choice = new Choice();
+		for (int i = 0; i < axisLabels.length; i++)
+			axis1Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
+		axis1Choice.select("medial - lateral");
+		axis1Choice.addItemListener(this);
+		// modeChoice.addKeyListener(ij);
+		panel.add(axis1Choice);
+		c.gridx = 0;
+		c.gridy = y++;
+		c.gridwidth = 2;
+		c.insets = new Insets(5, 5, 0, 5);
+		c.anchor = GridBagConstraints.CENTER;
+		c.fill = GridBagConstraints.NONE;
+		add(panel, c);
+
 		pack();
 		Point loc = Prefs.getLocation(LOC_KEY);
 		if (loc != null)
@@ -246,6 +292,19 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 				(int) (p.y - lsinTheta), Color.BLUE, font);
 	}
 
+	private void updateDirections() {
+		if (!isReflected) {
+			directions[0] = axisLabels[axis0][2];
+			directions[1] = axisLabels[axis0][3];
+		} else {
+			directions[0] = axisLabels[axis0][3];
+			directions[1] = axisLabels[axis0][2];
+		}
+		directions[2] = axisLabels[axis1][2];
+		directions[3] = axisLabels[axis1][3];
+		rotate(0);
+	}
+
 	void addPath(Shape shape, Color color, BasicStroke stroke) {
 		Roi roi = new ShapeRoi(shape);
 		roi.setStrokeColor(color);
@@ -276,15 +335,71 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener {
 		imp.setOverlay(null);
 	}
 
+	public void windowActivated(WindowEvent e) {
+		super.windowActivated(e);
+		setup();
+		WindowManager.setWindow(this);
+	}
+
+	private void setup() {
+		// TODO Auto-generated method stub
+		// Handle situation where instance of orientation exists and a new
+		// image is opened
+	}
+
 	public void windowClosing(WindowEvent e) {
 		close();
 		Prefs.saveLocation(LOC_KEY, getLocation());
 	}
 
-	@Override
 	public void adjustmentValueChanged(AdjustmentEvent e) {
 		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
 		}
+	}
+
+	@Override
+	public void itemStateChanged(ItemEvent e) {
+		if (e.getSource().equals(axis0Choice)) {
+			int i = axis0Choice.getSelectedIndex();
+			if (i == axis1Choice.getSelectedIndex()) {
+				axis0Choice.select(axis0);
+				IJ.error("Both axes cannot indicate the same direction");
+				return;
+			}
+			axis0 = i;
+			updateDirections();
+		} else if (e.getSource().equals(axis1Choice)) {
+			int i = axis1Choice.getSelectedIndex();
+			if (i == axis0Choice.getSelectedIndex()) {
+				axis1Choice.select(axis1);
+				IJ.error("Both axes cannot indicate the same direction");
+				return;
+			}
+			axis1 = i;
+			updateDirections();
+		} else if (e.getSource().equals(reflect)) {
+			isReflected = reflect.getState();
+			updateDirections();
+		}
+
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+		// TODO Auto-generated method stub
+
 	}
 }
