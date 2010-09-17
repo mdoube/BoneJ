@@ -63,10 +63,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 
 	/** Current principal direction choice */
 	private int axis0 = 1;
-	
+
 	/** Current secondary direction choice */
 	private int axis1 = 0;
-	
+
 	/** Direction labels */
 	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3],
 			axisLabels[axis1][2], axisLabels[axis1][3] };
@@ -89,12 +89,12 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	private Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
 	private Hashtable<Integer, Boolean> reflectHash = new Hashtable<Integer, Boolean>();
 
+	private Overlay overlay = new Overlay();
+	private int fontSize = 12;
+	private double scale = 1;
 	private GeneralPath path;
 	private BasicStroke stroke;
 
-	private Overlay overlay = new Overlay();
-	private int fontSize = 12;
-	
 	GridBagLayout gridbag;
 	GridBagConstraints c;
 	private Scrollbar slider;
@@ -334,9 +334,13 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	}
 
 	private void addLabels() {
-		Font font = new Font("SansSerif", Font.PLAIN, fontSize);
-		final double lsinTheta = (length + fontSize) * Math.sin(theta);
-		final double lcosTheta = (length + fontSize) * Math.cos(theta);
+		ImagePlus imp = WindowManager.getImage(activeImpID);
+		scale = imp.getCanvas().getMagnification();
+		Font font = new Font("SansSerif", Font.PLAIN, (int) (fontSize / scale));
+		final double lsinTheta = (length + (fontSize / scale))
+				* Math.sin(theta);
+		final double lcosTheta = (length + (fontSize / scale))
+				* Math.cos(theta);
 		addString(directions[0], (int) (p.x + lsinTheta),
 				(int) (p.y - lcosTheta), Color.RED, font);
 		addString(directions[1], (int) (p.x - lsinTheta),
@@ -369,7 +373,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 
 	void addString(String text, int x, int y, Color color, Font font) {
 		TextRoi roi = new TextRoi(x, y, text, font);
-		roi.setLocation(x - text.length() * fontSize / 4, y - fontSize / 2);
+		roi.setLocation(x - text.length() * (int) (fontSize / scale) / 4, y
+				- (int) (fontSize / scale) / 2);
 		roi.setStrokeColor(color);
 		overlay.add(roi);
 	}
