@@ -10,10 +10,12 @@ import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Label;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Scrollbar;
 import java.awt.Shape;
+import java.awt.TextArea;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
@@ -87,7 +89,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	private Hashtable<Integer, Point> centreHash = new Hashtable<Integer, Point>();
 	private Hashtable<Integer, GeneralPath> pathHash = new Hashtable<Integer, GeneralPath>();
 	private Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
-	private Hashtable<Integer, Boolean> reflectHash = new Hashtable<Integer, Boolean>();
+	private Hashtable<Integer, boolean[]> reflectHash = new Hashtable<Integer, boolean[]>();
 
 	private Overlay overlay = new Overlay();
 	private int fontSize = 12;
@@ -101,8 +103,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	private Panel panel;
 	private Choice axis0Choice;
 	private Choice axis1Choice;
-	private Checkbox reflect;
-	private boolean isReflected = false;
+	private Checkbox reflect0;
+	private Checkbox reflect1;
+	private boolean isReflected0 = false;
+	private boolean isReflected1 = false;
 
 	public AnatomicAxes() {
 		super("Orientation");
@@ -137,6 +141,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		slider.setPreferredSize(new Dimension(360, 16));
 
 		panel = new Panel();
+		
+		Label label0 = new Label("Principal");
+		panel.add(label0);
+		
 		axis0Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis0Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
@@ -144,16 +152,19 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		axis0Choice.addItemListener(this);
 		// methodChoice.addKeyListener(ij);
 		panel.add(axis0Choice);
-
-		reflect = new Checkbox("Reflect");
-		reflect.setState(isReflected);
-		reflect.addItemListener(this);
+		
+		reflect0 = new Checkbox("Reflect");
+		reflect0.setState(isReflected0);
+		reflect0.addItemListener(this);
 		c.gridx = 0;
 		c.gridy = y++;
 		c.gridwidth = 2;
-		c.insets = new Insets(5, 35, 0, 5);
-		add(reflect, c);
+		c.insets = new Insets(5, 5, 0, 5);
+		panel.add(reflect0, c);
 
+		Label label1 = new Label("Secondary");
+		panel.add(label1);
+		
 		axis1Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis1Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
@@ -168,6 +179,16 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		c.fill = GridBagConstraints.NONE;
 		add(panel, c);
 
+		reflect1 = new Checkbox("Reflect");
+		reflect1.setState(isReflected1);
+		reflect1.addItemListener(this);
+		c.gridx = 1;
+		c.gridy = y;
+		c.gridwidth = 2;
+		c.insets = new Insets(5, 5, 0, 5);
+		panel.add(reflect1, c);
+
+		
 		pack();
 		Point loc = Prefs.getLocation(LOC_KEY);
 		if (loc != null)
@@ -195,8 +216,10 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		int h = imp.getHeight();
 		this.theta = 0;
 		slider.setValue((int) (theta * 180 / Math.PI));
-		this.isReflected = false;
-		reflect.setState(isReflected);
+		this.isReflected0 = false;
+		reflect0.setState(isReflected0);
+		this.isReflected1 = false;
+		reflect1.setState(isReflected1);
 		this.length = Math.min(w, h) / 4;
 		this.p = new Point(w / 2, h / 2);
 		path = new GeneralPath();
@@ -214,7 +237,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		int[] axes = { axis0, axis1 };
 		axisHash.put(id, axes.clone());
 		lengthHash.put(id, new Integer(this.length));
-		reflectHash.put(id, new Boolean(isReflected));
+		boolean[] reflectors = { isReflected0, isReflected1 };
+		reflectHash.put(id, reflectors.clone());
 	}
 
 	private void update() {
@@ -231,11 +255,14 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		this.axis1 = axes[1];
 		this.path = pathHash.get(activeImpID);
 		this.length = lengthHash.get(activeImpID);
-		this.isReflected = reflectHash.get(activeImpID);
+		boolean[] reflectors = reflectHash.get(activeImpID);
+		this.isReflected0 = reflectors[0];
+		this.isReflected1 = reflectors[1];
 		axis0Choice.select(axis0);
 		axis1Choice.select(axis1);
 		slider.setValue((int) (theta * 180 / Math.PI));
-		reflect.setState(isReflected);
+		reflect0.setState(isReflected0);
+		reflect1.setState(isReflected1);
 		updateDirections();
 	}
 
@@ -352,15 +379,20 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	}
 
 	private void updateDirections() {
-		if (!isReflected) {
+		if (!isReflected0) {
 			directions[0] = axisLabels[axis0][2];
 			directions[1] = axisLabels[axis0][3];
 		} else {
 			directions[0] = axisLabels[axis0][3];
 			directions[1] = axisLabels[axis0][2];
 		}
-		directions[2] = axisLabels[axis1][2];
-		directions[3] = axisLabels[axis1][3];
+		if (!isReflected1) {
+			directions[2] = axisLabels[axis1][2];
+			directions[3] = axisLabels[axis1][3];
+		} else {
+			directions[2] = axisLabels[axis1][3];
+			directions[3] = axisLabels[axis1][2];
+		}
 		rotate(0);
 	}
 
@@ -427,9 +459,15 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 			int[] axes = { axis0, axis1 };
 			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
-		} else if (e.getSource().equals(reflect)) {
-			isReflected = reflect.getState();
-			reflectHash.put(activeImpID, new Boolean(isReflected));
+		} else if (e.getSource().equals(reflect0)) {
+			isReflected0 = reflect0.getState();
+			boolean[] reflectors = { isReflected0, isReflected1 };
+			reflectHash.put(activeImpID, reflectors.clone());
+			updateDirections();
+		} else if (e.getSource().equals(reflect1)) {
+			isReflected1 = reflect1.getState();
+			boolean[] reflectors = { isReflected0, isReflected1 };
+			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		}
 	}
