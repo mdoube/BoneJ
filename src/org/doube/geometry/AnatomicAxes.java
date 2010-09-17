@@ -15,7 +15,6 @@ import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Scrollbar;
 import java.awt.Shape;
-import java.awt.TextArea;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
@@ -100,7 +99,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	GridBagLayout gridbag;
 	GridBagConstraints c;
 	private Scrollbar slider;
-	private Panel panel;
+	private Panel panel0;
+	private Panel panel1;
 	private Choice axis0Choice;
 	private Choice axis1Choice;
 	private Checkbox reflect0;
@@ -140,53 +140,54 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		slider.setFocusable(false); // prevents blinking on Windows
 		slider.setPreferredSize(new Dimension(360, 16));
 
-		panel = new Panel();
+		panel0 = new Panel();
 		
-		Label label0 = new Label("Principal");
-		panel.add(label0);
+		Label label0 = new Label("Principal direction");
+		panel0.add(label0);
 		
 		axis0Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis0Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
 		axis0Choice.select(axis0);
 		axis0Choice.addItemListener(this);
-		// methodChoice.addKeyListener(ij);
-		panel.add(axis0Choice);
+		panel0.add(axis0Choice);
 		
 		reflect0 = new Checkbox("Reflect");
 		reflect0.setState(isReflected0);
 		reflect0.addItemListener(this);
-		c.gridx = 0;
-		c.gridy = y++;
-		c.gridwidth = 2;
-		c.insets = new Insets(5, 5, 0, 5);
-		panel.add(reflect0, c);
+		panel0.add(reflect0);
 
-		Label label1 = new Label("Secondary");
-		panel.add(label1);
+		panel1 = new Panel();
+		Label label1 = new Label("Secondary direction");
+		panel1.add(label1);
 		
 		axis1Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis1Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
 		axis1Choice.select(axis1);
 		axis1Choice.addItemListener(this);
-		panel.add(axis1Choice);
-		c.gridx = 0;
-		c.gridy = y++;
-		c.gridwidth = 2;
-		c.insets = new Insets(5, 5, 0, 5);
-		c.anchor = GridBagConstraints.CENTER;
-		c.fill = GridBagConstraints.NONE;
-		add(panel, c);
+		panel1.add(axis1Choice);
 
 		reflect1 = new Checkbox("Reflect");
 		reflect1.setState(isReflected1);
 		reflect1.addItemListener(this);
-		c.gridx = 1;
-		c.gridy = y;
+		panel1.add(reflect1);
+		
+		c.gridx = 0;
+		c.gridy = y++;
 		c.gridwidth = 2;
 		c.insets = new Insets(5, 5, 0, 5);
-		panel.add(reflect1, c);
+		c.anchor = GridBagConstraints.EAST;
+		c.fill = GridBagConstraints.NONE;
+		add(panel0, c);
+		
+		c.gridx = 0;
+		c.gridy = y++;
+		c.gridwidth = 2;
+		c.insets = new Insets(5, 5, 0, 5);
+		c.anchor = GridBagConstraints.EAST;
+		c.fill = GridBagConstraints.NONE;
+		add(panel1, c);
 
 		
 		pack();
