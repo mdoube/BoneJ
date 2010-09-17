@@ -141,17 +141,17 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		slider.setPreferredSize(new Dimension(360, 16));
 
 		panel0 = new Panel();
-		
+
 		Label label0 = new Label("Principal direction");
 		panel0.add(label0);
-		
+
 		axis0Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis0Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
 		axis0Choice.select(axis0);
 		axis0Choice.addItemListener(this);
 		panel0.add(axis0Choice);
-		
+
 		reflect0 = new Checkbox("Reflect");
 		reflect0.setState(isReflected0);
 		reflect0.addItemListener(this);
@@ -160,7 +160,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		panel1 = new Panel();
 		Label label1 = new Label("Secondary direction");
 		panel1.add(label1);
-		
+
 		axis1Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis1Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
@@ -172,7 +172,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		reflect1.setState(isReflected1);
 		reflect1.addItemListener(this);
 		panel1.add(reflect1);
-		
+
 		c.gridx = 0;
 		c.gridy = y++;
 		c.gridwidth = 2;
@@ -180,7 +180,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		c.anchor = GridBagConstraints.EAST;
 		c.fill = GridBagConstraints.NONE;
 		add(panel0, c);
-		
+
 		c.gridx = 0;
 		c.gridy = y++;
 		c.gridwidth = 2;
@@ -189,7 +189,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		c.fill = GridBagConstraints.NONE;
 		add(panel1, c);
 
-		
 		pack();
 		Point loc = Prefs.getLocation(LOC_KEY);
 		if (loc != null)
@@ -287,10 +286,64 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	 * @return orientation of the axis in radians clockwise from 12 o'clock
 	 */
 	public double getOrientation(String direction) {
+		ImagePlus imp = WindowManager.getCurrentImage();
+		return getOrientation(imp, direction);
+	}
+
+	/**
+	 * Overloaded version of getOrientation that takes no argument
+	 * 
+	 * @return orientation of the principal direction in radians clockwise from
+	 *         12 o'clock
+	 */
+	public double getOrientation() {
 		double orientation = this.theta;
+		return orientation;
+	}
+
+	/**
+	 * Get the orientation of the principal direction
+	 * 
+	 * @param imp
+	 * @return Orientation in radians clockwise from 12 o'clock
+	 * @throws IllegalArgumentException
+	 *             if imp has not been activated by Orientation
+	 */
+	public double getOrientation(ImagePlus imp) {
+		Integer id = new Integer(imp.getID());
+		Double o = thetaHash.get(id);
+		if (o == null) {
+			throw new IllegalArgumentException();
+		} else {
+			return o.doubleValue();
+		}
+	}
+
+	public double getOrientation(ImagePlus imp, String direction) {
+		double orientation = getOrientation(imp);
+		Integer id = new Integer(imp.getID());
+		boolean[] ref = reflectHash.get(id);
+		int[] axes = axisHash.get(id);
+		String[] dir = new String[4];
+
+		if (!ref[0]) {
+			dir[0] = axisLabels[axes[0]][2];
+			dir[1] = axisLabels[axes[0]][3];
+		} else {
+			dir[0] = axisLabels[axes[0]][3];
+			dir[1] = axisLabels[axes[0]][2];
+		}
+		if (!ref[1]) {
+			dir[2] = axisLabels[axes[1]][2];
+			dir[3] = axisLabels[axes[1]][3];
+		} else {
+			dir[2] = axisLabels[axes[1]][3];
+			dir[3] = axisLabels[axes[1]][2];
+		}
+
 		int quadrant = 0;
 		for (int i = 0; i < 4; i++) {
-			if (directions[i].equals(direction)) {
+			if (dir[i].equals(direction)) {
 				quadrant = i;
 				break;
 			}
@@ -317,17 +370,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	}
 
 	/**
-	 * Overloaded version of getOrientation that takes no argument
-	 * 
-	 * @return orientation of the principal direction in radians clockwise from
-	 *         12 o'clock
-	 */
-	public double getOrientation() {
-		double orientation = this.theta;
-		return orientation;
-	}
-
-	/**
 	 * Rotate the direction indicator by a given angle
 	 * 
 	 * @param deltaTheta
@@ -346,6 +388,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		addLabels();
 		imp.setOverlay(overlay);
 		thetaHash.put(activeImpID, new Double(theta));
+		pathHash.put(activeImpID, new GeneralPath(path));
 	}
 
 	/**
