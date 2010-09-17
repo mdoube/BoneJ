@@ -18,14 +18,12 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
+import java.util.Hashtable;
 
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
@@ -37,10 +35,7 @@ import ij.gui.TextRoi;
 import ij.plugin.frame.PlugInFrame;
 
 /**
- * Indicator to show anatomic directions such as medial, proximal, cranial
- * 
- * Instantiate 2 line ROI's, lock their lengths, lock their midpoint to always
- * be the same position.
+ * Indicator to show directions such as medial, proximal, cranial, north, left
  * 
  * @author Michael Doube
  * @author Wayne Rasband
@@ -48,7 +43,7 @@ import ij.plugin.frame.PlugInFrame;
  */
 @SuppressWarnings("serial")
 public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
-		ItemListener, KeyListener {
+		ItemListener {
 
 	public static final String LOC_KEY = "aa.loc";
 	private static final String[][] axisLabels = {
@@ -66,30 +61,43 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 			{ "east", "west", "E", "W" }, { "up", "down", "Up", "D" },
 			{ "right", "left", "R", "L" } };
 
-	private int axis0 = 1, axis1 = 0;
+	/** Current principal direction choice */
+	private int axis0 = 1;
+	
+	/** Current secondary direction choice */
+	private int axis1 = 0;
+	
+	/** Direction labels */
 	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3],
 			axisLabels[axis1][2], axisLabels[axis1][3] };
 	private static Frame instance;
-	ImageJ ij;
-	GridBagLayout gridbag;
-	GridBagConstraints c;
-
-	/** Common midpoint */
-	private int x, y;
 
 	/** Current orientation in radians */
 	private double theta = 0;
 
 	/** Axis length */
 	private int length;
-	private ImagePlus imp;
+
+	/** Compass centre coordinates */
 	private Point p;
+
+	private Integer activeImpID;
+	private Hashtable<Integer, Double> thetaHash = new Hashtable<Integer, Double>();
+	private Hashtable<Integer, Integer> lengthHash = new Hashtable<Integer, Integer>();
+	private Hashtable<Integer, Point> centreHash = new Hashtable<Integer, Point>();
+	private Hashtable<Integer, GeneralPath> pathHash = new Hashtable<Integer, GeneralPath>();
+	private Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
+	private Hashtable<Integer, Boolean> reflectHash = new Hashtable<Integer, Boolean>();
+
 	private GeneralPath path;
 	private BasicStroke stroke;
-	private Scrollbar slider;
 
 	private Overlay overlay = new Overlay();
 	private int fontSize = 12;
+	
+	GridBagLayout gridbag;
+	GridBagConstraints c;
+	private Scrollbar slider;
 	private Panel panel;
 	private Choice axis0Choice;
 	private Choice axis1Choice;
@@ -98,10 +106,6 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 
 	public AnatomicAxes() {
 		super("Orientation");
-
-	}
-
-	public void run(String arg) {
 		if (instance != null) {
 			if (!instance.getTitle().equals(getTitle())) {
 				AnatomicAxes aa = (AnatomicAxes) instance;
@@ -122,12 +126,12 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 
 		slider = new Scrollbar(Scrollbar.HORIZONTAL,
 				(int) (theta * 180 / Math.PI), 1, 0, 360);
+		int y = 0;
 		c.gridy = y++;
 		c.insets = new Insets(2, 10, 0, 10);
 		gridbag.setConstraints(slider, c);
 		add(slider);
 		slider.addAdjustmentListener(this);
-		slider.addKeyListener(this);
 		slider.setUnitIncrement(1);
 		slider.setFocusable(false); // prevents blinking on Windows
 		slider.setPreferredSize(new Dimension(360, 16));
@@ -136,7 +140,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		axis0Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis0Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
-		axis0Choice.select("cranial - caudal");
+		axis0Choice.select(axis0);
 		axis0Choice.addItemListener(this);
 		// methodChoice.addKeyListener(ij);
 		panel.add(axis0Choice);
@@ -153,9 +157,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		axis1Choice = new Choice();
 		for (int i = 0; i < axisLabels.length; i++)
 			axis1Choice.addItem(axisLabels[i][0] + " - " + axisLabels[i][1]);
-		axis1Choice.select("medial - lateral");
+		axis1Choice.select(axis1);
 		axis1Choice.addItemListener(this);
-		// modeChoice.addKeyListener(ij);
 		panel.add(axis1Choice);
 		c.gridx = 0;
 		c.gridy = y++;
@@ -174,29 +177,77 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		if (IJ.isMacOSX())
 			setResizable(false);
 		setVisible(true);
-
-		// show the crosshairs
-		this.imp = WindowManager.getCurrentImage();
-		if (imp == null)
-			return;
-		int w = imp.getWidth();
-		int h = imp.getHeight();
-		this.length = Math.min(w, h) / 4;
-		this.x = w / 2;
-		this.y = h / 2;
-		this.p = new Point(x, y);
-		path = new GeneralPath();
-		drawCross(p, path);
-		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
-				BasicStroke.JOIN_MITER);
-		this.imp.setOverlay(path, Color.BLUE, stroke);
-		rotateTo(0);
+		ImagePlus imp = WindowManager.getCurrentImage();
+		if (imp != null)
+			setup(imp);
 	}
 
-	public void reflect() {
-		// TODO method stub
-		// get whichever line is selected
-		// swap the labels
+	private void setup(ImagePlus imp) {
+		if (imp == null)
+			return;
+		if (checkHash(imp)) {
+			IJ.log("Image has already been set up");
+			return;
+		}
+		Integer id = new Integer(imp.getID());
+		activeImpID = id;
+		int w = imp.getWidth();
+		int h = imp.getHeight();
+		this.theta = 0;
+		slider.setValue((int) (theta * 180 / Math.PI));
+		this.isReflected = false;
+		reflect.setState(isReflected);
+		this.length = Math.min(w, h) / 4;
+		this.p = new Point(w / 2, h / 2);
+		path = new GeneralPath();
+		path.moveTo(p.x - length, p.y);
+		path.lineTo(p.x + length, p.y);
+		path.moveTo(p.x, p.y - length);
+		path.lineTo(p.x, p.y + length);
+		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
+				BasicStroke.JOIN_MITER);
+		imp.setOverlay(path, Color.BLUE, stroke);
+		rotateTo(theta);
+		centreHash.put(id, new Point(p));
+		thetaHash.put(id, new Double(theta));
+		pathHash.put(id, new GeneralPath(path));
+		int[] axes = { axis0, axis1 };
+		axisHash.put(id, axes.clone());
+		lengthHash.put(id, new Integer(this.length));
+		reflectHash.put(id, new Boolean(isReflected));
+	}
+
+	private void update() {
+		ImagePlus imp = WindowManager.getCurrentImage();
+		activeImpID = new Integer(imp.getID());
+		if (!checkHash(imp)) {
+			setup(imp);
+			return;
+		}
+		this.p = centreHash.get(activeImpID);
+		this.theta = thetaHash.get(activeImpID);
+		int[] axes = axisHash.get(activeImpID);
+		this.axis0 = axes[0];
+		this.axis1 = axes[1];
+		this.path = pathHash.get(activeImpID);
+		this.length = lengthHash.get(activeImpID);
+		this.isReflected = reflectHash.get(activeImpID);
+		axis0Choice.select(axis0);
+		axis1Choice.select(axis1);
+		slider.setValue((int) (theta * 180 / Math.PI));
+		reflect.setState(isReflected);
+		updateDirections();
+	}
+
+	/**
+	 * Check if an image is already handled by Orientation
+	 * 
+	 * @param imp
+	 * @return true if this image is already handled by Orientation
+	 */
+	private boolean checkHash(ImagePlus imp) {
+		Integer i = new Integer(imp.getID());
+		return thetaHash.containsKey(i);
 	}
 
 	/**
@@ -256,6 +307,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	 *            anti-clockwise)
 	 */
 	public void rotate(double deltaTheta) {
+		ImagePlus imp = WindowManager.getCurrentImage();
+		this.activeImpID = new Integer(imp.getID());
 		AffineTransform transform = new AffineTransform();
 		transform.rotate(deltaTheta, p.x, p.y);
 		this.theta += deltaTheta;
@@ -264,6 +317,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		addPath(path, Color.BLUE, stroke);
 		addLabels();
 		imp.setOverlay(overlay);
+		thetaHash.put(activeImpID, new Double(theta));
 	}
 
 	/**
@@ -276,6 +330,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	public void rotateTo(double newTheta) {
 		rotate(newTheta - this.theta);
 		this.theta = newTheta;
+		thetaHash.put(activeImpID, newTheta);
 	}
 
 	private void addLabels() {
@@ -319,32 +374,17 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 		overlay.add(roi);
 	}
 
-	/** draws the crosses in the images */
-	private void drawCross(Point p, GeneralPath path) {
-		float x = p.x;
-		float y = p.y;
-		path.moveTo(x - length, y);
-		path.lineTo(x + length, y);
-		path.moveTo(x, y - length);
-		path.lineTo(x, y + length);
-	}
-
 	public void close() {
 		super.close();
 		instance = null;
-		imp.setOverlay(null);
+		for (Integer i : thetaHash.keySet())
+			WindowManager.getImage(i.intValue()).setOverlay(null);
 	}
 
 	public void windowActivated(WindowEvent e) {
 		super.windowActivated(e);
-		setup();
+		update();
 		WindowManager.setWindow(this);
-	}
-
-	private void setup() {
-		// TODO Auto-generated method stub
-		// Handle situation where instance of orientation exists and a new
-		// image is opened
 	}
 
 	public void windowClosing(WindowEvent e) {
@@ -368,6 +408,8 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 				return;
 			}
 			axis0 = i;
+			int[] axes = { axis0, axis1 };
+			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (e.getSource().equals(axis1Choice)) {
 			int i = axis1Choice.getSelectedIndex();
@@ -377,29 +419,13 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 				return;
 			}
 			axis1 = i;
+			int[] axes = { axis0, axis1 };
+			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (e.getSource().equals(reflect)) {
 			isReflected = reflect.getState();
+			reflectHash.put(activeImpID, new Boolean(isReflected));
 			updateDirections();
 		}
-
-	}
-
-	@Override
-	public void keyPressed(KeyEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyReleased(KeyEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
-
 	}
 }
