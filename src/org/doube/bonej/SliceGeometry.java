@@ -49,7 +49,7 @@ import java.util.Vector;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
-import org.doube.geometry.AnatomicAxes;
+import org.doube.geometry.Orienteer;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;

@@ -43,7 +43,7 @@ import ij.plugin.frame.PlugInFrame;
  * 
  */
 @SuppressWarnings("serial")
-public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
+public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		ItemListener {
 
 	public static final String LOC_KEY = "aa.loc";
@@ -108,11 +108,11 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 	private boolean isReflected0 = false;
 	private boolean isReflected1 = false;
 
-	public AnatomicAxes() {
+	public Orienteer() {
 		super("Orientation");
 		if (instance != null) {
 			if (!instance.getTitle().equals(getTitle())) {
-				AnatomicAxes aa = (AnatomicAxes) instance;
+				Orienteer aa = (Orienteer) instance;
 				Prefs.saveLocation(LOC_KEY, aa.getLocation());
 				aa.close();
 			} else {
@@ -121,7 +121,7 @@ public class AnatomicAxes extends PlugInFrame implements AdjustmentListener,
 			}
 		}
 		instance = this;
-		IJ.register(AnatomicAxes.class);
+		IJ.register(Orienteer.class);
 		WindowManager.addWindow(this);
 
 		gridbag = new GridBagLayout();
