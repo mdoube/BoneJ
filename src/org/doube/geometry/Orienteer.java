@@ -6,7 +6,6 @@ import java.awt.Choice;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -33,6 +32,7 @@ import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.gui.ShapeRoi;
 import ij.gui.TextRoi;
+import ij.plugin.Orthogonal_Views;
 import ij.plugin.frame.PlugInFrame;
 
 /**
@@ -71,7 +71,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	/** Direction labels */
 	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3],
 			axisLabels[axis1][2], axisLabels[axis1][3] };
-	private static Frame instance;
+	private static Orienteer instance;
 
 	/** Current orientation in radians */
 	private double theta = 0;
@@ -277,6 +277,45 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		return thetaHash.containsKey(i);
 	}
 
+	public static Orienteer getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Gets the labels associated with an ImagePlus. Returns null if the image
+	 * isn't being tracked by Orienteer.
+	 * 
+	 * @param imp
+	 * @return an array of axis labels, with the principal direction in the
+	 *         zeroth position, the principal tail in the 1st position, the
+	 *         secondary head in the 2nd position and the secondary tail in the
+	 *         3rd position.
+	 */
+	public String[] getDirections(ImagePlus imp) {
+		if (!checkHash(imp))
+			return null;
+		Integer id = new Integer(imp.getID());
+		int[] axes = axisHash.get(id);
+		boolean[] ref = reflectHash.get(id);
+		String[] dirs = new String[4];
+
+		if (!ref[0]) {
+			dirs[0] = axisLabels[axes[0]][2];
+			dirs[1] = axisLabels[axes[0]][3];
+		} else {
+			dirs[0] = axisLabels[axes[0]][3];
+			dirs[1] = axisLabels[axes[0]][2];
+		}
+		if (!ref[1]) {
+			dirs[2] = axisLabels[axes[1]][2];
+			dirs[3] = axisLabels[axes[1]][3];
+		} else {
+			dirs[2] = axisLabels[axes[1]][3];
+			dirs[3] = axisLabels[axes[1]][2];
+		}
+		return dirs;
+	}
+
 	/**
 	 * Retrieve the orientation of the named axis. If the axis name is not
 	 * found, the principal axis orientation is returned.
@@ -423,20 +462,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	}
 
 	private void updateDirections() {
-		if (!isReflected0) {
-			directions[0] = axisLabels[axis0][2];
-			directions[1] = axisLabels[axis0][3];
-		} else {
-			directions[0] = axisLabels[axis0][3];
-			directions[1] = axisLabels[axis0][2];
-		}
-		if (!isReflected1) {
-			directions[2] = axisLabels[axis1][2];
-			directions[3] = axisLabels[axis1][3];
-		} else {
-			directions[2] = axisLabels[axis1][3];
-			directions[3] = axisLabels[axis1][2];
-		}
+		directions = getDirections(WindowManager.getImage(activeImpID));
 		rotate(0);
 	}
 
