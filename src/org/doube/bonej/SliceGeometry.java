@@ -158,6 +158,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/** List of polar section moduli */
 	private double[] Zpol;
 	private boolean do3DAnnotation;
+	private Orienteer orienteer;
+	/** Flag to use anatomic orientation */
+	private boolean doOriented;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -183,6 +186,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
+		orienteer = Orienteer.getInstance();
+
 		GenericDialog gd = new GenericDialog("Options");
 
 		// guess bone from image title
@@ -197,6 +202,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addCheckbox("Annotated_Copy_(2D)", true);
 		gd.addCheckbox("3D_Annotation", false);
 		gd.addCheckbox("Process_Stack", false);
+		gd.addCheckbox("Use Orientation", (orienteer != null));
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
 		gd.addCheckbox("HU_Calibrated", ImageCheck.huCalibrated(imp));
@@ -220,6 +226,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.doCopy = gd.getNextBoolean();
 		this.do3DAnnotation = gd.getNextBoolean();
 		this.doStack = gd.getNextBoolean();
+		this.doOriented = gd.getNextBoolean();
 		if (this.doStack) {
 			this.startSlice = 1;
 			this.endSlice = imp.getImageStackSize();
@@ -394,7 +401,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// list of axes
 		List<Point3f> axes = new ArrayList<Point3f>();
 		for (int s = 1; s <= roiImp.getImageStackSize(); s++) {
-			if (((Double)this.cortArea[s]).equals(Double.NaN))
+			if (((Double) this.cortArea[s]).equals(Double.NaN))
 				continue;
 
 			final double cX = sliceCentroids[0][s] - rX;
@@ -954,8 +961,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Checkbox box6 = (Checkbox) checkboxes.get(7);
-		boolean isHUCalibrated = box6.getState();
+		Checkbox calibration = (Checkbox) checkboxes.get(8);
+		boolean isHUCalibrated = calibration.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
 		double min = 0;
@@ -980,6 +987,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			DialogModifier.replaceUnitString(gd, "grey", "HU");
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
+
+		Checkbox oriented = (Checkbox) checkboxes.get(7);
+		if (orienteer == null) {
+			oriented.setState(false);
+			oriented.setEnabled(false);
+		} else
+			oriented.setEnabled(true);
+
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
