@@ -360,25 +360,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 
 	public double getOrientation(ImagePlus imp, String direction) {
 		double orientation = getOrientation(imp);
-		Integer id = new Integer(imp.getID());
-		boolean[] ref = reflectHash.get(id);
-		int[] axes = axisHash.get(id);
-		String[] dir = new String[4];
-
-		if (!ref[0]) {
-			dir[0] = axisLabels[axes[0]][2];
-			dir[1] = axisLabels[axes[0]][3];
-		} else {
-			dir[0] = axisLabels[axes[0]][3];
-			dir[1] = axisLabels[axes[0]][2];
-		}
-		if (!ref[1]) {
-			dir[2] = axisLabels[axes[1]][2];
-			dir[3] = axisLabels[axes[1]][3];
-		} else {
-			dir[2] = axisLabels[axes[1]][3];
-			dir[3] = axisLabels[axes[1]][2];
-		}
+		String[] dir = getDirections(imp);
 
 		int quadrant = 0;
 		for (int i = 0; i < 4; i++) {
