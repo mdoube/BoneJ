@@ -5,7 +5,6 @@ import java.awt.Checkbox;
 import java.awt.CheckboxGroup;
 import java.awt.Choice;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -37,7 +36,6 @@ import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.gui.ShapeRoi;
 import ij.gui.TextRoi;
-import ij.plugin.Orthogonal_Views;
 import ij.plugin.frame.PlugInFrame;
 
 /**
@@ -112,7 +110,6 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private Checkbox reflect1;
 	private boolean isReflected0 = false;
 	private boolean isReflected1 = false;
-	private double currentAngle;
 	private TextField text;
 	private Panel degRadPanel;
 	private Checkbox deg;
