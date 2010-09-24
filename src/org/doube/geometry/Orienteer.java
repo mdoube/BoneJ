@@ -272,7 +272,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		reflectHash.put(id, reflectors.clone());
 		deg.setState(true);
 		rad.setState(false);
-		boolean[] units = {deg.getState(), rad.getState()};
+		boolean[] units = { deg.getState(), rad.getState() };
 		unitHash.put(id, units);
 		updateTextbox();
 	}
@@ -280,6 +280,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private void update() {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		activeImpID = new Integer(imp.getID());
+		instance.setTitle("Orientation - " + imp.getTitle());
 		if (!checkHash(imp)) {
 			setup(imp);
 			return;
@@ -571,7 +572,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		} else if (source.equals(deg) || source.equals(rad)) {
-			boolean[] units = {deg.getState(), rad.getState()};
+			boolean[] units = { deg.getState(), rad.getState() };
 			unitHash.put(activeImpID, units);
 			updateTextbox();
 		}
