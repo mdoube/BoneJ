@@ -2,8 +2,10 @@ package org.doube.geometry;
 
 import java.awt.BasicStroke;
 import java.awt.Checkbox;
+import java.awt.CheckboxGroup;
 import java.awt.Choice;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -14,10 +16,13 @@ import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Scrollbar;
 import java.awt.Shape;
+import java.awt.TextField;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.TextEvent;
+import java.awt.event.TextListener;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
@@ -44,7 +49,7 @@ import ij.plugin.frame.PlugInFrame;
  */
 @SuppressWarnings("serial")
 public class Orienteer extends PlugInFrame implements AdjustmentListener,
-		ItemListener {
+		ItemListener, TextListener {
 
 	public static final String LOC_KEY = "aa.loc";
 	private static final String[][] axisLabels = {
@@ -107,6 +112,11 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private Checkbox reflect1;
 	private boolean isReflected0 = false;
 	private boolean isReflected1 = false;
+	private double currentAngle;
+	private TextField text;
+	private Panel degRadPanel;
+	private Checkbox deg;
+	private Checkbox rad;
 
 	public Orienteer() {
 		super("Orientation");
@@ -127,7 +137,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		gridbag = new GridBagLayout();
 		c = new GridBagConstraints();
 		setLayout(gridbag);
-
+		
 		slider = new Scrollbar(Scrollbar.HORIZONTAL,
 				(int) (theta * 180 / Math.PI), 1, 0, 360);
 		int y = 0;
@@ -139,7 +149,22 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.setUnitIncrement(1);
 		slider.setFocusable(false); // prevents blinking on Windows
 		slider.setPreferredSize(new Dimension(360, 16));
-
+		
+		degRadPanel = new Panel();
+		Label degRadLabel = new Label("Orientation");
+		degRadPanel.add(degRadLabel);
+		text = new TextField(IJ.d2s(theta * 180 / Math.PI, 3), 7);
+		degRadPanel.add(text);
+		text.addTextListener(this);
+		
+		CheckboxGroup degRad = new CheckboxGroup();
+		deg = new Checkbox("deg", degRad, true);
+		rad = new Checkbox("rad", degRad, false);
+		degRadPanel.add(deg);
+		degRadPanel.add(rad);
+		deg.addItemListener(this);
+		rad.addItemListener(this);
+		
 		panel0 = new Panel();
 
 		Label label0 = new Label("Principal direction");
@@ -173,6 +198,14 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		reflect1.addItemListener(this);
 		panel1.add(reflect1);
 
+		c.gridx = 0;
+		c.gridy = y++;
+		c.gridwidth = 2;
+		c.insets = new Insets(5, 5, 0, 5);
+		c.anchor = GridBagConstraints.EAST;
+		c.fill = GridBagConstraints.NONE;
+		add(degRadPanel, c);
+		
 		c.gridx = 0;
 		c.gridy = y++;
 		c.gridwidth = 2;
@@ -447,6 +480,13 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		directions = getDirections(WindowManager.getImage(activeImpID));
 		rotate(0);
 	}
+	
+	private void updateTextbox() {
+		if (deg.getState())
+			text.setText(IJ.d2s(this.theta * 180 / Math.PI, 3));
+		else
+			text.setText(IJ.d2s(this.theta, 5));
+	}
 
 	void addPath(Shape shape, Color color, BasicStroke stroke) {
 		Roi roi = new ShapeRoi(shape);
@@ -484,12 +524,14 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	public void adjustmentValueChanged(AdjustmentEvent e) {
 		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
+			updateTextbox();
 		}
 	}
 
 	@Override
 	public void itemStateChanged(ItemEvent e) {
-		if (e.getSource().equals(axis0Choice)) {
+		Object source = e.getSource();
+		if (source.equals(axis0Choice)) {
 			int i = axis0Choice.getSelectedIndex();
 			if (i == axis1Choice.getSelectedIndex()) {
 				axis0Choice.select(axis0);
@@ -500,7 +542,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 			int[] axes = { axis0, axis1 };
 			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
-		} else if (e.getSource().equals(axis1Choice)) {
+		} else if (source.equals(axis1Choice)) {
 			int i = axis1Choice.getSelectedIndex();
 			if (i == axis0Choice.getSelectedIndex()) {
 				axis1Choice.select(axis1);
@@ -511,16 +553,27 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 			int[] axes = { axis0, axis1 };
 			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
-		} else if (e.getSource().equals(reflect0)) {
+		} else if (source.equals(reflect0)) {
 			isReflected0 = reflect0.getState();
 			boolean[] reflectors = { isReflected0, isReflected1 };
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
-		} else if (e.getSource().equals(reflect1)) {
+		} else if (source.equals(reflect1)) {
 			isReflected1 = reflect1.getState();
 			boolean[] reflectors = { isReflected0, isReflected1 };
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
+		} else if (source.equals(deg) || source.equals(rad)){
+			updateTextbox();
 		}
+	}
+
+	@Override
+	public void textValueChanged(TextEvent e) {
+		TextField field = (TextField) e.getSource();
+		double value = Double.parseDouble(field.getText());
+		if (deg.getState())
+			value *= Math.PI / 180;
+		rotateTo(value);
 	}
 }
