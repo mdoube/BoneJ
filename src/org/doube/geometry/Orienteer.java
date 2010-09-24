@@ -92,6 +92,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private Hashtable<Integer, GeneralPath> pathHash = new Hashtable<Integer, GeneralPath>();
 	private Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
 	private Hashtable<Integer, boolean[]> reflectHash = new Hashtable<Integer, boolean[]>();
+	private Hashtable<Integer, boolean[]> unitHash = new Hashtable<Integer, boolean[]>();
 
 	private Overlay overlay = new Overlay();
 	private int fontSize = 12;
@@ -134,7 +135,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		gridbag = new GridBagLayout();
 		c = new GridBagConstraints();
 		setLayout(gridbag);
-		
+
 		slider = new Scrollbar(Scrollbar.HORIZONTAL,
 				(int) (theta * 180 / Math.PI), 1, 0, 360);
 		int y = 0;
@@ -146,14 +147,14 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.setUnitIncrement(1);
 		slider.setFocusable(false); // prevents blinking on Windows
 		slider.setPreferredSize(new Dimension(360, 16));
-		
+
 		degRadPanel = new Panel();
 		Label degRadLabel = new Label("Orientation");
 		degRadPanel.add(degRadLabel);
 		text = new TextField(IJ.d2s(theta * 180 / Math.PI, 3), 7);
 		degRadPanel.add(text);
 		text.addTextListener(this);
-		
+
 		CheckboxGroup degRad = new CheckboxGroup();
 		deg = new Checkbox("deg", degRad, true);
 		rad = new Checkbox("rad", degRad, false);
@@ -161,7 +162,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		degRadPanel.add(rad);
 		deg.addItemListener(this);
 		rad.addItemListener(this);
-		
+
 		panel0 = new Panel();
 
 		Label label0 = new Label("Principal direction");
@@ -202,7 +203,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		c.anchor = GridBagConstraints.EAST;
 		c.fill = GridBagConstraints.NONE;
 		add(degRadPanel, c);
-		
+
 		c.gridx = 0;
 		c.gridy = y++;
 		c.gridwidth = 2;
@@ -269,6 +270,11 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		lengthHash.put(id, new Integer(this.length));
 		boolean[] reflectors = { isReflected0, isReflected1 };
 		reflectHash.put(id, reflectors.clone());
+		deg.setState(true);
+		rad.setState(false);
+		boolean[] units = {deg.getState(), rad.getState()};
+		unitHash.put(id, units);
+		updateTextbox();
 	}
 
 	private void update() {
@@ -293,6 +299,10 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.setValue((int) (theta * 180 / Math.PI));
 		reflect0.setState(isReflected0);
 		reflect1.setState(isReflected1);
+		boolean[] units = unitHash.get(activeImpID);
+		deg.setState(units[0]);
+		rad.setState(units[1]);
+		updateTextbox();
 		updateDirections();
 	}
 
@@ -477,7 +487,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		directions = getDirections(WindowManager.getImage(activeImpID));
 		rotate(0);
 	}
-	
+
 	private void updateTextbox() {
 		if (deg.getState())
 			text.setText(IJ.d2s(this.theta * 180 / Math.PI, 3));
@@ -560,7 +570,9 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 			boolean[] reflectors = { isReflected0, isReflected1 };
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
-		} else if (source.equals(deg) || source.equals(rad)){
+		} else if (source.equals(deg) || source.equals(rad)) {
+			boolean[] units = {deg.getState(), rad.getState()};
+			unitHash.put(activeImpID, units);
 			updateTextbox();
 		}
 	}
@@ -571,6 +583,10 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		double value = Double.parseDouble(field.getText());
 		if (deg.getState())
 			value *= Math.PI / 180;
+		value = value % (2 * Math.PI);
+		if (value < 0)
+			value += 2 * Math.PI;
+		slider.setValue((int) (value * 180 / Math.PI));
 		rotateTo(value);
 	}
 }
