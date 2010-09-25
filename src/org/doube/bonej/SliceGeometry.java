@@ -100,17 +100,17 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/** Standard deviation of 2D local thickness in slice */
 	private double[] stdevCortThick2D;
 	/** normal x distance from parallel axis summed over pixels */
-//	private double[] Sx;
+	// private double[] Sx;
 	/** normal y distance from parallel axis summed over pixels */
-//	private double[] Sy;
+	// private double[] Sy;
 	/** squared normal distances from parallel axis (Iz) */
-//	private double[] Sxx;
+	// private double[] Sxx;
 	/** squared normal distances from parallel axis (Iz) */
-//	private double[] Syy;
-//	private double[] Sxy;
-//	private double[] Myy;
-//	private double[] Mxx;
-//	private double[] Mxy;
+	// private double[] Syy;
+	// private double[] Sxy;
+	// private double[] Myy;
+	// private double[] Mxx;
+	// private double[] Mxy;
 	/** Angle of principal axes */
 	private double[] theta;
 	/**
@@ -171,6 +171,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] Z1;
 	private double[] Z2;
 	private double[] Zp;
+	private double[] principalDiameter;
+	private double[] secondaryDiameter;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -275,7 +277,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 		ResultsTable rt = ResultsTable.getResultsTable();
 		rt.reset();
-		
+
 		String title = imp.getTitle();
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			rt.incrementCounter();
@@ -319,14 +321,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				rt.addValue("SD Thick 2D (" + units + ")",
 						this.stdevCortThick2D[s]);
 			}
-			if (this.doOriented && orienteer != null){
+			if (this.doOriented && orienteer != null) {
 				String[] dirs = orienteer.getDirections(imp);
-				rt.addValue("I"+dirs[0]+dirs[1], this.I1[s]);
-				rt.addValue("I"+dirs[2]+dirs[3], this.I2[s]);
-				rt.addValue("Z"+dirs[0]+dirs[1], this.Z1[s]);
-				rt.addValue("Z"+dirs[2]+dirs[3], this.Z2[s]);
-				rt.addValue("R"+dirs[0]+dirs[1], this.r1[s]);
-				rt.addValue("R"+dirs[2]+dirs[3], this.r2[s]);
+				rt.addValue("I" + dirs[0] + dirs[1], this.I1[s]);
+				rt.addValue("I" + dirs[2] + dirs[3], this.I2[s]);
+				rt.addValue("Z" + dirs[0] + dirs[1], this.Z1[s]);
+				rt.addValue("Z" + dirs[2] + dirs[3], this.Z2[s]);
+				rt.addValue("R" + dirs[0] + dirs[1], this.r1[s]);
+				rt.addValue("R" + dirs[2] + dirs[3], this.r2[s]);
+				rt.addValue("D" + dirs[0] + dirs[1], this.principalDiameter[s]);
+				rt.addValue("D" + dirs[2] + dirs[3], this.secondaryDiameter[s]);
 			}
 		}
 		rt.show("Results");
@@ -577,14 +581,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = stack.getRoi();
 		// START OF Ix AND Iy CALCULATION
-//		this.Sx = new double[this.al];
-//		this.Sy = new double[this.al];
-//		this.Sxx = new double[this.al];
-//		this.Syy = new double[this.al];
-//		this.Sxy = new double[this.al];
-//		this.Myy = new double[this.al];
-//		this.Mxx = new double[this.al];
-//		this.Mxy = new double[this.al];
+		// this.Sx = new double[this.al];
+		// this.Sy = new double[this.al];
+		// this.Sxx = new double[this.al];
+		// this.Syy = new double[this.al];
+		// this.Sxy = new double[this.al];
+		// this.Myy = new double[this.al];
+		// this.Mxx = new double[this.al];
+		// this.Mxy = new double[this.al];
 		this.theta = new double[this.al];
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			IJ.showStatus("Calculating Ix and Iy...");
@@ -612,35 +616,31 @@ public class SliceGeometry implements PlugIn, DialogListener {
 						}
 					}
 				}
-//				this.Sx[s] = sxs;
-//				this.Sy[s] = sys;
-//				this.Sxx[s] = sxxs;
-//				this.Syy[s] = syys;
-//				this.Sxy[s] = sxys;
-				double Myys = sxxs
-						- (sxs * sxs / this.cslice[s])
+				// this.Sx[s] = sxs;
+				// this.Sy[s] = sys;
+				// this.Sxx[s] = sxxs;
+				// this.Syy[s] = syys;
+				// this.Sxy[s] = sxys;
+				double Myys = sxxs - (sxs * sxs / this.cslice[s])
 						+ this.cslice[s] * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
-				double Mxxs = syys
-						- (sys * sys / this.cslice[s])
+				double Mxxs = syys - (sys * sys / this.cslice[s])
 						+ this.cslice[s] * vH * vH / 12;
-				double Mxys = sxys
-						- (sxs * sys / this.cslice[s])
+				double Mxys = sxys - (sxs * sys / this.cslice[s])
 						+ this.cslice[s] * vH * vW / 12;
 				if (Mxys == 0)
 					this.theta[s] = 0;
 				else {
 					this.theta[s] = Math.atan((Mxxs - Myys + Math
-							.sqrt((Mxxs - Myys)
-									* (Mxxs - Myys) + 4
-									* Mxys * Mxys))
+							.sqrt((Mxxs - Myys) * (Mxxs - Myys) + 4 * Mxys
+									* Mxys))
 							/ (2 * Mxys));
 				}
 			} else {
 				this.theta[s] = Double.NaN;
 			}
 		}
-		//Get I and Z around the principal axes
+		// Get I and Z around the principal axes
 		double[][] result = calculateAngleMoments(imp, min, max, this.theta);
 		this.Imax = result[0];
 		this.Imin = result[1];
@@ -652,12 +652,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.Zmax = result[7];
 		this.Zmin = result[8];
 		this.Zpol = result[9];
-		
-		//optionally get I and Z around some user-defined axes
-		if (doOriented && orienteer != null){
+
+		// optionally get I and Z around some user-defined axes
+		if (doOriented && orienteer != null) {
 			double angle = orienteer.getOrientation();
 			double[] angles = new double[this.al];
-			for (int i = 0; i < al; i++){
+			for (int i = 0; i < al; i++) {
 				angles[i] = angle;
 			}
 			double[][] result2 = calculateAngleMoments(imp, min, max, angles);
@@ -673,7 +673,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			this.Zp = result2[9];
 		}
 	}
-	private double[][] calculateAngleMoments(ImagePlus imp, double min, double max, double[] angles){
+
+	private double[][] calculateAngleMoments(ImagePlus imp, double min,
+			double max, double[] angles) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = stack.getRoi();
 		// END OF Ix and Iy CALCULATION
@@ -683,8 +685,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		double[] Ip = new double[this.al];
 		double[] r1 = new double[this.al];
 		double[] r2 = new double[this.al];
-		double[] maxRad2 = new double[this.al]; //TODO check!
-		double[] maxRad1 = new double[this.al]; //TODO check!
+		double[] maxRad2 = new double[this.al]; // TODO check!
+		double[] maxRad1 = new double[this.al]; // TODO check!
 		double[] maxRadC = new double[this.al];
 		double[] Z1 = new double[this.al];
 		double[] Z2 = new double[this.al];
@@ -736,30 +738,24 @@ public class SliceGeometry implements PlugIn, DialogListener {
 						}
 					}
 				}
-//				this.Sx[s] = sxs;
-//				this.Sy[s] = sys;
-//				this.Sxx[s] = sxxs;
-//				this.Syy[s] = syys;
-//				this.Sxy[s] = sxys;
+				// this.Sx[s] = sxs;
+				// this.Sy[s] = sys;
+				// this.Sxx[s] = sxxs;
+				// this.Syy[s] = syys;
+				// this.Sxy[s] = sxys;
 				maxRad2[s] = maxRadMinS;
 				maxRad1[s] = maxRadMaxS;
 				maxRadC[s] = maxRadCentreS;
 				final double pixelMoments = cS * vW * vH
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				I1[s] = vW
-						* vH
-						* (sxxs - (sxs * sxs / cS) + pixelMoments);
-				I2[s] = vW
-						* vH
-						* (syys - (sys * sys / cS) + pixelMoments);
-				Ip[s] = sxys - (sys * sxs / cS)
-						+ pixelMoments;
+				I1[s] = vW * vH * (sxxs - (sxs * sxs / cS) + pixelMoments);
+				I2[s] = vW * vH * (syys - (sys * sys / cS) + pixelMoments);
+				Ip[s] = sxys - (sys * sxs / cS) + pixelMoments;
 				r1[s] = Math.sqrt(I2[s] / (cS * vW * vH * vW * vH));
 				r2[s] = Math.sqrt(I1[s] / (cS * vW * vH * vW * vH));
 				Z1[s] = I1[s] / maxRad2[s];
 				Z2[s] = I2[s] / maxRad1[s];
-				Zp[s] = (I1[s] + I2[s])
-						/ maxRadC[s];
+				Zp[s] = (I1[s] + I2[s]) / maxRadC[s];
 			} else {
 				I1[s] = Double.NaN;
 				I2[s] = Double.NaN;
@@ -773,20 +769,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				Zp[s] = Double.NaN;
 			}
 		}
-		
-		double[][] result = {
-				I1,
-				I2,
-				Ip,
-				r1,
-				r2,
-				maxRad2,
-				maxRad1,
-				Z1,
-				Z2,
-				Zp,	
-		};
-		
+
+		double[][] result = { I1, I2, Ip, r1, r2, maxRad2, maxRad1, Z1, Z2, Zp, };
+
 		return result;
 	}
 
@@ -998,6 +983,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.feretMax = new double[this.al];
 		this.feretMin = new double[this.al];
 		this.perimeter = new double[this.al];
+		this.principalDiameter = new double[this.al];
+		this.secondaryDiameter = new double[this.al];
 		int initialSlice = imp.getCurrentSlice();
 		// for the required slices...
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
@@ -1010,6 +997,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.feretAngle[s] = Double.NaN;
 				this.feretMax[s] = Double.NaN;
 				this.perimeter[s] = Double.NaN;
+				this.principalDiameter[s] = Double.NaN;
+				this.secondaryDiameter[s] = Double.NaN;
+				continue;
 			} else {
 				int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
 				PolygonRoi roi = new PolygonRoi(w.xpoints, w.ypoints,
@@ -1019,6 +1009,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.feretAngle[s] = feretValues[1] * Math.PI / 180;
 				this.feretMax[s] = feretValues[0] * this.vW;
 				this.perimeter[s] = roi.getLength() * this.vW;
+			}
+			if (this.doOriented && orienteer != null) {
+				double[][] points = new double[w.npoints][2];
+				for (int i = 0; i < w.npoints; i++) {
+					points[i][0] = w.xpoints[i] * this.vW;
+					points[i][1] = w.ypoints[i] * this.vH;
+				}
+				double[] diameters = orienteer.getDiameters(points);
+				this.principalDiameter[s] = diameters[0];
+				this.secondaryDiameter[s] = diameters[1];
 			}
 			feretValues = null;
 		}

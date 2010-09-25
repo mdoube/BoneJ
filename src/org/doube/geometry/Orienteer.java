@@ -432,6 +432,35 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	}
 
 	/**
+	 * Given a set of (x,y) coordinates, find the caliper diameters across the
+	 * axes
+	 * 
+	 * @param points
+	 * @return caliper diameters across the principal and secondary axes (zeroth
+	 *         and first elements respectively)
+	 */
+	public double[] getDiameters(double[][] points) {
+		double xMin = Double.POSITIVE_INFINITY;
+		double xMax = Double.NEGATIVE_INFINITY;
+		double yMin = Double.POSITIVE_INFINITY;
+		double yMax = Double.NEGATIVE_INFINITY;
+		final int nPoints = points.length;
+		for (int i = 0; i < nPoints; i++) {
+			double x = points[i][0];
+			double y = points[i][1];
+			// rotate by -theta to get principal axis into y and 2ry axis into x
+			double xr = x * Math.cos(-theta) - y * Math.sin(-theta);
+			double yr = x * Math.sin(-theta) + y * Math.cos(-theta);
+			xMin = Math.min(xMin, xr);
+			xMax = Math.max(xMax, xr);
+			yMin = Math.min(yMin, yr);
+			yMax = Math.max(yMax, yr);
+		}
+		double[] result = { yMax - yMin, xMax - xMin };
+		return result;
+	}
+
+	/**
 	 * Rotate the direction indicator by a given angle
 	 * 
 	 * @param deltaTheta
