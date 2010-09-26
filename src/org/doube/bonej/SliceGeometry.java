@@ -154,7 +154,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/** List of perimeter lengths */
 	private double[] perimeter;
 	/** List of maximal distances from centroid */
-	private double[] maxRadCentre;
+//	private double[] maxRadCentre;
 	/** List of polar section moduli */
 	private double[] Zpol;
 	private boolean do3DAnnotation;
@@ -176,7 +176,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] Z1;
 	/** Section modulus around secondary axis */
 	private double[] Z2;
-	private double[] Zp;
+//	private double[] Zp;
 	private double[] principalDiameter;
 	private double[] secondaryDiameter;
 
@@ -684,7 +684,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			this.maxRad1 = result2[6];
 			this.Z1 = result2[7];
 			this.Z2 = result2[8];
-			this.Zp = result2[9];
+//			this.Zp = result2[9];
 		}
 	}
 
