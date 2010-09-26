@@ -161,14 +161,20 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private Orienteer orienteer;
 	/** Flag to use anatomic orientation */
 	private boolean doOriented;
+	/** Second moment of area around primary axis */
 	private double[] I1;
+	/** Second moment of area around secondary axis */
 	private double[] I2;
-	private double[] Ip;
-	private double[] r1;
-	private double[] r2;
+	// private double[] Ip;
+	// private double[] r1;
+	// private double[] r2;
+	/** Chord length from principal axis */
 	private double[] maxRad2;
+	/** Chord length from secondary axis */
 	private double[] maxRad1;
+	/** Section modulus around primary axis */
 	private double[] Z1;
+	/** Section modulus around secondary axis */
 	private double[] Z2;
 	private double[] Zp;
 	private double[] principalDiameter;
@@ -293,8 +299,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			rt.addValue("wY cent. (" + units + ")",
 					this.weightedCentroids[1][s]);
 			rt.addValue("Theta (rad)", this.theta[s]);
-			rt.addValue("R1 (" + units + ")", this.R1[s]);
-			rt.addValue("R2 (" + units + ")", this.R2[s]);
+			rt.addValue("R1 (" + units + ")", this.maxRadMax[s]);
+			rt.addValue("R2 (" + units + ")", this.maxRadMin[s]);
 			rt.addValue("Imin (" + units + "^4)", this.Imin[s]);
 			rt.addValue("Imax (" + units + "^4)", this.Imax[s]);
 			rt.addValue("Ipm (" + units + "^4)", this.Ipm[s]);
@@ -323,14 +329,22 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			if (this.doOriented && orienteer != null) {
 				String[] dirs = orienteer.getDirections(imp);
-				rt.addValue("I" + dirs[0] + dirs[1], this.I1[s]);
-				rt.addValue("I" + dirs[2] + dirs[3], this.I2[s]);
-				rt.addValue("Z" + dirs[0] + dirs[1], this.Z1[s]);
-				rt.addValue("Z" + dirs[2] + dirs[3], this.Z2[s]);
-				rt.addValue("R" + dirs[0] + dirs[1], this.r1[s]);
-				rt.addValue("R" + dirs[2] + dirs[3], this.r2[s]);
-				rt.addValue("D" + dirs[0] + dirs[1], this.principalDiameter[s]);
-				rt.addValue("D" + dirs[2] + dirs[3], this.secondaryDiameter[s]);
+				rt.addValue("I" + dirs[0] + dirs[1] + "(" + units + "^4)",
+						this.I1[s]);
+				rt.addValue("I" + dirs[2] + dirs[3] + "(" + units + "^4)",
+						this.I2[s]);
+				rt.addValue("Z" + dirs[0] + dirs[1] + "(" + units + "³)",
+						this.Z1[s]);
+				rt.addValue("Z" + dirs[2] + dirs[3] + "(" + units + "³)",
+						this.Z2[s]);
+				rt.addValue("R" + dirs[0] + dirs[1] + "(" + units + ")",
+						this.maxRad2[s]);
+				rt.addValue("R" + dirs[2] + dirs[3] + "(" + units + ")",
+						this.maxRad1[s]);
+				rt.addValue("D" + dirs[0] + dirs[1] + "(" + units + ")",
+						this.principalDiameter[s]);
+				rt.addValue("D" + dirs[2] + dirs[3] + "(" + units + ")",
+						this.secondaryDiameter[s]);
 			}
 		}
 		rt.show("Results");
@@ -663,9 +677,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double[][] result2 = calculateAngleMoments(imp, min, max, angles);
 			this.I1 = result2[0];
 			this.I2 = result2[1];
-			this.Ip = result2[2];
-			this.r1 = result2[3];
-			this.r2 = result2[4];
+			// this.Ip = result2[2];
+			// this.r1 = result2[3];
+			// this.r2 = result2[4];
 			this.maxRad2 = result2[5];
 			this.maxRad1 = result2[6];
 			this.Z1 = result2[7];
@@ -685,8 +699,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		double[] Ip = new double[this.al];
 		double[] r1 = new double[this.al];
 		double[] r2 = new double[this.al];
-		double[] maxRad2 = new double[this.al]; // TODO check!
-		double[] maxRad1 = new double[this.al]; // TODO check!
+		double[] maxRad2 = new double[this.al];
+		double[] maxRad1 = new double[this.al];
 		double[] maxRadC = new double[this.al];
 		double[] Z1 = new double[this.al];
 		double[] Z2 = new double[this.al];
