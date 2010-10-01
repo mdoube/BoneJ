@@ -100,7 +100,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 	/** shortest path z start position */
 	private int spz = 0;
 	/** shortest path start position array */
-	private int[][] spStartPosition;
+	private double[][] spStartPosition;
 	/** shortest path output stack */
 	private ImageStack shortPathImage = null;
 	
@@ -407,15 +407,15 @@ public class AnalyzeSkeleton implements PlugInFilter
 			shortestPathList = new ArrayList < Double >();
 			// Visit skeleton and measure distances.
 			// and apply warshall algorithm
-			spStartPosition = new int[this.numOfTrees][3];
+			spStartPosition = new double[this.numOfTrees][3];
 			for(int i = 0; i < this.numOfTrees; i++)
 			{							
-				//Warshall algorithm including tag positions
+				// Warshall algorithm including tag positions
 				this.shortestPath = warshallAlgorithm(this.graph[i]);
 				shortestPathList.add(this.shortestPath);
-				spStartPosition[i][0] = spx;
-				spStartPosition[i][1] = spy;
-				spStartPosition[i][2] = spz;				
+				spStartPosition[i][0] = spx * this.imRef.getCalibration().pixelWidth;
+				spStartPosition[i][1] = spy * this.imRef.getCalibration().pixelHeight;
+				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;				
 			}
 			
 			// Display short paths in a new stack
