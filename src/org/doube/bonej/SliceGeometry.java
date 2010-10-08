@@ -329,6 +329,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			if (this.doOriented && orienteer != null) {
 				String[] dirs = orienteer.getDirections(imp);
+				rt.addValue(dirs[0] +" (rad)", orienteer.getOrientation(imp, dirs[0]));
+				rt.addValue(dirs[2] +" (rad)", orienteer.getOrientation(imp, dirs[2]));
 				rt.addValue("I" + dirs[0] + dirs[1] + "(" + units + "^4)",
 						this.I1[s]);
 				rt.addValue("I" + dirs[2] + dirs[3] + "(" + units + "^4)",
