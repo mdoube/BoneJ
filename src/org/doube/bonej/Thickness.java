@@ -98,7 +98,7 @@ public class Thickness implements PlugIn {
 		if (doThickness) {
 			boolean inverse = false;
 			ImagePlus impLTC = getLocalThickness(imp, inverse);
-			impLTC.setTitle(title + "_Tr.Th");
+			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			double[] stats = meanStdDev(impLTC);
 			insertResults(imp, stats, inverse);
