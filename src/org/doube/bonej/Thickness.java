@@ -3,6 +3,7 @@ package org.doube.bonej;
 import ij.*;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
+import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.*;
 
@@ -78,6 +79,18 @@ public class Thickness implements PlugIn {
 			return;
 		}
 
+		if (!ic.isVoxelIsotropic(imp, 1E-3)) {
+			if (IJ.showMessageWithCancel(
+					"Anisotropic voxels",
+					"This image contains anisotropic voxels, which will\n"
+							+ "result in incorrect thickness calculation.\n\n" +
+									"Consider rescaling your data so that voxels are isotropic\n" +
+									"(Image > Scale...).\n\n"
+							+ "Continue anyway?")) {
+			} else
+				return;
+
+		}
 		GenericDialog gd = new GenericDialog("Options");
 		gd.addCheckbox("Thickness", true);
 		gd.addCheckbox("Spacing", false);
@@ -148,7 +161,7 @@ public class Thickness implements PlugIn {
 	 * application of Algorithm 1. Bob Dougherty 8/8/2006
 	 * </p>
 	 * 
-	 *<ul>
+	 * <ul>
 	 * <li>Version S1A: lower memory usage.</li>
 	 * <li>Version S1A.1 A fixed indexing bug for 666-bin data set</li>
 	 * <li>Version S1A.2 Aug. 9, 2006. Changed noResult value.</li>
@@ -159,7 +172,7 @@ public class Thickness implements PlugIn {
 	 * <li>Version D July 30, 2007. Multithread processing for step 2.</li>
 	 * </ul>
 	 * 
-	 *<p>
+	 * <p>
 	 * This version assumes the input stack is already in memory, 8-bit, and
 	 * outputs to a new 32-bit stack. Versions that are more stingy with memory
 	 * may be forthcoming.
@@ -968,17 +981,20 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-		// Process the surface points. Initially set results to negative values
-		// to be able to avoid including them in averages of for subsequent
-		// points.
-		// During the calculation, positive values in sNew are interior
-		// non-background
-		// local thicknesses. Negative values are surface points. In this case
-		// the
-		// value might be -1 (not processed yet) or -result, where result is the
-		// average of the neighboring interior points. Negative values are
-		// excluded from
-		// the averaging.
+			// Process the surface points. Initially set results to negative
+			// values
+			// to be able to avoid including them in averages of for subsequent
+			// points.
+			// During the calculation, positive values in sNew are interior
+			// non-background
+			// local thicknesses. Negative values are surface points. In this
+			// case
+			// the
+			// value might be -1 (not processed yet) or -result, where result is
+			// the
+			// average of the neighboring interior points. Negative values are
+			// excluded from
+			// the averaging.
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -991,7 +1007,7 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-		// Fix the negative values and double the results
+			// Fix the negative values and double the results
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
