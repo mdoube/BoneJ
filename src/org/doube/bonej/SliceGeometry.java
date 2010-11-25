@@ -1055,8 +1055,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
 
-		double min = Double.parseDouble(minT.getText().replace("∞", "Infinity"));
-		double max = Double.parseDouble(maxT.getText().replace("∞", "Infinity"));
+		double min = Double.parseDouble(minT.getText());
+		double max = Double.parseDouble(maxT.getText());
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));

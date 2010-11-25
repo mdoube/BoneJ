@@ -86,8 +86,6 @@ public class DialogModifier {
 			String string = ((TextField) text).getText(); 
 			if (string.length() == 0)
 				return false;
-			if (string.equals("∞") || string.equals("-∞"))
-				continue;
 			try {
 				Double.parseDouble(string);
 			} catch (NumberFormatException e) {

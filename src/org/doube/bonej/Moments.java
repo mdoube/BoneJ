@@ -952,8 +952,8 @@ public class Moments implements PlugIn, DialogListener {
 		boolean isHUCalibrated = box0.getState();
 		TextField minT = (TextField) nFields.get(2);
 		TextField maxT = (TextField) nFields.get(3);
-		double min = Double.parseDouble(minT.getText().replace("∞", "Infinity"));
-		double max = Double.parseDouble(maxT.getText().replace("∞", "Infinity"));
+		double min = Double.parseDouble(minT.getText());
+		double max = Double.parseDouble(maxT.getText());
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));
