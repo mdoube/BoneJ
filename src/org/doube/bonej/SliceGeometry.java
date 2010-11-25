@@ -154,7 +154,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/** List of perimeter lengths */
 	private double[] perimeter;
 	/** List of maximal distances from centroid */
-//	private double[] maxRadCentre;
+	// private double[] maxRadCentre;
 	/** List of polar section moduli */
 	private double[] Zpol;
 	private boolean do3DAnnotation;
@@ -176,7 +176,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] Z1;
 	/** Section modulus around secondary axis */
 	private double[] Z2;
-//	private double[] Zp;
+	// private double[] Zp;
 	private double[] principalDiameter;
 	private double[] secondaryDiameter;
 
@@ -329,8 +329,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			if (this.doOriented && orienteer != null) {
 				String[] dirs = orienteer.getDirections(imp);
-				rt.addValue(dirs[0] +" (rad)", orienteer.getOrientation(imp, dirs[0]));
-				rt.addValue(dirs[2] +" (rad)", orienteer.getOrientation(imp, dirs[2]));
+				rt.addValue(dirs[0] + " (rad)", orienteer.getOrientation(imp,
+						dirs[0]));
+				rt.addValue(dirs[2] + " (rad)", orienteer.getOrientation(imp,
+						dirs[2]));
 				rt.addValue("I" + dirs[0] + dirs[1] + "(" + units + "^4)",
 						this.I1[s]);
 				rt.addValue("I" + dirs[2] + dirs[3] + "(" + units + "^4)",
@@ -686,7 +688,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			this.maxRad1 = result2[6];
 			this.Z1 = result2[7];
 			this.Z2 = result2[8];
-//			this.Zp = result2[9];
+			// this.Zp = result2[9];
 		}
 	}
 
@@ -1044,20 +1046,17 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
 		Checkbox calibration = (Checkbox) checkboxes.get(8);
 		boolean isHUCalibrated = calibration.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
-		double min = 0;
-		double max = 0;
-		try {
-			min = Double.parseDouble(minT.getText());
-			max = Double.parseDouble(maxT.getText());
-		} catch (Exception ex) {
-			IJ.error("You put text in a number field");
-		}
+
+		double min = Double.parseDouble(minT.getText().replace("∞", "Infinity"));
+		double max = Double.parseDouble(maxT.getText().replace("∞", "Infinity"));
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));

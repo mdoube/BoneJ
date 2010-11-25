@@ -323,6 +323,8 @@ public class SphereFitter implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> numbers = gd.getNumericFields();
 		Checkbox box = (Checkbox) checkboxes.get(0);

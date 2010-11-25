@@ -2291,6 +2291,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> choices = gd.getChoices();
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> numbers = gd.getNumericFields();

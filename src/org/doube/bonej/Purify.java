@@ -392,6 +392,8 @@ public class Purify implements PlugIn, DialogListener {
 
 	@Override
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> choices = gd.getChoices();
 		Vector<?> numbers = gd.getNumericFields();
 		Choice choice = (Choice) choices.get(0);

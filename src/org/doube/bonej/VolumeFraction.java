@@ -275,6 +275,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> choices = gd.getChoices();
 		Choice choice = (Choice) choices.get(0);
 		Vector<?> numbers = gd.getNumericFields();

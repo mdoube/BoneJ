@@ -9,6 +9,7 @@ import java.awt.Component;
 import java.awt.Label;
 import java.awt.Panel;
 import java.awt.TextField;
+import java.util.Vector;
 
 public class DialogModifier {
 	/**
@@ -69,5 +70,30 @@ public class DialogModifier {
 			IJ.log("This plugin causes an exception\n" + e.toString());
 		}
 		return;
+	}
+
+	/**
+	 * Check all the numeric text fields in a dialog and return false if any of
+	 * them cannot be parsed into a number.
+	 * 
+	 * @param textFields
+	 *            e.g. result of GenericDialog.getNumericFields();
+	 * @return true if all numeric text fields in a dialog contain a valid
+	 *         number
+	 */
+	public static boolean allNumbersValid(Vector<?> textFields) {
+		for (Object text : textFields) {
+			String string = ((TextField) text).getText(); 
+			if (string.length() == 0)
+				return false;
+			if (string.equals("∞") || string.equals("-∞"))
+				continue;
+			try {
+				Double.parseDouble(string);
+			} catch (NumberFormatException e) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

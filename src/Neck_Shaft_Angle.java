@@ -324,7 +324,7 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 				}
 			}
 		}
-		if (count == 0){
+		if (count == 0) {
 			IJ.log("Count == 0");
 			return null;
 		}
@@ -605,20 +605,17 @@ public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
 		Checkbox box0 = (Checkbox) checkboxes.get(0);
 		boolean isHUCalibrated = box0.getState();
-		double min = 0;
-		double max = 0;
 		TextField minT = (TextField) nFields.get(2);
 		TextField maxT = (TextField) nFields.get(3);
-		try{
-			min = Double.parseDouble(minT.getText());
-			max = Double.parseDouble(maxT.getText());
-		} catch (Exception ex){
-			IJ.error("You put text in a number field");
-		}
+		double min = Double.parseDouble(minT.getText().replace("∞", "Infinity"));
+		double max = Double.parseDouble(maxT.getText().replace("∞", "Infinity"));
+
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));

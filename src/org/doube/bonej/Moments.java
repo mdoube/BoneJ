@@ -219,7 +219,7 @@ public class Moments implements PlugIn, DialogListener {
 	 *         bitDepth
 	 */
 	public static Object getEmptyPixels(int w, int h, int bitDepth) {
-		
+
 		Object emptyPixels = new Object();
 		if (bitDepth == 8) {
 			byte[] bytePixels = new byte[w * h];
@@ -525,8 +525,8 @@ public class Moments implements PlugIn, DialogListener {
 		AlignThread[] alignThread = new AlignThread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
 			alignThread[thread] = new AlignThread(thread, nThreads, imp,
-					sliceProcessors, targetProcessors, eigenVecInv, centroid, wT,
-					hT, dT, startSlice, endSlice);
+					sliceProcessors, targetProcessors, eigenVecInv, centroid,
+					wT, hT, dT, startSlice, endSlice);
 			alignThread[thread].start();
 		}
 		try {
@@ -590,9 +590,9 @@ public class Moments implements PlugIn, DialogListener {
 
 		public AlignThread(int thread, int nThreads, ImagePlus imp,
 				ImageProcessor[] sliceProcessors,
-				ImageProcessor[] targetProcessors,
-				double[][] eigenVecInv, double[] centroid, int wT, int hT,
-				int dT, int startSlice, int endSlice) {
+				ImageProcessor[] targetProcessors, double[][] eigenVecInv,
+				double[] centroid, int wT, int hT, int dT, int startSlice,
+				int endSlice) {
 			this.impT = imp;
 			this.stackT = this.impT.getStack();
 			this.thread = thread;
@@ -944,20 +944,16 @@ public class Moments implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
 		Checkbox box0 = (Checkbox) checkboxes.get(0);
 		boolean isHUCalibrated = box0.getState();
 		TextField minT = (TextField) nFields.get(2);
 		TextField maxT = (TextField) nFields.get(3);
-		double min = 0;
-		double max = 0;
-		try {
-			min = Double.parseDouble(minT.getText());
-			max = Double.parseDouble(maxT.getText());
-		} catch (Exception ex) {
-			IJ.error("You put text in a number field");
-		}
+		double min = Double.parseDouble(minT.getText().replace("∞", "Infinity"));
+		double max = Double.parseDouble(maxT.getText().replace("∞", "Infinity"));
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));

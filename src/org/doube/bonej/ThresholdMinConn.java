@@ -425,6 +425,8 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	}
 
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
+			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Checkbox to = (Checkbox) checkboxes.get(0);
 		thresholdOnly = to.getState();
