@@ -142,7 +142,10 @@ public class ImageCheck {
 							+ "Current voxel depth: " + IJ.d2s(vD, 4) + " "
 							+ units + "\n" + "DICOM slice spacing: "
 							+ IJ.d2s(sliceSpacing, 4) + " " + units + "\n");
-		}
+		} else
+			IJ
+					.log(imp.getTitle()
+							+ ": Voxel depth agrees with DICOM header.\n");
 		return sliceSpacing;
 	}
 
@@ -212,16 +215,16 @@ public class ImageCheck {
 		try {
 			Class.forName("javax.media.j3d.VirtualUniverse");
 		} catch (ClassNotFoundException e) {
-			IJ.showMessage("Java 3D libraries are not installed.\n" +
-					"Please install and run the ImageJ 3D Viewer,\n" +
-					"which will automatically install Java's 3D libraries.");
+			IJ.showMessage("Java 3D libraries are not installed.\n"
+					+ "Please install and run the ImageJ 3D Viewer,\n"
+					+ "which will automatically install Java's 3D libraries.");
 			return false;
 		}
 		try {
 			Class.forName("ij3d.ImageJ3DViewer");
-		} catch (ClassNotFoundException e){
-			IJ.showMessage("ImageJ 3D Viewer is not installed.\n" +
-					"Please install and run the ImageJ 3D Viewer.");
+		} catch (ClassNotFoundException e) {
+			IJ.showMessage("ImageJ 3D Viewer is not installed.\n"
+					+ "Please install and run the ImageJ 3D Viewer.");
 			return false;
 		}
 		if (!checkIJVersion())
