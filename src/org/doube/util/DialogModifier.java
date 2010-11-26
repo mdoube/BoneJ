@@ -74,16 +74,19 @@ public class DialogModifier {
 
 	/**
 	 * Check all the numeric text fields in a dialog and return false if any of
-	 * them cannot be parsed into a number.
+	 * them cannot be parsed into a number. Accepts any decimal number,
+	 * "Infinity" and "NaN". Rejects strings of 0 length or that contain any
+	 * non-decimal characters.
+	 * 
 	 * 
 	 * @param textFields
 	 *            e.g. result of GenericDialog.getNumericFields();
-	 * @return true if all numeric text fields in a dialog contain a valid
+	 * @return true if all numeric text fields contain a valid
 	 *         number
 	 */
 	public static boolean allNumbersValid(Vector<?> textFields) {
 		for (Object text : textFields) {
-			String string = ((TextField) text).getText(); 
+			String string = ((TextField) text).getText();
 			if (string.length() == 0)
 				return false;
 			try {
