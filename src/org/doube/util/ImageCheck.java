@@ -139,9 +139,9 @@ public class ImageCheck {
 					.log(imp.getTitle()
 							+ ":\n"
 							+ "Current voxel depth does not agree with DICOM header slice spacing.\n"
-							+ "Current voxel depth: " + IJ.d2s(vD, 4) + " "
+							+ "Current voxel depth: " + IJ.d2s(vD, 6) + " "
 							+ units + "\n" + "DICOM slice spacing: "
-							+ IJ.d2s(sliceSpacing, 4) + " " + units + "\n");
+							+ IJ.d2s(sliceSpacing, 6) + " " + units + "\n");
 		} else
 			IJ
 					.log(imp.getTitle()
