@@ -75,6 +75,10 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			IJ.error("Can't threshold a binary image");
 			return;
 		}
+		if (imp.getBitDepth() == 32){
+			IJ.error("Currently unable to threshold 32-bit images");
+			return;
+		}
 		if (!showDialog()) {
 			return;
 		}
@@ -95,7 +99,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			if (doPlot)
 				showPlot(testThreshold, conns);
 		}
-		IJ.log(imp.getTitle() + " threshold  = " + IJ.d2s(threshold, 1));
+		IJ.log(imp.getTitle() + " threshold  = "+IJ.d2s(imp.getCalibration().getCValue(threshold),1)+" ("+ IJ.d2s(threshold, 1)+")");
 
 		if (applyThreshold) {
 			ImageStack stack2 = thresholdStack(imp, threshold);
