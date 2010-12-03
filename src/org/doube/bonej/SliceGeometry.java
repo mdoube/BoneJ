@@ -415,6 +415,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 		ImagePlus ann = new ImagePlus("Annotated_" + imp.getTitle(), annStack);
 		ann.setCalibration(imp.getCalibration());
+		if (ann.getImageStackSize() == 1)
+			ann.setProperty("Info", stack.getSliceLabel(this.startSlice));
 		return ann;
 	}
 
