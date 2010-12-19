@@ -20,6 +20,8 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.TextEvent;
 import java.awt.event.TextListener;
 import java.awt.event.WindowEvent;
@@ -47,7 +49,7 @@ import ij.plugin.frame.PlugInFrame;
  */
 @SuppressWarnings("serial")
 public class Orienteer extends PlugInFrame implements AdjustmentListener,
-		ItemListener, TextListener {
+		ItemListener, TextListener, MouseWheelListener {
 
 	public static final String LOC_KEY = "aa.loc";
 	private static final String[][] axisLabels = {
@@ -147,6 +149,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.setUnitIncrement(1);
 		slider.setFocusable(false); // prevents blinking on Windows
 		slider.setPreferredSize(new Dimension(360, 16));
+		slider.addMouseWheelListener(this);
 
 		degRadPanel = new Panel();
 		Label degRadLabel = new Label("Orientation");
@@ -435,7 +438,8 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	 * Given a set of (x,y) coordinates, find the caliper diameters across the
 	 * axes
 	 * 
-	 * @param points in double[n][2] format
+	 * @param points
+	 *            in double[n][2] format
 	 * @return caliper diameters across the principal and secondary axes (zeroth
 	 *         and first elements respectively)
 	 */
@@ -615,7 +619,16 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		value = value % (2 * Math.PI);
 		if (value < 0)
 			value += 2 * Math.PI;
-		slider.setValue((int) (value * 180 / Math.PI));
+		slider.setValue((int) Math.round((value * 180 / Math.PI)));
 		rotateTo(value);
+	}
+
+	@Override
+	public void mouseWheelMoved(MouseWheelEvent e) {
+		final int oldPos = slider.getValue();
+		final int newPos = oldPos + e.getWheelRotation();
+		rotateTo(newPos * Math.PI / 180);
+		updateTextbox();
+		slider.setValue(newPos);
 	}
 }
