@@ -532,7 +532,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		Roi roi = new ShapeRoi(shape);
 		roi.setStrokeColor(color);
 		roi.setStroke(stroke);
-		roi.setStrokeWidth(roi.getStrokeWidth()/(float)scale);
+		roi.setStrokeWidth(roi.getStrokeWidth() / (float) scale);
 		overlay.add(roi);
 	}
 
@@ -627,7 +627,11 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		final int oldPos = slider.getValue();
-		final int newPos = oldPos + e.getWheelRotation();
+		int newPos = oldPos + e.getWheelRotation();
+		if (newPos < 0)
+			newPos += 360;
+		else if (newPos >= 360)
+			newPos -= 360;
 		rotateTo(newPos * Math.PI / 180);
 		updateTextbox();
 		slider.setValue(newPos);
