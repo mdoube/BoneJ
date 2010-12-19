@@ -532,6 +532,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		Roi roi = new ShapeRoi(shape);
 		roi.setStrokeColor(color);
 		roi.setStroke(stroke);
+		roi.setStrokeWidth(roi.getStrokeWidth()/(float)scale);
 		overlay.add(roi);
 	}
 
