@@ -17,7 +17,7 @@ public class Help_ implements PlugIn {
 	/**
 	 * BoneJ version
 	 */
-	public static final String bonejVersion = "1.1.12";
+	public static final String bonejVersion = "1.1.13";
 
 	public void run(String arg) {
 		if (arg.equals("about")) {
