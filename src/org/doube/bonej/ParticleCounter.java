@@ -53,7 +53,6 @@ import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
-import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 /**
