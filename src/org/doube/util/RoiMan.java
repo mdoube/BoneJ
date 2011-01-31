@@ -1,6 +1,5 @@
 package org.doube.util;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.measure.Calibration;
