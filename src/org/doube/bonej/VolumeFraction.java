@@ -243,6 +243,14 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final int nSlices = imp.getStackSize();
 		final ImageProcessor[] outIps = new ImageProcessor[nSlices + 1];
 		final ImageProcessor[] maskIps = new ImageProcessor[nSlices + 1];
+		ImageStack outStack = new ImageStack(w, h, nSlices);
+		ImageStack maskStack = new ImageStack(w, h, nSlices);
+		for (int i = 1; i <= nSlices; i++){
+			outStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
+			maskStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
+			outIps[i] = outStack.getProcessor(i);
+			maskIps[i] = maskStack.getProcessor(i);
+		}
 		final AtomicInteger ai = new AtomicInteger(1);
 		Thread[] threads = Multithreader.newThreads();
 		final RoiManager roiMan = RoiManager.getInstance();
@@ -254,16 +262,10 @@ public class VolumeFraction implements PlugIn, DialogListener {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, nSlices);
 						ImageProcessor ipSlice = stack.getProcessor(s);
+						IJ.log("ipSlice is "+ipSlice.getWidth()+" wide and "+ipSlice.getHeight()+" high");
 						ipSlice.setRoi(imp.getRoi());
-						ImageProcessor mask = ipSlice.getMask();
-						final Rectangle r = ipSlice.getRoi();
-						final int rLeft = r.x;
-						final int rTop = r.y;
-						final int rRight = rLeft + r.width;
-						final int rBottom = rTop + r.height;
-						boolean hasMask = (mask != null);
-						ImageProcessor outIp = new ByteProcessor(w, h);
-						ImageProcessor maskIp = new ByteProcessor(w, h);
+						ImageProcessor maskIp = maskIps[s];
+						ImageProcessor outIp = outIps[s];
 						if (roiMan != null && useRoiMan) {
 							ipSlice.resetRoi();
 							ArrayList<Roi> rois = new ArrayList<Roi>();
@@ -282,64 +284,75 @@ public class VolumeFraction implements PlugIn, DialogListener {
 								IJ.log("Working with ROI " + roi.getName()
 										+ " slice " + s);
 								ipSlice.setRoi(roi);
+								ImageProcessor mask = ipSlice.getMask();
+								final Rectangle r = ipSlice.getRoi();
+								final int rLeft = r.x;
+								final int rTop = r.y;
+								final int rRight = rLeft + r.width;
+								final int rBottom = rTop + r.height;
+								boolean hasMask = (mask != null);
 								IJ.log("rLeft = " + rLeft + ", rTop = " + rTop
 										+ ", rRight = " + rRight
 										+ ", rBottom = " + rBottom
 										+ ", hasMask = " + hasMask);
 								for (int v = rTop; v < rBottom; v++) {
+									final int vrTop = v - rTop;
 									for (int u = rLeft; u < rRight; u++) {
-										if (!hasMask || mask.get(u, v) > 0) {
-											maskIp.set(u, v, (byte) 255);
+										if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
+											maskIps[s].set(u, v, (byte) 255);
 											final double pixel = ipSlice.get(u,
 													v);
 											if (pixel >= minT && pixel <= maxT) {
-												outIp.set(u, v, (byte) 255);
+												outIps[s].set(u, v, (byte) 255);
 											}
 										}
 									}
 								}
 							}
 						} else {
+							ImageProcessor mask = ipSlice.getMask();
+							final Rectangle r = ipSlice.getRoi();
+							final int rLeft = r.x;
+							final int rTop = r.y;
+							final int rRight = rLeft + r.width;
+							final int rBottom = rTop + r.height;
+							boolean hasMask = (mask != null);
 							for (int v = rTop; v < rBottom; v++) {
+								final int vrTop = v - rTop;
 								for (int u = rLeft; u < rRight; u++) {
-									if (!hasMask || mask.get(u, v) > 0) {
-										maskIp.set(u, v, (byte) 255);
+									if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
+										maskIps[s].set(u, v, (byte) 255);
 										final double pixel = ipSlice.get(u, v);
 										if (pixel >= minT && pixel <= maxT) {
-											outIp.set(u, v, (byte) 255);
+											outIps[s].set(u, v, (byte) 255);
 										}
 									}
 								}
 							}
 						}
-						outIps[s] = outIp;
-						maskIps[s] = maskIp;
 					}
 				}
 			});
 		}
 		Multithreader.startAndJoin(threads);
-		final ImageStack outStack = new ImageStack(w, h);
-		final ImageStack maskStack = new ImageStack(w, h);
-		for (int i = 1; i <= nSlices; i++){
-			outStack.addSlice(""+i, outIps[i]);
-			maskStack.addSlice(""+i, maskIps[i]);
-		}
-		ImagePlus impOut = new ImagePlus();
-		impOut.setStack("Out", outStack);
-		impOut.setCalibration(imp.getCalibration());
+		ImagePlus outImp = new ImagePlus();
+		outImp.setStack("Out", outStack);
+		outImp.setCalibration(imp.getCalibration());
+		outImp.show();
+		ImagePlus maskImp = new ImagePlus();
+		maskImp.setStack("Mask", maskStack);
+		maskImp.setCalibration(imp.getCalibration());
+		maskImp.show();
 		IJ.showStatus("Creating surface mesh...");
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		boolean[] channels = { true, false, false };
 		MCTriangulator mct = new MCTriangulator();
-		List<Point3f> points = mct.getTriangles(impOut, 128, channels,
+		List<Point3f> points = mct.getTriangles(outImp, 128, channels,
 				resampling);
 		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
 				0.0f);
 		IJ.showStatus("Calculating BV...");
 		double boneVolume = Math.abs(surface.getVolume());
-		ImagePlus maskImp = new ImagePlus("Mask", maskStack);
-		maskImp.setCalibration(imp.getCalibration());
 		IJ.showStatus("Creating surface mesh...");
 		points = mct.getTriangles(maskImp, 128, channels, resampling);
 		CustomTriangleMesh mask = new CustomTriangleMesh(points, colour, 0.0f);
