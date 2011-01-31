@@ -19,6 +19,7 @@ package org.doube.bonej;
  */
 
 import java.awt.AWTEvent;
+import java.awt.Checkbox;
 import java.awt.Choice;
 import java.awt.Rectangle;
 import java.awt.TextField;
@@ -74,8 +75,10 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		String[] types = { "Voxel", "Surface" };
 		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
+		((TextField) gd.getNumericFields().get(0)).setEnabled(false);
 		gd.addCheckbox("Use ROI Manager", true);
 		gd.addCheckbox("Show 3D result", false);
+		((Checkbox) gd.getCheckboxes().get(1)).setEnabled(false);
 		gd.addHelp("http://bonej.org/volumefraction");
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -379,10 +382,15 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		Choice choice = (Choice) choices.get(0);
 		Vector<?> numbers = gd.getNumericFields();
 		TextField num = (TextField) numbers.get(0);
+		Vector<?> boxes = gd.getCheckboxes();
+		Checkbox box = (Checkbox) boxes.get(1);
+
 		if (choice.getSelectedIndex() == 1) {
 			num.setEnabled(true);
+			box.setEnabled(true);
 		} else {
 			num.setEnabled(false);
+			box.setEnabled(false);
 		}
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
