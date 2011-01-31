@@ -44,7 +44,6 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.measure.Calibration;
-import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
@@ -76,6 +75,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
 		gd.addCheckbox("Use ROI Manager", true);
+		gd.addCheckbox("Show 3D result", false);
 		gd.addHelp("http://bonej.org/volumefraction");
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -85,6 +85,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		String type = gd.getNextChoice();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean useRoiManager = gd.getNextBoolean();
+		final boolean show3D = gd.getNextBoolean();
 
 		final double[] thresholds = setThreshold(imp);
 		final double minT = thresholds[0];
@@ -96,7 +97,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		} else if (type.equals(types[1])) {
 			try {
 				volumes = getSurfaceVolume(imp, minT, maxT, resampling,
-						useRoiManager);
+						useRoiManager, show3D);
 			} catch (Exception e) {
 				IJ.handleException(e);
 				return;
@@ -116,7 +117,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	}
 
 	/**
-	 * Get the total and thresholded volumes of a masked area, ignoring the Roi
+	 * Get the total and thresholded volumes of a masked area, ignoring the ROI
 	 * Manager if it exists
 	 * 
 	 * @param imp
@@ -215,9 +216,19 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		return volumes;
 	}
 
+	/**
+	 * Get the volumes from a stack using a surface mesh. Ignores the ROI
+	 * Manager and doesn't draw any 3D results
+	 * 
+	 * @param imp
+	 * @param minT
+	 * @param maxT
+	 * @param resampling
+	 * @return
+	 */
 	public double[] getSurfaceVolume(final ImagePlus imp, final double minT,
 			final double maxT, int resampling) {
-		return getSurfaceVolume(imp, minT, maxT, resampling, false);
+		return getSurfaceVolume(imp, minT, maxT, resampling, false, false);
 	}
 
 	/**
@@ -232,11 +243,16 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	 * @param resampling
 	 *            voxel resampling for mesh creation; higher values result in
 	 *            simpler meshes
+	 * @param useRoiMan
+	 *            limit the BV/TV measurement to ROIs in the ROI Manager
+	 * @param show3D
+	 *            display bone surface and ROI surface in the 3D Viewer
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
 	public double[] getSurfaceVolume(final ImagePlus imp, final double minT,
-			final double maxT, int resampling, final boolean useRoiMan) {
+			final double maxT, int resampling, final boolean useRoiMan,
+			boolean show3D) {
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
@@ -245,7 +261,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final ImageProcessor[] maskIps = new ImageProcessor[nSlices + 1];
 		ImageStack outStack = new ImageStack(w, h, nSlices);
 		ImageStack maskStack = new ImageStack(w, h, nSlices);
-		for (int i = 1; i <= nSlices; i++){
+		for (int i = 1; i <= nSlices; i++) {
 			outStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
 			maskStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
 			outIps[i] = outStack.getProcessor(i);
@@ -262,10 +278,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, nSlices);
 						ImageProcessor ipSlice = stack.getProcessor(s);
-						IJ.log("ipSlice is "+ipSlice.getWidth()+" wide and "+ipSlice.getHeight()+" high");
 						ipSlice.setRoi(imp.getRoi());
-						ImageProcessor maskIp = maskIps[s];
-						ImageProcessor outIp = outIps[s];
 						if (roiMan != null && useRoiMan) {
 							ipSlice.resetRoi();
 							ArrayList<Roi> rois = new ArrayList<Roi>();
@@ -275,58 +288,34 @@ public class VolumeFraction implements PlugIn, DialogListener {
 									rois.add(roi);
 							} else
 								rois = RoiMan.getSliceRoi(roiMan, s);
-							if (rois.size() == 0) {
-								IJ.log("Skipping slice " + s);
+							if (rois.size() == 0)
 								continue;
-							}
-							IJ.log("Processing slice " + s);
 							for (Roi roi : rois) {
-								IJ.log("Working with ROI " + roi.getName()
-										+ " slice " + s);
 								ipSlice.setRoi(roi);
-								ImageProcessor mask = ipSlice.getMask();
-								final Rectangle r = ipSlice.getRoi();
-								final int rLeft = r.x;
-								final int rTop = r.y;
-								final int rRight = rLeft + r.width;
-								final int rBottom = rTop + r.height;
-								boolean hasMask = (mask != null);
-								IJ.log("rLeft = " + rLeft + ", rTop = " + rTop
-										+ ", rRight = " + rRight
-										+ ", rBottom = " + rBottom
-										+ ", hasMask = " + hasMask);
-								for (int v = rTop; v < rBottom; v++) {
-									final int vrTop = v - rTop;
-									for (int u = rLeft; u < rRight; u++) {
-										if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-											maskIps[s].set(u, v, (byte) 255);
-											final double pixel = ipSlice.get(u,
-													v);
-											if (pixel >= minT && pixel <= maxT) {
-												outIps[s].set(u, v, (byte) 255);
-											}
-										}
-									}
-								}
+								drawMasks(ipSlice, maskIps, outIps, s);
 							}
-						} else {
-							ImageProcessor mask = ipSlice.getMask();
-							final Rectangle r = ipSlice.getRoi();
-							final int rLeft = r.x;
-							final int rTop = r.y;
-							final int rRight = rLeft + r.width;
-							final int rBottom = rTop + r.height;
-							boolean hasMask = (mask != null);
-							for (int v = rTop; v < rBottom; v++) {
-								final int vrTop = v - rTop;
-								for (int u = rLeft; u < rRight; u++) {
-									if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-										maskIps[s].set(u, v, (byte) 255);
-										final double pixel = ipSlice.get(u, v);
-										if (pixel >= minT && pixel <= maxT) {
-											outIps[s].set(u, v, (byte) 255);
-										}
-									}
+						} else
+							drawMasks(ipSlice, maskIps, outIps, s);
+					}
+				}
+
+				private void drawMasks(ImageProcessor ipSlice,
+						ImageProcessor[] maskIps, ImageProcessor[] outIps, int s) {
+					ImageProcessor mask = ipSlice.getMask();
+					final Rectangle r = ipSlice.getRoi();
+					final int rLeft = r.x;
+					final int rTop = r.y;
+					final int rRight = rLeft + r.width;
+					final int rBottom = rTop + r.height;
+					boolean hasMask = (mask != null);
+					for (int v = rTop; v < rBottom; v++) {
+						final int vrTop = v - rTop;
+						for (int u = rLeft; u < rRight; u++) {
+							if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
+								maskIps[s].set(u, v, (byte) 255);
+								final double pixel = ipSlice.get(u, v);
+								if (pixel >= minT && pixel <= maxT) {
+									outIps[s].set(u, v, (byte) 255);
 								}
 							}
 						}
@@ -338,11 +327,9 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		ImagePlus outImp = new ImagePlus();
 		outImp.setStack("Out", outStack);
 		outImp.setCalibration(imp.getCalibration());
-		outImp.show();
 		ImagePlus maskImp = new ImagePlus();
 		maskImp.setStack("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
-		maskImp.show();
 		IJ.showStatus("Creating surface mesh...");
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		boolean[] channels = { true, false, false };
@@ -360,14 +347,16 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		double totalVolume = Math.abs(mask.getVolume());
 		double[] volumes = { boneVolume, totalVolume };
 		IJ.showStatus("");
-		Image3DUniverse univ = new Image3DUniverse();
-		surface.setColor(new Color3f(0.0f, 1.0f, 0.0f));
-		mask.setColor(new Color3f(0.0f, 1.0f, 0.0f));
-		surface.setTransparency(0.4f);
-		mask.setTransparency(0.25f);
-		univ.addCustomMesh(surface, "BV");
-		univ.addCustomMesh(mask, "TV");
-		univ.show();
+		if (show3D) {
+			Image3DUniverse univ = new Image3DUniverse();
+			surface.setColor(new Color3f(1.0f, 1.0f, 0.0f));
+			mask.setColor(new Color3f(0.0f, 0.0f, 1.0f));
+			surface.setTransparency(0.4f);
+			mask.setTransparency(0.65f);
+			univ.addCustomMesh(surface, "BV");
+			univ.addCustomMesh(mask, "TV");
+			univ.show();
+		}
 		return volumes;
 	}
 
