@@ -3,7 +3,6 @@ package org.doube.bonej;
 import ij.*;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
-import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.*;
 
