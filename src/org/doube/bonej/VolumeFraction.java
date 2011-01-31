@@ -22,6 +22,7 @@ import java.awt.AWTEvent;
 import java.awt.Choice;
 import java.awt.Rectangle;
 import java.awt.TextField;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,6 +36,7 @@ import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
+import org.doube.util.RoiMan;
 
 import customnode.CustomTriangleMesh;
 
@@ -45,9 +47,11 @@ import ij.measure.Calibration;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.plugin.PlugIn;
+import ij.plugin.frame.RoiManager;
 
 import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
+import ij.gui.Roi;
 import ij.gui.WaitForUserDialog;
 
 public class VolumeFraction implements PlugIn, DialogListener {
@@ -70,6 +74,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		String[] types = { "Voxel", "Surface" };
 		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
+		gd.addCheckbox("Use ROI Manager", true);
 		gd.addHelp("http://bonej.org/volumefraction");
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -78,6 +83,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		}
 		String type = gd.getNextChoice();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
+		final boolean useRoiManager = gd.getNextBoolean();
 
 		final double[] thresholds = setThreshold(imp);
 		final double minT = thresholds[0];
@@ -85,7 +91,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 
 		double[] volumes = new double[2];
 		if (type.equals(types[0])) {
-			volumes = getVolumes(imp, minT, maxT);
+			volumes = getVolumes(imp, minT, maxT, useRoiManager);
 		} else if (type.equals(types[1])) {
 			try {
 				volumes = getSurfaceVolume(imp, minT, maxT, resampling);
@@ -107,6 +113,20 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	}
 
 	/**
+	 * Get the total and thresholded volumes of a masked area, ignoring the Roi
+	 * Manager if it exists
+	 * 
+	 * @param imp
+	 * @param minT
+	 * @param maxT
+	 * @return
+	 */
+	public double[] getVolumes(final ImagePlus imp, final double minT,
+			final double maxT) {
+		return getVolumes(imp, minT, maxT, false);
+	}
+
+	/**
 	 * Get the total and thresholded volumes of a masked area
 	 * 
 	 * @param imp
@@ -118,36 +138,59 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	 * @return double[2] containing the foreground and total volumes
 	 * 
 	 */
-	public double[] getVolumes(ImagePlus imp, final double minT,
-			final double maxT) {
+	public double[] getVolumes(final ImagePlus imp, final double minT,
+			final double maxT, final boolean useRoiMan) {
 		final ImageStack stack = imp.getImageStack();
 		final int nSlices = stack.getSize();
-		final ImageProcessor mask = imp.getProcessor().getMask();
-		final Rectangle r = imp.getProcessor().getRoi();
 		final AtomicInteger ai = new AtomicInteger(1);
 		Thread[] threads = Multithreader.newThreads();
-		final long[] volTotalT = new long[nSlices+1];
-		final long[] volBoneT = new long[nSlices+1];
+		final long[] volTotalT = new long[nSlices + 1];
+		final long[] volBoneT = new long[nSlices + 1];
+		final RoiManager roiMan = RoiManager.getInstance();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
+					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai
+							.getAndIncrement()) {
+						ImageProcessor ipSlice = stack.getProcessor(s);
+						ipSlice.setRoi(imp.getRoi());
+						if (roiMan != null && useRoiMan) {
+							ipSlice.resetRoi();
+							ArrayList<Roi> rois = new ArrayList<Roi>();
+							if (nSlices == 1) {
+								Roi[] roiArray = roiMan.getRoisAsArray();
+								for (Roi roi : roiArray)
+									rois.add(roi);
+							} else
+								rois = RoiMan.getSliceRoi(roiMan, s);
+							if (rois.size() == 0)
+								continue;
+							for (Roi roi : rois) {
+								ipSlice.setRoi(roi);
+								calculate(ipSlice, volTotalT, volBoneT, s);
+							}
+						} else
+							calculate(ipSlice, volTotalT, volBoneT, s);
+					}
+				}
+
+				private void calculate(ImageProcessor ipSlice,
+						long[] volTotalT, long[] volBoneT, int s) {
+					final Rectangle r = ipSlice.getRoi();
 					final int rLeft = r.x;
 					final int rTop = r.y;
 					final int rRight = rLeft + r.width;
 					final int rBottom = rTop + r.height;
+					ImageProcessor mask = ipSlice.getMask();
 					final boolean hasMask = (mask != null);
-					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai
-							.getAndIncrement()) {
-						ImageProcessor ipSlice = stack.getProcessor(s);
-						for (int v = rTop; v < rBottom; v++) {
-							final int vrTop = v - rTop;
-							for (int u = rLeft; u < rRight; u++) {
-								if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-									volTotalT[s]++;
-									final double pixel = ipSlice.get(u, v);
-									if (pixel >= minT && pixel <= maxT) {
-										volBoneT[s]++;
-									}
+					for (int v = rTop; v < rBottom; v++) {
+						final int vrTop = v - rTop;
+						for (int u = rLeft; u < rRight; u++) {
+							if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
+								volTotalT[s]++;
+								final double pixel = ipSlice.get(u, v);
+								if (pixel >= minT && pixel <= maxT) {
+									volBoneT[s]++;
 								}
 							}
 						}
@@ -210,9 +253,10 @@ public class VolumeFraction implements PlugIn, DialogListener {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, nSlices);
 						ImageProcessor ipSlice = stack.getProcessor(s);
-						outStack.setPixels(Moments.getEmptyPixels(r.width, r.height, 8), s);
-						maskStack
-								.setPixels(Moments.getEmptyPixels(r.width, r.height, 8), s);
+						outStack.setPixels(Moments.getEmptyPixels(r.width,
+								r.height, 8), s);
+						maskStack.setPixels(Moments.getEmptyPixels(r.width,
+								r.height, 8), s);
 						outIps[s] = (ByteProcessor) outStack.getProcessor(s);
 						maskIps[s] = (ByteProcessor) maskStack.getProcessor(s);
 						for (int v = rTop; v < rBottom; v++) {
