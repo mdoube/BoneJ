@@ -1,5 +1,6 @@
 package org.doube.util;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.measure.Calibration;
@@ -7,6 +8,7 @@ import ij.plugin.frame.RoiManager;
 
 import java.awt.List;
 import java.awt.Rectangle;
+import java.util.ArrayList;
 
 /**
  * Do useful things with ImageJ's ROI Manager
@@ -49,5 +51,21 @@ public class RoiMan {
 			}
 		}
 		return dataPoints;
+	}
+
+	/**
+	 * Return a list of ROIs that are active in the given slice, s
+	 * 
+	 * @param roiMan
+	 * @param s
+	 * @return
+	 */
+	public static ArrayList<Roi> getSliceRoi(RoiManager roiMan, int s) {
+		ArrayList<Roi> roiList = new ArrayList<Roi>();
+		Roi[] rois = roiMan.getRoisAsArray();
+		for (Roi roi : rois)
+			if (roiMan.getSliceNumber(roi.getName()) == s)
+				roiList.add(roi);
+		return roiList;
 	}
 }
