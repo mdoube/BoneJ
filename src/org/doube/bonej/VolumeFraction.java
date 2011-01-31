@@ -331,28 +331,25 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		maskImp.setStack("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
 		IJ.showStatus("Creating surface mesh...");
-		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
+		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
+		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
 		boolean[] channels = { true, false, false };
 		MCTriangulator mct = new MCTriangulator();
 		List<Point3f> points = mct.getTriangles(outImp, 128, channels,
 				resampling);
-		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
-				0.0f);
+		CustomTriangleMesh surface = new CustomTriangleMesh(points, yellow,
+				0.4f);
 		IJ.showStatus("Calculating BV...");
 		double boneVolume = Math.abs(surface.getVolume());
 		IJ.showStatus("Creating surface mesh...");
 		points = mct.getTriangles(maskImp, 128, channels, resampling);
-		CustomTriangleMesh mask = new CustomTriangleMesh(points, colour, 0.0f);
+		CustomTriangleMesh mask = new CustomTriangleMesh(points, blue, 0.65f);
 		IJ.showStatus("Calculating TV...");
 		double totalVolume = Math.abs(mask.getVolume());
 		double[] volumes = { boneVolume, totalVolume };
 		IJ.showStatus("");
 		if (show3D) {
 			Image3DUniverse univ = new Image3DUniverse();
-			surface.setColor(new Color3f(1.0f, 1.0f, 0.0f));
-			mask.setColor(new Color3f(0.0f, 0.0f, 1.0f));
-			surface.setTransparency(0.4f);
-			mask.setTransparency(0.65f);
 			univ.addCustomMesh(surface, "BV");
 			univ.addCustomMesh(mask, "TV");
 			univ.show();
