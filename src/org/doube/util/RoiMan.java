@@ -74,8 +74,8 @@ public class RoiMan {
 	 * @param roiMan
 	 * @return int[] containing x min, x max, y min, y max, z min and z max, or
 	 *         null if there is no ROI Manager or if the ROI Manager is empty.
-	 *         If none of the ROIs contains slice information, z min and z max
-	 *         are omitted.
+	 *         If none of the ROIs contains slice information, z min is set to 1
+	 *         and z max is set to Integer.MAX_VALUE
 	 */
 	public static int[] getLimits(RoiManager roiMan) {
 		if (roiMan == null || roiMan.getCount() == 0)
@@ -102,7 +102,7 @@ public class RoiMan {
 			}
 		}
 		if (!hasZinfo) {
-			int[] limits = { xmin, xmax, ymin, ymax };
+			int[] limits = { xmin, xmax, ymin, ymax, 1, Integer.MAX_VALUE };
 			return limits;
 		} else {
 			int[] limits = { xmin, xmax, ymin, ymax, zmin, zmax };
