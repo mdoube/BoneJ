@@ -67,4 +67,46 @@ public class RoiMan {
 				roiList.add(roi);
 		return roiList;
 	}
+
+	/**
+	 * Find the x, y and z limits of the ROIs in the ROI Manager
+	 * 
+	 * @param roiMan
+	 * @return int[] containing x min, x max, y min, y max, z min and z max, or
+	 *         null if there is no ROI Manager or if the ROI Manager is empty.
+	 *         If none of the ROIs contains slice information, z min and z max
+	 *         are omitted.
+	 */
+	public static int[] getLimits(RoiManager roiMan) {
+		if (roiMan == null || roiMan.getCount() == 0)
+			return null;
+		int xmin = Integer.MAX_VALUE;
+		int xmax = 0;
+		int ymin = Integer.MAX_VALUE;
+		int ymax = 0;
+		int zmin = Integer.MAX_VALUE;
+		int zmax = 1;
+		boolean hasZinfo = false;
+		Roi[] rois = roiMan.getRoisAsArray();
+		for (Roi roi : rois) {
+			Rectangle r = roi.getBounds();
+			xmin = Math.min(r.x, xmin);
+			xmax = Math.max(r.x + r.width, xmax);
+			ymin = Math.min(r.y, ymin);
+			ymax = Math.max(r.y + r.height, ymax);
+			int slice = roiMan.getSliceNumber(roi.getName());
+			if (slice > 0) {
+				hasZinfo = true;
+				zmin = Math.min(slice, zmin);
+				zmax = Math.max(slice, zmax);
+			}
+		}
+		if (!hasZinfo) {
+			int[] limits = { xmin, xmax, ymin, ymax };
+			return limits;
+		} else {
+			int[] limits = { xmin, xmax, ymin, ymax, zmin, zmax };
+			return limits;
+		}
+	}
 }
