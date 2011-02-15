@@ -350,11 +350,9 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		ImagePlus outImp = new ImagePlus();
 		outImp.setStack("Out", outStack);
 		outImp.setCalibration(imp.getCalibration());
-		outImp.show();
 		ImagePlus maskImp = new ImagePlus();
 		maskImp.setStack("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
-		maskImp.show();
 		IJ.showStatus("Creating surface mesh...");
 		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
 		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
