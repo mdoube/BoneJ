@@ -260,26 +260,42 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
 		final int nSlices = imp.getStackSize();
-		final ImageProcessor[] outIps = new ImageProcessor[nSlices + 1];
-		final ImageProcessor[] maskIps = new ImageProcessor[nSlices + 1];
-		ImageStack outStack = new ImageStack(w, h, nSlices);
-		ImageStack maskStack = new ImageStack(w, h, nSlices);
-		for (int i = 1; i <= nSlices; i++) {
-			outStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
-			maskStack.setPixels(Moments.getEmptyPixels(w, h, 8), i);
-			outIps[i] = outStack.getProcessor(i);
-			maskIps[i] = maskStack.getProcessor(i);
-		}
-		final AtomicInteger ai = new AtomicInteger(1);
-		Thread[] threads = Multithreader.newThreads();
 		final RoiManager roiMan = RoiManager.getInstance();
+		final int[] limits = RoiMan.getLimits(roiMan);
+		int xmin = 0, xmax = w - 1, ymin = 1, ymax = h - 1, zmin = 1, zmax = nSlices;
+		if (useRoiMan && limits != null) {
+			xmin = Math.max(limits[0], xmin);
+			xmax = Math.min(limits[1], xmax);
+			ymin = Math.max(limits[2], ymin);
+			ymax = Math.min(limits[3], ymax);
+			zmin = Math.max(limits[4], zmin);
+			zmax = Math.min(limits[5], zmax);
+		}
+		final int wi = xmax - xmin + 1;
+		final int hi = ymax - ymin + 1;
+		final int di = zmax - zmin + 1;
+		final int xm = xmin;
+		final int ym = ymin;
+		final int zm = zmin;
+		final ImageProcessor[] outIps = new ImageProcessor[di];
+		final ImageProcessor[] maskIps = new ImageProcessor[di];
+		ImageStack outStack = new ImageStack(wi, hi, di);
+		ImageStack maskStack = new ImageStack(wi, hi, di);
+		for (int i = 0; i < di; i++) {
+			outStack.setPixels(Moments.getEmptyPixels(wi, hi, 8), i + 1);
+			maskStack.setPixels(Moments.getEmptyPixels(wi, hi, 8), i + 1);
+			outIps[i] = outStack.getProcessor(i + 1);
+			maskIps[i] = maskStack.getProcessor(i + 1);
+		}
+		final AtomicInteger ai = new AtomicInteger(zmin);
+		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai
+					for (int s = ai.getAndIncrement(); s <= di + zm; s = ai
 							.getAndIncrement()) {
 						IJ.showStatus("Creating binary templates...");
-						IJ.showProgress(s, nSlices);
+						IJ.showProgress(s, di);
 						ImageProcessor ipSlice = stack.getProcessor(s);
 						ipSlice.setRoi(imp.getRoi());
 						if (roiMan != null && useRoiMan) {
@@ -295,15 +311,17 @@ public class VolumeFraction implements PlugIn, DialogListener {
 								continue;
 							for (Roi roi : rois) {
 								ipSlice.setRoi(roi);
-								drawMasks(ipSlice, maskIps, outIps, s);
+								drawMasks(ipSlice, maskIps, outIps, s, xm, ym,
+										zm);
 							}
 						} else
-							drawMasks(ipSlice, maskIps, outIps, s);
+							drawMasks(ipSlice, maskIps, outIps, s, xm, ym, zm);
 					}
 				}
 
 				private void drawMasks(ImageProcessor ipSlice,
-						ImageProcessor[] maskIps, ImageProcessor[] outIps, int s) {
+						ImageProcessor[] maskIps, ImageProcessor[] outIps,
+						int s, int xmin, int ymin, int zmin) {
 					ImageProcessor mask = ipSlice.getMask();
 					final Rectangle r = ipSlice.getRoi();
 					final int rLeft = r.x;
@@ -315,10 +333,12 @@ public class VolumeFraction implements PlugIn, DialogListener {
 						final int vrTop = v - rTop;
 						for (int u = rLeft; u < rRight; u++) {
 							if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-								maskIps[s].set(u, v, (byte) 255);
+								maskIps[s - zmin].set(u - xmin, v - ymin,
+										(byte) 255);
 								final double pixel = ipSlice.get(u, v);
 								if (pixel >= minT && pixel <= maxT) {
-									outIps[s].set(u, v, (byte) 255);
+									outIps[s - zmin].set(u - xmin, v - ymin,
+											(byte) 255);
 								}
 							}
 						}
@@ -330,9 +350,11 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		ImagePlus outImp = new ImagePlus();
 		outImp.setStack("Out", outStack);
 		outImp.setCalibration(imp.getCalibration());
+		outImp.show();
 		ImagePlus maskImp = new ImagePlus();
 		maskImp.setStack("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
+		maskImp.show();
 		IJ.showStatus("Creating surface mesh...");
 		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
 		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
