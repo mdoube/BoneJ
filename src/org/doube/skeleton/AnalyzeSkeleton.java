@@ -418,19 +418,21 @@ public class AnalyzeSkeleton implements PlugInFilter
 				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;				
 			}
 			
-			// Display short paths in a new stack
-			ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
-			shortIP.show();
+			if (!silent) {
+				// Display short paths in a new stack
+				ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
+				shortIP.show();
 
-			// Set same calibration as the input image
-			shortIP.setCalibration(this.imRef.getCalibration());
+				// Set same calibration as the input image
+				shortIP.setCalibration(this.imRef.getCalibration());
 
-			// We apply the Fire LUT and reset the min and max to be between 0-255.
-			IJ.run(shortIP, "Fire", null);
+				// We apply the Fire LUT and reset the min and max to be between 0-255.
+				IJ.run(shortIP, "Fire", null);
 
-			//IJ.resetMinAndMax();
-			shortIP.resetDisplayRange();
-			shortIP.updateAndDraw();
+				//IJ.resetMinAndMax();
+				shortIP.resetDisplayRange();
+				shortIP.updateAndDraw();
+			}
 		
 		}
 		
@@ -629,10 +631,12 @@ public class AnalyzeSkeleton implements PlugInFilter
 		{
 			displayTagImage(taggedImage);
 		}
-		
+
 		// Mark trees
 		ImageStack treeIS = markTrees(taggedImage);
 		
+		if(this.numOfTrees == 0)
+			return;
 		
 		// Ask memory for every tree
 		initializeTrees();
@@ -1099,6 +1103,22 @@ public class AnalyzeSkeleton implements PlugInFilter
 	}// end method showResults
 
 	/**
+	 * Returns one of the two result images in an ImageStack object.
+	 *
+	 * @param longestShortestPath Get the tagged longest shortest paths instead of the standard tagged image
+	 *
+	 * @return The results image with a tagged skeleton 
+	 */
+	public ImageStack getResultImage(boolean longestShortestPath)
+	{
+		if (longestShortestPath) {
+			return this.shortPathImage;
+		}
+		return this.taggedImage;
+	}
+
+
+	/**
 	 * Returns the analysis results in a SkeletonResult object.
 	 * <p>
 	 *
@@ -1122,6 +1142,9 @@ public class AnalyzeSkeleton implements PlugInFilter
 		result.setListOfSlabVoxels(listOfSlabVoxels);
 		result.setListOfStartingSlabVoxels(listOfStartingSlabVoxels);
 
+		result.setShortestPathList(shortestPathList);
+		result.setSpStartPosition(spStartPosition);
+		
 		result.setGraph(graph);
 
 		result.calculateNumberOfVoxels();
@@ -1853,6 +1876,9 @@ public class AnalyzeSkeleton implements PlugInFilter
 				if(debug)
 					IJ.log("found unvisited junction point: " + nextPoint);
 				this.auxFinalVertex = findPointVertex(this.junctionVertex[iTree], nextPoint);
+				// Add the length to the first point of the vertex (to prevent later from having
+				// euclidean distances larger than the actual distance)
+				length += calculateDistance(auxFinalVertex.getPoints().get(0), nextPoint);
 				/*
 				int j = 0;
 				for(j = 0; j < this.junctionVertex[iTree].length; j++)
