@@ -4,10 +4,12 @@ import ij.*;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.plugin.PlugIn;
+import ij.plugin.frame.RoiManager;
 import ij.process.*;
 
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.RoiMan;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -94,6 +96,7 @@ public class Thickness implements PlugIn {
 		gd.addCheckbox("Thickness", true);
 		gd.addCheckbox("Spacing", false);
 		gd.addCheckbox("Graphic Result", true);
+		gd.addCheckbox("Use_ROI_Manager", false);
 		gd.addHelp("http://bonej.org/thickness");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -102,14 +105,23 @@ public class Thickness implements PlugIn {
 		boolean doThickness = gd.getNextBoolean();
 		boolean doSpacing = gd.getNextBoolean();
 		boolean doGraphic = gd.getNextBoolean();
+		boolean doRoi = gd.getNextBoolean();
 
 		long startTime = System.currentTimeMillis();
 		String title = stripExtension(imp.getTitle());
-
+		
+		RoiManager roiMan = RoiManager.getInstance();
 		// calculate trabecular thickness (Tb.Th)
 		if (doThickness) {
 			boolean inverse = false;
-			ImagePlus impLTC = getLocalThickness(imp, inverse);
+			ImagePlus impLTC = new ImagePlus();
+			if (doRoi && roiMan != null){
+				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 0, 1);
+				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
+				crop.setCalibration(imp.getCalibration());
+				impLTC = getLocalThickness(crop, inverse);
+			} else
+				impLTC = getLocalThickness(imp, inverse);
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			double[] stats = meanStdDev(impLTC);
@@ -123,8 +135,15 @@ public class Thickness implements PlugIn {
 		}
 		if (doSpacing) {
 			boolean inverse = true;
+			ImagePlus impLTCi = new ImagePlus();
+			if (doRoi && roiMan != null){
+				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 255, 1);
+				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
+				crop.setCalibration(imp.getCalibration());
+				impLTCi = getLocalThickness(crop, inverse);
+			} else
+				impLTCi = getLocalThickness(imp, inverse);
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
-			ImagePlus impLTCi = getLocalThickness(imp, inverse);
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
 			double[] stats = meanStdDev(impLTCi);
