@@ -120,12 +120,19 @@ public class RoiMan {
 	 * fill the background with a single pixel value.
 	 * 
 	 * @param roiMan
+	 *            ROI Manager containing ROIs
 	 * @param stack
+	 *            input stack
 	 * @param fillBackground
+	 *            if true, background will be set to value
+	 * @param fillValue
+	 *            value to set background to
+	 * @param padding
+	 *            empty pixels to pad faces of cropped stack with
 	 * @return cropped copy of input stack
 	 */
 	public static ImageStack cropStack(RoiManager roiMan, ImageStack stack,
-			boolean fillBackground, int fillValue) {
+			boolean fillBackground, int fillValue, int padding) {
 		int[] limits = getLimits(roiMan);
 		final int xmin = limits[0];
 		final int xmax = limits[1];
@@ -133,12 +140,12 @@ public class RoiMan {
 		final int ymax = limits[3];
 		final int zmin = limits[4];
 		final int zmax = (limits[5] == Integer.MAX_VALUE) ? stack.getSize()
-				: limits[5];
+				: limits[5] + 1 + padding;
 		final int w = xmax - xmin;
 		final int h = ymax - ymin;
 
-		ImageStack out = new ImageStack(w, h);
-		for (int z = zmin; z <= zmax; z++) {
+		ImageStack out = new ImageStack(w + 2 * padding, h + 2 * padding);
+		for (int z = zmin - 1 - padding; z <= zmax; z++) {
 			ImageProcessor ip = stack.getProcessor(z);
 			ImageProcessor ipOut = ip.duplicate();
 			final int length = ipOut.getPixelCount();
@@ -159,7 +166,8 @@ public class RoiMan {
 					}
 				}
 			}
-			ipOut.setRoi(xmin, ymin, w, h);
+			ipOut.setRoi(xmin - padding, ymin - padding, w + 2 * padding, h + 2
+					* padding);
 			ipOut = ipOut.crop();
 			out.addSlice(stack.getSliceLabel(z), ipOut);
 		}
