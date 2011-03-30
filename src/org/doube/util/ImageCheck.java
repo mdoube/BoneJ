@@ -17,7 +17,7 @@ public class ImageCheck {
 	/**
 	 * ImageJ version required by BoneJ
 	 */
-	public static final String requiredIJVersion = "1.44k";
+	public static final String requiredIJVersion = "1.45d";
 
 	/**
 	 * Check if image is binary

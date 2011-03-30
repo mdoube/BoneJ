@@ -173,4 +173,17 @@ public class RoiMan {
 		}
 		return out;
 	}
+
+	/**
+	 * Add an ROI to the ROI Manager at the given slice. If the ROI is already
+	 * assigned to a z-slice, it is reassigned (i.e. moved).
+	 * 
+	 * @param roiMan
+	 * @param roi
+	 * @param slice
+	 */
+	public static void setSliceRoi(RoiManager roiMan, Roi roi, int slice) {
+		roi.setPosition(slice);
+		roiMan.addRoi(roi);
+	}
 }
