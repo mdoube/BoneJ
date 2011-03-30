@@ -66,8 +66,8 @@ public class RoiMan {
 		ArrayList<Roi> roiList = new ArrayList<Roi>();
 		Roi[] rois = roiMan.getRoisAsArray();
 		for (Roi roi : rois) {
-			int sliceNumber = roiMan.getSliceNumber(roi.getName());
-			if (sliceNumber == s || sliceNumber == -1)
+			int sliceNumber = roi.getPosition();
+			if (sliceNumber == s || sliceNumber == 0)
 				roiList.add(roi);
 		}
 		return roiList;
@@ -172,5 +172,13 @@ public class RoiMan {
 			out.addSlice(stack.getSliceLabel(z), ipOut);
 		}
 		return out;
+	}
+
+	/**
+	 * Remove all ROIs from the ROI manager
+	 */
+	public static void deleteAll() {
+		// TODO Auto-generated method stub
+		
 	}
 }
