@@ -66,7 +66,9 @@ public class RoiMan {
 		ArrayList<Roi> roiList = new ArrayList<Roi>();
 		Roi[] rois = roiMan.getRoisAsArray();
 		for (Roi roi : rois) {
-			int sliceNumber = roi.getPosition();
+			int sliceNumber = roiMan.getSliceNumber(roi.getName());
+			if (sliceNumber == -1)
+				sliceNumber = roi.getPosition();
 			if (sliceNumber == s || sliceNumber == 0)
 				roiList.add(roi);
 		}
