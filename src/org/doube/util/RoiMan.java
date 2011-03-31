@@ -177,8 +177,13 @@ public class RoiMan {
 	/**
 	 * Remove all ROIs from the ROI manager
 	 */
-	public static void deleteAll() {
-		// TODO Auto-generated method stub
-		
+	public static void deleteAll(RoiManager roiMan) {
+		Roi[] rois = roiMan.getRoisAsArray();
+		for (int i = 0; i < rois.length; i++) {
+			if (roiMan.getCount() == 0)
+				break;
+			roiMan.select(i);
+			roiMan.runCommand("delete");
+		}
 	}
 }
