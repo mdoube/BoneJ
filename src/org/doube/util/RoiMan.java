@@ -148,6 +148,8 @@ public class RoiMan {
 
 		ImageStack out = new ImageStack(w + 2 * padding, h + 2 * padding);
 		for (int z = zmin - 1 - padding; z <= zmax; z++) {
+			if (z < 1 || z > stack.getSize())
+				continue;
 			ImageProcessor ip = stack.getProcessor(z);
 			ImageProcessor ipOut = ip.duplicate();
 			final int length = ipOut.getPixelCount();
