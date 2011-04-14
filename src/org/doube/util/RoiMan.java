@@ -165,7 +165,7 @@ public class RoiMan {
 				final int rw = r.x + r.width;
 				for (int y = r.y; y < rh; y++) {
 					for (int x = r.x; x < rw; x++) {
-						if (mask.get(x - r.x, y - r.y) > 0)
+						if (mask == null || mask.get(x - r.x, y - r.y) > 0)
 							ipOut.set(x, y, ip.get(x, y));
 					}
 				}
