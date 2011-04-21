@@ -1,5 +1,6 @@
 package org.doube.util;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Roi;
@@ -10,6 +11,8 @@ import ij.process.ImageProcessor;
 import java.awt.List;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+
+import org.doube.bonej.Moments;
 
 /**
  * Do useful things with ImageJ's ROI Manager
@@ -142,38 +145,50 @@ public class RoiMan {
 		final int ymax = limits[3];
 		final int zmin = limits[4];
 		final int zmax = (limits[5] == Integer.MAX_VALUE) ? stack.getSize()
-				: limits[5] + 1 + padding;
-		final int w = xmax - xmin;
-		final int h = ymax - ymin;
+				: limits[5];
+		// target stack dimensions
+		final int w = xmax - xmin + 2 * padding;
+		final int h = ymax - ymin + 2 * padding;
+		final int d = zmax - zmin + 2 * padding;
 
-		ImageStack out = new ImageStack(w + 2 * padding, h + 2 * padding);
-		for (int z = zmin - 1 - padding; z <= zmax; z++) {
-			if (z < 1 || z > stack.getSize())
+		// offset that places source stack in coordinate frame
+		// of target stack (i.e. origin of source stack relative to origin of
+		// target stack)
+		final int xOff = padding - xmin;
+		final int yOff = padding - ymin;
+		final int zOff = padding - zmin;
+
+		ImagePlus imp = new ImagePlus("title", stack);
+		ImageStack out = new ImageStack(w, h);
+		for (int z = 1; z <= d; z++) {
+			ImageProcessor ip = imp.getProcessor().createProcessor(w, h);
+			final int length = ip.getPixelCount();
+			if (z - zOff < 1 || z > stack.getSize()) { // catch out of bounds
+				for (int i = 0; i < length; i++)
+					ip.set(i, fillValue);
+				out.addSlice("padding", ip);
 				continue;
-			ImageProcessor ip = stack.getProcessor(z);
-			ImageProcessor ipOut = ip.duplicate();
-			final int length = ipOut.getPixelCount();
+			}
+			ImageProcessor ipSource = stack.getProcessor(z - zOff);
 			if (fillBackground)
 				for (int i = 0; i < length; i++)
-					ipOut.set(i, fillValue);
-			ArrayList<Roi> rois = getSliceRoi(roiMan, z);
+					ip.set(i, fillValue);
+			ArrayList<Roi> rois = getSliceRoi(roiMan, z - zOff);
 			for (Roi roi : rois) {
-				ip.setRoi(roi);
+				ipSource.setRoi(roi);
 				Rectangle r = roi.getBounds();
-				ImageProcessor mask = ip.getMask();
+				ImageProcessor mask = ipSource.getMask();
 				final int rh = r.y + r.height;
 				final int rw = r.x + r.width;
 				for (int y = r.y; y < rh; y++) {
+					final int yyOff = y + yOff;
 					for (int x = r.x; x < rw; x++) {
 						if (mask == null || mask.get(x - r.x, y - r.y) > 0)
-							ipOut.set(x, y, ip.get(x, y));
+							ip.set(x + xOff, yyOff, ipSource.get(x, y));
 					}
 				}
 			}
-			ipOut.setRoi(xmin - padding, ymin - padding, w + 2 * padding, h + 2
-					* padding);
-			ipOut = ipOut.crop();
-			out.addSlice(stack.getSliceLabel(z), ipOut);
+			out.addSlice(stack.getSliceLabel(z - zOff), ip);
 		}
 		return out;
 	}
