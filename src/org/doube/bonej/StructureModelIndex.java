@@ -208,6 +208,7 @@ public class StructureModelIndex implements PlugIn {
 		double v = Math.abs(surface.getVolume());
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
+		IJ.log("s1 = " + s1);
 
 		// get all the unique vertices
 		// associate each unique vertex with the triangles around it
@@ -249,22 +250,22 @@ public class StructureModelIndex implements PlugIn {
 				switch (corner) {
 				case 0:
 					point0 = triangles.get(pointIndex);
-					point1 = triangles.get(pointIndex + 1);
-					point2 = triangles.get(pointIndex + 2);
-					break;
-				case 1:
-					point0 = triangles.get(pointIndex - 1);
-					point1 = triangles.get(pointIndex);
+					point1 = triangles.get(pointIndex + 2);
 					point2 = triangles.get(pointIndex + 1);
 					break;
+				case 1:
+					point0 = triangles.get(pointIndex + 1);
+					point1 = triangles.get(pointIndex);
+					point2 = triangles.get(pointIndex - 1);
+					break;
 				case 2:
-					point0 = triangles.get(pointIndex - 2);
-					point1 = triangles.get(pointIndex - 1);
+					point0 = triangles.get(pointIndex - 1);
+					point1 = triangles.get(pointIndex - 2);
 					point2 = triangles.get(pointIndex);
 					break;
 				}
-				Point3f surfaceNormal = Vectors.crossProduct(point0,
-						point1, point2);
+				Point3f surfaceNormal = Vectors.crossProduct(point0, point1,
+						point2);
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
 				sumNormals.z += surfaceNormal.z;
@@ -308,13 +309,13 @@ public class StructureModelIndex implements PlugIn {
 			Point3f point0 = triangles.get(i);
 			Point3f point1 = triangles.get(i + 1);
 			Point3f point2 = triangles.get(i + 2);
-			double area1 = 0.5 * Vectors.crossProduct(point0, point1,
-					point2).distance(origin);
+			double area1 = 0.5 * Vectors.crossProduct(point0, point1, point2)
+					.distance(origin);
 			point0 = movedTriangles.get(i);
 			point1 = movedTriangles.get(i + 1);
 			point2 = movedTriangles.get(i + 2);
-			double area2 = 0.5 * Vectors.crossProduct(point0, point1,
-					point2).distance(origin);
+			double area2 = 0.5 * Vectors.crossProduct(point0, point1, point2)
+					.distance(origin);
 
 			double deltaArea = area2 - area1;
 
@@ -328,16 +329,16 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		double concaveFraction = concaveArea / (concaveArea + convexArea);
-		IJ.log("Fraction of surface area that is concave: "
-				+ concaveFraction);
+		IJ.log("Fraction of surface area that is concave: " + concaveFraction);
 		double sRconvex = convexDelta / r;
 		double sRconcave = concaveDelta / r;
-		double convexSMI = 6 * sRconvex * v  / (s1 * s1);
+		double convexSMI = 6 * sRconvex * v / (s1 * s1);
 		double concaveSMI = 6 * sRconcave * v / (s1 * s1);
 		IJ.log("Convex SMI = " + convexSMI);
 		IJ.log("Concave SMI = " + concaveSMI);
 
 		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
+		IJ.log("s2 = " + s2);
 		double sR = (s2 - s1) / r;
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
