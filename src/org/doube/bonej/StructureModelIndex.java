@@ -208,7 +208,6 @@ public class StructureModelIndex implements PlugIn {
 		double v = Math.abs(surface.getVolume());
 
 		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
-		IJ.log("s1 = " + s1);
 
 		// get all the unique vertices
 		// associate each unique vertex with the triangles around it
@@ -338,7 +337,6 @@ public class StructureModelIndex implements PlugIn {
 		IJ.log("Concave SMI = " + concaveSMI);
 
 		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
-		IJ.log("s2 = " + s2);
 		double sR = (s2 - s1) / r;
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
