@@ -1,0 +1,65 @@
+//PointToRoi.txt ImageJ Macro for determination of 
+//shortest distances from 2 perimeter ROIs
+//to each of many point ROIs
+//Expected running order is:
+//[1], then set appropriate threshold
+//select osteonal canal with wand and save it with [2]
+//draw cement line, then save it with [3]
+//add point selections and save them with [4]
+//shortest distances from point selections to canal (dpMin) and cement line (dcMin)
+//are logged to the results window
+//ROI sets can be saved for later analysis, using the Save button in ROI Manager
+
+//Michael Doube, July 2008
+//Imperial College London
+
+var row = 0;
+var xCoordinatesP;
+var yCoordinatesP;
+var xCoordinatesC;
+var yCoordinatesC;
+var width, height, depth, unit;
+var nOc;
+
+macro "Set Up Perimeter [1]" {
+getVoxelSize(width, height, depth, unit);
+run("Threshold...");
+setTool(8);
+if (roiManager("count")>0) roiManager("reset");
+run("Select None");
+setOption("Show All", true);
+nOc = 3;	//first osteocyte numbered by ROI manager is 3 (ROI 1&2 are the perimenters)
+if (isOpen("Results")) row = nResults; 
+else row = 0;
+}
+macro "Save Canal ROI [2]" {
+	roiManager("Add");
+	getSelectionCoordinates(xCoordinatesP, yCoordinatesP);
+	setTool(3);
+}
+macro "Save Cement Line ROI [3]" {
+	roiManager("Add");
+	getSelectionCoordinates(xCoordinatesC, yCoordinatesC);
+	setTool(7);
+}
+macro "Distance to Point [4]" {
+	roiManager("Add");
+	getSelectionCoordinates(x, y);
+	dpMin = 9999999;
+	dcMin = 9999999;
+	for (n=0; n< lengthOf(xCoordinatesP); n++){
+		dp = sqrt((x[0]-xCoordinatesP[n])*(x[0]-xCoordinatesP[n])*width*width+(y[0]-yCoordinatesP[n])*(y[0]-yCoordinatesP[n])*height*height);
+		dpMin = minOf(dpMin, dp);
+	}
+	for (n=0; n< lengthOf(xCoordinatesC); n++){
+		dc = sqrt((x[0]-xCoordinatesC[n])*(x[0]-xCoordinatesC[n])*width*width+(y[0]-yCoordinatesC[n])*(y[0]-yCoordinatesC[n])*height*height);
+		dcMin = minOf(dcMin, dc);
+	}
+	setResult("Label", row, getTitle);
+	setResult("nOc", row, nOc);		//osteocyte number from ROI manager
+	setResult("dpMin ("+unit+")", row, dpMin);	//minimum distance between point and canal
+	setResult("dcMin ("+unit+")", row, dcMin);	//minimum distance between point and cement line
+	updateResults();
+	row++;
+	nOc++;
+}
