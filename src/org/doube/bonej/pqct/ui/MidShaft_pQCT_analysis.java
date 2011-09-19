@@ -29,28 +29,18 @@ erode algorithm (modified from dilate):	http://ostermiller.org/dilate_and_erode.
 The file structure of Stratec files was volunteered from Stratec in response to my query
 
 */
-package ui;
+package org.doube.bonej.pqct.ui;
 import javax.swing.*;		//GUI using swing
 import java.awt.event.*; 	//Events and Actionlisteners
 import java.io.*;				//File IO
 import java.lang.Math;
 import java.awt.*;
-import java.awt.geom.Line2D;
-import javax.swing.event.*;
-import javax.swing.border.*;
 import java.util.Vector;
-import java.util.Enumeration;
-import java.io.*;
-import javax.sound.sampled.*;
-import java.awt.font.*;
 import java.text.*;
-import java.awt.image.*;
-import java.awt.image.DataBuffer;
-import Jama.*; //For solving linear equation groups, i.e. for  calculating the spline http://math.nist.gov/javanumerics/jama/
-import Analysis.*;	//Analysis stuff..
-import SelectRoi.*;	//ROI selection..
-import ImageReading.*;	//image data (includes DICOMReader, which seems to work for uncompressed explicit and implicit VR-files.  lossles JPEG not implemented)
-import DrawImage.*;		//Drawing and saving images
+import org.doube.bonej.pqct.analysis.*;	//Analysis stuff..
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import org.doube.bonej.pqct.io.*;	//image data (includes DICOMReader, which seems to work for uncompressed explicit and implicit VR-files.  lossles JPEG not implemented)
+import org.doube.bonej.pqct.drawimage.*;		//Drawing and saving images
 /*implements AL enables using events. Operating system will implement...*/
 /*extends = inherit, object can inherit only one object*/
 public class MidShaft_pQCT_analysis extends JPanel implements ActionListener, ItemListener {	

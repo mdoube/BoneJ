@@ -18,18 +18,18 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package SelectRoi;
+package org.doube.bonej.pqct.selectroi;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
-import Jama.*;		//linear equation group solver http://math.nist.gov/javanumerics/jama/
+import org.doube.jama.*;	//linear equation group solver http://math.nist.gov/javanumerics/jama/
 import java.awt.image.*; //Creating the image...
 import java.awt.*;
 import java.awt.Graphics2D;
 import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
 import javax.swing.*;   //for createImage
-import ImageReading.*;	//image data
-import DrawImage.*;		//Drawing and saving images
+import org.doube.bonej.pqct.io.*;//image data
+import org.doube.bonej.pqct.drawimage.*;		//Drawing and saving images
 
 public class Histogram extends JPanel{
 	ImageAndAnalysisDetails details;

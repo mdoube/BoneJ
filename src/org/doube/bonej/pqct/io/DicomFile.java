@@ -18,7 +18,7 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package ImageReading;
+package org.doube.bonej.pqct.io;
 /*For saving several slices from a single file*/
 public class DicomFile{
 	public byte[] transferSyntax;

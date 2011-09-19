@@ -18,7 +18,7 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package ImageReading;
+package org.doube.bonej.pqct.io;
 import java.util.*;	//Vector, Collections
 
 public class ScaledImageData{

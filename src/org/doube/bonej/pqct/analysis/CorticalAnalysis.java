@@ -19,10 +19,9 @@
 */
 
 
-package Analysis;
-import java.util.*;	//Vector, Collections
+package org.doube.bonej.pqct.analysis;
 import java.lang.Math; //atan2
-import SelectRoi.*;	//ROI selection..
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 //import SelectROI.*;
 public class CorticalAnalysis{
 	public double BMD;

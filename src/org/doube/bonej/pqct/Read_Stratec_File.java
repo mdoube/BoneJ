@@ -1,10 +1,10 @@
+package org.doube.bonej.pqct;
+
 import java.io.*;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
 import ij.plugin.*;
-import ij.process.*;
-import java.util.*;
 
 /*
 	This program is free software: you can redistribute it and/or modify

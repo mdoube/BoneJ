@@ -1,12 +1,14 @@
+package org.doube.bonej.pqct;
+
 import ij.*;
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
 import java.awt.*;
 import ij.plugin.filter.*;
-import Analysis.*;		//Analysis stuff..
-import SelectRoi.*;		//ROI selection..
-import ImageReading.*;	//image data 
+import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
+import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
+import org.doube.bonej.pqct.io.*;	//image data 
 import java.awt.image.*; //Creating the result BufferedImage...
 
 /*

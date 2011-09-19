@@ -19,16 +19,14 @@
 */
 
 
-package Analysis;
+package org.doube.bonej.pqct.analysis;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import java.awt.image.*; //Creating the image...
-import java.awt.Graphics2D;
 import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
-import javax.swing.*;   //for createImage
-import SelectRoi.*;	//ROI selection..
-import ImageReading.*;
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import org.doube.bonej.pqct.io.*;
 public class AnalyzeROI{
 	
 	//image array pointers

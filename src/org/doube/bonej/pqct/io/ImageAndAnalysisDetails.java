@@ -18,7 +18,7 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package ImageReading;
+package org.doube.bonej.pqct.io;
 public class ImageAndAnalysisDetails{
 	public double scalingFactor;
 	public double constant;

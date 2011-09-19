@@ -18,7 +18,7 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package DrawImage;
+package org.doube.bonej.pqct.drawimage;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;

@@ -19,9 +19,9 @@
 */
 
 
-package Analysis;
+package org.doube.bonej.pqct.analysis;
 import java.util.*;	//Vector, Collections
-import SelectRoi.*;	//ROI selection..
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 //import SelectROI.*;
 public class MedullaryAnalysis{
 	public double medBMD;

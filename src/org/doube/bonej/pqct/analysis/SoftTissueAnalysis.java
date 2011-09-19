@@ -18,8 +18,8 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-package Analysis;
-import SelectRoi.*;	//ROI selection..
+package org.doube.bonej.pqct.analysis;
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 public class SoftTissueAnalysis{
 	public double stBMD;
 	public double stAREA;

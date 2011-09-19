@@ -20,11 +20,9 @@
 */
 
 
-package ImageReading;
+package org.doube.bonej.pqct.io;
 import java.util.*;	//Vector
 import java.io.*;	//File IO
-import javax.swing.*;
-import javax.imageio.*;
 /*Java advanced imaging imageIO deactivated for now*/
 /*
 import com.sun.media.imageioimpl.plugins.jpeg.*;
@@ -34,9 +32,6 @@ import com.sun.medialib.codec.jpeg.*;
 //import javax.media.jai.*;
 
 import java.awt.image.*;
-import java.awt.*;
-import java.util.*;	//Vector, Collections
-
 
 public class DicomReader{
 	
