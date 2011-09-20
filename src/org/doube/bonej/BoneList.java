@@ -21,7 +21,7 @@ public class BoneList {
 	private final static String[] boneList = { "unknown", "scapula", "humerus",
 			"radius", "ulna", "metacarpal", "pelvis", "femur", "tibia",
 			"fibula", "metatarsal", "calcaneus", "tibiotarsus",
-			"tarsometatarsal" };
+			"tarsometatarsal", "sacrum" };
 
 	/**
 	 * Return the array of bone names
