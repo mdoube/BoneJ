@@ -954,6 +954,78 @@ public class SelectROI extends JPanel implements Runnable{
 		
 	}
 	
+	/*New algorithm 
+			trace edge by advancing according to the previous direction
+			if above threshold, turn to negative direction
+			if below threshold, turn to positive direction
+			Idea taken from some paper, couldn't locate it anymore
+			The paper traced continent edges on map/satellite image
+		*/
+	void traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int[] len,int i,int j){
+		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
+		double previousDirection;
+		boolean done = false;
+		int initI,initJ;
+		initI = i;
+		initJ = j;
+		//System.out.println("I "+i+" J "+j+"InI "+initI+" J "+initJ+" dir "+(direction/Math.PI*180.0)+" D "+ scaledImage[i+j*width]+" r "+result[i+j*width]);
+		while(!done){
+
+			int counter = 0;
+			previousDirection = direction;
+			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
+				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
+				)
+				&& counter < 8 
+				){
+					direction-=Math.PI/4.0;
+					++counter;
+					if (Math.abs(direction-previousDirection) >= 180){
+						//System.out.println("Negative break");
+						break;
+					}
+					
+				}
+			}else{//Rotate clockwise
+				while((scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold 
+				)
+				&& counter < 8){
+					direction+=Math.PI/4.0;
+					++counter;
+					if (Math.abs(direction-previousDirection) >= 180){
+						//System.out.println("Positive break");
+						break;
+					}
+				}
+			}
+			//if (result[i+j*width] == 1 || initialI.size()<1){ /*Allow returning via already used point*/
+			i += (int) Math.round(Math.cos(direction));
+			j += (int) Math.round(Math.sin(direction));
+			//if ((i == initI && j == initJ) || counter > 7 || i < 1 || j < 1 || i>=width-1|| j>=height-1 || scaledImage[i+j*width]<threshold){
+			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
+				//System.out.println("TEST "+(i == initI && j == initJ)+" "+(counter > 7)+" "+(scaledImage[i+j*width]<threshold));
+				//System.out.println("Done "+i+" "+j+" "+counter+" "+scaledImage[i+j*width]);
+				done = true;
+			}
+			else{
+				if (result[i+j*width] == 0){
+					result[i+j*width] = 2;
+				}else if (result[i+j*width] != 1){
+					result[i+j*width]++;
+				}
+				iit.add(new Integer(i));
+				jiit.add(new Integer(j));
+				len[0]++;
+			}
+			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
+		}
+		
+		for (int ii = 0; ii< result.length;++ii){
+			if(result[ii] > 1){result[ii]=1;}
+		}
+		
+	}
+	
 	void findEdge_leg(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit, int[] longestEdge,double threshold)
 	{
 		int newRow;
@@ -971,13 +1043,13 @@ public class SelectROI extends JPanel implements Runnable{
 		size = width*height;
 		int[][] searchOrder = {{1,0,-1,-1,-1,0,1,1,1},{1,1,1,0,-1,-1,-1,0,1}};
 		
-		int len;
+		int[] len = new int[1];
 		i = 0;
 		j = 0;
 
 		//System.out.println("Edge tracing begins "+i+" "+j);
 		while ((i < (width-1)) && (j < (height -1) )){
-			len = 0;
+			len[0] = 0;
 			//printf("Prior to i %d j %d\n",i,j);
 			previousI.clear();
 			previousJ.clear();
@@ -1018,80 +1090,18 @@ public class SelectROI extends JPanel implements Runnable{
 			result[i+j*width] = 1;
 			iit.add(new Integer(i));
 			jiit.add(new Integer(j));
-			len++;
-			//Loop traces the edge until the initial point is found.
+			len[0]++;
+			/*Tracing algorithm*/
+			traceEdge(scaledImage,result,threshold,iit,jiit,len,i,j);
+			/*Tracing algorithm done...*/
 
-			char z;
-			boolean done = false;
-			while(!done){
-				initialI.clear();
-				initialJ.clear();
-				
-				
-				
-				//Check the surrouding pixels. If last iit and jiit will be empty.
-				//System.out.println("Direction");
-				for (z=1;z < 9;z++){ 
-					if (scaledImage[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] >= threshold && scaledImage[i+searchOrder[0][z-1]+(j+searchOrder[1][z-1])*width] < threshold && result[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] < 1) {
-						initialI.add(new Integer(i+searchOrder[0][z]));
-						initialJ.add(new Integer(j+searchOrder[1][z]));		
-					}
-				}
-
-				//Check which of the possible candicaes changes direction the least
-				if (previousI.size() > 1 && initialI.size() >1){
-					//printf("checking angle i %d j %d\n",initialI[0],initialJ[0]);
-					Vector<Double> angle = new Vector<Double>();
-					double[] v1 = new double[2];
-					double[] v2 = new double[2];
-					int selection = 0;
-					int zz;
-					double smallestAngle = Math.PI*2;
-					for (zz = 0;zz < initialI.size()-1;zz++);{
-						v1[0] = (Integer) previousI.elementAt(0)-(Integer) previousI.elementAt(1);
-						v1[1] = (Integer) previousJ.elementAt(0)-(Integer) previousJ.elementAt(1);
-						v2[0] = (Integer) initialI.elementAt(zz)-(Integer) previousI.elementAt(1);
-						v2[1] = (Integer) initialJ.elementAt(zz)-(Integer) previousJ.elementAt(1);
-						angle.add(new Double(Math.atan2(v1[0],v1[1])-Math.atan2(v2[0],v2[1])));
-						if (angle.lastElement()  < smallestAngle) {
-							selection = zz;
-						}
-					}
-					
-					i = (Integer) initialI.elementAt(selection);
-					j = (Integer) initialJ.elementAt(selection);
-					
-				} else if (initialI.size() > 0){
-					i = initialI.firstElement();
-					j = initialJ.firstElement();
-				}
-				//System.out.println("Direction defined");
-
-				
-				//Stop if no candidate pixels left
-				if (result[i+j*width] == 1 || initialI.size()<1){
-					done = true;
-				}
-				else{
-					result[i+j*width] = 1;
-					iit.add(new Integer(i));
-					jiit.add(new Integer(j));
-					previousI.add(new Integer(i));
-					previousJ.add(new Integer(j));
-					if (previousI.size()>2){
-						previousI.remove(0) ;
-						previousJ.remove(0);
-					}
-					len++;
-				}
-			}
-			if (len > 0){
-				length.add(new Integer(len));
-				lengths.add(new Integer(len));
+			if (len[0] > 0){
+				length.add(new Integer(len[0]));
+				lengths.add(new Integer(len[0]));
 				if (length.size() < 2){
 					beginnings.add(new Integer(0));
 				}else{
-					beginnings.add(new Integer(iit.size()-len));
+					beginnings.add(new Integer(iit.size()-len[0]));
 				}
 				
 				
@@ -1295,12 +1305,12 @@ public class SelectROI extends JPanel implements Runnable{
 		size = width*height;
 		int[][] searchOrder = {{1,0,-1,-1,-1,0,1,1,1},{1,1,1,0,-1,-1,-1,0,1}};
 		
-		int len;
+		int[] len = new int[1];
 		i = 0;
 		j = 0;
 
 		while ((i < (width-1)) && (j < (height -1) )){
-			len = 0;
+			len[0] = 0;
 			previousI.clear();
 			previousJ.clear();
 			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
@@ -1333,66 +1343,19 @@ public class SelectROI extends JPanel implements Runnable{
 			result[i+j*width] = 1;
 			iit.add(new Integer(i));
 			jiit.add(new Integer(j));
-			len++;
-			char z;
-			boolean done = false;
-			while(!done){
-				initialI.clear();
-				initialJ.clear();
-				for (z=1;z < 9;z++){ 
-					if (scaledImage[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] >= threshold && scaledImage[i+searchOrder[0][z-1]+(j+searchOrder[1][z-1])*width] < threshold && result[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] < 1) {
-						initialI.add(new Integer(i+searchOrder[0][z]));
-						initialJ.add(new Integer(j+searchOrder[1][z]));		
-					}
-				}
-				if (previousI.size() > 1 && initialI.size() >1){
-					Vector<Double> angle = new Vector<Double>();
-					double[] v1 = new double[2];
-					double[] v2 = new double[2];
-					int valinta = 0;
-					int zz;
-					double smallestAngle = Math.PI*2;
-					for (zz = 0;zz < initialI.size()-1;zz++);{
-						v1[0] = (Integer) previousI.elementAt(0)-(Integer) previousI.elementAt(1);
-						v1[1] = (Integer) previousJ.elementAt(0)-(Integer) previousJ.elementAt(1);
-						v2[0] = (Integer) initialI.elementAt(zz)-(Integer) previousI.elementAt(1);
-						v2[1] = (Integer) initialJ.elementAt(zz)-(Integer) previousJ.elementAt(1);
-						angle.add(new Double(Math.atan2(v1[0],v1[1])-Math.atan2(v2[0],v2[1])));
-						if (angle.lastElement()  < smallestAngle) {
-							valinta = zz;
-						}
-					}
-					
-					i = (Integer) initialI.elementAt(valinta);
-					j = (Integer) initialJ.elementAt(valinta);
-				} else if (initialI.size() > 0){
-					i = initialI.firstElement();
-					j = initialJ.firstElement();
-				}
+			len[0]++;
 
-				if (result[i+j*width] == 1 || initialI.size()<1){
-					done = true;
-				}
-				else{
-					result[i+j*width] = 1;
-					iit.add(new Integer(i));
-					jiit.add(new Integer(j));
-					previousI.add(new Integer(i));
-					previousJ.add(new Integer(j));
-					if (previousI.size()>2){
-						previousI.remove(0) ;
-						previousJ.remove(0);
-					}
-					len++;
-				}
-			}
-			if (len > 0){
-				length.add(new Integer(len));
-				lengths.add(new Integer(len));
+			/*Tracing algorithm*/
+			traceEdge(scaledImage,result,threshold,iit,jiit,len,i,j);
+			/*Tracing algorithm done...*/
+			
+			if (len[0] > 0){
+				length.add(new Integer(len[0]));
+				lengths.add(new Integer(len[0]));
 				if (length.size() < 2){
 					beginnings.add(new Integer(0));
 				}else{
-					beginnings.add(new Integer(iit.size()-len));
+					beginnings.add(new Integer(iit.size()-len[0]));
 				}
 				
 				
