@@ -27,7 +27,7 @@ import ij.plugin.*;
     Copyright (C) 2011 Timo Rantalainen
 */
 
-public class Read_Stratec_File implements PlugIn {
+public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Global variables
 	ImagePlus img;
 	//Stratec header stuff
@@ -53,20 +53,39 @@ public class Read_Stratec_File implements PlugIn {
 	public short[] data;
 	public short min,max;
 	
+	
 	public Read_Stratec_File() { //Constructor
 		img = null;
 	}
 	
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
 	public void run(String arg) { 
-		OpenDialog od = new OpenDialog("Select stratec image (I*.M*)", arg);
-		String directory = od.getDirectory();
-		String fileName = od.getFileName();
+		String fileName;
+		String directory;
+		File file;
+		//ij.IJ.showStatus("In Stratec Reader "+arg);
+		//try{Thread.sleep(5000);}catch (Exception err){}
+		
+		if (!arg.isEmpty()){//Called by HandleExtraFileTypes
+			File theFile = new File(arg);
+			directory = theFile.getParent()+"/";
+			fileName = theFile.getName();
+			//ij.IJ.showStatus(directory+" "+fileName);
+			//try{Thread.sleep(500);}catch (Exception err){}
+		
+		}else{//select file manually
+			OpenDialog od = new OpenDialog("Select stratec image (I*.M*)", arg);
+			directory = od.getDirectory();
+			fileName = od.getFileName();
+		}
 		if (fileName==null) return;
 		read(directory,fileName);
+
 		if (img==null) return;
 		img.show();
 	}
+	
+	
 	
 	public void read(String directory, String fileName){
 		File fileIn = new File(directory+fileName);
