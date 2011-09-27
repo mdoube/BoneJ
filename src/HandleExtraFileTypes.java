@@ -221,20 +221,17 @@ public class HandleExtraFileTypes extends ImagePlus implements PlugIn {
 			return tryPlugIn("Open_DAT_EMMENU", path);
 		}
 
+		// Timo Rantalainen and Michael Doube: read Stratec pQCT files
+		if ((new Character(name.charAt(0))).equals(new Character('i')) 
+				&& (new Character(name.charAt(name.length()-3))).equals(new Character('m'))) { 
+			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
+		}
+		
 		// ****************** MODIFY HERE ******************
 		// do what ever you have to do to recognise your own file type
 		// and then call appropriate plugin using the above as models
-		// e.g.:// 'new format' only
-		//AboutBox abox = new AboutBox();
-		//ij.IJ.showStatus("At Stratec IF");
-		//try{Thread.sleep(500);}catch (Exception err){}
-		if ((new Character(name.charAt(0))).equals(new Character('i')) && (new Character(name.charAt(name.length()-3))).equals(new Character('m'))) { 
-			
-			//ij.IJ.showStatus("Opening File "+path);
-			//try{Thread.sleep(500);}catch (Exception err){}
-			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
-		}
-				/*
+
+		/*
 		// A. Dent: Added XYZ handler
 		// ----------------------------------------------
 		// check if the file ends in .xyz, and bytes 0 and 1 equal 42
