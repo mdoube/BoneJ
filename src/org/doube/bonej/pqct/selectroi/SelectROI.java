@@ -40,10 +40,6 @@ public class SelectROI extends JPanel implements Runnable{
 	public Vector<Integer> roiI;
 	public Vector<Integer> roiJ;
 
-	public Vector<Integer> marrowRoiI;
-	public Vector<Integer> marrowRoiJ;
-	public Vector<Integer> medullaryMarrowRoiI;
-	public Vector<Integer> medullaryMarrowRoiJ;
 	public Vector<Integer> boneMarrowRoiI;
 	public Vector<Integer> boneMarrowRoiJ;
 	public Vector<Integer> cortexRoiI;	//For BMD analyses
@@ -129,16 +125,12 @@ public class SelectROI extends JPanel implements Runnable{
 		marrowSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
-		marrowRoiI = new Vector<Integer>();
-		marrowRoiJ = new Vector<Integer>();
 		cortexRoiI = new Vector<Integer>();
 		cortexRoiJ = new Vector<Integer>();
 		cortexAreaRoiI = new Vector<Integer>();
 		cortexAreaRoiJ = new Vector<Integer>();
 		boneMarrowRoiI = new Vector<Integer>();
 		boneMarrowRoiJ = new Vector<Integer>();
-		medullaryMarrowRoiI = new Vector<Integer>();
-		medullaryMarrowRoiJ = new Vector<Integer>();
 		//System.out.println("Luominen valmis ");
 	}
 
@@ -201,159 +193,28 @@ public class SelectROI extends JPanel implements Runnable{
 		}
 		
 	}
-	
-	int erodeConcentric(byte[] data, double[] densities, Vector<Double> marrowDensities){
-		int removed=0;
-		double value =0;
-		//Erode algorithm
-		//Modified from the best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
-		for (int i=0; i<height; i++){
-			for (int j=0; j<width; j++){
-				if (data[i*width+j] > 0){
-					if (i>0 && data[(i-1)*width+j]==0 ||
-						j>0 && data[(i)*width+j-1]==0 ||
-						i+1<height && data[(i+1)*width+j]==0 ||
-						j+1<width && data[(i)*width+j+1]==0)
-					{//Erode the pixel if any of the neighborhood pixels is background
-						data[i*width+j] = 0-1;
-						++removed;
-						value+=densities[i*width+j];
-					}	
-						
-				}
-			}
-		}
-		for (int i=0; i<width*height; i++){
-			if (data[i] < 0){
-				data[i] = 0;
-			}
-		}
-		value/=(double)removed;
-		marrowDensities.add(value);
-		return removed;
-	}
-	
-	int erodeKernel(byte[] data){
-		int removed=0;
-		//Erode algorithm
-		//Modified from the best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
-		for (int i=0; i<height; i++){
-			for (int j=0; j<width; j++){
-				if (data[i*width+j] > 0){
-					if (i>0 && data[(i-1)*width+j]==0 ||
-						j>0 && data[(i)*width+j-1]==0 ||
-						i+1<height && data[(i+1)*width+j]==0 ||
-						j+1<width && data[(i)*width+j+1]==0)
-					{//Erode the pixel if any of the neighborhood pixels is background
-						data[i*width+j] = 0-1;
-						++removed;
-					}	
-						
-				}
-			}
-		}
-		for (int i=0; i<width*height; i++){
-			if (data[i] < 0){
-				data[i] = 0;
-			}
-		}
-		return removed;
-	}
-	
-	
-	void erode(byte[] data){
-		//Erode algorithm
-		//Modified from the best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
-		for (int i=0; i<height; i++){
-			for (int j=0; j<width; j++){
-				if (data[i*width+j] > 0){
-					if (i>0 && data[(i-1)*width+j]==0 ||
-						j>0 && data[(i)*width+j-1]==0 ||
-						i+1<height && data[(i+1)*width+j]==0 ||
-						j+1<width && data[(i)*width+j+1]==0)
-						{data[i*width+j] = 0-1;}	//Erode the pixel if any of the neighborhood pixels is background
-				}
-			}
-		}
-		for (int i=0; i<width*height; i++){
-			if (data[i] < 0){
-				data[i] = 0;
-			}
-		}
-	}
 
-	public void dilate(byte[] data,byte dilateVal,byte min, byte temp){
-	//Dilate algorithm
-	// Best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
-	
-		for (int i=0; i<height; i++){
-			for (int j=0; j<width; j++){
-				if (data[i*width+j] ==dilateVal){
-					if (i>0 && data[(i-1)*width+j]==min) {data[(i-1)*width+j] = temp;}
-					if (j>0 && data[(i)*width+j-1]==min) {data[(i)*width+j-1] = temp;}
-					if (i+1<height && data[(i+1)*width+j]==min) {data[(i+1)*width+j] = temp;}
-					if (j+1<width && data[(i)*width+j+1]==min) {data[(i)*width+j+1] = temp;}
-				}
-			}
+	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
+		int width, int height, double minimum, double maximum, Component imageCreator) {
+		int[] image = new int[width*height];
+		int pixel;
+		for (int x = 0; x < width*height;x++) {
+			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0)); //Korjaa tama...
+			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
 		}
-		for (int i=0; i<width*height; i++){
-			if (data[i] == temp){
-				data[i] = dilateVal;	//Set to proper value here...
-			}
+		 //Draw rotated radii
+		for(int i = 0; i< 360;i++) {
+			image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
+			image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
 		}
-	}
-	
-	int peelDistal(){
-		int pixelsPeeled = 0;
-		//Use Erode algorithm for peeling extra pixels off...
-		//Modified from the best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
-		for (int i=0; i<height; i++){
-			for (int j=0; j<width; j++){
-				if (sieve[i*width+j] > 0){
-					if ((i>0 && sieve[(i-1)*width+j]==0 && cortexROI[(i)*width+j] < areaThreshold) ||
-						(j>0 && sieve[(i)*width+j-1]==0 && cortexROI[(i)*width+j] < areaThreshold) ||
-						(i+1<height && sieve[(i+1)*width+j]==0 && cortexROI[(i)*width+j] < areaThreshold) ||
-						(j+1<width && sieve[(i)*width+j+1]==0 )&& cortexROI[(i)*width+j] < areaThreshold)
-						{
-							cortexROI[i*width+j] = minimum-1;
-							sieve [i*width+j] = -1;
-							pixelsPeeled++;
-						}	//Erode the pixel if any of the neighborhood pixels is background
-				}
-			}
-		}
-		for (int i=0; i<width*height; i++){
-			if (cortexROI[i] < minimum){
-				cortexROI[i] = minimum;
-				sieve[i] = 0;
-			}
-		}
-		return pixelsPeeled;
-	}
 
-	
-		
-		public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
-				int width, int height, double minimum, double maximum, Component imageCreator) {
-			 int[] image = new int[width*height];
-			 int pixel;
-			 for (int x = 0; x < width*height;x++) {
-				pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0)); //Korjaa tama...
-				image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-			 }
-			 //Draw rotated radii
-			for(int i = 0; i< 360;i++) {
-				image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
-				image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
-			}
-
-			 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
-			 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-			 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-			 Graphics2D gbuf = bufferedImage.createGraphics();
-			 gbuf.drawImage(imageToDraw, 0, 0,null);
-			 return bufferedImage;
-		}
+		 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
+		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
+		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
+		 Graphics2D gbuf = bufferedImage.createGraphics();
+		 gbuf.drawImage(imageToDraw, 0, 0,null);
+		 return bufferedImage;
+	}
 
 	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
 		//Fill the area enclosed by the traced edge contained in roiI,roiJ
@@ -939,12 +800,6 @@ public class SelectROI extends JPanel implements Runnable{
 			}
 		}
 
-
-			
-
-
-		//System.out.println("Loppu found funktio");
-		
 	}
 	
 	/*
