@@ -2,6 +2,7 @@
 import ij.*;
 import ij.plugin.*;
 import java.io.*;
+import java.util.regex.*;	//Pattern matching for recognizing Stratec files
 
 // Plugin to handle file types which are not implemented
 // directly in ImageJ through io.Opener
@@ -225,13 +226,10 @@ public class HandleExtraFileTypes extends ImagePlus implements PlugIn {
 		// do what ever you have to do to recognise your own file type
 		// and then call appropriate plugin using the above as models
 		// e.g.:// 'new format' only
-		//AboutBox abox = new AboutBox();
-		//ij.IJ.showStatus("At Stratec IF");
-		//try{Thread.sleep(500);}catch (Exception err){}
-		if ((new Character(name.charAt(0))).equals(new Character('i')) && (new Character(name.charAt(name.length()-3))).equals(new Character('m'))) { 
-			
-			//ij.IJ.showStatus("Opening File "+path);
-			//try{Thread.sleep(500);}catch (Exception err){}
+		
+		//Stratec File. Suffix is MHH, where H is hex number and the file name always begin with I
+		if ((new Character(name.charAt(0))).equals(new Character('i')) && Pattern.matches("m[\\d|[a-f]][\\d|[a-f]]", name.substring(name.length()-3,name.length()))
+		) { 
 			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
 		}
 				/*
