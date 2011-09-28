@@ -128,46 +128,62 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiI = new Vector<Integer>();
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
-		if (ijROI == null){
+		if (ijROI == null){	/*No ROI defined, detect one automatically*/
 			selectRoiBiggestBone();
-			int[] xcoordinates = new int[roiI.size()];
-			int[] ycoordinates = new int[roiJ.size()];
-			for (int i = 0;i<roiI.size();++i){
-				xcoordinates[i] = roiI.get(i);
-				ycoordinates[i] = roiJ.get(i);
-			}
-			ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
-			imp.setRoi(ijROI);
-		}else{
+		}else{ /*Manually selected ROI*/
+			ij.IJ.showMessage(new String("Loysin Roin"));
 			Vector<Integer> tempI = new Vector<Integer>();
 			Vector<Integer> tempJ = new Vector<Integer>();
 			Polygon roiPolygon = ijROI.getPolygon();
-			if (roiPolygon == null){
+			ij.IJ.showMessage(new String("Polygon "+roiPolygon.npoints));
+			if (roiPolygon == null | roiPolygon.npoints <= 4){
 				Rectangle roiRectangle = ijROI.getBounds();
+				ij.IJ.showMessage(new String("Rectangle "+roiRectangle));
 				/*Mark the coordinates of the outline into roiI and roiJ*/
 				//Go from left to right on top
 				for (int i = roiRectangle.x;i<roiRectangle.x+roiRectangle.width;++i){
-					roiI.add(x);
+					roiI.add(i);
 					roiJ.add(roiRectangle.y);
 				}
-				//
-				for (int j = 0;j<roiPolygon.npoints;++j){
-						roiI.add
-					}
+				//Go from top to bottom on right hand side
+				for (int i = roiRectangle.y;i<roiRectangle.y+roiRectangle.height;++i){
+					roiI.add(roiRectangle.x+roiRectangle.width);
+					roiJ.add(i);
 				}
-					
-				
+				//Go from right to left on bottom
+				for (int i = roiRectangle.x+roiRectangle.width; i>roiRectangle.x;--i){
+					roiI.add(i);
+					roiJ.add(roiRectangle.y+roiRectangle.height);
+				}
+				//Go from bottom to top on the left hand side
+				for (int i = roiRectangle.y+roiRectangle.height;i>roiRectangle.y;--i){
+					roiI.add(roiRectangle.x);
+					roiJ.add(i);
+				}
 			} else {
 				for (int i = 0;i<roiPolygon.npoints;++i){
 					tempI.add(roiPolygon.xpoints[i]);
 					tempJ.add(roiPolygon.ypoints[i]);
-				}	
+					ij.IJ.showMessage(new String(roiPolygon.xpoints[i]+" "+roiPolygon.ypoints[i]));
+				}
+				/*Close the polygon...*/
+				tempI.add(roiPolygon.xpoints[0]);
+				tempJ.add(roiPolygon.ypoints[0]);
 				roiI = calculateSpline(tempI, 1000);
 				roiJ = calculateSpline(tempJ, 1000);
 			}
 			
 		}
-
+		/*Add the roi to the image*/
+		int[] xcoordinates = new int[roiI.size()];
+		int[] ycoordinates = new int[roiJ.size()];
+		for (int i = 0;i<roiI.size();++i){
+			xcoordinates[i] = roiI.get(i);
+			ycoordinates[i] = roiJ.get(i);
+		}
+		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
+		imp.setRoi(ijROI);
+		
 		fillSieve(roiI, roiJ, sieve);
 
 		for (int j = 0;j< height;j++){
