@@ -28,12 +28,10 @@ import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
 import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
-import org.doube.bonej.pqct.drawimage.*;
 
 public class SelectROI extends JPanel implements Runnable{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
-	public double[] softScaledImage;
 	public double[] cortexROI;
 	public double minimum;
 	public double maximum;
@@ -41,12 +39,7 @@ public class SelectROI extends JPanel implements Runnable{
 	public Vector<Integer> jiit;	//indexes for y-coordinates
 	public Vector<Integer> roiI;
 	public Vector<Integer> roiJ;
-	public Vector<Integer> softIit;
-	public Vector<Integer> softJiit;
-	public Vector<Integer> softRoiI;
-	public Vector<Integer> softRoiJ;
-	public Vector<Integer> marrowIit;
-	public Vector<Integer> marrowJiit;
+
 	public Vector<Integer> marrowRoiI;
 	public Vector<Integer> marrowRoiJ;
 	public Vector<Integer> medullaryMarrowRoiI;
@@ -59,8 +52,6 @@ public class SelectROI extends JPanel implements Runnable{
 	public Vector<Integer> cortexAreaRoiJ;	//For AREA analyses
 	public Vector<Integer> length;
 	public Vector<Integer> beginnings;
-	public Vector<Integer> lengthSoft;
-	public Vector<Integer> beginningsSoft;
 	public Vector<Integer> lengthMarrow;
 	public Vector<Integer> beginningsMarrow;
 	public Vector<Double> marrowDensities;	//For storing mean BMD of marrow concentric rings
@@ -80,17 +71,12 @@ public class SelectROI extends JPanel implements Runnable{
 	public double pixelSpacing;
 	public byte[] result;
 	public byte[] sieve;
-	public byte[] softSieve;
 	public byte[] marrowSieve;
 	public byte[] marrowKernelSieve;
-	public byte[] muscleSieve;
 	public byte[] legSieve;	//Sieve for calculating fat% contains the whole leg pixels
-	public byte[] stSieve;		//Soft Tissue Sieve, What will be 1 on this one is the muscle = fat. Bones will be removed
 	public int[] longestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
-	public int[] softLongestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
 	public int[] marrowLongestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
 
-	DrawImage showFigure;
 	public String imageSaveName;
 	public String imageSavePath;
 
@@ -100,7 +86,6 @@ public class SelectROI extends JPanel implements Runnable{
 		imageJ = true; //Used to indicate that the object has been constructed with imageJ
 		details =detailsIn;
 		scaledImage = (double[])dataIn.scaledImage.clone();
-		softScaledImage = (double[])dataIn.softScaledImage.clone();
 		pixelSpacing = dataIn.pixelSpacing;
 		imageSavePath = details.imageSavePath;
 		width =dataIn.width;
@@ -121,19 +106,12 @@ public class SelectROI extends JPanel implements Runnable{
 		
 		iit = new Vector<Integer>();
 		jiit = new Vector<Integer>();
-		softIit = new Vector<Integer>();
-		softJiit = new Vector<Integer>();
-		marrowIit = new Vector<Integer>();
-		marrowJiit = new Vector<Integer>();
 		length = new Vector<Integer>();
 		beginnings = new Vector<Integer>();
-		lengthSoft = new Vector<Integer>();
-		beginningsSoft = new Vector<Integer>();
 		lengthMarrow = new Vector<Integer>();
 		beginningsMarrow = new Vector<Integer>();
 		marrowDensities = new Vector<Double>();
 		longestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		softLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
 		marrowLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
 		//System.out.println("Edgeen\n");
 		//System.out.println("Jalka etsimaan");
@@ -141,46 +119,16 @@ public class SelectROI extends JPanel implements Runnable{
 		if (details.dicomOn == true){
 			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
 			leg = 1;  //true = vasen
-			//System.out.println("Bone found "+marrowThreshold);
-			
-			if (details.mOn == true){
-				result = new byte[width*height];
-				findEdge(scaledImage,lengthMarrow,beginningsMarrow, marrowIit,marrowJiit,marrowLongestEdge,marrowThreshold);	//marrow analysis
-			}
-			
-			//System.out.println("marrow found");
-			if (details.stOn ==true){
-				result = new byte[width*height];
-				findEdge(softScaledImage,lengthSoft,beginningsSoft, softIit,softJiit,softLongestEdge,softThreshold);	//Soft tissue analysis
-			}
 		}else{
 			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-			//System.out.println("Bone found "+marrowThreshold);
-			
-			if (details.mOn == true){
-				result = new byte[width*height];
-				findEdge_leg(scaledImage,lengthMarrow,beginningsMarrow, marrowIit,marrowJiit,marrowLongestEdge,marrowThreshold);	//marrow analysis
-			}
-			
-			//System.out.println("marrow found");
-			if (details.stOn ==true){
-				result = new byte[width*height];
-				findEdge_leg(softScaledImage,lengthSoft,beginningsSoft, softIit,softJiit,softLongestEdge,softThreshold);	//Soft tissue analysis
-			}
 		}
 		/*Select ROI and set everything else than the roi to minimum*/
 		//System.out.println("soft found");
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
 		sieve= new byte[width*height];
-		softSieve= new byte[width*height];
 		marrowSieve= new byte[width*height];
-		stSieve= new byte[width*height];
-		legSieve = new byte[width*height]; //Includes the whole cross-section of the leg
-		muscleSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
-		softRoiI = new Vector<Integer>();
-		softRoiJ = new Vector<Integer>();
 		marrowRoiI = new Vector<Integer>();
 		marrowRoiJ = new Vector<Integer>();
 		cortexRoiI = new Vector<Integer>();
@@ -193,136 +141,18 @@ public class SelectROI extends JPanel implements Runnable{
 		medullaryMarrowRoiJ = new Vector<Integer>();
 		//System.out.println("Luominen valmis ");
 	}
-	
-	
-	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, DrawImage showFigureIn,String imageSaveNameIn){
-		
-		details =detailsIn;
-		scaledImage = (double[])dataIn.scaledImage.clone();
-		softScaledImage = (double[])dataIn.softScaledImage.clone();
-		showFigure = showFigureIn;
-		pixelSpacing = dataIn.pixelSpacing;
-		imageSavePath = details.imageSavePath;
-		imageSaveName = imageSaveNameIn;
-		width =dataIn.width;
-		height =dataIn.height;
-		
 
-		airThreshold = details.airThreshold;
-		fatThreshold = details.fatThreshold;
-		muscleThreshold = details.muscleThreshold;
-		marrowThreshold = details.marrowThreshold;
-		areaThreshold = details.areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		BMDthreshold = details.BMDthreshold;		//For cortical BMD analyses
-		softThreshold = details.softThreshold;	//Thresholding soft tissues + marrow from bone
-		boneThreshold = details.boneThreshold;
-		minimum = dataIn.minimum;
-		maximum = dataIn.maximum;
-		//Select ROI
-		
-		iit = new Vector<Integer>();
-		jiit = new Vector<Integer>();
-		softIit = new Vector<Integer>();
-		softJiit = new Vector<Integer>();
-		marrowIit = new Vector<Integer>();
-		marrowJiit = new Vector<Integer>();
-		length = new Vector<Integer>();
-		beginnings = new Vector<Integer>();
-		lengthSoft = new Vector<Integer>();
-		beginningsSoft = new Vector<Integer>();
-		lengthMarrow = new Vector<Integer>();
-		beginningsMarrow = new Vector<Integer>();
-		marrowDensities = new Vector<Double>();
-		longestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		softLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		marrowLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		//System.out.println("Edgeen\n");
-		//System.out.println("Jalka etsimaan");
-		result = new byte[width*height];
-		if (details.dicomOn == true){
-			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-			leg = 1;  //true = vasen
-			//System.out.println("Bone found "+marrowThreshold);
-			/*
-			if (details.mOn == true){
-				result = new byte[width*height];
-				findEdge(scaledImage,lengthMarrow,beginningsMarrow, marrowIit,marrowJiit,marrowLongestEdge,marrowThreshold);	//marrow analysis
-			}
-			*/
-			//System.out.println("marrow found");
-			if (details.stOn ==true){
-				result = new byte[width*height];
-				findEdge(softScaledImage,lengthSoft,beginningsSoft, softIit,softJiit,softLongestEdge,softThreshold);	//Soft tissue analysis
-			}
-		}else{
-			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-			//System.out.println("Bone found "+marrowThreshold);
-			/*
-			if (details.mOn == true){
-				result = new byte[width*height];
-				findEdge_leg(scaledImage,lengthMarrow,beginningsMarrow, marrowIit,marrowJiit,marrowLongestEdge,marrowThreshold);	//marrow analysis
-			}
-			*/
-			//System.out.println("marrow found");
-			if (details.stOn ==true){
-				result = new byte[width*height];
-				findEdge_leg(softScaledImage,lengthSoft,beginningsSoft, softIit,softJiit,softLongestEdge,softThreshold);	//Soft tissue analysis
-			}
-		}
-		/*Select ROI and set everything else than the roi to minimum*/
-		//System.out.println("soft found");
-		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
-		sieve= new byte[width*height];
-		softSieve= new byte[width*height];
-		marrowSieve= new byte[width*height];
-		stSieve= new byte[width*height];
-		legSieve = new byte[width*height]; //Includes the whole cross-section of the leg
-		muscleSieve= new byte[width*height];
-		roiI = new Vector<Integer>();
-		roiJ = new Vector<Integer>();
-		softRoiI = new Vector<Integer>();
-		softRoiJ = new Vector<Integer>();
-		marrowRoiI = new Vector<Integer>();
-		marrowRoiJ = new Vector<Integer>();
-		cortexRoiI = new Vector<Integer>();
-		cortexRoiJ = new Vector<Integer>();
-		cortexAreaRoiI = new Vector<Integer>();
-		cortexAreaRoiJ = new Vector<Integer>();
-		boneMarrowRoiI = new Vector<Integer>();
-		boneMarrowRoiJ = new Vector<Integer>();
-		medullaryMarrowRoiI = new Vector<Integer>();
-		medullaryMarrowRoiJ = new Vector<Integer>();
-		//System.out.println("Luominen valmis ");
-	}
 	public void run(){
-		//System.out.println("beg "+beginnings.get(longestEdge[0])+" le "+length.get(longestEdge[0]));
 		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
-		if (details.stOn == true){
-			for (int i = beginningsSoft.get(softLongestEdge[0]);i < beginningsSoft.get(softLongestEdge[0])+lengthSoft.get(softLongestEdge[0]);i++){
-				softRoiI.add(softIit.get(i));
-				softRoiJ.add(softJiit.get(i));
-			}
-		}
-		/*
-		if (details.mOn == true){
-			for (int i = beginningsMarrow.get(marrowLongestEdge[0]);i < beginningsMarrow.get(marrowLongestEdge[0])+lengthMarrow.get(marrowLongestEdge[0]);i++){
-				marrowRoiI.add(marrowIit.get(i));
-				marrowRoiJ.add(marrowJiit.get(i));
-			}
-		}
-		*/
+
 		double[] tempImage = (double[])scaledImage.clone();
 		for (int i = 0;i<roiI.size();i++){
 			tempImage[roiI.get(i)+roiJ.get(i)*width] = maximum;
 		}
-		
-		if (imageJ ==false){
-			showFigure.drawImage(tempImage,width, height,minimum,maximum);
-			showFigure.paintImmediately(0,0,500,500);
-		}
+		/*
 		if (details.mRoiDet ==true){	//Delineate ROI manually
 			System.out.println("Digitize coordinates with left mouse button, right click once on the figure when you're done.");
 			System.out.println("If ROI is OK, just right click once on the figure.");
@@ -346,29 +176,12 @@ public class SelectROI extends JPanel implements Runnable{
 				showFigure.paintImmediately(0,0,500,500);
 			}
 		}
-
-		
-		
+		*/
 
 		fillSieve(roiI, roiJ, sieve);
-		/*
-		if (details.mOn){
-			fillSieve(marrowRoiI, marrowRoiJ, marrowSieve);
-		}
-		*/
-		if (details.stOn){
-			fillSieve(softRoiI, softRoiJ, softSieve);
-		}
+
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
-				/*
-				if (details.mOn){
-					if (scaledImage[i+j*width]<marrowThreshold && marrowSieve[i+j*width] > 0){
-						medullaryMarrowRoiI.add(i);
-						medullaryMarrowRoiJ.add(j);
-					}
-				}
-				*/
 				if (scaledImage[i+j*width]<marrowThreshold && sieve[i+j*width] > 0){
 					boneMarrowRoiI.add(i);
 					boneMarrowRoiJ.add(j);
@@ -385,113 +198,6 @@ public class SelectROI extends JPanel implements Runnable{
 					cortexROI[i+j*width] = minimum;
 				}
 			}
-		}
-		marrowSieve = new byte[width*height];	//marrowSieve needs to be cleared here...
-		//ADD bone marrow ROI, erode marrow area by two layers of pixels
-		if (details.mOn){
-			/*
-			for (int i=0;i<medullaryMarrowRoiI.size();i++){
-				marrowSieve[medullaryMarrowRoiI.get(i)+width*medullaryMarrowRoiJ.get(i)]=1;
-			}
-			*/
-			for (int i=0;i<boneMarrowRoiI.size();i++){
-				marrowSieve[boneMarrowRoiI.get(i)+width*boneMarrowRoiJ.get(i)]=1;
-			}
-			
-			//System.out.println("MarrowSize "+medullaryMarrowRoiI.size());
-			//How many layers are to be eroded (try 0, 1, 2,3,4)
-			
-			/* //No eroding for now...
-			for (int ee =0;ee<2;ee++){
-				erode(marrowSieve);
-			}
-			*/
-			int eroded =0;
-			int marCSA=0;
-			for (int i=0;i<height*width;i++){
-				if (marrowSieve[i] == 1){marCSA++;}
-			}
-			//Marrow densities in concentric layers..
-			eroded =0;
-			byte [] marrowConcentric = (byte[])marrowSieve.clone();	//marrowSieve needs to be cleared here...
-			while (eroded < marCSA){//while (eroded < boneMarrowRoiI.size()){
-				eroded+=erodeConcentric(marrowConcentric, scaledImage, marrowDensities);
-			}
-			System.out.println("MarrowRings "+marrowDensities.size());
-			//Marrow densities in concentric layers done
-			//Add dividing the marrow area to half
-			marrowKernelSieve = (byte[])marrowSieve.clone();	//marrowSieve needs to be cleared here...
-			eroded =0;
-			while (eroded < marCSA/2){
-				eroded+=erodeKernel(marrowKernelSieve);
-			}
-			//Marrow area divided...
-			//Bone marrow analysis done
-		}
-		if(details.stOn==true){
-			//Add soft Tissue ROI
-			for (int i=0;i<height*width;i++){
-				stSieve[i] = 0;	
-				legSieve[i] = 0;	
-				if (softScaledImage[i] > airThreshold){// && softScaledImage[i] < muscleThreshold){
-					stSieve[i] = 1;	
-					legSieve[i] = 1;
-				}
-			}
-			//System.out.println("stSieveTehty");
-			softTissueRemoveBones(lengthSoft,beginningsSoft, softIit,softJiit,softLongestEdge);
-			
-			//Just for UKK institute data, get rid of the sleeve!!!
-			if (details.ukkOn){
-				UKK_special(softScaledImage,20.0);
-			}
-			//UKK special ends
-			for (int i=0;i<height*width;i++){
-				muscleSieve[i] = 0;	
-				if (stSieve[i] ==1 && softScaledImage[i] >= fatThreshold && softScaledImage[i] < muscleThreshold){
-					muscleSieve[i] = 1;	
-				}
-				//Remove muscle from stSieve
-				if (stSieve[i] ==1 && softScaledImage[i] < airThreshold || softScaledImage[i] >= fatThreshold){
-					stSieve[i] = 0;	
-				}
-			}
-			
-
-			//Soft Tissue ROI done..
-		}
-		//DRAW FIGURES
-		if (details.imOn ==true && details.dOn ==false){
-			try{
-				 //Save ROI selection image
-				 BufferedImage bi = getMyImage(scaledImage,roiI,roiJ,marrowSieve,marrowKernelSieve,stSieve,muscleSieve,legSieve); // retrieve image
-				// System.out.println("Saatiin bi tehtya");
-					File imageOutputFile = new File(details.imageSavePath+"/"+ imageSaveName+".png");
-				// System.out.println("Saatiin oputFile tehtya");
-					ImageIO.write(bi, "png", imageOutputFile);
-				// System.out.println("Saatiin tulostettua");
-			}catch (Exception err){System.err.println("Couldn't write image out: "+err.getMessage());}
-		}
-		if (details.imOn ==true && details.stOn == true){
-			try{
-				 //Save ROI selection image
-				 BufferedImage bi = getMyImage(softScaledImage,roiI,roiJ,marrowSieve,marrowKernelSieve,stSieve,muscleSieve,legSieve); // retrieve image
-				// System.out.println("Saatiin bi tehtya");
-					File imageOutputFile = new File(details.imageSavePath+"/"+ imageSaveName+"soft.png");
-				// System.out.println("Saatiin oputFile tehtya");
-					ImageIO.write(bi, "png", imageOutputFile);
-				 //System.out.println("Saatiin tulostettua");
-			}catch (Exception err){System.err.println("Couldn't write image out: "+err.getMessage());}
-		}
-		//Remove extra pixels from the external surface of the bone
-		if (details.dBoneSite == true && details.eOn == true){
-			showFigure.drawImage(cortexROI,width, height,minimum,maximum);
-			showFigure.paintImmediately(0,0,500,500);
-			try{Thread.sleep(500); }catch (Exception err){System.err.println("Didn't finnish digitizing: "+err.getMessage());}
-			while (peelDistal() > 0){System.out.println("Eroded one round");}
-			showFigure.drawImage(cortexROI,width, height,minimum,maximum);
-			showFigure.paintImmediately(0,0,500,500);
-			try{Thread.sleep(500); }catch (Exception err){System.err.println("Didn't finnish digitizing: "+err.getMessage());}
 		}
 		
 	}
@@ -576,51 +282,6 @@ public class SelectROI extends JPanel implements Runnable{
 		}
 	}
 
-	void softTissueRemoveBones(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit, int[] longestEdge){	
-		//Fill the area enclosed by the traced edge contained in roiI,roiJ
-		//beginning needs to be within the traced edge
-		int kai,kaj,i,j;
-		//First Bone
-		//Set traced edge to 2 and determine the seed point for the flood fill
-		kai = 0;
-		kaj = 0;
-		for (int ii = beginnings.get(longestEdge[0]);ii < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);ii++){
-			kai+=iit.get(ii);
-			kaj+=jiit.get(ii);
-			stSieve[iit.get(ii)+width*jiit.get(ii)]=2;
-		}
-		i = kai/length.get(longestEdge[0]);
-		j = kaj/length.get(longestEdge[0]);
-		softTissueRemoveBonesFill(i,j);
-		//Second Bone
-		//System.out.println("Beginning "+beginnings.size());
-		if (beginnings.size() > 1){
-			kai = 0;
-			kaj = 0;
-			for (int ii = beginnings.get(longestEdge[1]);ii < beginnings.get(longestEdge[1])+length.get(longestEdge[1]);ii++){
-				kai+=iit.get(ii);
-				kaj+=jiit.get(ii);
-				stSieve[iit.get(ii)+width*jiit.get(ii)]=2;
-			}
-			//i = kai/length.get(longestEdge[1]);
-			//j = kaj/length.get(longestEdge[1]);
-			i = iit.get(beginnings.get(longestEdge[1]));
-			j = jiit.get(beginnings.get(longestEdge[1]));
-			int[][] searchOrder = {{1,1,1,0,-1,-1,-1,0,1},{1,0,-1,-1,-1,0,1,1,1}};
-			int z = 0;
-			while (z < 9 && (softScaledImage[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] <softThreshold) || stSieve[i+searchOrder[0][z]+(j+searchOrder[1][z])*width] == 2){
-				++z;
-			}
-			
-			softTissueRemoveBonesFill(i+searchOrder[0][z],j+searchOrder[1][z]);	
-		}
-		
-		dilate(stSieve,((byte)2),((byte)1),((byte)3));	//To Remove remaining bone after applying a threshold of 690!
-		dilate(stSieve,((byte)2),((byte)1),((byte)3));	//To Remove remaining bone after applying a threshold of 690!
-			//printf("sihti i %d j %d\n",i,j);
-
-	}
-	
 	public void dilate(byte[] data,byte dilateVal,byte min, byte temp){
 	//Dilate algorithm
 	// Best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
@@ -641,48 +302,6 @@ public class SelectROI extends JPanel implements Runnable{
 			}
 		}
 	}
-	
-	
-	void softTissueRemoveBonesFill(int i, int j){
-		Vector<Integer> initialI = new Vector<Integer>();
-		Vector<Integer> initialJ = new Vector<Integer>();
-		initialI.add(i);
-		initialJ.add(j);
-		int montakoPoistettiin=0;
-		while (initialI.size()>0){
-			i =initialI.lastElement();
-			j =initialJ.lastElement();
-			initialI.remove(initialI.size()-1);;
-			initialJ.remove(initialJ.size()-1);;
-			//Do we paint the cell
-			if (stSieve[i+j*width] == 1){
-				stSieve[i+j*width] = 2;
-				++montakoPoistettiin;
-			}
-			
-			if (stSieve[i-1+j*width] == 1) {
-				initialI.add(i-1);
-				initialJ.add(j);
-			}
-			
-			if (stSieve[i+1+j*width] == 1) {
-				initialI.add(i+1);
-				initialJ.add(j);
-			}
-			
-			if (stSieve[i+(j-1)*width] == 1) {
-				initialI.add(i);
-				initialJ.add(j-1);
-			}
-			
-			if (stSieve[i+(j+1)*width] == 1) {
-				initialI.add(i);
-				initialJ.add(j+1);
-			}
-		}
-		
-	}
-	
 	
 	int peelDistal(){
 		int pixelsPeeled = 0;
@@ -712,114 +331,15 @@ public class SelectROI extends JPanel implements Runnable{
 		return pixelsPeeled;
 	}
 
-     //  private static final int DEFAULT_IMAGE_TYPE = BufferedImage.TYPE_INT_RGB;
-
-		public BufferedImage getMyImage(double[] imageIn,Vector<Integer> xx,Vector<Integer> yy, byte[] marrowSieve,byte[] marrowKernelSieve, byte[] stSieve, byte[] muscleSieve, byte[] legSieve) {
-			 int[] image = new int[width*height];
-			 int pixel;
-			 for (int x = 0; x < width*height;x++) {
-				pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
-				image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-
-				
-				if (marrowSieve[x] == 1){   //Change marrow area color to green
-					image[x]= 255<<24 | 0 <<16| pixel+50<<8| 0; 
-					if (marrowKernelSieve[x] == 1){   //Change marrow area color to green
-						image[x]= 255<<24 | pixel+50 <<16| pixel+50<<8| 0; 
-					}
-				}
-				
-				if (stSieve[x] == 1){   //Change soft Tissue area color to red
-					image[x]= 255<<24 | 0 <<16| 0 <<8| pixel; 
-				}
-				if (muscleSieve[x] == 1){   //Change muscle area color to violet
-					image[x]= 255<<24 | pixel <<16| 0 <<8| 0; 
-				}
-				
-			 }
-
-			 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
-			 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-			 //System.out.println("Scaled the image to draw");
-			 BufferedImage bufferedImage = (BufferedImage) showFigure.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-			 //System.out.println("BI done "+bufferedImage);
-			 Graphics2D gbuf = bufferedImage.createGraphics();
-			 //System.out.println("Graphics done");
-			 gbuf.drawImage(imageToDraw, 0, 0,null);
-			 //System.out.println("Drawn");
-			 return bufferedImage;
-		}
-
 	
-		public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
-				byte[] marrowSieve,byte[] marrowKernelSieve, byte[] stSieve, byte[] muscleSieve, byte[] legSieve,
-				int width, int height, double minimum, double maximum) {
-			 int[] image = new int[width*height];
-			 int pixel;
-			 for (int x = 0; x < width*height;x++) {
-				pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0)); 
-				image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-				/*
-				if (legSieve[x] == 1){   //Change shank area color to blue
-					image[x]= 255<<24 | 0 <<16| 0 <<8| pixel; 
-				}
-				*/
-				
-				if (marrowSieve[x] == 1){   //Change marrow area color to green
-					image[x]= 255<<24 | 0 <<16| pixel+50<<8| 0; 
-					if (marrowKernelSieve[x] == 1){   //Change marrow area color to green
-						image[x]= 255<<24 | pixel+50 <<16| pixel+50<<8| 0; 
-					}
-				}
-				
-				if (stSieve[x] == 1){   //Change soft Tissue area color to red
-					image[x]= 255<<24 | 0 <<16| 0 <<8| pixel; 
-				}
-				if (muscleSieve[x] == 1){   //Change muscle area color to violet
-					image[x]= 255<<24 | pixel <<16| 0 <<8| 0; 
-				}
-				
-			 }
-			 //Draw rotated radii
-			for(int i = 0; i< 360;i++) {
-				image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
-				image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
-			}
-			 
-
-			 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
-			 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-			 BufferedImage bufferedImage = (BufferedImage) showFigure.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-			 Graphics2D gbuf = bufferedImage.createGraphics();
-			 gbuf.drawImage(imageToDraw, 0, 0,null);
-
-			 return bufferedImage;
-		}
 		
 		public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
-				byte[] marrowSieve,byte[] marrowKernelSieve, byte[] stSieve, byte[] muscleSieve, byte[] legSieve,
 				int width, int height, double minimum, double maximum, Component imageCreator) {
 			 int[] image = new int[width*height];
 			 int pixel;
 			 for (int x = 0; x < width*height;x++) {
 				pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0)); //Korjaa tama...
 				image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-
-				
-				if (marrowSieve[x] == 1){   //Change marrow area color to green
-					image[x]= 255<<24 | 0 <<16| pixel+50<<8| 0; 
-					if (marrowKernelSieve[x] == 1){   //Change marrow area color to green
-						image[x]= 255<<24 | pixel+50 <<16| pixel+50<<8| 0; 
-					}
-				}
-				
-				if (stSieve[x] == 1){   //Change soft Tissue area color to red
-					image[x]= 255<<24 | 0 <<16| 0 <<8| pixel; 
-				}
-				if (muscleSieve[x] == 1){   //Change muscle area color to violet
-					image[x]= 255<<24 | pixel <<16| 0 <<8| 0; 
-				}
-				
 			 }
 			 //Draw rotated radii
 			for(int i = 0; i< 360;i++) {
@@ -840,7 +360,6 @@ public class SelectROI extends JPanel implements Runnable{
 		//beginning needs to be within the traced edge
 			int z=0;
 			int kai,kaj,i,j;
-			
 			kai = 0;
 			kaj = 0;
 			for(z = 0;z<roiI.size();z++){
@@ -887,71 +406,6 @@ public class SelectROI extends JPanel implements Runnable{
 				}
 			
 			}
-	}
-	
-	public void UKK_special(double[] scaledImage,double sleeveThreshold){
-		int i,j;
-		i=10;
-		j=10;
-		while ((j < height-1 && i < width && scaledImage[i+j*width] <sleeveThreshold) || scaledImage[i+j*width] ==0){
-			i++;
-			if (i == width){
-				j++;
-				if (j >= height-1) break;
-				i = 0;
-			}
-			//System.out.println("X Y BMD"+i+" "+j+" "+scaledImage[i+j*width]);
-		}
-		//System.out.println("Sleeve coords "+i+" "+j);
-		//Sleeve found
-		byte[] sleeve = new byte[width*height];
-		Vector<Integer> initialI = new Vector<Integer>();
-		Vector<Integer> initialJ= new Vector<Integer>();
-		initialI.add(i);
-		initialJ.add(j);
-		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
-			i =initialI.lastElement();
-			j = initialJ.lastElement();
-			initialI.remove( initialI.size()-1);
-			initialJ.remove( initialJ.size()-1);
-			if (scaledImage[i+j*width] > sleeveThreshold && sleeve[i+j*width] ==0){
-				sleeve[i+j*width] = 1;
-			}
-
-			if (scaledImage[i-1+j*width] > sleeveThreshold && sleeve[i-1+j*width] ==0) {
-				initialI.add(new Integer(i-1));
-				initialJ.add(new Integer(j));
-			}
-
-			if (scaledImage[i+1+j*width] > sleeveThreshold && sleeve[i+1+j*width] ==0) {
-				initialI.add(new Integer(i+1));
-				initialJ.add(new Integer(j));
-			}
-
-			if (scaledImage[i+(j-1)*width] > sleeveThreshold && sleeve[i+(j-1)*width] ==0) {
-				initialI.add(new Integer(i));
-				initialJ.add(new Integer(j-1));
-			}
-
-			if (scaledImage[i+(j+1)*width] > sleeveThreshold && sleeve[i+(j+1)*width] ==0) {
-				initialI.add(new Integer(i));
-				initialJ.add(new Integer(j+1));
-			}
-
-		}
-		dilate(sleeve,(byte)1,(byte)0,(byte)2);
-		dilate(sleeve,(byte)1,(byte)0,(byte)2);
-		
-		int removed=0;
-		for (int ii =0;ii<width*height;ii++){
-			if(sleeve[ii]==1){
-				stSieve[ii]=0;
-				legSieve[ii] = 0;
-				++removed;
-			}
-		}
-		//System.out.println("UKK_special "+removed);
-		
 	}
 	
 	/*New algorithm 

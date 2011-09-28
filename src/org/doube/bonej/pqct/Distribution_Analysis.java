@@ -106,7 +106,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		printResults(textWindow,cortAnalysis,analyzeRoi);
 		
 		/*Display the analysis results...*/
-		BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.marrowSieve,roi.marrowKernelSieve,roi.stSieve,roi.muscleSieve,roi.legSieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+		BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 		ImagePlus resultImage = new ImagePlus("Visual results",bi);
 		resultImage.show();
 	}
