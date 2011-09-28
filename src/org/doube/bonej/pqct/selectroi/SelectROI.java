@@ -1535,44 +1535,5 @@ public class SelectROI extends JPanel implements Runnable{
 		}
 		return result;
 	}
-	public static double[] interpolateMarrow(Vector<Double> interpolants){
-		double[][] a = new double[interpolants.size()][interpolants.size()];
-		double[] b = new double[interpolants.size()];
-		double [] x = new double[interpolants.size()];
-		double[] bb = new double[interpolants.size()-1];
-		double [] d = new double[interpolants.size()-1];
-		for (int i = 0;i<interpolants.size();i++){	//Create xs
-			x[i] = (double) i;
-		}
-		a[0][0] = 1;
-		a[interpolants.size()-1][interpolants.size()-1] = 1;
-		b[0] = 0;
-		b[interpolants.size()-1] = 0;
-		for (int i = 1; i< interpolants.size()-1;i++){
-			a[i][i-1] =x[i]-x[i-1];
-			a[i][i]   =2.0*((x[i]-x[i-1])+(x[i+1]-x[i]));
-			a[i][i+1] =x[i+1]-x[i];
-			b[i] = (3/(x[i+1]-x[i]))*((double) interpolants.get(i+1)-(double) interpolants.get(i))-(3/(x[i]-x[i-1]))*((double) interpolants.get(i)-(double) interpolants.get(i-1));
-		}
-		Matrix A = new Matrix(a);
-		Matrix B = new Matrix(b,interpolants.size());
-		Matrix c = A.solve(B);
-		for (int i = 1; i < interpolants.size();i++){
-			bb[i-1] = 1/(x[i]-x[i-1])*((double) interpolants.get(i)-(double) interpolants.get(i-1))-(x[i]-x[i-1])/3*(2*c.get(i-1,0)+c.get(i,0));
-			d[i-1] = (c.get(i,0)-c.get(i-1,0))/(3*(x[i]-x[i-1]));
-		}
-		
-		double[] result = new double[10];
-		double inter;
-		result[0]=interpolants.get(0);
-		result[9]=interpolants.get(interpolants.size()-1);
-		//System.out.println("Interpolate ... size "+(interpolants.size()-1));
-		for (int i = 1; i<9; i++){
-			inter = ((double) (i))/9.0*((double)(interpolants.size()-1));
-			//System.out.println(i+" "+inter+" "+((int) Math.floor(inter)) +" ");
-			result[i] = interpolants.get((int) Math.floor(inter))+bb[(int) Math.floor(inter)]*(inter-Math.floor(inter))+c.get((int) Math.floor(inter),0)*Math.pow(inter-Math.floor(inter),2.0)+d[(int) Math.floor(inter)]*Math.pow(inter-Math.floor(inter),3.0);
-		}
-		//System.out.println("Interpolate ... done");
-		return result;
-	}
+
 }
