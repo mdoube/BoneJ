@@ -23,7 +23,6 @@ import java.util.*;	//Vector, Collections
 
 public class ScaledImageData{
 	public double[] scaledImage;
-	public double[] softScaledImage;
 	public double[] justROI;
 	public double minimum;
 	public double maximum;
@@ -46,9 +45,7 @@ public class ScaledImageData{
 			if (unFiltered[t] < minimum) {minimum = unFiltered[t];}
 			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
 		}
-		double[] unFilteredSoft = (double[])unFiltered.clone();			//For 7x7 median filtering...	
 		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
-		softScaledImage = medianFilter(unFilteredSoft,width,height,7); //Median filter data
 	}
 	
 	//ImageJ DICOM constructor
@@ -65,9 +62,7 @@ public class ScaledImageData{
 			if (unFiltered[t] < minimum) {minimum = unFiltered[t];}
 			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
 		}
-		double[] unFilteredSoft = (double[])unFiltered.clone();			//For 7x7 median filtering...	
 		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
-		softScaledImage = medianFilter(unFilteredSoft,width,height,7); //Median filter data
 	}
 	
 
