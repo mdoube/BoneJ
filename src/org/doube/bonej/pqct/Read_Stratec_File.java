@@ -62,16 +62,11 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		String fileName;
 		String directory;
 		File file;
-		//ij.IJ.showStatus("In Stratec Reader "+arg);
-		//try{Thread.sleep(5000);}catch (Exception err){}
-		
+	
 		if (!arg.isEmpty()){//Called by HandleExtraFileTypes
 			File theFile = new File(arg);
 			directory = theFile.getParent()+"/";
 			fileName = theFile.getName();
-			//ij.IJ.showStatus(directory+" "+fileName);
-			//try{Thread.sleep(500);}catch (Exception err){}
-		
 		}else{//select file manually
 			OpenDialog od = new OpenDialog("Select stratec image (I*.M*)", arg);
 			directory = od.getDirectory();
@@ -81,15 +76,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		read(directory,fileName);
 
 		if (this.getHeight()<1) return;
-		//if (tempImage.getHeight()<1) return;
-		
-		//ij.IJ.showStatus("trying to show Image");
-		//try{Thread.sleep(1500);}catch (Exception err){}
-		//this.show();
-		//tempImage.show();
 	}
-	
-	
 	
 	public void read(String directory, String fileName){
 		File fileIn = new File(directory+fileName);
@@ -102,24 +89,12 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			//Read some data from the file Header
 			readHeader(fileData);
 			//Create ImageJ image
-			//ImagePlus tempImage = NewImage.createFloatImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
 			ImagePlus tempImage = NewImage.createFloatImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
-			//ij.IJ.showStatus("trying to set image ");
-			//try{Thread.sleep(1500);}catch (Exception err){}
 			this.setImage(tempImage.getImage());
 			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
-			//ij.IJ.showStatus("Image set");
-			//try{Thread.sleep(1500);}catch (Exception err){}
 			//Set ImageJ image properties
 			setProperties(this,fileName);
-			//ij.IJ.showStatus("Properties set "+this.getProperty(new String("VoxelSize"))+" processor "+this.getProcessor());
-			//try{Thread.sleep(1500);}catch (Exception err){}
-			//ij.IJ.showStatus("Temp processor "+tempImage.getProcessor());
-			//try{Thread.sleep(1500);}catch (Exception err){}
 			float[] pixels = (float[]) this.getProcessor().getPixels();
-			//float[] pixels = (float[]) tempImage.getProcessor().getPixels();
-			//ij.IJ.showStatus("Pixel pointer obtained");
-			//try{Thread.sleep(1500);}catch (Exception err){}
 			float min = (float) Math.pow(2,15)-1;
 			float max = (float) -Math.pow(2,15);
 			for (int j = 0;j < PicMatrixY; ++j){
@@ -131,16 +106,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 					pixels[i+j*PicMatrixX] = value;
 				}
 			}
-			//ij.IJ.showStatus("Pixels set");
-			//try{Thread.sleep(1500);}catch (Exception err){}
-			//System.out.println(min +" "+max+" "+voxelSize+" "+PicMatrixX+" "+PicMatrixY);
 			this.setDisplayRange((double) min,(double) max);
-			//tempImage.setDisplayRange((double) min,(double) max);
-			//ij.IJ.showStatus("Display range set");
-			//try{Thread.sleep(1500);}catch (Exception err){}
-			//Properties props = img.getProperties();
-			//System.out.println(props);
-		 }catch (Exception e) {
+		}catch (Exception e) {
 			IJ.error("Stratec file read failed ", e.getMessage());
 			return;
 		}
@@ -216,5 +183,4 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		img.setProperty(new String("PicMatrixX"),PicMatrixX);
 		img.setProperty(new String("PicMatrixY"),PicMatrixY);
 	}
-
 }
