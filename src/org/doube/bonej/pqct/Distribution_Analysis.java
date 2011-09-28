@@ -89,15 +89,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 		}
 		ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold);
-		SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails);
-		Thread roiThread = new Thread(roi,"roiThread");
-		try{
-			roiThread.start();	//All of the analysis needs to be done within this thread from hereafter
-			roiThread.join();
-		}catch (Exception e){
-			IJ.error("Stratec file read failed ", e.getMessage());
-			return;
-		}
+		SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 		CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 		AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
 		

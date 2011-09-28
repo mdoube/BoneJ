@@ -23,13 +23,14 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.jama.*;		//linear equation group solver http://math.nist.gov/javanumerics/jama/
 import java.awt.image.*; //Creating the image...
-import java.awt.*;
+import java.awt.*;			//Polygon, Rectangle
 import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
 import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
-
-public class SelectROI extends JPanel implements Runnable{
+import ij.*;		//ImagePlus
+import ij.gui.*;	//ImagePlus ROI
+public class SelectROI extends JPanel{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
 	public double[] cortexROI;
@@ -75,11 +76,11 @@ public class SelectROI extends JPanel implements Runnable{
 
 	public String imageSaveName;
 	public String imageSavePath;
-
-	public boolean imageJ;	//used to indicate to not try to print out images while using the object from ImageJ
+	ImagePlus imp;
 	//ImageJ constructor
-	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn){
-		imageJ = true; //Used to indicate that the object has been constructed with imageJ
+	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp){
+
+		this.imp = imp;
 		details =detailsIn;
 		scaledImage = (double[])dataIn.scaledImage.clone();
 		pixelSpacing = dataIn.pixelSpacing;
@@ -112,13 +113,8 @@ public class SelectROI extends JPanel implements Runnable{
 		//System.out.println("Edgeen\n");
 		//System.out.println("Jalka etsimaan");
 		result = new byte[width*height];
-		if (details.dicomOn == true){
-			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-			leg = 1;  //true = vasen
-		}else{
-			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-		}
-		/*Select ROI and set everything else than the roi to minimum*/
+
+				/*Select ROI and set everything else than the roi to minimum*/
 		//System.out.println("soft found");
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
 		sieve= new byte[width*height];
@@ -131,44 +127,46 @@ public class SelectROI extends JPanel implements Runnable{
 		cortexAreaRoiJ = new Vector<Integer>();
 		boneMarrowRoiI = new Vector<Integer>();
 		boneMarrowRoiJ = new Vector<Integer>();
-		//System.out.println("Luominen valmis ");
-	}
-
-	public void run(){
-		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
-			roiI.add(iit.get(i));
-			roiJ.add(jiit.get(i));
-		}
-
-		double[] tempImage = (double[])scaledImage.clone();
-		for (int i = 0;i<roiI.size();i++){
-			tempImage[roiI.get(i)+roiJ.get(i)*width] = maximum;
-		}
-		/*
-		if (details.mRoiDet ==true){	//Delineate ROI manually
-			System.out.println("Digitize coordinates with left mouse button, right click once on the figure when you're done.");
-			System.out.println("If ROI is OK, just right click once on the figure.");
-			showFigure.notReady = true;
-			showFigure.coordx.clear();
-			showFigure.coordy.clear();
-			while (showFigure.notReady == true){
-				try{Thread.sleep(100); }catch (Exception err){System.err.println("Didn't finnish digitizing: "+err.getMessage());}
+		Roi ijROI = imp.getRoi();
+		if (ijROI == null){
+			selectRoiBiggestBone();
+			int[] xcoordinates = new int[roiI.size()];
+			int[] ycoordinates = new int[roiJ.size()];
+			for (int i = 0;i<roiI.size();++i){
+				xcoordinates[i] = roiI.get(i);
+				ycoordinates[i] = roiJ.get(i);
 			}
-			if(showFigure.coordx.size() > 3){
-				showFigure.coordx.add(showFigure.coordx.firstElement());	//Close the ROI
-				showFigure.coordy.add(showFigure.coordy.firstElement());	//Close the ROI
-				roiI = calculateSpline(showFigure.coordx, 1000);
-				roiJ = calculateSpline(showFigure.coordy, 1000);
-				tempImage = (double[])scaledImage.clone();
-            
-				for (int i = 0;i<roiI.size();i++){
-					tempImage[roiI.get(i)+roiJ.get(i)*width] = maximum;
+			ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
+			imp.setRoi(ijROI);
+		}else{
+			Vector<Integer> tempI = new Vector<Integer>();
+			Vector<Integer> tempJ = new Vector<Integer>();
+			Polygon roiPolygon = ijROI.getPolygon();
+			if (roiPolygon == null){
+				Rectangle roiRectangle = ijROI.getBounds();
+				/*Mark the coordinates of the outline into roiI and roiJ*/
+				//Go from left to right on top
+				for (int i = roiRectangle.x;i<roiRectangle.x+roiRectangle.width;++i){
+					roiI.add(x);
+					roiJ.add(roiRectangle.y);
 				}
-				showFigure.drawImageSpline(tempImage,width, height,minimum,maximum,roiI,roiJ);
-				showFigure.paintImmediately(0,0,500,500);
+				//
+				for (int j = 0;j<roiPolygon.npoints;++j){
+						roiI.add
+					}
+				}
+					
+				
+			} else {
+				for (int i = 0;i<roiPolygon.npoints;++i){
+					tempI.add(roiPolygon.xpoints[i]);
+					tempJ.add(roiPolygon.ypoints[i]);
+				}	
+				roiI = calculateSpline(tempI, 1000);
+				roiJ = calculateSpline(tempJ, 1000);
 			}
+			
 		}
-		*/
 
 		fillSieve(roiI, roiJ, sieve);
 
@@ -194,6 +192,20 @@ public class SelectROI extends JPanel implements Runnable{
 		
 	}
 
+	void selectRoiBiggestBone(){
+			if (details.dicomOn == true){
+			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
+			leg = 1;  //true = vasen
+		}else{
+			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
+		}
+		//System.out.println("Luominen valmis ");
+		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
+			roiI.add(iit.get(i));
+			roiJ.add(jiit.get(i));
+		}
+	}
+	
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
 		int width, int height, double minimum, double maximum, Component imageCreator) {
 		int[] image = new int[width*height];
