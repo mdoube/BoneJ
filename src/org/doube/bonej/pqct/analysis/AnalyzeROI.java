@@ -142,22 +142,6 @@ public class AnalyzeROI{
 		}
 		calculateRadii();
 		rotateResults(details,roi);
-		//Save figure
-		 //System.out.println("Savettaan "+roi.width+" "+roi.height+" "+roi.minimum+" "+roi.maximum);
-		if (details.imOn == true){
-			try{
-				//Save ROI selection image
-				BufferedImage bi = roi.getMyImage(roi.scaledImage,marrowCenter,pind,R,R2,Theta2,roi.marrowSieve,roi.marrowKernelSieve,roi.stSieve,roi.muscleSieve,roi.legSieve,roi.width,roi.height,roi.minimum,roi.maximum); // retrieve image
-				//System.out.println("Saatiin bi tehtya");
-				//File imageOutputFile = new File(details.imageSavePath+"/"+ roi.imageSaveName.substring(0,roi.imageSaveName.length()-4)+".png");
-				File imageOutputFile = new File(details.imageSavePath+"/"+ roi.imageSaveName+".png");
-				//System.out.println("Saatiin oputFile tehtya");
-				ImageIO.write(bi, "png", imageOutputFile);
-				//System.out.println("Saatiin tulostettua");
-			}catch (Exception err){System.err.println("Couldn't write image out: "+err.getMessage());}
-		}
-		//Figure saved
-		
 	}
 	
 	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi){
@@ -173,14 +157,14 @@ public class AnalyzeROI{
 		}
 		double vali1,vali2;		
 
-			//Ipolar caclulated
+		//Ipolar caclulated
 		//Calculation of Imax and Imin
 		//Calculate rotation required to align rotation axes
 		alfa = Math.atan(2*moment/(ymax-xmax))/2;
 		//Calculate the maximal and minimial cross-sectional moments of inertia
 		vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
 		vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
-			//rotationCorrection will be used in determining which way the image needs to be rotated. The above alfa may align rotation axis corresponding to maximal CSMI with either horizontal or vertical axis, whichever rotation is smaller...
+		//rotationCorrection will be used in determining which way the image needs to be rotated. The above alfa may align rotation axis corresponding to maximal CSMI with either horizontal or vertical axis, whichever rotation is smaller...
 			
 		if (details.femur == true && details.dicomOn == true){
 					if (leg == 0){
@@ -276,18 +260,10 @@ public class AnalyzeROI{
 		}
 		//Bone marrow cortexCenter[0] and cortexCenter[1]
 
-/*
-		//Just for visualization purposes draw the rotated endocortex&pericortex
-		for(int i = 0; i< 360;i++) {
-			peeledROI[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]=(maximum+minimum)/2.0;
-			peeledROI[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=(maximum+minimum)/2.0;
-		} 
-*/	
 		pRad = new double[360];
 		eRad= new double[360];
 		pPRad= new double[360];
 		pERad= new double[360];
-
 		
 		//Calculate the endocortical and pericortical radii along with the corresponding radii after peeling one layer of pixels
 		for (inde=0;inde<360;inde++){
@@ -297,8 +273,6 @@ public class AnalyzeROI{
 			pERad[inde] = R2[inde]*pixelSpacing;
 			
 		}
-
-
 
 		endocorticalRadii = new double[(int) (360/sectorWidth)];
 		pericorticalRadii = new double[(int) (360/sectorWidth)];
@@ -367,12 +341,6 @@ public class AnalyzeROI{
 					|| peeledROI[(int) (marrowCenter[0]+(R[et]+4)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+4)*Math.sin(Theta[et])))*width)] > 0
 					|| peeledROI[(int) (marrowCenter[0]+(R[et]+6)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+6)*Math.sin(Theta[et])))*width)] > 0){
 				R[et] = R[et] + 0.1;
-				//Calculate BMC rho*dV, dV=dA*slice_thickness
-				//dA=pi*((R(et)*resolution)^2-((R(et)-0.1)*resolution)^2), slice_thickness = 1 mm
-				//(could be set to actual slice thickness, but makes no
-				//difference for comparisons -> 1 mm is used BMD divided by
-				//1000, because unit is mg/cm3 and area is mm2
-				//BMC[et] = BMC[et]+(*(originalROI+(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)))/1000*Math.PI/360*((R[et]*pixelSpacing)*((R[et]*pixelSpacing)-((R[et]-0.1)*pixelSpacing)*((R[et]-0.1)*pixelSpacing)));
 				increments++;
 				if (peeledROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] > 0){
 					BMD_temp.add(originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)]);}
@@ -421,15 +389,6 @@ public class AnalyzeROI{
 			}
 
 		}
-		
-		/*
-		//Visualize result...
-		for(int i = 0; i< 360;i++) {
-			peeledROI[((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])))+  ((int) (marrowCenter[1]+R[i]*Math.sin(Theta[i])))*width]=(maximum+minimum)/2.0;
-			peeledROI[(int) (marrowCenter[0]+R2[i]*Math.cos(Theta[i]))+ ((int) (marrowCenter[1]+R2[i]*Math.sin(Theta[i])))*width]=(maximum+minimum)/2.0;
-		} 
-		*/
-
 	}
 	
 	void erode(double[] data){
@@ -452,6 +411,4 @@ public class AnalyzeROI{
 			}
 		}
 	}
-	
-
 }
