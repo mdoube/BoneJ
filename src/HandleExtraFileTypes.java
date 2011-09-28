@@ -222,27 +222,16 @@ public class HandleExtraFileTypes extends ImagePlus implements PlugIn {
 			return tryPlugIn("Open_DAT_EMMENU", path);
 		}
 
-		// Timo Rantalainen and Michael Doube: read Stratec pQCT files
-		if (name.matches("[iI]\\d{7}\\.[mM]\\d\\d")) {
+		// Timo Rantalainen and Michael Doube: read Stratec pQCT files. File naming convention is I???????.MHH, where H is hex number
+		if (name.matches("[iI]\\p{ASCII}{7}\\.[mM][\\d|[a-f][A-F]][\\d|[a-f][A-F]]")) {
 			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
 		}
 		
 		// ****************** MODIFY HERE ******************
 		// do what ever you have to do to recognise your own file type
 		// and then call appropriate plugin using the above as models
-<<<<<<< HEAD
 		// e.g.:// 'new format' only
-		
-		//Stratec File. Suffix is MHH, where H is hex number and the file name always begin with I
-		if ((new Character(name.charAt(0))).equals(new Character('i')) && Pattern.matches("m[\\d|[a-f]][\\d|[a-f]]", name.substring(name.length()-3,name.length()))
-		) { 
-			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
-		}
-				/*
-=======
-
 		/*
->>>>>>> df81610ee59cd9ccfaecb5f766682eb7b32577e5
 		// A. Dent: Added XYZ handler
 		// ----------------------------------------------
 		// check if the file ends in .xyz, and bytes 0 and 1 equal 42
