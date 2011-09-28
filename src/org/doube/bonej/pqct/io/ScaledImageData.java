@@ -49,7 +49,6 @@ public class ScaledImageData{
 		double[] unFilteredSoft = (double[])unFiltered.clone();			//For 7x7 median filtering...	
 		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
 		softScaledImage = medianFilter(unFilteredSoft,width,height,7); //Median filter data
-		//System.out.println("Data skaalattu kahdella eri filtterilla");
 	}
 	
 	//ImageJ DICOM constructor
@@ -69,7 +68,6 @@ public class ScaledImageData{
 		double[] unFilteredSoft = (double[])unFiltered.clone();			//For 7x7 median filtering...	
 		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
 		softScaledImage = medianFilter(unFilteredSoft,width,height,7); //Median filter data
-		//System.out.println("Data skaalattu kahdella eri filtterilla");
 	}
 	
 
