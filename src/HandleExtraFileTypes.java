@@ -222,8 +222,9 @@ public class HandleExtraFileTypes extends ImagePlus implements PlugIn {
 			return tryPlugIn("Open_DAT_EMMENU", path);
 		}
 
-		// Timo Rantalainen and Michael Doube: read Stratec pQCT files. File naming convention is I???????.MHH, where H is hex number
-		if (name.matches("[iI]\\p{ASCII}{7}\\.[mM][\\d|[a-f][A-F]][\\d|[a-f][A-F]]")) {
+		// Timo Rantalainen and Michael Doube: read Stratec pQCT files.
+		// File naming convention is I???????.MHH, where H is hex number
+		if (name.matches("[iI]\\p{ASCII}{7}\\.[mM]\\p{XDigit}{2}")) {
 			return tryPlugIn("org.doube.bonej.pqct.Read_Stratec_File", path);
 		}
 		
