@@ -69,8 +69,6 @@ public class SelectROI extends JPanel{
 	public byte[] result;
 	public byte[] sieve;
 	public byte[] marrowSieve;
-	public byte[] marrowKernelSieve;
-	public byte[] legSieve;	//Sieve for calculating fat% contains the whole leg pixels
 	public int[] longestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
 	public int[] marrowLongestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
 
@@ -129,8 +127,16 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
 		if (ijROI == null){	/*No ROI defined, detect one automatically*/
-			/*Make a switch for automated roi detections here...*/
-			selectRoiBiggestBone();
+			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Delineate the manual ROI	
+			/*Make the selection for automated roi here...*/
+			if (details.roiChoice.equals(details.choiceLabels[0])){selectRoiBiggestBone();}
+			if (details.roiChoice.equals(details.choiceLabels[1])){selectRoiSmallestBone();}
+			if (details.roiChoice.equals(details.choiceLabels[2])){selectRoiLeftMostBone();}
+			if (details.roiChoice.equals(details.choiceLabels[3])){selectRoiRightMostBone();}
+			if (details.roiChoice.equals(details.choiceLabels[4])){selectRoiTopMostBone();}
+			if (details.roiChoice.equals(details.choiceLabels[5])){selectRoiBottomMostBone();}
+			if (details.roiChoice.equals(details.choiceLabels[6])){selectRoiCentralBone();}
+			if (details.roiChoice.equals(details.choiceLabels[7])){selectRoiPeripheralBone();}
 		}else{ /*Manually selected ROI*/
 			double[] tempScaledImage = (double[]) scaledImage.clone();
 			/*Check whether pixel is within ROI, mark with bone threshold*/
@@ -144,6 +150,8 @@ public class SelectROI extends JPanel{
 			}
 			findEdge(tempScaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Delineate the manual ROI	
 		}
+		/*Select correct bone outline*/
+		
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
 			roiI.add(iit.get(i));
@@ -184,7 +192,35 @@ public class SelectROI extends JPanel{
 	}
 
 	void selectRoiBiggestBone(){
-		findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
+		
+	}
+	
+	void selectRoiSmallestBone(){
+		
+	}
+	
+	void selectRoiLeftMostBone(){
+		
+	}
+	
+	void selectRoiRightMostBone(){
+		
+	}
+	
+	void selectRoiTopMostBone(){
+		
+	}
+	
+	void selectRoiBottomMostBone(){
+		
+	}
+	
+	void selectRoiCentralBone(){
+		
+	}
+
+	void selectRoiPeripheralBone(){
+		
 	}
 	
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 

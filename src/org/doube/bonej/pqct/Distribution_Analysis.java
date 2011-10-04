@@ -88,15 +88,15 @@ public class Distribution_Analysis implements PlugInFilter {
 			dialog.addNumericField(new String("In-plane pixel size [mm]"), 0.8, 4);
 		}
 		//Get ROI selection
-		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Central","Peripheral","Top","Bottom"};
+		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi selection", choiceLabels, "Bigger"); 
 		String[] rotationLabels = {"According to Imax/Imin","Furthest point"};
 		dialog.addChoice("Rotation selection", rotationLabels, "According to Imax/Imin");
 		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
-		dialog.addMessage("the manual selection will be used."); 
-		dialog.addMessage("The leftmost bone within the manual ROI"); 
-		dialog.addMessage("will be automatically detected and analysed.");
-
+		dialog.addMessage("the Automated selection will still be used."); 
+		dialog.addMessage("Manual ROI only allows preventing"); 
+		dialog.addMessage("parts of the image from being considered in"); 
+		dialog.addMessage("automatically detecting the bone."); 
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
@@ -107,11 +107,11 @@ public class Distribution_Analysis implements PlugInFilter {
 			resolution		= dialog.getNextNumber();
 			roiChoice		= dialog.getNextChoice();
 			rotationChoice	= dialog.getNextChoice();
-			
+			/*
 			//For debugging
-			//TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
-			//checkWindow.append("Selection "+roiChoice);
-			
+			TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
+			checkWindow.append("Selection "+roiChoice);
+			*/
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -121,7 +121,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice,rotationChoice);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 			AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);

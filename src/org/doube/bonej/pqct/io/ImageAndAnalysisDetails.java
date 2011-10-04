@@ -36,8 +36,9 @@ public class ImageAndAnalysisDetails{
 	public String imageSavePath;
 	public String roiChoice;
 	public String rotationChoice;
+	public String[] choiceLabels;
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice){
+	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels){
 		scalingFactor	= scalingFactorIn;
 		constant 		= constantIn;
 		airThreshold	= -100;
@@ -53,6 +54,7 @@ public class ImageAndAnalysisDetails{
 		sectorWidth 	= 10;
 		roiChoice		= roiChoiceIn;
 		this.rotationChoice = rotationChoice;
+		this.choiceLabels = choiceLabels;
 		imageSavePath 	= new String("");
 	}
 }
