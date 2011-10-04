@@ -74,7 +74,13 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}
 		if (fileName==null) return;
 		read(directory,fileName);
-
+		FileInfo fi = this.getFileInfo(); 
+		fi.pixelWidth = VoxelSize;
+		fi.pixelHeight = VoxelSize;
+		fi.valueUnit = "mm";
+		fi.fileName = fileName;
+		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
+        this.setFileInfo(fi);  
 		if (this.getHeight()<1) return;
 	}
 	

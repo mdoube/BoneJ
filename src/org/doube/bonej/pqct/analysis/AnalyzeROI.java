@@ -27,6 +27,7 @@ import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
+import ij.text.*;
 public class AnalyzeROI{
 	
 	//image array pointers
@@ -164,76 +165,51 @@ public class AnalyzeROI{
 		//Calculate the maximal and minimial cross-sectional moments of inertia
 		vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
 		vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
-		//rotationCorrection will be used in determining which way the image needs to be rotated. The above alfa may align rotation axis corresponding to maximal CSMI with either horizontal or vertical axis, whichever rotation is smaller...
+		
+		//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
+		//upwards. In addition it will be used in determining which way the image needs to be rotated. 
+		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
+		//or vertical axis, whichever rotation is smaller...
+			/*		
+			//For Debugging
+			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
+			checkWindow.append("Coefficients "+details.rotationChoice);
+			*/
 			
-		if (details.femur == true && details.dicomOn == true){
-					if (leg == 0){
-						rotationCorrection = 0-(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					if (leg == 1){
-						rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					/*Calculate alfa from periosteal radii*/
-					double[] radii = new double[roi.roiI.size()];
-					for (int i = 0; i<roi.roiI.size();++i){
-						radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
-					}
-					double[] sumRadii = new double[radii.length-10];
-					for (int i = 0;i<radii.length-10;++i){
-						for (int j = 0;j<11;++j){
-							sumRadii[i]+=radii[i+j];
-						}
-					}
-					double[] sortRadii = (double[]) sumRadii.clone();
-					Arrays.sort(sortRadii);
-					int largest =0;
-					while (sumRadii[largest] != sortRadii[sortRadii.length-1]){
-						++largest;
-					}
-					largest+=6;
-					double x,y;
-					x = roi.roiI.get(largest)-marrowCenter[0];
-					y = roi.roiJ.get(largest)-marrowCenter[1];
-					alfa = Math.PI/2.0-Math.atan2(y,x);
-		}else{
-			if (details.dicomOn == true){
-				if (vali1 > vali2){
-					if (leg == 0){
-						rotationCorrection = 0-(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					if (leg == 1){
-						rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-				} else {
-					if (leg == 0){
-						rotationCorrection = -Math.PI/2.0-(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					if (leg == 1){
-						rotationCorrection = +Math.PI/2.0+(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-				}			
-			}else{
-				if (vali1 > vali2){
-					if (leg == 0){
-						rotationCorrection = Math.PI/2.0+(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					if (leg == 1){
-						rotationCorrection = -Math.PI/2.0-(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-				} else {
-					if (leg == 0){
-						rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-					if (leg == 1){
-						rotationCorrection = 0-(((double) sectorWidth)/2)/180*Math.PI; 
-					}
-				}			
+		if (details.rotationChoice.equals("Furthest point")){
+			/*Calculate alfa from periosteal radii*/
+			double[] radii = new double[roi.roiI.size()];
+			for (int i = 0; i<roi.roiI.size();++i){
+				radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
 			}
+			double[] sumRadii = new double[radii.length-10];
+			for (int i = 0;i<radii.length-10;++i){
+				for (int j = 0;j<11;++j){
+					sumRadii[i]+=radii[i+j];
+				}
+			}
+			double[] sortRadii = (double[]) sumRadii.clone();
+			Arrays.sort(sortRadii);
+			int largest =0;
+			while (sumRadii[largest] != sortRadii[sortRadii.length-1]){
+				++largest;
+			}
+			double x,y;
+			x = roi.roiI.get(largest)-marrowCenter[0];
+			y = roi.roiJ.get(largest)-marrowCenter[1];
+			alfa = Math.PI/2.0-Math.atan2(y,x);
+			rotationCorrection = 0-(((double) sectorWidth)/2)/180*Math.PI; 
+		}
+		if (details.rotationChoice.equals("Selection According to Imax/Imin")){
+			if (vali1 > vali2){
+					rotationCorrection = Math.PI/2.0+(((double) sectorWidth)/2)/180*Math.PI; 
+			} else {
+					rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
+			}	
 		}
 		//figuring out the indexes for rotating vBMDs and having sector #1 directed posteriorly and having the bending axis corresponding to minimal CSMI half the sector.
 		int alkuindex;
 		alkuindex = 0;
-
 		if (alfa+rotationCorrection >= 0){
 			alkuindex = 360-(int) (alfa/Math.PI*180+rotationCorrection/Math.PI*180); 
 		}else{
@@ -252,12 +228,7 @@ public class AnalyzeROI{
 			pind.add(inde);
 			inde++;
 		}
-		//We want to have comparable sectors for left and right leg -> reverse index for left leg
-		if (details.dicomOn == false){
-			if (leg == 1){
-				Collections.reverse(pind);
-			}
-		}
+
 		//Bone marrow cortexCenter[0] and cortexCenter[1]
 
 		pRad = new double[360];
