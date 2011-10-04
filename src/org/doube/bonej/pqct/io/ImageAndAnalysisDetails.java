@@ -34,17 +34,6 @@ public class ImageAndAnalysisDetails{
 	public int softFilterSize;
 	public int sectorWidth;
 	public String imageSavePath;
-	public boolean mRoiDet;
-	public boolean dBoneSite;
-	public boolean eOn;
-	public boolean mOn;
-	public boolean dOn;
-	public boolean stOn;
-	public boolean cOn;
-	public boolean ukkOn;
-	public boolean dicomOn;
-	public boolean imOn;
-	public boolean femur;
 	public String roiChoice;
 
 	//ImageJ plugin constructor
@@ -64,16 +53,5 @@ public class ImageAndAnalysisDetails{
 		sectorWidth 	= 10;
 		roiChoice		= roiChoiceIn;
 		imageSavePath 	= new String("");
-		mRoiDet			= false;		//manual roi determination
-		dBoneSite		= false;	//Distal bone site
-		eOn				= false;	//erode distal site
-		mOn				= false;	//marrow analysis
-		dOn				= true;	//Distribution analysis
-		stOn			= false;	//Soft tissue analysis
-		cOn				= true;		//Cortical analysis
-		ukkOn			= false;		//UKK special
-		dicomOn			= false;	//DICOM IMAGES
-		imOn			= false;		//Visual inspection images
-		femur 			= false;			//For radii rotation in case of femoral mid-shaft images...
 	}
 }
