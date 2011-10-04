@@ -45,9 +45,10 @@ public class ImageAndAnalysisDetails{
 	public boolean dicomOn;
 	public boolean imOn;
 	public boolean femur;
+	public String roiChoice;
 
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn){
+	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn){
 		scalingFactor	= scalingFactorIn;
 		constant 		= constantIn;
 		airThreshold	= -100;
@@ -61,6 +62,7 @@ public class ImageAndAnalysisDetails{
 		filterSize		= 3;
 		softFilterSize	= 7;
 		sectorWidth 	= 10;
+		roiChoice		= roiChoiceIn;
 		imageSavePath 	= new String("");
 		mRoiDet			= false;		//manual roi determination
 		dBoneSite		= false;	//Distal bone site
