@@ -30,6 +30,7 @@ import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
+//import ij.text.*;		//debugging
 public class SelectROI extends JPanel{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
@@ -126,19 +127,8 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiI = new Vector<Integer>();
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
-		if (ijROI == null){	/*No ROI defined, detect one automatically*/
-			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Delineate the manual ROI	
-			/*Make the selection for automated roi here...*/
-			if (details.roiChoice.equals(details.choiceLabels[0])){selectRoiBiggestBone();}
-			if (details.roiChoice.equals(details.choiceLabels[1])){selectRoiSmallestBone();}
-			if (details.roiChoice.equals(details.choiceLabels[2])){selectRoiLeftMostBone();}
-			if (details.roiChoice.equals(details.choiceLabels[3])){selectRoiRightMostBone();}
-			if (details.roiChoice.equals(details.choiceLabels[4])){selectRoiTopMostBone();}
-			if (details.roiChoice.equals(details.choiceLabels[5])){selectRoiBottomMostBone();}
-			if (details.roiChoice.equals(details.choiceLabels[6])){selectRoiCentralBone();}
-			if (details.roiChoice.equals(details.choiceLabels[7])){selectRoiPeripheralBone();}
-		}else{ /*Manually selected ROI*/
-			double[] tempScaledImage = (double[]) scaledImage.clone();
+		double[] tempScaledImage = (double[]) scaledImage.clone();
+		if (ijROI != null){	/*Set pixels outside the manually selected ROI to zero*/
 			/*Check whether pixel is within ROI, mark with bone threshold*/
 			for (int j = 0;j< height;j++){
 				for (int i = 0; i < width;i++){
@@ -148,12 +138,32 @@ public class SelectROI extends JPanel{
 					}
 				}
 			}
-			findEdge(tempScaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Delineate the manual ROI	
 		}
+		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		/*Select correct bone outline*/
-		
+		int selection = 0;
+		/*
+		//Debugging
+		TextWindow checkWindow = new TextWindow(new String("Rois"),new String(""),500,200);
+		checkWindow.append("Length no "+length.size());
+		for (int i =0;i<details.choiceLabels.length;++i){
+			checkWindow.append("match "+i+" "+details.roiChoice.equals(details.choiceLabels[i]));
+		}
+		checkWindow.append("going into select "+selection+" choice "+details.roiChoice+" labels 1"+details.choiceLabels[1]);
+		*/
+		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
+		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
+		if (details.roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
+		if (details.roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
+		if (details.roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
+		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
+		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone();}
+		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone();}
+		/*
+		checkWindow.append("after selection "+selection);	
+		*/
 		/*fill roiI & roiJ*/
-		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
+		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
@@ -191,36 +201,102 @@ public class SelectROI extends JPanel{
 		
 	}
 
-	void selectRoiBiggestBone(){
 		
+	
+	int selectRoiBiggestBone(Vector<Integer> length){
+		Vector<Integer> temp = new Vector<Integer>();
+		for (int iii =0;iii<length.size();++iii){
+			temp.add(length.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (length.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiSmallestBone(){
-		
+	int selectRoiSmallestBone(Vector<Integer> length){
+		Vector<Integer> temp = new Vector<Integer>();
+		for (int iii =0;iii<length.size();iii++){
+			temp.add(length.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (length.get(counter) !=temp.get(0)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiLeftMostBone(){
-		
+	int selectRoiLeftMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(0)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiRightMostBone(){
-		
+	int selectRoiRightMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiTopMostBone(){
-		
+	int selectRoiTopMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(0)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiBottomMostBone(){
-		
+	int selectRoiBottomMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
 	}
 	
-	void selectRoiCentralBone(){
-		
+	int selectRoiCentralBone(){
+		int counter=0;
+		return counter;
 	}
 
-	void selectRoiPeripheralBone(){
-		
+	int selectRoiPeripheralBone(){
+		int counter=0;
+		return counter;
 	}
 	
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
@@ -370,221 +446,6 @@ public class SelectROI extends JPanel{
 		
 	}
 	
-	void findEdge_leg(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit, int[] longestEdge,double threshold)
-	{
-		int newRow;
-		int newCol;
-		int i,j,ii,jj,tempI,tempJ;
-		
-		Vector<Integer> initialI = new Vector<Integer>();
-		Vector<Integer> initialJ= new Vector<Integer>(); 
-		
-		Vector<Integer> previousI = new Vector<Integer>();
-		Vector<Integer> previousJ= new Vector<Integer>();
-		Vector<Integer> lengths = new Vector<Integer>();
-		boolean edgeEnd = false;
-		int size;
-		size = width*height;
-		int[][] searchOrder = {{1,0,-1,-1,-1,0,1,1,1},{1,1,1,0,-1,-1,-1,0,1}};
-		
-		int[] len = new int[1];
-		i = 0;
-		j = 0;
-
-		//System.out.println("Edge tracing begins "+i+" "+j);
-		while ((i < (width-1)) && (j < (height -1) )){
-			len[0] = 0;
-			//printf("Prior to i %d j %d\n",i,j);
-			previousI.clear();
-			previousJ.clear();
-			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
-				i++;
-				if (result[i+j*width] == 1){
-					while (j < height-1 && result[i+j*width]>0){
-						i++;
-						if (i == width && j < height-2){
-							i = 0;
-							j++;
-						}
-						
-					}
-				}
-
-				if (i == width){
-					j++;
-					if (j >= height-1) break;
-					i = 0;
-				}
-			}
-			//System.out.println("temp I\n");
-			tempI = i;
-			tempJ = j;
-			//Save previous i and j
-			previousI.add(new Integer(i));
-			previousJ.add(new Integer(j));
-			//System.out.println("temp I "+(Integer) previousI.lastElement()+" J"+(Integer) previousJ.lastElement());
-			//return if we're at the end of the scaledImage
-			
-			if (i >= width-1 && j >= height-1){
-				break;	/*Go to end...*/
-				//return;
-			}
-			//
-			//Edge found
-			result[i+j*width] = 1;
-			iit.add(new Integer(i));
-			jiit.add(new Integer(j));
-			len[0]++;
-			/*Tracing algorithm*/
-			traceEdge(scaledImage,result,threshold,iit,jiit,len,i,j);
-			/*Tracing algorithm done...*/
-
-			if (len[0] > 0){
-				length.add(new Integer(len[0]));
-				lengths.add(new Integer(len[0]));
-				if (length.size() < 2){
-					beginnings.add(new Integer(0));
-				}else{
-					beginnings.add(new Integer(iit.size()-len[0]));
-				}
-				
-				
-				int kai,kaj;
-				kai = 0;
-				kaj = 0;
-				for(int zz = beginnings.lastElement() ;zz<(beginnings.lastElement()+length.lastElement()) ;zz++){
-					/*kai = kai+(Integer) iit.get(zz);
-					kaj = kaj+(Integer) jiit.get(zz);*/
-					kai = kai+ iit.get(zz);
-					kaj = kaj+ jiit.get(zz);
-				}
-				//printf("Kai %d Kaj %d\n",kai,kaj);
-				kai = kai/length.lastElement() ;
-				kaj = kaj/length.lastElement() ;
-				//System.out.println("kai "+kai+" kaj"+kaj);
-				//In case the centre of the traced edge is on top of the trace
-				while(result[kai+kaj*width]> 1){
-					kai = kai+1;
-					kaj = kaj+1;
-				}
-				
-				//Check whether the trace can be filled
-			
-				boolean possible = true;
-				
-				jj =kaj;
-				for (ii = kai;ii<width;ii++){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (ii>=width-1) possible = false;
-				for (ii = kai;ii>0;ii--){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (ii<=1) possible = false;
-				i = kai;
-				for (jj = kaj;jj<height;jj++){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (jj>=height-1) possible = false;
-				for (jj = kaj;jj>0;jj--){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (jj<=1) possible = false;
-				
-				if(result[kai+kaj*width]==1){
-					possible = false;
-
-				}
-				//System.out.println(possible);
-
-				if (possible){
-					
-					possible = resultFill(kai,kaj);
-					
-					if (!possible){
-						//Remove "extra ii and jii
-						for (int po = 0;po <length.lastElement() ;po++){
-							iit.remove(iit.size()-1);
-							jiit.remove(jiit.size()-1);
-						}
-						length.remove(length.size()-1);
-						beginnings.remove(beginnings.size()-1);
-					// return;
-					}
-				}else{
-					for (int po = 0;po <length.lastElement() ;po++){
-						iit.remove(iit.size()-1);
-						jiit.remove(jiit.size()-1);
-					}
-					length.remove(length.size()-1);
-					beginnings.remove(beginnings.size()-1);
-				}
-			}
-			//Find next empty spot
-			i = tempI;
-			j = tempJ;
-			while (j < height && scaledImage[i+j*width] >=threshold){
-				i++;
-				if (i == width){
-				i = 0;
-				j++;
-				}
-			}
-			//System.out.println("length "+length.size()+" beg "+beginnings.size());
-		}
-		whichLeg(lengths);
-		
-		longestEdge[0] = 0;
-		longestEdge[1] = 0;
-		Vector<Integer> temp = new Vector<Integer>();
-		for (int iii =0;iii<length.size();iii++){
-			temp.add(length.get(iii));
-		}
-		Collections.sort(temp);
-		int counter=0;
-		while (length.get(counter) !=temp.get(temp.size()-1)){
-			++counter;
-		}
-		longestEdge[0]=counter;
-		if (length.size() > 1){
-			counter=0;
-			while (length.get(counter) !=temp.get(temp.size()-2)){
-				++counter;
-			}
-			longestEdge[1]=counter;
-		}
-		
-	}
-	
-	void whichLeg(Vector<Integer> lengths)
-	{
-		leg = 0;
-		int[] pitit = new int[2];
-		
-		
-
-			//Find out which is tibia -> Look for the largest...
-		int jar = 0;
-		for (int i = 0; i<2;i++){
-			int maxima = 0;
-			for (int is = 0; is < lengths.size();is++){
-				//if ((Integer) lengths.get(is) > (Integer) lengths.get(maxima)){maxima = is;}
-				if (lengths.get(is) > lengths.get(maxima)){maxima = is;}
-			}
-			pitit[jar] = maxima;
-			lengths.setElementAt(0,maxima);
-			++jar;
-		}
-		if (pitit[0] < pitit[1]){
-			leg = 0;  //false =right
-		}else{
-			leg = 1;  //true = left
-		}	
-	}
 	boolean resultFill(int i, int j){	
 		boolean possible = true;
 		Vector<Integer> initialI = new Vector<Integer>();
@@ -631,24 +492,18 @@ public class SelectROI extends JPanel{
 		return possible;
 	}
 	
-	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit, int[] longestEdge,double threshold)
+	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold)
 	{
 		int newRow;
 		int newCol;
 		int i,j,ii,jj,tempI,tempJ;
-		
 		Vector<Integer> initialI = new Vector<Integer>();	
 		Vector<Integer> initialJ= new Vector<Integer>(); 
-		
-
 		Vector<Integer> previousI = new Vector<Integer>();
 		Vector<Integer> previousJ= new Vector<Integer>();
-		Vector<Integer> lengths = new Vector<Integer>();
 		boolean edgeEnd = false;
 		int size;
 		size = width*height;
-		int[][] searchOrder = {{1,0,-1,-1,-1,0,1,1,1},{1,1,1,0,-1,-1,-1,0,1}};
-		
 		int[] len = new int[1];
 		i = 0;
 		j = 0;
@@ -694,12 +549,11 @@ public class SelectROI extends JPanel{
 			/*Tracing algorithm done...*/
 			
 			if (len[0] > 0){
-				length.add(new Integer(len[0]));
-				lengths.add(new Integer(len[0]));
+				length.add(len[0]);
 				if (length.size() < 2){
-					beginnings.add(new Integer(0));
+					beginnings.add(0);
 				}else{
-					beginnings.add(new Integer(iit.size()-len[0]));
+					beginnings.add(iit.size()-len[0]);
 				}
 				
 				
@@ -779,54 +633,6 @@ public class SelectROI extends JPanel{
 				}
 			}
 
-		}
-
-		
-		longestEdge[0] = 0;
-		longestEdge[1] = 0;
-		Vector<Integer> temp = new Vector<Integer>();
-		temp.addAll(length);
-		Collections.sort(temp);
-		int counter=0;
-		while (length.get(counter) !=temp.get(temp.size()-1)){
-			++counter;
-		}
-		longestEdge[0]=counter;
-		if (length.size() > 1){
-			counter=0;
-			while (length.get(counter) !=temp.get(temp.size()-2)){
-				++counter;
-			}
-			longestEdge[1]=counter;
-			/*In case of dicom image having both the left and the right leg, switch left leg tibia to longestEdge[0]*/
-			if (iit.get(beginnings.get(longestEdge[0])) < iit.get(beginnings.get(longestEdge[1]))){ //the one with smaller column is left...
-
-			} else {
-				int tempo = longestEdge[0];
-				longestEdge[0] = longestEdge[1];
-				longestEdge[1] = tempo;
-			}
-		}
-
-		
-		/*Search for Figula in DICOM having both feet*/
-		if (length.size() > 3){
-			counter=0;
-			while (length.get(counter) !=temp.get(temp.size()-3)){
-				++counter;
-			}
-			longestEdge[2]=counter; /*First fibula*/
-			counter=0;
-			while (length.get(counter) !=temp.get(temp.size()-4)){
-				++counter;
-			}
-			longestEdge[3]=counter; /*Second fibula*/
-			/*In case of dicom image having both the left and the right leg, switch left leg tibia to longestEdge[0]*/
-			if (iit.get(beginnings.get(longestEdge[2])) < iit.get(beginnings.get(longestEdge[3]))){ //the one with smaller column is left...
-				longestEdge[1] = longestEdge[2];
-			} else {
-				longestEdge[1] = longestEdge[3];
-			}
 		}
 
 	}
