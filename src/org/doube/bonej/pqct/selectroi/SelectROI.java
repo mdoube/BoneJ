@@ -117,7 +117,7 @@ public class SelectROI extends JPanel{
 				/*Select ROI and set everything else than the roi to minimum*/
 		//System.out.println("soft found");
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
-		sieve= new byte[width*height];
+		
 		marrowSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
@@ -129,50 +129,25 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
 		if (ijROI == null){	/*No ROI defined, detect one automatically*/
+			/*Make a switch for automated roi detections here...*/
 			selectRoiBiggestBone();
 		}else{ /*Manually selected ROI*/
-			ij.IJ.showMessage(new String("Loysin Roin"));
-			Vector<Integer> tempI = new Vector<Integer>();
-			Vector<Integer> tempJ = new Vector<Integer>();
-			Polygon roiPolygon = ijROI.getPolygon();
-			ij.IJ.showMessage(new String("Polygon "+roiPolygon.npoints));
-			if (roiPolygon == null | roiPolygon.npoints <= 4){
-				Rectangle roiRectangle = ijROI.getBounds();
-				ij.IJ.showMessage(new String("Rectangle "+roiRectangle));
-				/*Mark the coordinates of the outline into roiI and roiJ*/
-				//Go from left to right on top
-				for (int i = roiRectangle.x;i<roiRectangle.x+roiRectangle.width;++i){
-					roiI.add(i);
-					roiJ.add(roiRectangle.y);
+			double[] tempScaledImage = (double[]) scaledImage.clone();
+			/*Check whether pixel is within ROI, mark with bone threshold*/
+			for (int j = 0;j< height;j++){
+				for (int i = 0; i < width;i++){
+					if (ijROI.contains(i,j)){
+					}else{
+						tempScaledImage[i+j*width] = minimum;
+					}
 				}
-				//Go from top to bottom on right hand side
-				for (int i = roiRectangle.y;i<roiRectangle.y+roiRectangle.height;++i){
-					roiI.add(roiRectangle.x+roiRectangle.width);
-					roiJ.add(i);
-				}
-				//Go from right to left on bottom
-				for (int i = roiRectangle.x+roiRectangle.width; i>roiRectangle.x;--i){
-					roiI.add(i);
-					roiJ.add(roiRectangle.y+roiRectangle.height);
-				}
-				//Go from bottom to top on the left hand side
-				for (int i = roiRectangle.y+roiRectangle.height;i>roiRectangle.y;--i){
-					roiI.add(roiRectangle.x);
-					roiJ.add(i);
-				}
-			} else {
-				for (int i = 0;i<roiPolygon.npoints;++i){
-					tempI.add(roiPolygon.xpoints[i]);
-					tempJ.add(roiPolygon.ypoints[i]);
-					ij.IJ.showMessage(new String(roiPolygon.xpoints[i]+" "+roiPolygon.ypoints[i]));
-				}
-				/*Close the polygon...*/
-				tempI.add(roiPolygon.xpoints[0]);
-				tempJ.add(roiPolygon.ypoints[0]);
-				roiI = calculateSpline(tempI, 1000);
-				roiJ = calculateSpline(tempJ, 1000);
 			}
-			
+			findEdge(tempScaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Delineate the manual ROI	
+		}
+		/*fill roiI & roiJ*/
+		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
+			roiI.add(iit.get(i));
+			roiJ.add(jiit.get(i));
 		}
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
@@ -183,7 +158,7 @@ public class SelectROI extends JPanel{
 		}
 		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 		imp.setRoi(ijROI);
-		
+		sieve= new byte[width*height];
 		fillSieve(roiI, roiJ, sieve);
 
 		for (int j = 0;j< height;j++){
@@ -209,16 +184,11 @@ public class SelectROI extends JPanel{
 	}
 
 	void selectRoiBiggestBone(){
-			if (details.dicomOn == true){
+		if (details.dicomOn == true){
 			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
 			leg = 1;  //true = vasen
 		}else{
 			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-		}
-		//System.out.println("Luominen valmis ");
-		for (int i = beginnings.get(longestEdge[0]);i < beginnings.get(longestEdge[0])+length.get(longestEdge[0]);i++){
-			roiI.add(iit.get(i));
-			roiJ.add(jiit.get(i));
 		}
 	}
 	
