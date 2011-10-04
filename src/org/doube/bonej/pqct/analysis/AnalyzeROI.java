@@ -27,6 +27,7 @@ import java.io.*;				//File IO
 import javax.imageio.*;		//Saving the image
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
+import ij.text.*;
 public class AnalyzeROI{
 	
 	//image array pointers
@@ -169,8 +170,13 @@ public class AnalyzeROI{
 		//upwards. In addition it will be used in determining which way the image needs to be rotated. 
 		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
 		//or vertical axis, whichever rotation is smaller...
-		
-		if (details.rotationChoice.equals("Selection Furthest point")){
+			/*		
+			//For Debugging
+			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
+			checkWindow.append("Coefficients "+details.rotationChoice);
+			*/
+			
+		if (details.rotationChoice.equals("Furthest point")){
 			/*Calculate alfa from periosteal radii*/
 			double[] radii = new double[roi.roiI.size()];
 			for (int i = 0; i<roi.roiI.size();++i){
