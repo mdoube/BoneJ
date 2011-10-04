@@ -184,12 +184,7 @@ public class SelectROI extends JPanel{
 	}
 
 	void selectRoiBiggestBone(){
-		if (details.dicomOn == true){
-			findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-			leg = 1;  //true = vasen
-		}else{
-			findEdge_leg(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
-		}
+		findEdge(scaledImage,length,beginnings, iit, jiit,longestEdge,boneThreshold);	//Bone area analysis
 	}
 	
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 

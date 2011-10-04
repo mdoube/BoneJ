@@ -1,6 +1,7 @@
 package org.doube.bonej.pqct;
 
 import ij.*;
+
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
@@ -44,6 +45,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean cOn;
 	boolean dOn;
 	public String roiChoice;
+	public String rotationChoice;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
@@ -54,18 +56,32 @@ public class Distribution_Analysis implements PlugInFilter {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
-		double resolution;
-		if (imp.getProperty(new String("VoxelSize")) != null){
-			resolution = (Double) imp.getProperty(new String("VoxelSize"));
-		}else{
-			resolution =0;
+		double resolution = 0;
+		
+		
+		if (imp.getOriginalFileInfo().pixelWidth != 0){
+			resolution = imp.getOriginalFileInfo().pixelWidth;
 		}
+	
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog(new String("Analysis parameters"));
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
-		dialog.addNumericField(new String("Scaling coefficient (slope)"), 1.724, 4);
-		dialog.addNumericField(new String("Scaling constant (intercept)"), -322.0, 4);
+		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){/*Suggest HU scaling for dicom Files*/
+			double[] coeffs = imp.getCalibration().getCoefficients();
+			dialog.addNumericField(new String("Scaling coefficient (slope)"), coeffs[1], 4);
+			dialog.addNumericField(new String("Scaling constant (intercept)"),coeffs[0], 4);
+			/*
+			//For Debugging
+			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
+			for (int i = 0; i<coeffs.length;++i){
+				checkWindow.append("Coefficients "+i+" "+coeffs[i]);
+			}
+			*/			
+		}else{
+			dialog.addNumericField(new String("Scaling coefficient (slope)"), 1.724, 4);
+			dialog.addNumericField(new String("Scaling constant (intercept)"), -322.0, 4);
+		}
 		if (resolution != 0){
 			dialog.addNumericField(new String("In-plane pixel size [mm]"), resolution, 4);
 		} else {
@@ -74,7 +90,8 @@ public class Distribution_Analysis implements PlugInFilter {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Central","Peripheral","Top","Bottom"};
 		dialog.addChoice("Roi selection", choiceLabels, "Bigger"); 
-
+		String[] rotationLabels = {"According to Imax/Imin","Furthest point"};
+		dialog.addChoice("Rotation selection", rotationLabels, "According to Imax/Imin");
 		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
 		dialog.addMessage("the manual selection will be used."); 
 		dialog.addMessage("The leftmost bone within the manual ROI"); 
@@ -89,11 +106,12 @@ public class Distribution_Analysis implements PlugInFilter {
 			constant		= dialog.getNextNumber();
 			resolution		= dialog.getNextNumber();
 			roiChoice		= dialog.getNextChoice();
-			/*
+			rotationChoice	= dialog.getNextChoice();
+			
 			//For debugging
-			TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
-			checkWindow.append("Selection "+roiChoice);
-			*/
+			//TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
+			//checkWindow.append("Selection "+roiChoice);
+			
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -103,7 +121,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice,rotationChoice);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 			AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
@@ -112,7 +130,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			TextWindow textWindow = new TextWindow(new String("Results"),new String(""),500,200);
 			printResults(textWindow,cortAnalysis,analyzeRoi);
 			
-			/*Display the analysis results...*/
+			//Display the analysis results...
 			BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 			ImagePlus resultImage = new ImagePlus("Visual results",bi);
 			resultImage.show();
