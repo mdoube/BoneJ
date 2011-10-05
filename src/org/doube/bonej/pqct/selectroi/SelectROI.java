@@ -138,6 +138,13 @@ public class SelectROI extends JPanel{
 					}
 				}
 			}
+			/*Check whether a polygon can be acquired and include polygon points too*/
+			Polygon polygon = ijROI.getPolygon();
+			if (polygon != null){
+				for (int j = 0;j< polygon.npoints;j++){
+					tempScaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width] = scaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width];
+				}
+			}
 		}
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		/*Select correct bone outline*/
