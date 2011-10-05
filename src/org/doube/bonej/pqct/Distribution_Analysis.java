@@ -37,47 +37,43 @@ import java.awt.image.*; //Creating the result BufferedImage...
 
 public class Distribution_Analysis implements PlugInFilter {
 	ImagePlus imp;
-	double areaThreshold;
-	double BMDThreshold;
-	double scalingFactor;
-	double constant;
+
 	int sectorWidth;
 	boolean cOn;
 	boolean dOn;
-	public String roiChoice;
-	public String rotationChoice;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
 		return DOES_ALL;
 	}
+	
 
+
+	/*
+	//For Debugging
+	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
+	checkWindow.append((String) imp.getProperty("Info"));
+	*/
+	
 	public void run(ImageProcessor ip) {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
 		double resolution = 0;
-		
-		
 		if (imp.getOriginalFileInfo().pixelWidth != 0){
 			resolution = imp.getOriginalFileInfo().pixelWidth;
 		}
 	
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog(new String("Analysis parameters"));
+		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
-		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){/*Suggest HU scaling for dicom Files*/
+		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){//Suggest HU scaling for dicom Files
 			double[] coeffs = imp.getCalibration().getCoefficients();
 			dialog.addNumericField(new String("Scaling coefficient (slope)"), coeffs[1], 4);
 			dialog.addNumericField(new String("Scaling constant (intercept)"),coeffs[0], 4);
-			/*
-			//For Debugging
-			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
-			for (int i = 0; i<coeffs.length;++i){
-				checkWindow.append("Coefficients "+i+" "+coeffs[i]);
-			}
-			*/			
+					
 		}else{
 			dialog.addNumericField(new String("Scaling coefficient (slope)"), 1.724, 4);
 			dialog.addNumericField(new String("Scaling constant (intercept)"), -322.0, 4);
@@ -92,6 +88,9 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addChoice("Roi selection", choiceLabels, "Bigger"); 
 		String[] rotationLabels = {"According to Imax/Imin","Furthest point"};
 		dialog.addChoice("Rotation selection", rotationLabels, "According to Imax/Imin");
+		dialog.addCheckbox("Analyse cortical results",true);
+		dialog.addCheckbox("Analyse density distribution",true);
+		dialog.addCheckbox("Allow cleaving",false);
 		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
 		dialog.addMessage("the Automated selection will still be used."); 
 		dialog.addMessage("Manual ROI only allows preventing"); 
@@ -100,18 +99,18 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
-			areaThreshold	= dialog.getNextNumber();
-			BMDThreshold	= dialog.getNextNumber();
-			scalingFactor	= dialog.getNextNumber();
-			constant		= dialog.getNextNumber();
-			resolution		= dialog.getNextNumber();
-			roiChoice		= dialog.getNextChoice();
-			rotationChoice	= dialog.getNextChoice();
-			/*
-			//For debugging
-			TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
-			checkWindow.append("Selection "+roiChoice);
-			*/
+			double fatThreshold		= dialog.getNextNumber();
+			double areaThreshold	= dialog.getNextNumber();
+			double BMDThreshold		= dialog.getNextNumber();
+			double scalingFactor	= dialog.getNextNumber();
+			double constant			= dialog.getNextNumber();
+			resolution				= dialog.getNextNumber();
+			String roiChoice		= dialog.getNextChoice();
+			String rotationChoice	= dialog.getNextChoice();
+			cOn						= dialog.getNextBoolean();
+			dOn						= dialog.getNextBoolean();
+			boolean allowCleaving	= dialog.getNextBoolean();
+
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -121,60 +120,96 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,allowCleaving);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
-			CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
-			AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
-			
-			String resultString = new String();
 			TextWindow textWindow = new TextWindow(new String("Results"),new String(""),500,200);
-			printResults(textWindow,cortAnalysis,analyzeRoi);
-			
+			printResults(textWindow);
+			if (cOn){
+				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
+				printCorticalResults(textWindow,cortAnalysis);
+				
+				//if(!dOn){
+				//	BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+				//	ImagePlus resultImage = new ImagePlus("Visual results",bi);
+				//	resultImage.show();
+				//}
+				
+			}
+			if (dOn){
+				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
+				printDistributionResults(textWindow,analyzeRoi);
+				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+				ImagePlus resultImage = new ImagePlus("Visual results",bi);
+				resultImage.show();
+			}
+			String resultString = new String();
 			//Display the analysis results...
-			BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-			ImagePlus resultImage = new ImagePlus("Visual results",bi);
-			resultImage.show();
 		}
 	}
 	
-	void printResults(TextWindow textWindow,CorticalAnalysis cortAnalysis,AnalyzeROI analyzeRoi){
-		if (imp.getProperty(new String("FileName")) != null){
-			textWindow.append("Filename\t"+(String) imp.getProperty(new String("FileName")));
-			textWindow.append("Subject name\t"+(String) imp.getProperty(new String("PatName")));
-			textWindow.append("Subject ID\t"+(String) imp.getProperty(new String("PatID")));
-			textWindow.append("Subject birthdate\t"+(Long) imp.getProperty(new String("PatBirth")));
-			textWindow.append("Measurement date\t"+(Long) imp.getProperty(new String("MeasDate")));
+	void printResults(TextWindow textWindow){
+		if (imp != null){
+			textWindow.append("Filename\t"+imp.getOriginalFileInfo().fileName);
+			textWindow.append("Subject name\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient's Name"));
+			textWindow.append("Subject ID\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient ID"));
+			textWindow.append("Subject birthdate\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient's Birth Date"));
+			textWindow.append("Measurement date\t"+ getInfoProperty((String) imp.getProperty("Info"),"Acquisition Date"));
 		}
-		if (cOn){
-			textWindow.append("BMD\t"+Double.toString(cortAnalysis.BMD)+"\tmg/cm3");
-			textWindow.append("AREA\t"+Double.toString(cortAnalysis.AREA)+"\tmm2");
-			textWindow.append("SSI\t"+Double.toString(cortAnalysis.SSI)+"\tmm3");
+	}
+	
+		String getInfoProperty(String properties,String propertyToGet){
+			String toTokenize = (String) imp.getProperty("Info");
+			StringTokenizer st = new StringTokenizer(toTokenize,"\n");
+			String currentToken = null;
+			while (st.hasMoreTokens() ) {
+				currentToken = st.nextToken();
+				if (currentToken.indexOf(propertyToGet) != -1){break;}
+			}
+			if (currentToken.indexOf(propertyToGet) != -1){
+				StringTokenizer st2 = new StringTokenizer(currentToken,":");
+				String token2 = null;
+				while (st2.hasMoreTokens()){
+					token2 = st2.nextToken();
+				}
+				return token2.trim();
+			}
+			return null;
+	}
+	
+	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
+		textWindow.append("CoD\t"+Double.toString(cortAnalysis.BMD)+"\tmg/cm3");
+		textWindow.append("CoA\t"+Double.toString(cortAnalysis.AREA)+"\tmm2");
+		textWindow.append("SSI\t"+Double.toString(cortAnalysis.SSI)+"\tmm3");
+		textWindow.append("ToD\t"+Double.toString(cortAnalysis.ToD)+"\tmg/cm3");
+		textWindow.append("ToA\t"+Double.toString(cortAnalysis.ToA)+"\tmm2");
+		textWindow.append("BSId\t"+Double.toString(cortAnalysis.BSId)+"\tg2/cm4");
+	}
+	
+	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
+
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append("Endocortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.endocorticalRadii[pp]+"\tmm");
 		}
-		if (dOn){
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append("Endocortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.endocorticalRadii[pp]+"\tmm");
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append("Pericortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.pericorticalRadii[pp]+"\tmm");
-			}
-			/*	//Radii after peeling off one layer of pixels
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append(analyzeRoi.peeledEndocorticalRadii[pp]+" mg/cm3");
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append(analyzeRoi.peeledPericorticalRadii[pp]+" mg/cm3");
-			}
-			*/
-			//Cortex BMD values			
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append("Endocortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.endoCorticalBMDs[pp]+"\tmg/cm3");
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append("Midcortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.midCorticalBMDs[pp]+"\tmg/cm3");
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				textWindow.append("Pericortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.periCorticalBMDs[pp]+"\tmg/cm3");
-			}
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append("Pericortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.pericorticalRadii[pp]+"\tmm");
+		}
+		/*	//Radii after peeling off one layer of pixels
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append(analyzeRoi.peeledEndocorticalRadii[pp]+" mg/cm3");
+		}
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append(analyzeRoi.peeledPericorticalRadii[pp]+" mg/cm3");
+		}
+		*/
+		//Cortex BMD values			
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append("Endocortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.endoCorticalBMDs[pp]+"\tmg/cm3");
+		}
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append("Midcortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.midCorticalBMDs[pp]+"\tmg/cm3");
+		}
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			textWindow.append("Pericortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.periCorticalBMDs[pp]+"\tmg/cm3");
 		}
 	}
 }

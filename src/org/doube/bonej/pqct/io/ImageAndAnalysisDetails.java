@@ -37,24 +37,26 @@ public class ImageAndAnalysisDetails{
 	public String roiChoice;
 	public String rotationChoice;
 	public String[] choiceLabels;
+	public boolean allowCleaving;
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels){
-		scalingFactor	= scalingFactorIn;
-		constant 		= constantIn;
-		airThreshold	= -100;
-		fatThreshold 	= 40;
-		muscleThreshold = 200;
-		marrowThreshold = 300;
-		areaThreshold 	= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		BMDthreshold 	= BMDthresholdIn;		//For cortical BMD analyses
-		softThreshold 	= 300;	//Thresholding soft tissues + marrow from bone
-		boneThreshold 	= areaThresholdIn;
-		filterSize		= 3;
-		softFilterSize	= 7;
-		sectorWidth 	= 10;
-		roiChoice		= roiChoiceIn;
-		this.rotationChoice = rotationChoice;
-		this.choiceLabels = choiceLabels;
-		imageSavePath 	= new String("");
+	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels, boolean allowCleaving){
+		scalingFactor		= scalingFactorIn;
+		constant 			= constantIn;
+		airThreshold		= -100;
+		this.fatThreshold 	= fatThreshold;
+		muscleThreshold 	= 200;
+		marrowThreshold 	= 300;
+		areaThreshold 		= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+		BMDthreshold 		= BMDthresholdIn;		//For cortical BMD analyses
+		softThreshold 		= 300;	//Thresholding soft tissues + marrow from bone
+		boneThreshold 		= areaThresholdIn;
+		filterSize			= 3;
+		softFilterSize		= 7;
+		sectorWidth 		= 10;
+		roiChoice			= roiChoiceIn;
+		this.rotationChoice	= rotationChoice;
+		this.choiceLabels	= choiceLabels;
+		imageSavePath 		= new String("");
+		this.allowCleaving	=allowCleaving;
 	}
 }
