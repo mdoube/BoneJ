@@ -37,16 +37,10 @@ import java.awt.image.*; //Creating the result BufferedImage...
 
 public class Distribution_Analysis implements PlugInFilter {
 	ImagePlus imp;
-	double fatThreshold;
-	double areaThreshold;
-	double BMDThreshold;
-	double scalingFactor;
-	double constant;
+
 	int sectorWidth;
 	boolean cOn;
 	boolean dOn;
-	public String roiChoice;
-	public String rotationChoice;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
@@ -94,6 +88,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addChoice("Roi selection", choiceLabels, "Bigger"); 
 		String[] rotationLabels = {"According to Imax/Imin","Furthest point"};
 		dialog.addChoice("Rotation selection", rotationLabels, "According to Imax/Imin");
+		dialog.addCheckbox("Allow cleaving",false);
 		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
 		dialog.addMessage("the Automated selection will still be used."); 
 		dialog.addMessage("Manual ROI only allows preventing"); 
@@ -102,14 +97,15 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
-			fatThreshold	= dialog.getNextNumber();
-			areaThreshold	= dialog.getNextNumber();
-			BMDThreshold	= dialog.getNextNumber();
-			scalingFactor	= dialog.getNextNumber();
-			constant		= dialog.getNextNumber();
+			double fatThreshold	= dialog.getNextNumber();
+			double areaThreshold	= dialog.getNextNumber();
+			double BMDThreshold	= dialog.getNextNumber();
+			double scalingFactor	= dialog.getNextNumber();
+			double constant		= dialog.getNextNumber();
 			resolution		= dialog.getNextNumber();
-			roiChoice		= dialog.getNextChoice();
-			rotationChoice	= dialog.getNextChoice();
+			String roiChoice		= dialog.getNextChoice();
+			String rotationChoice	= dialog.getNextChoice();
+			boolean allowCleaving	= dialog.getNextBoolean();
 			/*
 			//For debugging
 			TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
@@ -124,7 +120,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,allowCleaving);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 			AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);

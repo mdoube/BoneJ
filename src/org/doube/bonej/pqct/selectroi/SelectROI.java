@@ -169,8 +169,9 @@ public class SelectROI extends JPanel{
 		}
 		
 		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
-		cleaveEdge(roiI,roiJ,3.0,6.0);
-		
+		if (details.allowCleaving){
+			cleaveEdge(roiI,roiJ,3.0,6.0);
+		}
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
