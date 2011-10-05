@@ -1,6 +1,7 @@
 package org.doube.bonej.pqct;
 
 import java.io.*;
+import java.util.*;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
@@ -99,7 +100,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			this.setImage(tempImage.getImage());
 			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
 			//Set ImageJ image properties
-			setProperties(this,fileName);
+			setProperties();
 			float[] pixels = (float[]) this.getProcessor().getPixels();
 			float min = (float) Math.pow(2,15)-1;
 			float max = (float) -Math.pow(2,15);
@@ -172,21 +173,19 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		PicMatrixY = ((int) ((int) (fileData[offset+1] & 0xFF)) <<8 | ((int) (fileData[offset+0] & 0xFF)));
 	}
 	
-	public void setProperties(ImagePlus img,String FileName){
-		img.setProperty(new String("FileName"),FileName);
-		img.setProperty(new String("VoxelSize"),VoxelSize);
-		img.setProperty(new String("ObjLen"),ObjLen);
-		img.setProperty(new String("MeasInfo"),MeasInfo);
-		img.setProperty(new String("MeasDate"),MeasDate);
-		img.setProperty(new String("Device"),Device);
-		img.setProperty(new String("PatMeasNo"),PatMeasNo);
-		img.setProperty(new String("PatNo"),PatNo);
-		img.setProperty(new String("PatBirth"),PatBirth);
-		img.setProperty(new String("PatName"),PatName);
-		img.setProperty(new String("PatID"),PatID);
-		img.setProperty(new String("PicX0"),PicX0);
-		img.setProperty(new String("PicY0"),PicY0);
-		img.setProperty(new String("PicMatrixX"),PicMatrixX);
-		img.setProperty(new String("PicMatrixY"),PicMatrixY);
+	public void setProperties(){
+		String[] propertyNames = {"Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
+									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
+									"Patient ID","PicX0","PicY0",
+									"Width","Height"};
+		String[] propertyValues = {Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
+									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
+									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
+									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY)};
+		String properties = new String();
+		for (int i = 0;i<propertyNames.length;++i){
+			properties += propertyNames[i]+": "+propertyValues[i]+"\n";
+		}
+		this.setProperty("Info", properties);
 	}
 }

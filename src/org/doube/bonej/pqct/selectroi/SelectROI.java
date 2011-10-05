@@ -30,7 +30,7 @@ import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
-//import ij.text.*;		//debugging
+import ij.text.*;		//debugging
 public class SelectROI extends JPanel{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
@@ -138,6 +138,13 @@ public class SelectROI extends JPanel{
 					}
 				}
 			}
+			/*Check whether a polygon can be acquired and include polygon points too*/
+			Polygon polygon = ijROI.getPolygon();
+			if (polygon != null){
+				for (int j = 0;j< polygon.npoints;j++){
+					tempScaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width] = scaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width];
+				}
+			}
 		}
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		/*Select correct bone outline*/
@@ -157,8 +164,8 @@ public class SelectROI extends JPanel{
 		if (details.roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
 		if (details.roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone();}
-		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone();}
+		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		/*
 		checkWindow.append("after selection "+selection);	
 		*/
@@ -166,6 +173,11 @@ public class SelectROI extends JPanel{
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
+		}
+		
+		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
+		if (details.allowCleaving){
+			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
@@ -289,15 +301,68 @@ public class SelectROI extends JPanel{
 		return counter;
 	}
 	
-	int selectRoiCentralBone(){
+	int selectRoiCentralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,length,iit,jiit,tempScaledImage,fatThreshold);
+		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		Arrays.sort(temp);
 		int counter=0;
+		while (distanceFromCentreOfLimb[counter] !=temp[0]){
+			++counter;
+		}
 		return counter;
 	}
 
-	int selectRoiPeripheralBone(){
+	int selectRoiPeripheralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,length,iit,jiit,tempScaledImage,fatThreshold);
+		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		Arrays.sort(temp);
 		int counter=0;
+		while (distanceFromCentreOfLimb[counter] !=temp[temp.length-1]){
+			++counter;
+		}
 		return counter;
 	}
+	
+	public double[] calcDistancesFromCentreOfLimb(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] softPoints = new double[3];
+		for (int j=0;j<3;++j){
+				softPoints[j]=0;
+			}
+		Vector<double[]> bones = new Vector<double[]>();		
+		for (int i=0;i<beginnings.size();++i){
+			bones.add(new double[3]);
+			for (int j=0;j<3;++j){
+				bones.get(i)[j]=0;
+			}
+		}
+		/*Find the centre of area of the limb*/
+		for (int j = 0; j<height;++j){
+			for (int i = 0; i<width;++i){
+				if (tempScaledImage[i+j*width]>=fatThreshold){
+				softPoints[0]+=i;
+				softPoints[1]+=j;
+				softPoints[2]+=1;
+				}
+			}
+		}
+		softPoints[0]/=softPoints[2];	/*X coordinate of the centre of area of the limb... (assuming just one limb)*/
+		softPoints[1]/=softPoints[2];	/*Y coordinate of the centre of area of the limb... (assuming just one limb)*/
+		/*Find the centres of circumference of the bones*/
+		double[] distanceFromCentreOfLimb = new double[beginnings.size()];
+		for (int i=0;i<beginnings.size();++i){
+			for (int j = beginnings.get(i);j < beginnings.get(i)+length.get(i);j++){
+				bones.get(i)[0]+=iit.get(j);
+				bones.get(i)[1]+=jiit.get(j);
+				bones.get(i)[2]+=1;
+			}
+			bones.get(i)[0]/=bones.get(i)[2];
+			bones.get(i)[1]/=bones.get(i)[2];
+			distanceFromCentreOfLimb[i] =Math.pow(softPoints[0]-bones.get(i)[0],2.0)+Math.pow(softPoints[1]-bones.get(i)[1],2.0); /*Square root omitted, as it does not affect the order...*/
+		}
+		return distanceFromCentreOfLimb;
+	}
+	
+	
 	
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
 		int width, int height, double minimum, double maximum, Component imageCreator) {
@@ -635,6 +700,85 @@ public class SelectROI extends JPanel{
 
 		}
 
+	}
+	
+	/*Cleaving is made by looking at the ratios of
+	distances between two points along the edge and the shortest distance 
+	between the points. If the maximum of the  ratio is big enough, the 
+	highest ratio points will be connected with a straigth
+	line and the edge with higher indices will be removed. E.g. 
+	for a circle, the maximum ratio is (pi/2)/d ~= 1.57 and for square
+	it is 2/sqrt(2) = sqrt(2) ~= 1.41.*/	
+	void cleaveEdge(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
+		double distanceAlongTheEdge = 0;
+		double distance = 0;
+		double ratio;
+		double minEdge = (double) fatRoiI.size()/minLength;
+		int[] cleavingIndices = new int[2];
+		int jj=0;
+		boolean nextLoop = true;
+		while (nextLoop){
+			double highestRatio = minRatio-0.1;
+			/*Go through all point pairs*/
+			for (int i=0;i<fatRoiI.size()-11;++i){
+				for (int j=i+10;j<fatRoiI.size();++j){
+					distance = Math.sqrt(Math.pow((double) (fatRoiI.get(j)-fatRoiI.get(i)),2.0)+Math.pow((double) (fatRoiJ.get(j)-fatRoiJ.get(i)),2.0));
+					distanceAlongTheEdge = min((double)(j-i),(double) fatRoiI.size()-j+i);
+					ratio = distanceAlongTheEdge/distance;
+					if (ratio>highestRatio && distanceAlongTheEdge > minEdge){
+						highestRatio = ratio;
+						cleavingIndices[0] = i;
+						cleavingIndices[1] = j;
+					}
+
+				}
+			}
+			/*If ratio is high enough, cleave at the highest ratio point pair*/
+			if (highestRatio >= minRatio){
+				int returned = cleave(fatRoiI,fatRoiJ,cleavingIndices);
+			} else {
+				nextLoop = false;
+			}
+		}
+	}
+	
+	/*
+		Remove the extra part from vectors
+		and replace with a straight line
+	*/
+	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
+		/*Search for suitable end point*/
+		int initialLength = fatRoiI.size();
+		int targetI,targetJ;
+		targetI = fatRoiI.get(cleavingIndices[1]);
+		targetJ = fatRoiJ.get(cleavingIndices[1]);
+		/*remove cleaved elements*/
+		for (int k = cleavingIndices[0]+1;k<cleavingIndices[1];++k){
+			fatRoiI.removeElementAt(cleavingIndices[0]+1);
+			fatRoiJ.removeElementAt(cleavingIndices[0]+1);
+		}
+		/*Insert replacement line*/
+		int replacementI,replacementJ;
+		double replacementLength = (double)(cleavingIndices[1]-cleavingIndices[0]);
+		int inserted =0;
+		double repILength = (double)(targetI-fatRoiI.get(cleavingIndices[0]));
+		double repJLength = (double)(targetJ-fatRoiJ.get(cleavingIndices[0]));
+		double relativeLength;
+		for (int k = cleavingIndices[1];k>cleavingIndices[0];--k){
+			relativeLength = ((double)k)-((double)cleavingIndices[0]);
+			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+fatRoiI.get(cleavingIndices[0]);
+			replacementJ= ((int) (repJLength*(relativeLength/replacementLength)))+fatRoiJ.get(cleavingIndices[0]);
+			if (replacementI !=fatRoiI.get(cleavingIndices[0]+1) || replacementJ !=fatRoiJ.get(cleavingIndices[0]+1)){
+				fatRoiI.insertElementAt(replacementI,cleavingIndices[0]+1);
+				fatRoiJ.insertElementAt(replacementJ,cleavingIndices[0]+1);
+				++inserted;
+			}
+		}
+		return  initialLength - fatRoiI.size();
+	}
+	
+	double min(double a,double b){
+		return (a < b) ? a : b;
 	}
 	
 	/*
