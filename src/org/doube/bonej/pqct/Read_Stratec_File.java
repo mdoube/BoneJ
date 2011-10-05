@@ -99,7 +99,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			this.setImage(tempImage.getImage());
 			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
 			//Set ImageJ image properties
-			setProperties(this,fileName);
+			setProperties();
 			float[] pixels = (float[]) this.getProcessor().getPixels();
 			float min = (float) Math.pow(2,15)-1;
 			float max = (float) -Math.pow(2,15);
@@ -172,21 +172,20 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		PicMatrixY = ((int) ((int) (fileData[offset+1] & 0xFF)) <<8 | ((int) (fileData[offset+0] & 0xFF)));
 	}
 	
-	public void setProperties(ImagePlus img,String FileName){
-		img.setProperty(new String("FileName"),FileName);
-		img.setProperty(new String("VoxelSize"),VoxelSize);
-		img.setProperty(new String("ObjLen"),ObjLen);
-		img.setProperty(new String("MeasInfo"),MeasInfo);
-		img.setProperty(new String("MeasDate"),MeasDate);
-		img.setProperty(new String("Device"),Device);
-		img.setProperty(new String("PatMeasNo"),PatMeasNo);
-		img.setProperty(new String("PatNo"),PatNo);
-		img.setProperty(new String("PatBirth"),PatBirth);
-		img.setProperty(new String("PatName"),PatName);
-		img.setProperty(new String("PatID"),PatID);
-		img.setProperty(new String("PicX0"),PicX0);
-		img.setProperty(new String("PicY0"),PicY0);
-		img.setProperty(new String("PicMatrixX"),PicMatrixX);
-		img.setProperty(new String("PicMatrixY"),PicMatrixY);
+	public void setProperties(){
+		this.setProperty(new String("VoxelSize"),VoxelSize);
+		this.setProperty(new String("ObjLen"),ObjLen);
+		this.setProperty(new String("MeasInfo"),MeasInfo);
+		this.setProperty(new String("MeasDate"),MeasDate);
+		this.setProperty(new String("Device"),Device);
+		this.setProperty(new String("PatMeasNo"),PatMeasNo);
+		this.setProperty(new String("PatNo"),PatNo);
+		this.setProperty(new String("PatBirth"),PatBirth);
+		this.setProperty(new String("PatName"),PatName);
+		this.setProperty(new String("PatID"),PatID);
+		this.setProperty(new String("PicX0"),PicX0);
+		this.setProperty(new String("PicY0"),PicY0);
+		this.setProperty(new String("PicMatrixX"),PicMatrixX);
+		this.setProperty(new String("PicMatrixY"),PicMatrixY);
 	}
 }

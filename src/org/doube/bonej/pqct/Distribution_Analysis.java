@@ -156,7 +156,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	
 	void printResults(TextWindow textWindow){
 		if (imp != null){
-			textWindow.append("Filename\t"+(String) imp.getProperty(new String("FileName")));
+			textWindow.append("Filename\t"+imp.getOriginalFileInfo().fileName);
 			textWindow.append("Subject name\t"+(String) imp.getProperty(new String("PatName")));
 			textWindow.append("Subject ID\t"+(String) imp.getProperty(new String("PatID")));
 			textWindow.append("Subject birthdate\t"+(Long) imp.getProperty(new String("PatBirth")));
