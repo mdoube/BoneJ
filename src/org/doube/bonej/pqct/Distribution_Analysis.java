@@ -155,7 +155,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 	
 	void printResults(TextWindow textWindow){
-		if (imp.getProperty(new String("FileName")) != null){
+		if (imp != null){
 			textWindow.append("Filename\t"+(String) imp.getProperty(new String("FileName")));
 			textWindow.append("Subject name\t"+(String) imp.getProperty(new String("PatName")));
 			textWindow.append("Subject ID\t"+(String) imp.getProperty(new String("PatID")));
@@ -164,9 +164,12 @@ public class Distribution_Analysis implements PlugInFilter {
 		}
 	}
 	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
-		textWindow.append("BMD\t"+Double.toString(cortAnalysis.BMD)+"\tmg/cm3");
-		textWindow.append("AREA\t"+Double.toString(cortAnalysis.AREA)+"\tmm2");
+		textWindow.append("CoD\t"+Double.toString(cortAnalysis.BMD)+"\tmg/cm3");
+		textWindow.append("CoA\t"+Double.toString(cortAnalysis.AREA)+"\tmm2");
 		textWindow.append("SSI\t"+Double.toString(cortAnalysis.SSI)+"\tmm3");
+		textWindow.append("ToD\t"+Double.toString(cortAnalysis.ToD)+"\tmg/cm3");
+		textWindow.append("ToA\t"+Double.toString(cortAnalysis.ToA)+"\tmm2");
+		textWindow.append("BSId\t"+Double.toString(cortAnalysis.BSId)+"\tg2/cm4");
 	}
 	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
 

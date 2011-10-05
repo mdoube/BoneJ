@@ -25,12 +25,14 @@ import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 //import SelectROI.*;
 public class CorticalAnalysis{
 	public double BMD;
-	public double	AREA;
+	public double AREA;
 	public double ToA;
+	public double ToD;
 	public double maxRadiusY;
 	public double[] cortexCenter;
 	//Variables for moment calculations
 	public double SSI;
+	public double BSId;
 	public double IPo;
 	public double IMax;
 	public double IMin;
@@ -42,12 +44,16 @@ public class CorticalAnalysis{
 	public CorticalAnalysis(SelectROI roi)
 	{
 		ToA =0;
+		ToD = 0;
 		for (int i =0;i<roi.width*roi.height;i++){
 			if (roi.sieve[i] >0){
 				ToA +=1;
+				ToD +=roi.scaledImage[i];
 			}
 		}
+		ToD/=ToA;
 		ToA*=roi.pixelSpacing*roi.pixelSpacing;
+		BSId = ToD*ToD*ToA/100000000.0; //To make it look nicer, we'll use a unit of g^2/cm^4
 		BMD = 0;
 		AREA = 0;
 		cortexCenter = new double[2];
