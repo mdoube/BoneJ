@@ -167,6 +167,10 @@ public class SelectROI extends JPanel{
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
+		
+		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
+		cleaveEdge(roiI,roiJ,3.0,6.0);
+		
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -688,6 +692,85 @@ public class SelectROI extends JPanel{
 
 		}
 
+	}
+	
+	/*Cleaving is made by looking at the ratios of
+	distances between two points along the edge and the shortest distance 
+	between the points. If the maximum of the  ratio is big enough, the 
+	highest ratio points will be connected with a straigth
+	line and the edge with higher indices will be removed. E.g. 
+	for a circle, the maximum ratio is (pi/2)/d ~= 1.57 and for square
+	it is 2/sqrt(2) = sqrt(2) ~= 1.41.*/	
+	void cleaveEdge(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
+		double distanceAlongTheEdge = 0;
+		double distance = 0;
+		double ratio;
+		double minEdge = (double) fatRoiI.size()/minLength;
+		int[] cleavingIndices = new int[2];
+		int jj=0;
+		boolean nextLoop = true;
+		while (nextLoop){
+			double highestRatio = minRatio-0.1;
+			/*Go through all point pairs*/
+			for (int i=0;i<fatRoiI.size()-11;++i){
+				for (int j=i+10;j<fatRoiI.size();++j){
+					distance = Math.sqrt(Math.pow((double) (fatRoiI.get(j)-fatRoiI.get(i)),2.0)+Math.pow((double) (fatRoiJ.get(j)-fatRoiJ.get(i)),2.0));
+					distanceAlongTheEdge = min((double)(j-i),(double) fatRoiI.size()-j+i);
+					ratio = distanceAlongTheEdge/distance;
+					if (ratio>highestRatio && distanceAlongTheEdge > minEdge){
+						highestRatio = ratio;
+						cleavingIndices[0] = i;
+						cleavingIndices[1] = j;
+					}
+
+				}
+			}
+			/*If ratio is high enough, cleave at the highest ratio point pair*/
+			if (highestRatio >= minRatio){
+				int returned = cleave(fatRoiI,fatRoiJ,cleavingIndices);
+			} else {
+				nextLoop = false;
+			}
+		}
+	}
+	
+	/*
+		Remove the extra part from vectors
+		and replace with a straight line
+	*/
+	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
+		/*Search for suitable end point*/
+		int initialLength = fatRoiI.size();
+		int targetI,targetJ;
+		targetI = fatRoiI.get(cleavingIndices[1]);
+		targetJ = fatRoiJ.get(cleavingIndices[1]);
+		/*remove cleaved elements*/
+		for (int k = cleavingIndices[0]+1;k<cleavingIndices[1];++k){
+			fatRoiI.removeElementAt(cleavingIndices[0]+1);
+			fatRoiJ.removeElementAt(cleavingIndices[0]+1);
+		}
+		/*Insert replacement line*/
+		int replacementI,replacementJ;
+		double replacementLength = (double)(cleavingIndices[1]-cleavingIndices[0]);
+		int inserted =0;
+		double repILength = (double)(targetI-fatRoiI.get(cleavingIndices[0]));
+		double repJLength = (double)(targetJ-fatRoiJ.get(cleavingIndices[0]));
+		double relativeLength;
+		for (int k = cleavingIndices[1];k>cleavingIndices[0];--k){
+			relativeLength = ((double)k)-((double)cleavingIndices[0]);
+			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+fatRoiI.get(cleavingIndices[0]);
+			replacementJ= ((int) (repJLength*(relativeLength/replacementLength)))+fatRoiJ.get(cleavingIndices[0]);
+			if (replacementI !=fatRoiI.get(cleavingIndices[0]+1) || replacementJ !=fatRoiJ.get(cleavingIndices[0]+1)){
+				fatRoiI.insertElementAt(replacementI,cleavingIndices[0]+1);
+				fatRoiJ.insertElementAt(replacementJ,cleavingIndices[0]+1);
+				++inserted;
+			}
+		}
+		return  initialLength - fatRoiI.size();
+	}
+	
+	double min(double a,double b){
+		return (a < b) ? a : b;
 	}
 	
 	/*
