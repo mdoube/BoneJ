@@ -46,19 +46,20 @@ public class Distribution_Analysis implements PlugInFilter {
 		//return DOES_32;
 		return DOES_ALL;
 	}
+	
 
+
+	/*
+	//For Debugging
+	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
+	checkWindow.append((String) imp.getProperty("Info"));
+	*/
+	
 	public void run(ImageProcessor ip) {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
 		double resolution = 0;
-		//For Debugging
-			//For debugging
-			TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
-			checkWindow.append((String) imp.getProperty("Info"));
-			
-		
-		/*
 		if (imp.getOriginalFileInfo().pixelWidth != 0){
 			resolution = imp.getOriginalFileInfo().pixelWidth;
 		}
@@ -142,23 +143,39 @@ public class Distribution_Analysis implements PlugInFilter {
 				resultImage.show();
 			}
 			String resultString = new String();
-
-			
 			//Display the analysis results...
-			
 		}
-		*/
 	}
 	
 	void printResults(TextWindow textWindow){
 		if (imp != null){
 			textWindow.append("Filename\t"+imp.getOriginalFileInfo().fileName);
-			textWindow.append("Subject name\t"+(String) imp.getProperty(new String("PatName")));
-			textWindow.append("Subject ID\t"+(String) imp.getProperty(new String("PatID")));
-			textWindow.append("Subject birthdate\t"+(Long) imp.getProperty(new String("PatBirth")));
-			textWindow.append("Measurement date\t"+(Long) imp.getProperty(new String("MeasDate")));
+			textWindow.append("Subject name\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient's Name"));
+			textWindow.append("Subject ID\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient ID"));
+			textWindow.append("Subject birthdate\t"+ getInfoProperty((String) imp.getProperty("Info"),"Patient's Birth Date"));
+			textWindow.append("Measurement date\t"+ getInfoProperty((String) imp.getProperty("Info"),"Acquisition Date"));
 		}
 	}
+	
+		String getInfoProperty(String properties,String propertyToGet){
+			String toTokenize = (String) imp.getProperty("Info");
+			StringTokenizer st = new StringTokenizer(toTokenize,"\n");
+			String currentToken = null;
+			while (st.hasMoreTokens() ) {
+				currentToken = st.nextToken();
+				if (currentToken.indexOf(propertyToGet) != -1){break;}
+			}
+			if (currentToken.indexOf(propertyToGet) != -1){
+				StringTokenizer st2 = new StringTokenizer(currentToken,":");
+				String token2 = null;
+				while (st2.hasMoreTokens()){
+					token2 = st2.nextToken();
+				}
+				return token2.trim();
+			}
+			return null;
+	}
+	
 	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
 		textWindow.append("CoD\t"+Double.toString(cortAnalysis.BMD)+"\tmg/cm3");
 		textWindow.append("CoA\t"+Double.toString(cortAnalysis.AREA)+"\tmm2");
@@ -167,6 +184,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		textWindow.append("ToA\t"+Double.toString(cortAnalysis.ToA)+"\tmm2");
 		textWindow.append("BSId\t"+Double.toString(cortAnalysis.BSId)+"\tg2/cm4");
 	}
+	
 	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
 
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
@@ -194,5 +212,4 @@ public class Distribution_Analysis implements PlugInFilter {
 			textWindow.append("Pericortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+"\t"+analyzeRoi.periCorticalBMDs[pp]+"\tmg/cm3");
 		}
 	}
-
 }

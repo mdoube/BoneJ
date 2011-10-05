@@ -174,7 +174,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	}
 	
 	public void setProperties(){
-		String[] propertyNames = {"Pixel Spacing","ObjLen","MeasInfo","MeasDate",
+		String[] propertyNames = {"Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
 									"Width","Height"};
