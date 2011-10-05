@@ -52,8 +52,13 @@ public class Distribution_Analysis implements PlugInFilter {
 		cOn = true;
 		dOn = true;
 		double resolution = 0;
+		//For Debugging
+			//For debugging
+			TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
+			checkWindow.append((String) imp.getProperty("Info"));
+			
 		
-		
+		/*
 		if (imp.getOriginalFileInfo().pixelWidth != 0){
 			resolution = imp.getOriginalFileInfo().pixelWidth;
 		}
@@ -63,17 +68,11 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
-		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){/*Suggest HU scaling for dicom Files*/
+		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){//Suggest HU scaling for dicom Files
 			double[] coeffs = imp.getCalibration().getCoefficients();
 			dialog.addNumericField(new String("Scaling coefficient (slope)"), coeffs[1], 4);
 			dialog.addNumericField(new String("Scaling constant (intercept)"),coeffs[0], 4);
-			/*
-			//For Debugging
-			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
-			for (int i = 0; i<coeffs.length;++i){
-				checkWindow.append("Coefficients "+i+" "+coeffs[i]);
-			}
-			*/			
+					
 		}else{
 			dialog.addNumericField(new String("Scaling coefficient (slope)"), 1.724, 4);
 			dialog.addNumericField(new String("Scaling constant (intercept)"), -322.0, 4);
@@ -110,11 +109,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			cOn						= dialog.getNextBoolean();
 			dOn						= dialog.getNextBoolean();
 			boolean allowCleaving	= dialog.getNextBoolean();
-			/*
-			//For debugging
-			TextWindow checkWindow = new TextWindow(new String("Checkboxes"),new String(""),500,200);
-			checkWindow.append("Selection "+roiChoice);
-			*/
+
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -131,13 +126,13 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (cOn){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				printCorticalResults(textWindow,cortAnalysis);
-				/*
-				if(!dOn){
-					BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-					ImagePlus resultImage = new ImagePlus("Visual results",bi);
-					resultImage.show();
-				}
-				*/
+				
+				//if(!dOn){
+				//	BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+				//	ImagePlus resultImage = new ImagePlus("Visual results",bi);
+				//	resultImage.show();
+				//}
+				
 			}
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
@@ -152,6 +147,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			//Display the analysis results...
 			
 		}
+		*/
 	}
 	
 	void printResults(TextWindow textWindow){

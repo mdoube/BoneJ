@@ -1,6 +1,7 @@
 package org.doube.bonej.pqct;
 
 import java.io.*;
+import java.util.*;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
@@ -173,19 +174,18 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	}
 	
 	public void setProperties(){
-		this.setProperty(new String("VoxelSize"),VoxelSize);
-		this.setProperty(new String("ObjLen"),ObjLen);
-		this.setProperty(new String("MeasInfo"),MeasInfo);
-		this.setProperty(new String("MeasDate"),MeasDate);
-		this.setProperty(new String("Device"),Device);
-		this.setProperty(new String("PatMeasNo"),PatMeasNo);
-		this.setProperty(new String("PatNo"),PatNo);
-		this.setProperty(new String("PatBirth"),PatBirth);
-		this.setProperty(new String("PatName"),PatName);
-		this.setProperty(new String("PatID"),PatID);
-		this.setProperty(new String("PicX0"),PicX0);
-		this.setProperty(new String("PicY0"),PicY0);
-		this.setProperty(new String("PicMatrixX"),PicMatrixX);
-		this.setProperty(new String("PicMatrixY"),PicMatrixY);
+		String[] propertyNames = {"Pixel Spacing","ObjLen","MeasInfo","MeasDate",
+									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
+									"Patient ID","PicX0","PicY0",
+									"Width","Height"};
+		String[] propertyValues = {Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
+									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
+									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
+									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY)};
+		String properties = new String();
+		for (int i = 0;i<propertyNames.length;++i){
+			properties += propertyNames[i]+": "+propertyValues[i]+"\n";
+		}
+		this.setProperty("Info", properties);
 	}
 }
