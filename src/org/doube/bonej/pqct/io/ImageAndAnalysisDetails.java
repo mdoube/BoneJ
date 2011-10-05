@@ -38,11 +38,11 @@ public class ImageAndAnalysisDetails{
 	public String rotationChoice;
 	public String[] choiceLabels;
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels){
+	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels){
 		scalingFactor	= scalingFactorIn;
 		constant 		= constantIn;
 		airThreshold	= -100;
-		fatThreshold 	= 40;
+		this.fatThreshold 	= fatThreshold;
 		muscleThreshold = 200;
 		marrowThreshold = 300;
 		areaThreshold 	= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels

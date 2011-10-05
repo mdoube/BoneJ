@@ -37,6 +37,7 @@ import java.awt.image.*; //Creating the result BufferedImage...
 
 public class Distribution_Analysis implements PlugInFilter {
 	ImagePlus imp;
+	double fatThreshold;
 	double areaThreshold;
 	double BMDThreshold;
 	double scalingFactor;
@@ -65,6 +66,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog(new String("Analysis parameters"));
+		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
 		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){/*Suggest HU scaling for dicom Files*/
@@ -100,6 +102,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
+			fatThreshold	= dialog.getNextNumber();
 			areaThreshold	= dialog.getNextNumber();
 			BMDThreshold	= dialog.getNextNumber();
 			scalingFactor	= dialog.getNextNumber();
@@ -121,7 +124,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 			AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);

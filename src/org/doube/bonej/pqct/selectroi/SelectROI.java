@@ -30,7 +30,7 @@ import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
-//import ij.text.*;		//debugging
+import ij.text.*;		//debugging
 public class SelectROI extends JPanel{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
@@ -157,8 +157,8 @@ public class SelectROI extends JPanel{
 		if (details.roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
 		if (details.roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone();}
-		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone();}
+		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		/*
 		checkWindow.append("after selection "+selection);	
 		*/
@@ -289,13 +289,93 @@ public class SelectROI extends JPanel{
 		return counter;
 	}
 	
-	int selectRoiCentralBone(){
+	int selectRoiCentralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] softPoints = new double[3];
+		for (int j=0;j<3;++j){
+				softPoints[j]=0;
+			}
+		Vector<double[]> bones = new Vector<double[]>();		
+		for (int i=0;i<beginnings.size();++i){
+			bones.add(new double[3]);
+			for (int j=0;j<3;++j){
+				bones.get(i)[j]=0;
+			}
+		}
+		/*Find the centre of area of the limb*/
+		for (int j = 0; j<height;++j){
+			for (int i = 0; i<width;++i){
+				if (tempScaledImage[i+j*width]>=fatThreshold){
+				softPoints[0]+=i;
+				softPoints[1]+=j;
+				softPoints[2]+=1;
+				}
+			}
+		}
+		softPoints[0]/=softPoints[2];	/*X coordinate of the centre of area of the limb... (assuming just one limb)*/
+		softPoints[1]/=softPoints[2];	/*Y coordinate of the centre of area of the limb... (assuming just one limb)*/
+		/*Find the centres of circumference of the bones*/
+		double[] distanceFromCentreOfLimb = new double[beginnings.size()];
+		for (int i=0;i<beginnings.size();++i){
+			for (int j = beginnings.get(i);j < beginnings.get(i)+length.get(i);j++){
+				bones.get(i)[0]+=iit.get(j);
+				bones.get(i)[1]+=jiit.get(j);
+				bones.get(i)[2]+=1;
+			}
+			bones.get(i)[0]/=bones.get(i)[2];
+			bones.get(i)[1]/=bones.get(i)[2];
+			distanceFromCentreOfLimb[i] =Math.pow(softPoints[0]-bones.get(i)[0],2.0)+Math.pow(softPoints[1]-bones.get(i)[1],2.0); /*Square root omitted, as it does not affect the order...*/
+		}
+		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		Arrays.sort(temp);
 		int counter=0;
+		while (distanceFromCentreOfLimb[counter] !=temp[0]){
+			++counter;
+		}
 		return counter;
 	}
 
-	int selectRoiPeripheralBone(){
+	int selectRoiPeripheralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+				double[] softPoints = new double[3];
+		for (int j=0;j<3;++j){
+				softPoints[j]=0;
+			}
+		Vector<double[]> bones = new Vector<double[]>();		
+		for (int i=0;i<beginnings.size();++i){
+			bones.add(new double[3]);
+			for (int j=0;j<3;++j){
+				bones.get(i)[j]=0;
+			}
+		}
+		/*Find the centre of area of the limb*/
+		for (int j = 0; j<height;++j){
+			for (int i = 0; i<width;++i){
+				if (tempScaledImage[i+j*width]>=fatThreshold){
+				softPoints[0]+=i;
+				softPoints[1]+=j;
+				softPoints[2]+=1;
+				}
+			}
+		}
+		softPoints[0]/=softPoints[2];	/*X coordinate of the centre of area of the limb... (assuming just one limb)*/
+		softPoints[1]/=softPoints[2];	/*Y coordinate of the centre of area of the limb... (assuming just one limb)*/
+		/*Find the centres of circumference of the bones*/
+		double[] distanceFromCentreOfLimb = new double[beginnings.size()];
+		for (int i=0;i<beginnings.size();++i){
+			for (int j = beginnings.get(i);j < beginnings.get(i)+length.get(i);j++){
+				bones.get(i)[0]+=iit.get(j);
+				bones.get(i)[1]+=jiit.get(j);
+				bones.get(i)[2]+=1;
+			}
+			bones.get(i)[0]/=bones.get(i)[2];
+			bones.get(i)[1]/=bones.get(i)[2];
+			distanceFromCentreOfLimb[i] =Math.pow(softPoints[0]-bones.get(i)[0],2.0)+Math.pow(softPoints[1]-bones.get(i)[1],2.0); /*Square root omitted, as it does not affect the order...*/
+		}
+		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		Arrays.sort(temp);
 		int counter=0;
+		while (distanceFromCentreOfLimb[counter] !=temp[temp.length-1]){
+			++counter;
+		}
 		return counter;
 	}
 	
