@@ -176,9 +176,12 @@ public class SelectROI extends JPanel{
 		}
 		
 		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
+		TextWindow checkWindow = new TextWindow(new String("Cleaving2"),new String(""),300,500);
+		checkWindow.append("Before "+ roiI.size());
 		if (details.allowCleaving){
 			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
+		checkWindow.append("After "+ roiI.size());
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -735,7 +738,11 @@ public class SelectROI extends JPanel{
 			}
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
+				TextWindow checkWindow = new TextWindow(new String("CleaveRet"),new String(""),300,500);
+				checkWindow.append("Bef size "+ fatRoiI.size());
 				int returned = cleave(fatRoiI,fatRoiJ,cleavingIndices);
+				checkWindow.append("Aft size "+ fatRoiI.size());
+				nextLoop = false;	//Added for debugging...
 			} else {
 				nextLoop = false;
 			}
@@ -748,31 +755,74 @@ public class SelectROI extends JPanel{
 	*/
 	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
 		/*Search for suitable end point*/
+		TextWindow checkWindow = new TextWindow(new String("Cleaving"),new String(""),300,500);
+		checkWindow.append("Cleave begun, cleaving "+(cleavingIndices[1]-cleavingIndices[0]));
+		checkWindow.append("fatRoiI size "+ fatRoiI.size());
+		checkWindow.append("x "+ fatRoiI.get(cleavingIndices[0])+" y "+fatRoiJ.get(cleavingIndices[0]));
+		checkWindow.append("x "+ fatRoiI.get(cleavingIndices[1])+" y "+fatRoiJ.get(cleavingIndices[1]));
+
 		int initialLength = fatRoiI.size();
-		int targetI,targetJ;
-		targetI = fatRoiI.get(cleavingIndices[1]);
-		targetJ = fatRoiJ.get(cleavingIndices[1]);
+		int initI = fatRoiI.get(cleavingIndices[0]);
+		int initJ = fatRoiJ.get(cleavingIndices[0]);
+		int targetI = fatRoiI.get(cleavingIndices[1]);
+		int targetJ = fatRoiJ.get(cleavingIndices[1]);
 		/*remove cleaved elements*/
-		for (int k = cleavingIndices[0]+1;k<cleavingIndices[1];++k){
-			fatRoiI.removeElementAt(cleavingIndices[0]+1);
-			fatRoiJ.removeElementAt(cleavingIndices[0]+1);
+		int replacementI = fatRoiI.get(cleavingIndices[0]);
+		int replacementJ = fatRoiJ.get(cleavingIndices[0]);
+		Vector<Integer> cleavedI = new Vector<Integer>(fatRoiI.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
+		Vector<Integer> cleavedJ = new Vector<Integer>(fatRoiJ.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
+		checkWindow.append("Got the part to be cleaved");
+		for (int i = cleavingIndices[0]; i <cleavingIndices[1];++i){
+			fatRoiI.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
+			fatRoiJ.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
 		}
+		checkWindow.append("Cleaving done");
+
 		/*Insert replacement line*/
-		int replacementI,replacementJ;
+		
 		double replacementLength = (double)(cleavingIndices[1]-cleavingIndices[0]);
-		int inserted =0;
-		double repILength = (double)(targetI-fatRoiI.get(cleavingIndices[0]));
-		double repJLength = (double)(targetJ-fatRoiJ.get(cleavingIndices[0]));
+		double repILength = (double)(targetI-initI);
+		double repJLength = (double)(targetJ-initJ);
 		double relativeLength;
-		for (int k = cleavingIndices[1];k>cleavingIndices[0];--k){
+		Vector<Integer> insertionI = new Vector<Integer>();
+		Vector<Integer> insertionJ = new Vector<Integer>();
+		insertionI.add(replacementI);
+		insertionJ.add(replacementJ);
+		checkWindow.append("Start making the line");
+		
+		TextWindow checkWindow2 = new TextWindow(new String("Replacement"),new String(""),300,500);
+		
+		
+		for (int k = cleavingIndices[0];k<cleavingIndices[1];++k){
 			relativeLength = ((double)k)-((double)cleavingIndices[0]);
-			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+fatRoiI.get(cleavingIndices[0]);
-			replacementJ= ((int) (repJLength*(relativeLength/replacementLength)))+fatRoiJ.get(cleavingIndices[0]);
-			if (replacementI !=fatRoiI.get(cleavingIndices[0]+1) || replacementJ !=fatRoiJ.get(cleavingIndices[0]+1)){
-				fatRoiI.insertElementAt(replacementI,cleavingIndices[0]+1);
-				fatRoiJ.insertElementAt(replacementJ,cleavingIndices[0]+1);
-				++inserted;
+			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+initI;
+			replacementJ = ((int) (repJLength*(relativeLength/replacementLength)))+initJ;
+			checkWindow2.append("repi "+replacementI+" repj "+replacementJ);
+			if (replacementI !=insertionI.lastElement() || replacementJ !=insertionJ.lastElement()){
+				insertionI.add(replacementI);
+				insertionJ.add(replacementJ);
 			}
+		}
+		checkWindow.append("Insert replacement "+insertionI.size());
+		for (int i = 0; i<insertionI.size();++i){
+			checkWindow.append(insertionI.get(i)+"\t"+insertionJ.get(i));
+		}
+		fatRoiI.addAll(cleavingIndices[0],insertionI);
+		fatRoiJ.addAll(cleavingIndices[0],insertionJ);
+		Collections.reverse(insertionI);
+		Collections.reverse(insertionJ);
+		cleavedI.addAll(0,insertionI);
+		cleavedJ.addAll(0,insertionJ);
+		if (details.cleaveReturnSmaller){ /*replace fatRoiI & fatRoiJ with cleaved, if smaller is to be returned*/
+			fatRoiI.clear();
+			fatRoiJ.clear();
+			fatRoiI.addAll(cleavedI);
+			fatRoiJ.addAll(cleavedJ);
+		}
+		checkWindow.append("Done");
+		checkWindow.append("Return size "+fatRoiI.size());
+		for (int i = 0; i<fatRoiI.size();++i){
+			checkWindow.append(fatRoiI.get(i)+"\t"+fatRoiJ.get(i));
 		}
 		return  initialLength - fatRoiI.size();
 	}

@@ -91,6 +91,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Analyse cortical results",true);
 		dialog.addCheckbox("Analyse density distribution",true);
 		dialog.addCheckbox("Allow cleaving",false);
+		dialog.addCheckbox("Cleave retain smaller",false);
 		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
 		dialog.addMessage("the Automated selection will still be used."); 
 		dialog.addMessage("Manual ROI only allows preventing"); 
@@ -99,18 +100,18 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
-			double fatThreshold		= dialog.getNextNumber();
-			double areaThreshold	= dialog.getNextNumber();
-			double BMDThreshold		= dialog.getNextNumber();
-			double scalingFactor	= dialog.getNextNumber();
-			double constant			= dialog.getNextNumber();
-			resolution				= dialog.getNextNumber();
-			String roiChoice		= dialog.getNextChoice();
-			String rotationChoice	= dialog.getNextChoice();
-			cOn						= dialog.getNextBoolean();
-			dOn						= dialog.getNextBoolean();
-			boolean allowCleaving	= dialog.getNextBoolean();
-
+			double fatThreshold			= dialog.getNextNumber();
+			double areaThreshold		= dialog.getNextNumber();
+			double BMDThreshold			= dialog.getNextNumber();
+			double scalingFactor		= dialog.getNextNumber();
+			double constant				= dialog.getNextNumber();
+			resolution					= dialog.getNextNumber();
+			String roiChoice			= dialog.getNextChoice();
+			String rotationChoice		= dialog.getNextChoice();
+			cOn							= dialog.getNextBoolean();
+			dOn							= dialog.getNextBoolean();
+			boolean allowCleaving		= dialog.getNextBoolean();
+			boolean cleaveReturnSmaller = dialog.getNextBoolean();
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -120,7 +121,9 @@ public class Distribution_Analysis implements PlugInFilter {
 			}else{		
 				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,allowCleaving);
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
+															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
+															allowCleaving,cleaveReturnSmaller);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			TextWindow textWindow = new TextWindow(new String("Results"),new String(""),500,200);
 			printResults(textWindow);
