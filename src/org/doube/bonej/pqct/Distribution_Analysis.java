@@ -73,33 +73,28 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
 		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){//Suggest HU scaling for dicom Files
 			double[] coeffs = imp.getCalibration().getCoefficients();
-			dialog.addNumericField(new String("Scaling coefficient (slope)"), coeffs[1], 4);
-			dialog.addNumericField(new String("Scaling constant (intercept)"),coeffs[0], 4);
+			dialog.addNumericField(new String("Scaling_coefficient (slope)"), coeffs[1], 4);
+			dialog.addNumericField(new String("Scaling_constant (intercept)"),coeffs[0], 4);
 					
 		}else{
-			dialog.addNumericField(new String("Scaling coefficient (slope)"), 1.724, 4);
-			dialog.addNumericField(new String("Scaling constant (intercept)"), -322.0, 4);
+			dialog.addNumericField(new String("Scaling_coefficient (slope)"), 1.724, 4);
+			dialog.addNumericField(new String("Scaling_constant (intercept)"), -322.0, 4);
 		}
 		if (resolution != 0){
-			dialog.addNumericField(new String("In-plane pixel size [mm]"), resolution, 4);
+			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), resolution, 4);
 		} else {
-			dialog.addNumericField(new String("In-plane pixel size [mm]"), 0.8, 4);
+			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), 0.8, 4);
 		}
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
-		dialog.addChoice("Roi selection", choiceLabels, "Bigger"); 
-		String[] rotationLabels = {"According to Imax/Imin","Furthest point"};
-		dialog.addChoice("Rotation selection", rotationLabels, "According to Imax/Imin");
-		dialog.addCheckbox("Analyse cortical results",true);
-		dialog.addCheckbox("Analyse density distribution",true);
-		dialog.addCheckbox("Allow cleaving",false);
-		dialog.addCheckbox("Cleave retain smaller",false);
-		dialog.addCheckbox("Suppress result image",false);
-		dialog.addMessage("N.B. If a ROI has been manually defined,"); 
-		dialog.addMessage("the Automated selection will still be used."); 
-		dialog.addMessage("Manual ROI only allows preventing"); 
-		dialog.addMessage("parts of the image from being considered in"); 
-		dialog.addMessage("automatically detecting the bone."); 
+		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
+		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point"};
+		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
+		dialog.addCheckbox("Analyse_cortical_results",true);
+		dialog.addCheckbox("Analyse_density_distribution",true);
+		dialog.addCheckbox("Allow_cleaving",false);
+		dialog.addCheckbox("Cleave_retain_smaller",false);
+		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
