@@ -153,10 +153,6 @@ public class SelectROI extends JPanel{
 		//Debugging
 		TextWindow checkWindow = new TextWindow(new String("Rois"),new String(""),500,200);
 		checkWindow.append("Length no "+length.size());
-		for (int i =0;i<details.choiceLabels.length;++i){
-			checkWindow.append("match "+i+" "+details.roiChoice.equals(details.choiceLabels[i]));
-		}
-		checkWindow.append("going into select "+selection+" choice "+details.roiChoice+" labels 1"+details.choiceLabels[1]);
 		*/
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
@@ -166,22 +162,16 @@ public class SelectROI extends JPanel{
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		/*
-		checkWindow.append("after selection "+selection);	
-		*/
+
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
-		
-		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
-		TextWindow checkWindow = new TextWindow(new String("Cleaving2"),new String(""),300,500);
-		checkWindow.append("Before "+ roiI.size());
+			/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
 		if (details.allowCleaving){
 			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
-		checkWindow.append("After "+ roiI.size());
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -738,11 +728,7 @@ public class SelectROI extends JPanel{
 			}
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
-				TextWindow checkWindow = new TextWindow(new String("CleaveRet"),new String(""),300,500);
-				checkWindow.append("Bef size "+ fatRoiI.size());
 				int returned = cleave(fatRoiI,fatRoiJ,cleavingIndices);
-				checkWindow.append("Aft size "+ fatRoiI.size());
-				nextLoop = false;	//Added for debugging...
 			} else {
 				nextLoop = false;
 			}
@@ -754,13 +740,6 @@ public class SelectROI extends JPanel{
 		and replace with a straight line
 	*/
 	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
-		/*Search for suitable end point*/
-		TextWindow checkWindow = new TextWindow(new String("Cleaving"),new String(""),300,500);
-		checkWindow.append("Cleave begun, cleaving "+(cleavingIndices[1]-cleavingIndices[0]));
-		checkWindow.append("fatRoiI size "+ fatRoiI.size());
-		checkWindow.append("x "+ fatRoiI.get(cleavingIndices[0])+" y "+fatRoiJ.get(cleavingIndices[0]));
-		checkWindow.append("x "+ fatRoiI.get(cleavingIndices[1])+" y "+fatRoiJ.get(cleavingIndices[1]));
-
 		int initialLength = fatRoiI.size();
 		int initI = fatRoiI.get(cleavingIndices[0]);
 		int initJ = fatRoiJ.get(cleavingIndices[0]);
@@ -771,15 +750,11 @@ public class SelectROI extends JPanel{
 		int replacementJ = fatRoiJ.get(cleavingIndices[0]);
 		Vector<Integer> cleavedI = new Vector<Integer>(fatRoiI.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
 		Vector<Integer> cleavedJ = new Vector<Integer>(fatRoiJ.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
-		checkWindow.append("Got the part to be cleaved");
 		for (int i = cleavingIndices[0]; i <cleavingIndices[1];++i){
 			fatRoiI.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
 			fatRoiJ.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
 		}
-		checkWindow.append("Cleaving done");
-
 		/*Insert replacement line*/
-		
 		double replacementLength = (double)(cleavingIndices[1]-cleavingIndices[0]);
 		double repILength = (double)(targetI-initI);
 		double repJLength = (double)(targetJ-initJ);
@@ -788,24 +763,14 @@ public class SelectROI extends JPanel{
 		Vector<Integer> insertionJ = new Vector<Integer>();
 		insertionI.add(replacementI);
 		insertionJ.add(replacementJ);
-		checkWindow.append("Start making the line");
-		
-		TextWindow checkWindow2 = new TextWindow(new String("Replacement"),new String(""),300,500);
-		
-		
 		for (int k = cleavingIndices[0];k<cleavingIndices[1];++k){
 			relativeLength = ((double)k)-((double)cleavingIndices[0]);
 			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+initI;
 			replacementJ = ((int) (repJLength*(relativeLength/replacementLength)))+initJ;
-			checkWindow2.append("repi "+replacementI+" repj "+replacementJ);
 			if (replacementI !=insertionI.lastElement() || replacementJ !=insertionJ.lastElement()){
 				insertionI.add(replacementI);
 				insertionJ.add(replacementJ);
 			}
-		}
-		checkWindow.append("Insert replacement "+insertionI.size());
-		for (int i = 0; i<insertionI.size();++i){
-			checkWindow.append(insertionI.get(i)+"\t"+insertionJ.get(i));
 		}
 		fatRoiI.addAll(cleavingIndices[0],insertionI);
 		fatRoiJ.addAll(cleavingIndices[0],insertionJ);
@@ -818,11 +783,6 @@ public class SelectROI extends JPanel{
 			fatRoiJ.clear();
 			fatRoiI.addAll(cleavedI);
 			fatRoiJ.addAll(cleavedJ);
-		}
-		checkWindow.append("Done");
-		checkWindow.append("Return size "+fatRoiI.size());
-		for (int i = 0; i<fatRoiI.size();++i){
-			checkWindow.append(fatRoiI.get(i)+"\t"+fatRoiJ.get(i));
 		}
 		return  initialLength - fatRoiI.size();
 	}
