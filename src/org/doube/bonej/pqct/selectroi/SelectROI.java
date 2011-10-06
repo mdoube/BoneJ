@@ -354,9 +354,8 @@ public class SelectROI extends JPanel{
 		}
 		return distanceFromCentreOfLimb;
 	}
-	
-	
-	
+		
+	/*For density distribution visualization*/
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
 		int width, int height, double minimum, double maximum, Component imageCreator) {
 		int[] image = new int[width*height];
@@ -370,7 +369,6 @@ public class SelectROI extends JPanel{
 			image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
 			image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
 		}
-
 		 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
 		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
 		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
@@ -379,6 +377,25 @@ public class SelectROI extends JPanel{
 		 return bufferedImage;
 	}
 
+	/*For cortical analysis only visualization*/
+	public BufferedImage getMyImage(double[] imageIn,byte[] sieve,int width, int height, double minimum, double maximum, Component imageCreator) {
+		int[] image = new int[width*height];
+		int pixel;
+		for (int x = 0; x < width*height;x++) {
+			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
+			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
+			if (sieve[x] == 1){   //Ting roi area color with violet
+				image[x]= 255<<24 | pixel <<16| 0 <<8| pixel; 
+			}
+		}
+		Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
+		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
+		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
+		 Graphics2D gbuf = bufferedImage.createGraphics();
+		 gbuf.drawImage(imageToDraw, 0, 0,null);
+		 return bufferedImage;
+	}
+	
 	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
 		//Fill the area enclosed by the traced edge contained in roiI,roiJ
 		//beginning needs to be within the traced edge

@@ -140,11 +140,11 @@ public class Distribution_Analysis implements PlugInFilter {
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				printCorticalResults(textWindow,cortAnalysis);
 				
-				//if(!dOn && !suppressImages){
-				//	BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-				//	ImagePlus resultImage = new ImagePlus("Visual results",bi);
-				//	resultImage.show();
-				//}
+				if(!dOn && !suppressImages){
+					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
+					ImagePlus resultImage = new ImagePlus("Visual results",bi);
+					resultImage.show();
+				}
 				
 			}
 			if (dOn){
