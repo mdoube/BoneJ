@@ -790,48 +790,4 @@ public class SelectROI extends JPanel{
 	double min(double a,double b){
 		return (a < b) ? a : b;
 	}
-	
-	/*
-	Calculate Spline 
-	linear equation group solver http://math.nist.gov/javanumerics/jama/
-	cubic spline http://www.physics.arizona.edu/~restrepo/475A/Notes/sourcea/node35.html
-	*/
-
-	public static Vector<Integer> calculateSpline(Vector<Integer> interpolants, int numberOfPointsBetweenInterpolants){
-		double[][] a = new double[interpolants.size()][interpolants.size()];
-		double[] b = new double[interpolants.size()];
-		double [] x = new double[interpolants.size()];
-		double[] bb = new double[interpolants.size()-1];
-		double [] d = new double[interpolants.size()-1];
-		for (int i = 0;i<interpolants.size();i++){	//Create xs
-			x[i] = (double) i;
-		}
-		a[0][0] = 1;
-		a[interpolants.size()-1][interpolants.size()-1] = 1;
-		b[0] = 0;
-		b[interpolants.size()-1] = 0;
-		for (int i = 1; i< interpolants.size()-1;i++){
-			a[i][i-1] =x[i]-x[i-1];
-			a[i][i]   =2.0*((x[i]-x[i-1])+(x[i+1]-x[i]));
-			a[i][i+1] =x[i+1]-x[i];
-			b[i] = (3/(x[i+1]-x[i]))*((double) interpolants.get(i+1)-(double) interpolants.get(i))-(3/(x[i]-x[i-1]))*((double) interpolants.get(i)-(double) interpolants.get(i-1));
-		}
-		Matrix A = new Matrix(a);
-		Matrix B = new Matrix(b,interpolants.size());
-		Matrix c = A.solve(B);
-		for (int i = 1; i < interpolants.size();i++){
-			bb[i-1] = 1/(x[i]-x[i-1])*((double) interpolants.get(i)-(double) interpolants.get(i-1))-(x[i]-x[i-1])/3*(2*c.get(i-1,0)+c.get(i,0));
-			d[i-1] = (c.get(i,0)-c.get(i-1,0))/(3*(x[i]-x[i-1]));
-		}
-		Vector<Integer> result = new Vector<Integer>();
-		double inter;
-		for (int i = 0;i<interpolants.size()-1;i++){
-		   for (int j = 0;j<numberOfPointsBetweenInterpolants;j++){
-			   inter = (x[i+1]-x[i])*(double)j/(double)numberOfPointsBetweenInterpolants;
-			   result.add((int) ((double) interpolants.get(i)+bb[i]*inter+c.get(i,0)*Math.pow(inter,2.0)+d[i]*Math.pow(inter,3.0)));
-		   }
-		}
-		return result;
-	}
-
 }
