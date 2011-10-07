@@ -59,10 +59,6 @@ public class CorticalAnalysis{
 		cortexCenter = new double[2];
 		for (int j = 0;j< roi.cortexRoiI.size();j++){
 			BMD+=roi.cortexROI[roi.cortexRoiI.get(j)+roi.cortexRoiJ.get(j)*roi.width];
-			/*
-			cortexCenter[0]+=(double)roi.cortexRoiI.get(j);
-			cortexCenter[1]+=(double)roi.cortexAreaRoiJ.get(j);
-			*/
 		}
 		BMD/=(double)roi.cortexRoiI.size();
 		//Calculate cortical area from 550 threshold...

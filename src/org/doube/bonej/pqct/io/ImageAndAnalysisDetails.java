@@ -38,25 +38,38 @@ public class ImageAndAnalysisDetails{
 	public String rotationChoice;
 	public String[] choiceLabels;
 	public boolean allowCleaving;
+	public boolean cleaveReturnSmaller;
+	public boolean manualRoi;
+	public boolean manualRotation;
+	public double manualAlfa;
+	public boolean flipDistribution;
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels, boolean allowCleaving){
-		scalingFactor		= scalingFactorIn;
-		constant 			= constantIn;
-		airThreshold		= -100;
-		this.fatThreshold 	= fatThreshold;
-		muscleThreshold 	= 200;
-		marrowThreshold 	= 300;
-		areaThreshold 		= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		BMDthreshold 		= BMDthresholdIn;		//For cortical BMD analyses
-		softThreshold 		= 300;	//Thresholding soft tissues + marrow from bone
-		boneThreshold 		= areaThresholdIn;
-		filterSize			= 3;
-		softFilterSize		= 7;
-		sectorWidth 		= 10;
-		roiChoice			= roiChoiceIn;
-		this.rotationChoice	= rotationChoice;
-		this.choiceLabels	= choiceLabels;
-		imageSavePath 		= new String("");
-		this.allowCleaving	=allowCleaving;
+	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,
+									double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels,
+									boolean allowCleaving, boolean cleaveReturnSmaller, boolean manualRoi,
+									boolean manualRotation, double manualAlfa, boolean flipDistribution){
+		scalingFactor				= scalingFactorIn;
+		constant 					= constantIn;
+		airThreshold				= -100;
+		this.fatThreshold 			= fatThreshold;
+		muscleThreshold 			= 200;
+		marrowThreshold 			= 300;
+		areaThreshold 				= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+		BMDthreshold 				= BMDthresholdIn;		//For cortical BMD analyses
+		softThreshold 				= 300;	//Thresholding soft tissues + marrow from bone
+		boneThreshold 				= areaThresholdIn;
+		filterSize					= 3;
+		softFilterSize				= 7;
+		sectorWidth 				= 10;
+		roiChoice					= roiChoiceIn;
+		this.rotationChoice			= rotationChoice;
+		this.choiceLabels			= choiceLabels;
+		imageSavePath 				= new String("");
+		this.allowCleaving			=allowCleaving;
+		this.cleaveReturnSmaller	= cleaveReturnSmaller;
+		this.manualRoi				= manualRoi;
+		this.manualRotation			= manualRotation;
+		this.manualAlfa				= manualAlfa;
+		this.flipDistribution		= flipDistribution;
 	}
 }
