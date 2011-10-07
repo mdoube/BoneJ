@@ -54,7 +54,7 @@ public class AnalyzeROI{
 	public double[] marrowCenter;
 	double[] cortexCenter;
 	
-	//Varibales for radii calculations
+	//Variables for radii calculations
 	double[]	Theta;
 	public double[]  Theta2;
 	public double[]	R;
@@ -170,11 +170,6 @@ public class AnalyzeROI{
 		//upwards. In addition it will be used in determining which way the image needs to be rotated. 
 		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
 		//or vertical axis, whichever rotation is smaller...
-			/*		
-			//For Debugging
-			TextWindow checkWindow = new TextWindow(new String("test"),new String(""),200,200);			
-			checkWindow.append("Coefficients "+details.rotationChoice);
-			*/
 			
 		if (details.rotationChoice.equals("Furthest point")){
 			/*Calculate alfa from periosteal radii*/

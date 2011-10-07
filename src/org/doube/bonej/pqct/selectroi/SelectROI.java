@@ -109,14 +109,10 @@ public class SelectROI extends JPanel{
 		marrowDensities = new Vector<Double>();
 		longestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
 		marrowLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		//System.out.println("Edgeen\n");
-		//System.out.println("Jalka etsimaan");
 		result = new byte[width*height];
 
-				/*Select ROI and set everything else than the roi to minimum*/
-		//System.out.println("soft found");
+		/*Select ROI and set everything else than the roi to minimum*/
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
-		
 		marrowSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
@@ -149,11 +145,6 @@ public class SelectROI extends JPanel{
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		/*Select correct bone outline*/
 		int selection = 0;
-		/*
-		//Debugging
-		TextWindow checkWindow = new TextWindow(new String("Rois"),new String(""),500,200);
-		checkWindow.append("Length no "+length.size());
-		*/
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
@@ -168,10 +159,12 @@ public class SelectROI extends JPanel{
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
-			/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
+		
+		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
 		if (details.allowCleaving){
 			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
+		
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -205,8 +198,6 @@ public class SelectROI extends JPanel{
 		}
 		
 	}
-
-		
 	
 	int selectRoiBiggestBone(Vector<Integer> length){
 		Vector<Integer> temp = new Vector<Integer>();
@@ -463,9 +454,7 @@ public class SelectROI extends JPanel{
 		int initI,initJ;
 		initI = i;
 		initJ = j;
-		//System.out.println("I "+i+" J "+j+"InI "+initI+" J "+initJ+" dir "+(direction/Math.PI*180.0)+" D "+ scaledImage[i+j*width]+" r "+result[i+j*width]);
 		while(!done){
-
 			int counter = 0;
 			previousDirection = direction;
 			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
@@ -476,7 +465,6 @@ public class SelectROI extends JPanel{
 					direction-=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
-						//System.out.println("Negative break");
 						break;
 					}
 					
@@ -488,18 +476,13 @@ public class SelectROI extends JPanel{
 					direction+=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
-						//System.out.println("Positive break");
 						break;
 					}
 				}
 			}
-			//if (result[i+j*width] == 1 || initialI.size()<1){ /*Allow returning via already used point*/
 			i += (int) Math.round(Math.cos(direction));
 			j += (int) Math.round(Math.sin(direction));
-			//if ((i == initI && j == initJ) || counter > 7 || i < 1 || j < 1 || i>=width-1|| j>=height-1 || scaledImage[i+j*width]<threshold){
 			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
-				//System.out.println("TEST "+(i == initI && j == initJ)+" "+(counter > 7)+" "+(scaledImage[i+j*width]<threshold));
-				//System.out.println("Done "+i+" "+j+" "+counter+" "+scaledImage[i+j*width]);
 				done = true;
 			}
 			else{
@@ -513,8 +496,7 @@ public class SelectROI extends JPanel{
 				len[0]++;
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
-		}
-		
+		}	
 		for (int ii = 0; ii< result.length;++ii){
 			if(result[ii] > 1){result[ii]=1;}
 		}
@@ -527,15 +509,12 @@ public class SelectROI extends JPanel{
 		Vector<Integer> initialJ= new Vector<Integer>();
 		initialI.add(new Integer(i));
 		initialJ.add(new Integer(j));
-
-		////System.out.println("I "+i+" J "+j);
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
-			//System.out.println("I "+i+" J "+j);
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
 			initialI.remove( initialI.size()-1);
 			initialJ.remove( initialJ.size()-1);
-			//System.out.println("2I "+i+" J "+j);
+
 			if (result[i+j*width] == 0){
 				result[i+j*width] = 1;
 			}
@@ -562,8 +541,7 @@ public class SelectROI extends JPanel{
 
 		}
 
-		if (initialI.size() > 0 || initialJ.size()>0) {possible = false;}
-		
+		if (initialI.size() > 0 || initialJ.size()>0) {possible = false;}		
 		return possible;
 	}
 	

@@ -1,7 +1,6 @@
 package org.doube.bonej.pqct;
 
 import ij.*;
-
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
@@ -13,7 +12,7 @@ import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
 import org.doube.bonej.pqct.io.*;	//image data 
 import java.awt.image.*; //Creating the result BufferedImage...
 import ij.plugin.filter.Info;
-
+import ij.io.*;
 /*
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,8 +49,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		//return DOES_32;
 		return DOES_ALL;
 	}
-	
-
 
 	/*
 	//For Debugging
@@ -72,27 +69,11 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			resolution = Double.valueOf(temp);
 		}
-	
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog(new String("Analysis parameters"));
 		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
-		/*
-		TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
-		checkWindow.append("GetOriginalInfo");
-		checkWindow.append(imp.getOriginalFileInfo().info);
-		checkWindow.append("");
-		checkWindow.append("GetInfo");
-		checkWindow.append(imp.getFileInfo().info);
-		checkWindow.append("");
-		checkWindow.append("GetProperty");
-		checkWindow.append((String) imp.getProperty("Info"));
-		checkWindow.append("");
-		checkWindow.append("GetInfo");
-		Info info = new Info();
-		checkWindow.append(new Info().getImageInfo(imp,imp.getChannelProcessor()));
-		*/
 		if (getInfoProperty(imageInfo,"Rescale Slope")!= null){//Suggest HU scaling for dicom Files
 			dialog.addNumericField(new String("Scaling_coefficient (slope)"), Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4);
 			dialog.addNumericField(new String("Scaling_constant (intercept)"),Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4);
@@ -116,10 +97,12 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Allow_cleaving",false);
 		dialog.addCheckbox("Cleave_retain_smaller",false);
 		dialog.addCheckbox("Suppress_result_image",false);
-		dialog.addCheckbox("Limit ROI search to manually selected",false);
-		dialog.addCheckbox("Set distribution results rotation manually",false);
-		dialog.addNumericField("Manual rotation [+- 180 deg]", 0.0, 4);
-		dialog.addCheckbox("Flip distribution results (e.g. for comapring left to rights)",false);
+		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
+		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
+		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4);
+		dialog.addCheckbox("Flip_distribution_results",false);
+		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
+		dialog.addStringField("Image_save_path","C:/Your/Path/Goes/Here",40);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
@@ -140,7 +123,21 @@ public class Distribution_Analysis implements PlugInFilter {
 			boolean manualRotation		= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
 			boolean flipDistribution	= dialog.getNextBoolean();
+			boolean saveImageOnDisk		= dialog.getNextBoolean();
+			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
+			
+			String imageName;
+			if (getInfoProperty(imageInfo,"File Name")!= null){
+				imageName = getInfoProperty(imageInfo,"File Name");
+			}else{
+				if(imp.getImageStackSize() == 1){
+					imageName = getInfoProperty(imageInfo,"Title");
+				}else{
+					imageName = imageInfo.substring(0,imageInfo.indexOf("\n"));
+				}
+			}
+			
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
 				int[] unsignedShort = new int[tempPointer.length];
@@ -160,28 +157,32 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			resultString = new String();
 			printResults(textWindow);
+			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				printCorticalResults(textWindow,cortAnalysis);
 				
-				if(!dOn && !suppressImages){
+				if(!dOn){
 					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
-					ImagePlus resultImage = new ImagePlus("Visual results",bi);
-					resultImage.show();
+					resultImage = new ImagePlus("Visual results",bi);
 				}
 				
 			}
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
 				printDistributionResults(textWindow,analyzeRoi);
-				if (!suppressImages){
-					BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-					ImagePlus resultImage = new ImagePlus("Visual results",bi);
-					resultImage.show();
-				}
+				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+				resultImage = new ImagePlus("Visual results",bi);
+			}
+			
+			if (!suppressImages && resultImage!= null){
+				resultImage.show();
+			}
+			if (saveImageOnDisk && resultImage!= null){
+				FileSaver fSaver = new FileSaver(resultImage);
+				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 			}
 			textWindow.append(resultString);
-			//Display the analysis results...
 		}
 	}
 	
