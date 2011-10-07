@@ -30,8 +30,7 @@ import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 import java.awt.AWTEvent;
-//import java.awt.Checkbox;
-import java.awt.Choice;
+import java.awt.Checkbox;
 import java.awt.Rectangle;
 import java.awt.TextField;
 import java.util.ArrayList;
@@ -63,19 +62,7 @@ public class Moments implements PlugIn, DialogListener {
 
 	private boolean fieldUpdated = false;
 	private Calibration cal;
-	private String pixUnits = "grey";
-	/** Use pixel values for density */
-	private static final int PIXEL = 0;
-	/** Use calibration table for density */
-	private static final int TABLE = 1;
-	/** Calculate density from pixel value and user-defined linear function */
-	private static final int LINEAR_PIXEL = 2;
-	/** Density from calibration table and user-defined linear function */
-	private static final int LINEAR_CAL = 3;
-	/** Don't do any density calibration */
-	private static final int NONE = 4;
-	private int calMode = PIXEL;
-	
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -88,19 +75,17 @@ public class Moments implements PlugIn, DialogListener {
 		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
-		// if (ImageCheck.huCalibrated(imp)) {
-		// pixUnits = "HU";
-		// fieldUpdated = true;
-		// } else
-		// pixUnits = "grey";
+		String pixUnits;
+		if (ImageCheck.huCalibrated(imp)) {
+			pixUnits = "HU";
+			fieldUpdated = true;
+		} else
+			pixUnits = "grey";
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Start Slice:", 1, 0);
 		gd.addNumericField("End Slice:", imp.getStackSize(), 0);
-		String[] items = { "Pixel Values", "Calibration Table",
-				"Linear Fit to Pixels", "Linear Fit to Calibration", "None" };
-		gd.addChoice("Density from...", items, items[calMode]);
 
-		// gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
+		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
 		gd
@@ -120,15 +105,10 @@ public class Moments implements PlugIn, DialogListener {
 		}
 		final int startSlice = (int) gd.getNextNumber();
 		final int endSlice = (int) gd.getNextNumber();
-		calMode = gd.getNextChoiceIndex();
-		// boolean isHUCalibrated = gd.getNextBoolean();
+		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
-		// if (isHUCalibrated) {
-		// min = cal.getRawValue(min);
-		// max = cal.getRawValue(max);
-		// }
-		if (calMode == TABLE || calMode == LINEAR_CAL){
+		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
 		}
@@ -966,97 +946,30 @@ public class Moments implements PlugIn, DialogListener {
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
-		// Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Vector<?> choices = gd.getChoices();
-		// Checkbox box0 = (Checkbox) checkboxes.get(0);
-		// boolean isHUCalibrated = box0.getState();
+		Checkbox box0 = (Checkbox) checkboxes.get(0);
+		boolean isHUCalibrated = box0.getState();
 		TextField minT = (TextField) nFields.get(2);
 		TextField maxT = (TextField) nFields.get(3);
-		TextField slope = (TextField) nFields.get(4);
-		TextField intercept = (TextField) nFields.get(5);
 		double min = Double.parseDouble(minT.getText());
 		double max = Double.parseDouble(maxT.getText());
-		if (calMode == TABLE || calMode == LINEAR_CAL){
-			min = cal.getRawValue(min);
-			max = cal.getRawValue(max);
+		if (isHUCalibrated && !fieldUpdated) {
+			minT.setText("" + cal.getCValue(min));
+			maxT.setText("" + cal.getCValue(max));
+			fieldUpdated = true;
 		}
-		Choice calChoice = (Choice) choices.get(0);
-		if (e.getSource().equals(calChoice)) {
+		if (!isHUCalibrated && fieldUpdated) {
+			minT.setText("" + cal.getRawValue(min));
+			maxT.setText("" + cal.getRawValue(max));
 			fieldUpdated = false;
-			calMode = calChoice.getSelectedIndex();
-			switch (calMode) {
-			case PIXEL:
-				updateUnits(gd, "grey");
-				slope.setEnabled(false);
-				intercept.setEnabled(false);
-				if (!fieldUpdated) {
-					minT.setText("" + min);
-					maxT.setText("" + max);
-					fieldUpdated = true;
-				}
-				break;
-			case TABLE:
-				updateUnits(gd, cal.getValueUnit());
-				slope.setEnabled(false);
-				intercept.setEnabled(false);
-				if (!fieldUpdated) {
-					minT.setText("" + cal.getCValue(min));
-					maxT.setText("" + cal.getCValue(max));
-					fieldUpdated = true;
-				}
-				break;
-			case LINEAR_CAL:
-				updateUnits(gd, cal.getValueUnit());
-				slope.setEnabled(true);
-				intercept.setEnabled(true);
-				if (!fieldUpdated) {
-					minT.setText("" + cal.getCValue(min));
-					maxT.setText("" + cal.getCValue(max));
-					fieldUpdated = true;
-				}
-				break;
-			case LINEAR_PIXEL:
-				updateUnits(gd, "grey");
-				slope.setEnabled(true);
-				intercept.setEnabled(true);
-				if (!fieldUpdated) {
-					minT.setText("" + min);
-					maxT.setText("" + max);
-					fieldUpdated = true;
-				}
-				break;
-			case NONE:
-				updateUnits(gd, "grey");
-				slope.setEnabled(false);
-				intercept.setEnabled(false);
-				if (!fieldUpdated) {
-					minT.setText("" + min);
-					maxT.setText("" + max);
-					fieldUpdated = true;
-				}
-				break;
-			}
 		}
-		// if (isHUCalibrated && !fieldUpdated) {
-		// minT.setText("" + cal.getCValue(min));
-		// maxT.setText("" + cal.getCValue(max));
-		// fieldUpdated = true;
-		// }
-		// // if (!isHUCalibrated && fieldUpdated) {
-		// // minT.setText("" + cal.getRawValue(min));
-		// // maxT.setText("" + cal.getRawValue(max));
-		// // fieldUpdated = false;
-		// // }
-		// if (isHUCalibrated)
-		// updateUnits(gd, "HU");
+		if (isHUCalibrated)
+			DialogModifier.replaceUnitString(gd, "grey", "HU");
+		else
+			DialogModifier.replaceUnitString(gd, "HU", "grey");
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
-	}
-
-	private void updateUnits(GenericDialog gd, String newUnits) {
-		DialogModifier.replaceUnitString(gd, pixUnits, newUnits);
-		pixUnits = newUnits;
 	}
 
 }
