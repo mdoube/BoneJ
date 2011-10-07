@@ -128,7 +128,7 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
 		double[] tempScaledImage = (double[]) scaledImage.clone();
-		if (ijROI != null){	/*Set pixels outside the manually selected ROI to zero*/
+		if (ijROI != null && details.manualRoi){	/*Set pixels outside the manually selected ROI to zero*/
 			/*Check whether pixel is within ROI, mark with bone threshold*/
 			for (int j = 0;j< height;j++){
 				for (int i = 0; i < width;i++){

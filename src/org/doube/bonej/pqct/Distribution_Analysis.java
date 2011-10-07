@@ -116,6 +116,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Allow_cleaving",false);
 		dialog.addCheckbox("Cleave_retain_smaller",false);
 		dialog.addCheckbox("Suppress_result_image",false);
+		dialog.addCheckbox("Limit ROI search to manually selected",false);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
@@ -132,6 +133,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			boolean allowCleaving		= dialog.getNextBoolean();
 			boolean cleaveReturnSmaller = dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
+			boolean manualRoi			= dialog.getNextBoolean();
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -143,7 +145,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
-															allowCleaving,cleaveReturnSmaller);
+															allowCleaving,cleaveReturnSmaller,manualRoi);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			TextWindow textWindow = (TextWindow) ij.WindowManager.getFrame("Distribution Analysis Results");
 			if (textWindow == null){

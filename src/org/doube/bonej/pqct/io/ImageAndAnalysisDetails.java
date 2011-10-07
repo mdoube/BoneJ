@@ -39,10 +39,11 @@ public class ImageAndAnalysisDetails{
 	public String[] choiceLabels;
 	public boolean allowCleaving;
 	public boolean cleaveReturnSmaller;
+	public boolean manualRoi;
 	//ImageJ plugin constructor
 	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,
 									double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels,
-									boolean allowCleaving, boolean cleaveReturnSmaller){
+									boolean allowCleaving, boolean cleaveReturnSmaller, boolean manualRoi){
 		scalingFactor		= scalingFactorIn;
 		constant 			= constantIn;
 		airThreshold		= -100;
@@ -62,5 +63,6 @@ public class ImageAndAnalysisDetails{
 		imageSavePath 		= new String("");
 		this.allowCleaving	=allowCleaving;
 		this.cleaveReturnSmaller = cleaveReturnSmaller;
+		this.manualRoi		= manualRoi;
 	}
 }
