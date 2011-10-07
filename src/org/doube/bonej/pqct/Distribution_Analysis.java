@@ -117,6 +117,9 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Cleave_retain_smaller",false);
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit ROI search to manually selected",false);
+		dialog.addCheckbox("Set distribution results rotation manually",false);
+		dialog.addNumericField("Manual rotation [+- 180 deg]", 0.0, 4);
+		dialog.addCheckbox("Flip distribution results (e.g. for comapring left to rights)",false);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
@@ -134,6 +137,9 @@ public class Distribution_Analysis implements PlugInFilter {
 			boolean cleaveReturnSmaller = dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
+			boolean manualRotation		= dialog.getNextBoolean();
+			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
+			boolean flipDistribution	= dialog.getNextBoolean();
 			ScaledImageData scaledImageData;
 			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
@@ -145,7 +151,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
-															allowCleaving,cleaveReturnSmaller,manualRoi);
+															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			TextWindow textWindow = (TextWindow) ij.WindowManager.getFrame("Distribution Analysis Results");
 			if (textWindow == null){

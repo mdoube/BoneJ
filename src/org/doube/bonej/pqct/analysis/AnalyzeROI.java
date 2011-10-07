@@ -207,6 +207,12 @@ public class AnalyzeROI{
 					rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
 			}	
 		}
+		
+		if (details.manualRotation){
+			alfa = details.manualAlfa;
+			rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
+		}
+		
 		//figuring out the indexes for rotating vBMDs and having sector #1 directed posteriorly and having the bending axis corresponding to minimal CSMI half the sector.
 		int alkuindex;
 		alkuindex = 0;
@@ -228,7 +234,11 @@ public class AnalyzeROI{
 			pind.add(inde);
 			inde++;
 		}
-
+		
+		/*Flip pind, for e.g. comparing left to right*/
+		if (details.flipDistribution){
+			Collections.reverse(pind);
+		}
 		//Bone marrow cortexCenter[0] and cortexCenter[1]
 
 		pRad = new double[360];
