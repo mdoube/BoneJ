@@ -12,6 +12,7 @@ import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
 import org.doube.bonej.pqct.io.*;	//image data 
 import java.awt.image.*; //Creating the result BufferedImage...
+import ij.plugin.filter.Info;
 
 /*
 	This program is free software: you can redistribute it and/or modify
@@ -42,6 +43,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean cOn;
 	boolean dOn;
 	String resultString;
+	String imageInfo;
 	
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
@@ -58,12 +60,17 @@ public class Distribution_Analysis implements PlugInFilter {
 	*/
 	
 	public void run(ImageProcessor ip) {
+		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());		
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
 		double resolution = 0;
-		if (imp.getOriginalFileInfo().pixelWidth != 0){
-			resolution = imp.getOriginalFileInfo().pixelWidth;
+		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
+			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
+			if (temp.indexOf("\\")!=-1){
+				temp = temp.substring(0,temp.indexOf("\\"));
+			}
+			resolution = Double.valueOf(temp);
 		}
 	
 		//Get parameters for scaling the image and for thresholding
@@ -71,10 +78,24 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
 		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
 		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
-		if (imp.getOriginalFileInfo().fileFormat == ij.io.FileInfo.DICOM ){//Suggest HU scaling for dicom Files
-			double[] coeffs = imp.getCalibration().getCoefficients();
-			dialog.addNumericField(new String("Scaling_coefficient (slope)"), coeffs[1], 4);
-			dialog.addNumericField(new String("Scaling_constant (intercept)"),coeffs[0], 4);
+		/*
+		TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
+		checkWindow.append("GetOriginalInfo");
+		checkWindow.append(imp.getOriginalFileInfo().info);
+		checkWindow.append("");
+		checkWindow.append("GetInfo");
+		checkWindow.append(imp.getFileInfo().info);
+		checkWindow.append("");
+		checkWindow.append("GetProperty");
+		checkWindow.append((String) imp.getProperty("Info"));
+		checkWindow.append("");
+		checkWindow.append("GetInfo");
+		Info info = new Info();
+		checkWindow.append(new Info().getImageInfo(imp,imp.getChannelProcessor()));
+		*/
+		if (getInfoProperty(imageInfo,"Rescale Slope")!= null){//Suggest HU scaling for dicom Files
+			dialog.addNumericField(new String("Scaling_coefficient (slope)"), Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4);
+			dialog.addNumericField(new String("Scaling_constant (intercept)"),Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4);
 					
 		}else{
 			dialog.addNumericField(new String("Scaling_coefficient (slope)"), 1.724, 4);
@@ -83,7 +104,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		if (resolution != 0){
 			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), resolution, 4);
 		} else {
-			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), 0.8, 4);
+			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), 1.0, 4);
 		}
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
@@ -185,16 +206,24 @@ public class Distribution_Analysis implements PlugInFilter {
 	
 	void printResults(TextWindow textWindow){
 		if (imp != null){
-			resultString += imp.getOriginalFileInfo().fileName+"\t";
-			resultString += getInfoProperty((String) imp.getProperty("Info"),"Patient's Name")+"\t";
-			resultString += getInfoProperty((String) imp.getProperty("Info"),"Patient ID")+"\t";
-			resultString += getInfoProperty((String) imp.getProperty("Info"),"Patient's Birth Date")+"\t";
-			resultString += getInfoProperty((String) imp.getProperty("Info"),"Acquisition Date")+"\t";
+			if (getInfoProperty(imageInfo,"File Name")!= null){
+				resultString += getInfoProperty(imageInfo,"File Name")+"\t";
+			}else{
+				if(imp.getImageStackSize() == 1){
+					resultString += getInfoProperty(imageInfo,"Title")+"\t";
+				}else{
+					resultString += imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
+				}
+			}
+			resultString += getInfoProperty(imageInfo,"Patient's Name")+"\t";
+			resultString += getInfoProperty(imageInfo,"Patient ID")+"\t";
+			resultString += getInfoProperty(imageInfo,"Patient's Birth Date")+"\t";
+			resultString += getInfoProperty(imageInfo,"Acquisition Date")+"\t";
 		}
 	}
 	
 		String getInfoProperty(String properties,String propertyToGet){
-			String toTokenize = (String) imp.getProperty("Info");
+			String toTokenize = properties;
 			StringTokenizer st = new StringTokenizer(toTokenize,"\n");
 			String currentToken = null;
 			while (st.hasMoreTokens() ) {
