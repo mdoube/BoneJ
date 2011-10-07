@@ -43,7 +43,14 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean dOn;
 	String resultString;
 	String imageInfo;
-	
+	double resolution;
+	double fatThreshold;
+	double areaThreshold;
+	double BMDThreshold;
+	double scalingFactor;
+	double constant;	
+	boolean flipDistribution;
+	boolean manualRotation;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
@@ -61,7 +68,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
-		double resolution = 0;
+		resolution = 0;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -106,11 +113,11 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
-			double fatThreshold			= dialog.getNextNumber();
-			double areaThreshold		= dialog.getNextNumber();
-			double BMDThreshold			= dialog.getNextNumber();
-			double scalingFactor		= dialog.getNextNumber();
-			double constant				= dialog.getNextNumber();
+			fatThreshold				= dialog.getNextNumber();
+			areaThreshold				= dialog.getNextNumber();
+			BMDThreshold				= dialog.getNextNumber();
+			scalingFactor				= dialog.getNextNumber();
+			constant					= dialog.getNextNumber();
 			resolution					= dialog.getNextNumber();
 			String roiChoice			= dialog.getNextChoice();
 			String rotationChoice		= dialog.getNextChoice();
@@ -120,9 +127,9 @@ public class Distribution_Analysis implements PlugInFilter {
 			boolean cleaveReturnSmaller = dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
-			boolean manualRotation		= dialog.getNextBoolean();
+			manualRotation				= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
-			boolean flipDistribution	= dialog.getNextBoolean();
+			flipDistribution			= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
@@ -188,11 +195,16 @@ public class Distribution_Analysis implements PlugInFilter {
 	
 	void writeHeader(TextWindow textWindow){
 		String headerRow = new String();
-		headerRow = "Filename\tSubject name\tSubject ID\tSubject birthdate\tMeasurement date\t";
+		if (imp!=null){
+			headerRow += "Filename\tSubject name\tSubject ID\tSubject birthdate\tMeasurement date\t";
+		}
+		headerRow += "Fat Threshold\tArea Threshold\tBMD Threshold\tScaling Coefficient\tScaling Constant\tResolution\t";
 		if (cOn){
 			headerRow +="CoD [mg/cm3]\tCoA [mm2]\tSSI [mm3]\tToD [mg/cm3]\tToA[mm2]\tBSId[g2/cm4]\t";
 		}
 		if (dOn){
+			headerRow +="Alfa [deg]\tManual rotation [true/false]\tFlip [true/false]\t";
+		
 			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 				headerRow +="Endocortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mm]\t";
 			}
@@ -229,6 +241,13 @@ public class Distribution_Analysis implements PlugInFilter {
 			resultString += getInfoProperty(imageInfo,"Patient's Birth Date")+"\t";
 			resultString += getInfoProperty(imageInfo,"Acquisition Date")+"\t";
 		}
+		
+		resultString += Double.toString(fatThreshold)+"\t";
+		resultString += Double.toString(areaThreshold)+"\t";
+		resultString += Double.toString(BMDThreshold)+"\t";
+		resultString += Double.toString(scalingFactor)+"\t";
+		resultString += Double.toString(constant)+"\t";	
+		resultString += Double.toString(resolution)+"\t";
 	}
 	
 		String getInfoProperty(String properties,String propertyToGet){
@@ -260,7 +279,10 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 	
 	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
-
+		resultString += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
+		resultString += Boolean.toString(manualRotation)+"\t";
+		resultString += Boolean.toString(flipDistribution)+"\t";
+		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 			resultString += analyzeRoi.endocorticalRadii[pp]+"\t";
 		}
