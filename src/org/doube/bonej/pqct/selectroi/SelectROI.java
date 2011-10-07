@@ -109,14 +109,10 @@ public class SelectROI extends JPanel{
 		marrowDensities = new Vector<Double>();
 		longestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
 		marrowLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		//System.out.println("Edgeen\n");
-		//System.out.println("Jalka etsimaan");
 		result = new byte[width*height];
 
-				/*Select ROI and set everything else than the roi to minimum*/
-		//System.out.println("soft found");
+		/*Select ROI and set everything else than the roi to minimum*/
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
-		
 		marrowSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
@@ -128,7 +124,7 @@ public class SelectROI extends JPanel{
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
 		double[] tempScaledImage = (double[]) scaledImage.clone();
-		if (ijROI != null){	/*Set pixels outside the manually selected ROI to zero*/
+		if (ijROI != null && details.manualRoi){	/*Set pixels outside the manually selected ROI to zero*/
 			/*Check whether pixel is within ROI, mark with bone threshold*/
 			for (int j = 0;j< height;j++){
 				for (int i = 0; i < width;i++){
@@ -149,15 +145,6 @@ public class SelectROI extends JPanel{
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		/*Select correct bone outline*/
 		int selection = 0;
-		/*
-		//Debugging
-		TextWindow checkWindow = new TextWindow(new String("Rois"),new String(""),500,200);
-		checkWindow.append("Length no "+length.size());
-		for (int i =0;i<details.choiceLabels.length;++i){
-			checkWindow.append("match "+i+" "+details.roiChoice.equals(details.choiceLabels[i]));
-		}
-		checkWindow.append("going into select "+selection+" choice "+details.roiChoice+" labels 1"+details.choiceLabels[1]);
-		*/
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
@@ -166,9 +153,7 @@ public class SelectROI extends JPanel{
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		/*
-		checkWindow.append("after selection "+selection);	
-		*/
+
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
@@ -179,6 +164,7 @@ public class SelectROI extends JPanel{
 		if (details.allowCleaving){
 			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
+		
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -212,8 +198,6 @@ public class SelectROI extends JPanel{
 		}
 		
 	}
-
-		
 	
 	int selectRoiBiggestBone(Vector<Integer> length){
 		Vector<Integer> temp = new Vector<Integer>();
@@ -361,9 +345,8 @@ public class SelectROI extends JPanel{
 		}
 		return distanceFromCentreOfLimb;
 	}
-	
-	
-	
+		
+	/*For density distribution visualization*/
 	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
 		int width, int height, double minimum, double maximum, Component imageCreator) {
 		int[] image = new int[width*height];
@@ -377,7 +360,6 @@ public class SelectROI extends JPanel{
 			image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
 			image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
 		}
-
 		 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
 		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
 		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
@@ -386,6 +368,25 @@ public class SelectROI extends JPanel{
 		 return bufferedImage;
 	}
 
+	/*For cortical analysis only visualization*/
+	public BufferedImage getMyImage(double[] imageIn,byte[] sieve,int width, int height, double minimum, double maximum, Component imageCreator) {
+		int[] image = new int[width*height];
+		int pixel;
+		for (int x = 0; x < width*height;x++) {
+			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
+			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
+			if (sieve[x] == 1){   //Ting roi area color with violet
+				image[x]= 255<<24 | pixel <<16| 0 <<8| pixel; 
+			}
+		}
+		Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
+		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
+		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
+		 Graphics2D gbuf = bufferedImage.createGraphics();
+		 gbuf.drawImage(imageToDraw, 0, 0,null);
+		 return bufferedImage;
+	}
+	
 	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
 		//Fill the area enclosed by the traced edge contained in roiI,roiJ
 		//beginning needs to be within the traced edge
@@ -453,9 +454,7 @@ public class SelectROI extends JPanel{
 		int initI,initJ;
 		initI = i;
 		initJ = j;
-		//System.out.println("I "+i+" J "+j+"InI "+initI+" J "+initJ+" dir "+(direction/Math.PI*180.0)+" D "+ scaledImage[i+j*width]+" r "+result[i+j*width]);
 		while(!done){
-
 			int counter = 0;
 			previousDirection = direction;
 			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
@@ -466,7 +465,6 @@ public class SelectROI extends JPanel{
 					direction-=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
-						//System.out.println("Negative break");
 						break;
 					}
 					
@@ -478,18 +476,13 @@ public class SelectROI extends JPanel{
 					direction+=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
-						//System.out.println("Positive break");
 						break;
 					}
 				}
 			}
-			//if (result[i+j*width] == 1 || initialI.size()<1){ /*Allow returning via already used point*/
 			i += (int) Math.round(Math.cos(direction));
 			j += (int) Math.round(Math.sin(direction));
-			//if ((i == initI && j == initJ) || counter > 7 || i < 1 || j < 1 || i>=width-1|| j>=height-1 || scaledImage[i+j*width]<threshold){
 			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
-				//System.out.println("TEST "+(i == initI && j == initJ)+" "+(counter > 7)+" "+(scaledImage[i+j*width]<threshold));
-				//System.out.println("Done "+i+" "+j+" "+counter+" "+scaledImage[i+j*width]);
 				done = true;
 			}
 			else{
@@ -503,8 +496,7 @@ public class SelectROI extends JPanel{
 				len[0]++;
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
-		}
-		
+		}	
 		for (int ii = 0; ii< result.length;++ii){
 			if(result[ii] > 1){result[ii]=1;}
 		}
@@ -517,15 +509,12 @@ public class SelectROI extends JPanel{
 		Vector<Integer> initialJ= new Vector<Integer>();
 		initialI.add(new Integer(i));
 		initialJ.add(new Integer(j));
-
-		////System.out.println("I "+i+" J "+j);
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
-			//System.out.println("I "+i+" J "+j);
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
 			initialI.remove( initialI.size()-1);
 			initialJ.remove( initialJ.size()-1);
-			//System.out.println("2I "+i+" J "+j);
+
 			if (result[i+j*width] == 0){
 				result[i+j*width] = 1;
 			}
@@ -552,8 +541,7 @@ public class SelectROI extends JPanel{
 
 		}
 
-		if (initialI.size() > 0 || initialJ.size()>0) {possible = false;}
-		
+		if (initialI.size() > 0 || initialJ.size()>0) {possible = false;}		
 		return possible;
 	}
 	
@@ -747,32 +735,49 @@ public class SelectROI extends JPanel{
 		and replace with a straight line
 	*/
 	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
-		/*Search for suitable end point*/
 		int initialLength = fatRoiI.size();
-		int targetI,targetJ;
-		targetI = fatRoiI.get(cleavingIndices[1]);
-		targetJ = fatRoiJ.get(cleavingIndices[1]);
+		int initI = fatRoiI.get(cleavingIndices[0]);
+		int initJ = fatRoiJ.get(cleavingIndices[0]);
+		int targetI = fatRoiI.get(cleavingIndices[1]);
+		int targetJ = fatRoiJ.get(cleavingIndices[1]);
 		/*remove cleaved elements*/
-		for (int k = cleavingIndices[0]+1;k<cleavingIndices[1];++k){
-			fatRoiI.removeElementAt(cleavingIndices[0]+1);
-			fatRoiJ.removeElementAt(cleavingIndices[0]+1);
+		int replacementI = fatRoiI.get(cleavingIndices[0]);
+		int replacementJ = fatRoiJ.get(cleavingIndices[0]);
+		Vector<Integer> cleavedI = new Vector<Integer>(fatRoiI.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
+		Vector<Integer> cleavedJ = new Vector<Integer>(fatRoiJ.subList(cleavingIndices[0]+1,cleavingIndices[1]+1)); /*the elements to be cleaved*/
+		for (int i = cleavingIndices[0]; i <cleavingIndices[1];++i){
+			fatRoiI.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
+			fatRoiJ.removeElementAt(cleavingIndices[0]);	/*Remove the elements to be cleaved*/
 		}
 		/*Insert replacement line*/
-		int replacementI,replacementJ;
 		double replacementLength = (double)(cleavingIndices[1]-cleavingIndices[0]);
-		int inserted =0;
-		double repILength = (double)(targetI-fatRoiI.get(cleavingIndices[0]));
-		double repJLength = (double)(targetJ-fatRoiJ.get(cleavingIndices[0]));
+		double repILength = (double)(targetI-initI);
+		double repJLength = (double)(targetJ-initJ);
 		double relativeLength;
-		for (int k = cleavingIndices[1];k>cleavingIndices[0];--k){
+		Vector<Integer> insertionI = new Vector<Integer>();
+		Vector<Integer> insertionJ = new Vector<Integer>();
+		insertionI.add(replacementI);
+		insertionJ.add(replacementJ);
+		for (int k = cleavingIndices[0];k<cleavingIndices[1];++k){
 			relativeLength = ((double)k)-((double)cleavingIndices[0]);
-			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+fatRoiI.get(cleavingIndices[0]);
-			replacementJ= ((int) (repJLength*(relativeLength/replacementLength)))+fatRoiJ.get(cleavingIndices[0]);
-			if (replacementI !=fatRoiI.get(cleavingIndices[0]+1) || replacementJ !=fatRoiJ.get(cleavingIndices[0]+1)){
-				fatRoiI.insertElementAt(replacementI,cleavingIndices[0]+1);
-				fatRoiJ.insertElementAt(replacementJ,cleavingIndices[0]+1);
-				++inserted;
+			replacementI = ((int) (repILength*(relativeLength/replacementLength)))+initI;
+			replacementJ = ((int) (repJLength*(relativeLength/replacementLength)))+initJ;
+			if (replacementI !=insertionI.lastElement() || replacementJ !=insertionJ.lastElement()){
+				insertionI.add(replacementI);
+				insertionJ.add(replacementJ);
 			}
+		}
+		fatRoiI.addAll(cleavingIndices[0],insertionI);
+		fatRoiJ.addAll(cleavingIndices[0],insertionJ);
+		Collections.reverse(insertionI);
+		Collections.reverse(insertionJ);
+		cleavedI.addAll(0,insertionI);
+		cleavedJ.addAll(0,insertionJ);
+		if (details.cleaveReturnSmaller){ /*replace fatRoiI & fatRoiJ with cleaved, if smaller is to be returned*/
+			fatRoiI.clear();
+			fatRoiJ.clear();
+			fatRoiI.addAll(cleavedI);
+			fatRoiJ.addAll(cleavedJ);
 		}
 		return  initialLength - fatRoiI.size();
 	}
@@ -780,48 +785,4 @@ public class SelectROI extends JPanel{
 	double min(double a,double b){
 		return (a < b) ? a : b;
 	}
-	
-	/*
-	Calculate Spline 
-	linear equation group solver http://math.nist.gov/javanumerics/jama/
-	cubic spline http://www.physics.arizona.edu/~restrepo/475A/Notes/sourcea/node35.html
-	*/
-
-	public static Vector<Integer> calculateSpline(Vector<Integer> interpolants, int numberOfPointsBetweenInterpolants){
-		double[][] a = new double[interpolants.size()][interpolants.size()];
-		double[] b = new double[interpolants.size()];
-		double [] x = new double[interpolants.size()];
-		double[] bb = new double[interpolants.size()-1];
-		double [] d = new double[interpolants.size()-1];
-		for (int i = 0;i<interpolants.size();i++){	//Create xs
-			x[i] = (double) i;
-		}
-		a[0][0] = 1;
-		a[interpolants.size()-1][interpolants.size()-1] = 1;
-		b[0] = 0;
-		b[interpolants.size()-1] = 0;
-		for (int i = 1; i< interpolants.size()-1;i++){
-			a[i][i-1] =x[i]-x[i-1];
-			a[i][i]   =2.0*((x[i]-x[i-1])+(x[i+1]-x[i]));
-			a[i][i+1] =x[i+1]-x[i];
-			b[i] = (3/(x[i+1]-x[i]))*((double) interpolants.get(i+1)-(double) interpolants.get(i))-(3/(x[i]-x[i-1]))*((double) interpolants.get(i)-(double) interpolants.get(i-1));
-		}
-		Matrix A = new Matrix(a);
-		Matrix B = new Matrix(b,interpolants.size());
-		Matrix c = A.solve(B);
-		for (int i = 1; i < interpolants.size();i++){
-			bb[i-1] = 1/(x[i]-x[i-1])*((double) interpolants.get(i)-(double) interpolants.get(i-1))-(x[i]-x[i-1])/3*(2*c.get(i-1,0)+c.get(i,0));
-			d[i-1] = (c.get(i,0)-c.get(i-1,0))/(3*(x[i]-x[i-1]));
-		}
-		Vector<Integer> result = new Vector<Integer>();
-		double inter;
-		for (int i = 0;i<interpolants.size()-1;i++){
-		   for (int j = 0;j<numberOfPointsBetweenInterpolants;j++){
-			   inter = (x[i+1]-x[i])*(double)j/(double)numberOfPointsBetweenInterpolants;
-			   result.add((int) ((double) interpolants.get(i)+bb[i]*inter+c.get(i,0)*Math.pow(inter,2.0)+d[i]*Math.pow(inter,3.0)));
-		   }
-		}
-		return result;
-	}
-
 }

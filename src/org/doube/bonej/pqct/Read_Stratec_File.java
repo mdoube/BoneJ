@@ -52,7 +52,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	public double ObjLen; //
 	public short[] data;
 	public short min,max;
-	
+	public String fileName;
+	public String properties;
 	
 	public Read_Stratec_File() { //Constructor
 		//this = null;
@@ -60,7 +61,6 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
 	public void run(String arg) { 
-		String fileName;
 		String directory;
 		File file;
 	
@@ -74,18 +74,19 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			fileName = od.getFileName();
 		}
 		if (fileName==null) return;
-		read(directory,fileName);
+		read(directory);
 		FileInfo fi = this.getFileInfo(); 
 		fi.pixelWidth = VoxelSize;
 		fi.pixelHeight = VoxelSize;
 		fi.valueUnit = "mm";
 		fi.fileName = fileName;
+		fi.info		= properties;
 		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
         this.setFileInfo(fi);  
 		if (this.getHeight()<1) return;
 	}
 	
-	public void read(String directory, String fileName){
+	public void read(String directory){
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
 		try{BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
@@ -174,15 +175,15 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	}
 	
 	public void setProperties(){
-		String[] propertyNames = {"Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
+		String[] propertyNames = {"File Name","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
 									"Width","Height"};
-		String[] propertyValues = {Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
+		String[] propertyValues = {fileName,Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
 									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
 									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
 									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY)};
-		String properties = new String();
+		properties = new String();
 		for (int i = 0;i<propertyNames.length;++i){
 			properties += propertyNames[i]+": "+propertyValues[i]+"\n";
 		}
