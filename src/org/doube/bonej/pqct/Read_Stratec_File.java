@@ -47,7 +47,6 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	public String Device;
 	public byte[] PID = new byte[13];
 	public String PatID;
-	int offset;
 	public double ObjLen; //
 	public short[] data;
 	public short min,max;
@@ -105,7 +104,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			float max = (float) -Math.pow(2,15);
 			for (int j = 0;j < PicMatrixY; ++j){
 				for (int i = 0;i < PicMatrixX; ++i){
-					offset = 1609+2*(i+j*PicMatrixX);
+					final int offset = 1609+2*(i+j*PicMatrixX);
 					float value =(float) ((short) (((fileData[offset+1] & 0xFF)) <<8 | ((short) (fileData[offset] & 0xFF))<<0));
 					if (value < min){min = value;}
 					if (value > max){max = value;}
@@ -121,7 +120,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	
 	public void readHeader(byte[] fileData){
 		byte stringLength;
-		offset =12;
+		int offset =12;
 		VoxelSize = Double.longBitsToDouble((long) ( ((long) (fileData[offset+7] & 0xFF))<<56 | ((long) (fileData[offset+6] & 0xFF))<<48 | ((long) (fileData[offset+5] & 0xFF))<<40 | ((long) (fileData[offset+4] & 0xFF))<<32 | ((long) (fileData[offset+3] & 0xFF))<<24 | ((long) (fileData[offset+2] & 0xFF))<<16 | ((long) (fileData[offset+1] & 0xFF))<<8 | ((long) (fileData[offset+0] & 0xFF))<<0));
 
 		offset = 318;
