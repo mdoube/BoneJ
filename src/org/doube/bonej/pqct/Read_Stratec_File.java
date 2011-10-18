@@ -1,7 +1,6 @@
 package org.doube.bonej.pqct;
 
 import java.io.*;
-import java.util.*;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
@@ -62,7 +61,6 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
 	public void run(String arg) { 
 		String directory;
-		File file;
 	
 		if (!arg.isEmpty()){//Called by HandleExtraFileTypes
 			File theFile = new File(arg);
