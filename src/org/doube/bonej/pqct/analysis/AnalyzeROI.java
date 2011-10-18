@@ -22,12 +22,8 @@
 package org.doube.bonej.pqct.analysis;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
-import java.awt.image.*; //Creating the image...
-import java.io.*;				//File IO
-import javax.imageio.*;		//Saving the image
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
-import ij.text.*;
 public class AnalyzeROI{
 	
 	//image array pointers
@@ -288,13 +284,13 @@ public class AnalyzeROI{
 		BMDj3= new double[360];
 		Vector<Double> BMD_temp = new Vector<Double>();
 		int et;
-		byte continuousCortex= 1;
-		int increments;
+//		byte continuousCortex= 1;
+//		int increments;
 		for (et = 0;et < 360;et++){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
 			Theta[et]=Math.PI/180.0*et;
 			Theta2[et]=-(((double) sectorWidth)/180.0*Math.PI)/2.0+Math.PI/180.0*et;
 			BMD_temp.clear();
-			increments = 0;
+//			increments = 0;
 			//Anatomical endosteal border
 			while (originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] < threshold 
 					&& R[et] < maxRadius/pixelSpacing){
@@ -317,7 +313,7 @@ public class AnalyzeROI{
 					|| peeledROI[(int) (marrowCenter[0]+(R[et]+4)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+4)*Math.sin(Theta[et])))*width)] > 0
 					|| peeledROI[(int) (marrowCenter[0]+(R[et]+6)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+6)*Math.sin(Theta[et])))*width)] > 0){
 				R[et] = R[et] + 0.1;
-				increments++;
+//				increments++;
 				if (peeledROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] > 0){
 					BMD_temp.add(originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)]);}
 			}
@@ -340,7 +336,7 @@ public class AnalyzeROI{
 			mo = 0;
 			//Dividing the cortex to three divisions -> save the mean vBMD for each division
 			if (analysisThickness < 3){
-				continuousCortex = 0; //No point in continuing analysis if the cortex is not continuous
+//				continuousCortex = 0; //No point in continuing analysis if the cortex is not continuous
 				break;
 			} else {
 				//cortex 
