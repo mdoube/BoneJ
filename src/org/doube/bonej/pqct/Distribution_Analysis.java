@@ -4,7 +4,6 @@ import ij.*;
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
-import java.awt.*;
 import java.util.*;	//Vector
 import ij.plugin.filter.*;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
