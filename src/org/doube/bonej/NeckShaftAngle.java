@@ -1,3 +1,4 @@
+package org.doube.bonej;
 /**
  *Neck Shaft Angle ImageJ plugin
  *Copyright 2008 2009 2010 Michael Doube 
@@ -32,7 +33,6 @@ import java.awt.TextField;
 import java.awt.event.*;
 import java.util.Vector;
 
-import org.doube.bonej.Moments;
 import org.doube.geometry.FitCircle;
 import org.doube.geometry.FitSphere;
 import org.doube.geometry.Trig;
@@ -69,7 +69,7 @@ import org.doube.util.ThresholdGuesser;
  *@author Michael Doube
  *@version 0.1
  */
-public class Neck_Shaft_Angle implements PlugIn, MouseListener, DialogListener {
+public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 
 	private ImageCanvas canvas;
 
