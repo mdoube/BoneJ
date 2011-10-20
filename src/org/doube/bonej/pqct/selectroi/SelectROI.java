@@ -21,16 +21,14 @@
 package org.doube.bonej.pqct.selectroi;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
-import org.doube.jama.*;		//linear equation group solver http://math.nist.gov/javanumerics/jama/
 import java.awt.image.*; //Creating the image...
 import java.awt.*;			//Polygon, Rectangle
-import java.io.*;				//File IO
-import javax.imageio.*;		//Saving the image
 import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
-import ij.text.*;		//debugging
+
+@SuppressWarnings("serial")
 public class SelectROI extends JPanel{
 	ImageAndAnalysisDetails details;
 	public double[] scaledImage;
@@ -547,16 +545,9 @@ public class SelectROI extends JPanel{
 	
 	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold)
 	{
-		int newRow;
-		int newCol;
 		int i,j,ii,jj,tempI,tempJ;
-		Vector<Integer> initialI = new Vector<Integer>();	
-		Vector<Integer> initialJ= new Vector<Integer>(); 
 		Vector<Integer> previousI = new Vector<Integer>();
 		Vector<Integer> previousJ= new Vector<Integer>();
-		boolean edgeEnd = false;
-		int size;
-		size = width*height;
 		int[] len = new int[1];
 		i = 0;
 		j = 0;
@@ -703,7 +694,6 @@ public class SelectROI extends JPanel{
 		double ratio;
 		double minEdge = (double) fatRoiI.size()/minLength;
 		int[] cleavingIndices = new int[2];
-		int jj=0;
 		boolean nextLoop = true;
 		while (nextLoop){
 			double highestRatio = minRatio-0.1;
@@ -723,7 +713,6 @@ public class SelectROI extends JPanel{
 			}
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
-				int returned = cleave(fatRoiI,fatRoiJ,cleavingIndices);
 			} else {
 				nextLoop = false;
 			}
