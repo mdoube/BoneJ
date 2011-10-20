@@ -428,7 +428,6 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 		final int rW = r.x + r.width;
 		final int rH = r.y + r.height;
 		// pixel counters
-		double cstack = 0;
 
 		boolean[] emptySlices = new boolean[stack.getSize() + 1];
 		double[] cortArea = new double[stack.getSize() + 1];
@@ -454,7 +453,6 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 			if (cslice > 0) {
 				sliceCentroids[0][s] = sumX / cslice;
 				sliceCentroids[1][s] = sumY / cslice;
-				cstack += cslice;
 				emptySlices[s] = false;
 			} else {
 				emptySlices[s] = true;
