@@ -211,7 +211,7 @@ public class StructureModelIndex implements PlugIn {
 
 		// get all the unique vertices
 		// associate each unique vertex with the triangles around it
-		Hashtable vertexHash = new Hashtable();
+		Hashtable<Point3f, ArrayList<Integer>> vertexHash = new Hashtable<Point3f, ArrayList<Integer>>();
 		ArrayList<Integer> locations = new ArrayList<Integer>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
@@ -231,9 +231,9 @@ public class StructureModelIndex implements PlugIn {
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
-		Hashtable normalsHash = new Hashtable();
+		Hashtable<Point3f, Point3f> normalsHash = new Hashtable<Point3f, Point3f>();
 		Point3f vert = new Point3f();
-		Enumeration e = vertexHash.keys();
+		Enumeration<Point3f> e = vertexHash.keys();
 		while (e.hasMoreElements()) {
 			IJ.showStatus("Calculating vertex normals...");
 			vert = (Point3f) e.nextElement();
