@@ -191,7 +191,8 @@ public class Distribution_Analysis implements PlugInFilter {
 				writeHeader(resultsTable);
 			}
 			resultsTable.incrementCounter();
-			
+			resultsTable.updateResults();
+			printResults(resultsTable);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
@@ -216,7 +217,6 @@ public class Distribution_Analysis implements PlugInFilter {
 				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 			}
 			resultsTable.updateResults();
-			printResults(resultsTable);
 			resultsTable.show("Results");
 		}
 	}
@@ -233,38 +233,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		resultsTable.getFreeColumn("Scaling Coefficient");
 		resultsTable.getFreeColumn("Scaling Constant");
 		resultsTable.getFreeColumn("Resolution");
-	}
-	
-	void writeHeader(TextWindow textWindow){
-		String headerRow = new String();
-		if (imp!=null){
-			headerRow += "Filename\tSubject name\tSubject ID\tSubject birthdate\tMeasurement date\t";
-		}
-		headerRow += "Fat Threshold\tArea Threshold\tBMD Threshold\tScaling Coefficient\tScaling Constant\tResolution\t";
-		if (cOn){
-			headerRow +="CoD [mg/cm3]\tCoA [mm2]\tSSI [mm3]\tToD [mg/cm3]\tToA[mm2]\tBSId[g2/cm4]\t";
-		}
-		if (dOn){
-			headerRow +="Alfa [deg]\tManual rotation [true/false]\tFlip [true/false]\t";
-		
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Endocortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mm]\t";
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Pericortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mm]\t";
-			}
-			//Cortex BMD values			
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Endocortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Midcortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
-			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Pericortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
-			}
-		}
-		textWindow.append(headerRow);
 	}
 	
 	String getInfoProperty(String properties,String propertyToGet){
@@ -296,7 +264,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 	
 	void printResults(ResultsTable resultsTable){
-		String resultString = "";
+		String resultString = "\t";
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
 				resultString += getInfoProperty(imageInfo,"File Name")+"\t";
@@ -318,7 +286,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		resultString += Double.toString(BMDThreshold)+"\t";
 		resultString += Double.toString(scalingFactor)+"\t";
 		resultString += Double.toString(constant)+"\t";	
-		resultString += Double.toString(resolution)+"\t";
+		resultString += Double.toString(resolution);
 		resultsTable.setLabel(resultString,resultsTable.getCounter()-1);
 	}
 	
