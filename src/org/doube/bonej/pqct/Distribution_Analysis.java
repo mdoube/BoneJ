@@ -187,9 +187,8 @@ public class Distribution_Analysis implements PlugInFilter {
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 
 			ResultsTable resultsTable = Analyzer.getResultsTable();
-			if (resultsTable.getCounter() == 0){
-				writeHeader(resultsTable);
-			}
+			if (resultsTable == null) {resultsTable = new ResultsTable();}
+			if (resultsTable.getCounter() == 0){writeHeader(resultsTable);}
 			resultsTable.incrementCounter();
 			resultsTable.updateResults();
 			printResults(resultsTable);
@@ -222,17 +221,15 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 	
 	void writeHeader(ResultsTable resultsTable){
-		resultsTable.getFreeColumn("Filename");
-		resultsTable.getFreeColumn("Subject name");
-		resultsTable.getFreeColumn("Subject ID");
-		resultsTable.getFreeColumn("Subject birthdate");
-		resultsTable.getFreeColumn("Measurement date");
-		resultsTable.getFreeColumn("Fat Threshold");
-		resultsTable.getFreeColumn("Area Threshold");
-		resultsTable.getFreeColumn("BMD Threshold");
-		resultsTable.getFreeColumn("Scaling Coefficient");
-		resultsTable.getFreeColumn("Scaling Constant");
-		resultsTable.getFreeColumn("Resolution");
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		for (int i = 0;i<propertyNames.length;++i){
+			resultsTable.getFreeColumn(propertyNames[i]);
+		}
+		for (int i = 0;i<parameterNames.length;++i){
+			resultsTable.getFreeColumn(parameterNames[i]);
+		}
+
 	}
 	
 	String getInfoProperty(String properties,String propertyToGet){
@@ -264,30 +261,29 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 	
 	void printResults(ResultsTable resultsTable){
-		String resultString = "\t";
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
+
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
-				resultString += getInfoProperty(imageInfo,"File Name")+"\t";
+				resultsTable.addLabel(propertyNames[0],getInfoProperty(imageInfo,"File Name"));
 			}else{
 				if(imp.getImageStackSize() == 1){
-					resultString += getInfoProperty(imageInfo,"Title")+"\t";
+					resultsTable.addLabel(propertyNames[0],getInfoProperty(imageInfo,"Title"));
 				}else{
-					resultString += imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
+					resultsTable.addLabel(propertyNames[0],imageInfo.substring(0,imageInfo.indexOf("\n")));
 				}
 			}
-			resultString += getInfoProperty(imageInfo,"Patient's Name")+"\t";
-			resultString += getInfoProperty(imageInfo,"Patient ID")+"\t";
-			resultString += getInfoProperty(imageInfo,"Patient's Birth Date")+"\t";
-			resultString += getInfoProperty(imageInfo,"Acquisition Date")+"\t";
+			for (int i = 1;i<propertyNames.length;++i){
+				resultsTable.addLabel(propertyNames[i],getInfoProperty(imageInfo,propertyNames[i]));
+			}
 		}
 		
-		resultString += Double.toString(fatThreshold)+"\t";
-		resultString += Double.toString(areaThreshold)+"\t";
-		resultString += Double.toString(BMDThreshold)+"\t";
-		resultString += Double.toString(scalingFactor)+"\t";
-		resultString += Double.toString(constant)+"\t";	
-		resultString += Double.toString(resolution);
-		resultsTable.setLabel(resultString,resultsTable.getCounter()-1);
+		for (int i = 0;i<parameterNames.length;++i){
+			resultsTable.addLabel(parameterNames[i],parameters[i]);
+		}
+		
 	}
 	
 	void printCorticalResults(ResultsTable resultsTable,CorticalAnalysis cortAnalysis){
