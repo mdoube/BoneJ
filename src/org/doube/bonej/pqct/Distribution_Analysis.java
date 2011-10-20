@@ -10,10 +10,12 @@ import ij.plugin.filter.*;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;			//image data 
-
 import java.awt.image.*;					//Creating the result BufferedImage...
+import java.awt.*;							//Image, component for debugging...
+import javax.swing.JPanel;					//createImage for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
+
 /*
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -59,6 +61,23 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 
 	/*
+	//For debugging
+	public BufferedImage getMyImage(double[] imageIn,int width, int height, double minimum, double maximum, Component imageCreator) {
+		int[] image = new int[width*height];
+		int pixel;
+		for (int x = 0; x < width*height;x++) {
+			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
+			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
+		}
+		Image imageToDraw = new JPanel().createImage(new MemoryImageSource(width,height,image,0,width));
+		imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
+		BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
+		Graphics2D gbuf = bufferedImage.createGraphics();
+		gbuf.drawImage(imageToDraw, 0, 0,null);
+		return bufferedImage;
+	}
+	*/
+	/*
 	//For Debugging
 	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
 	checkWindow.append((String) imp.getProperty("Info"));
@@ -71,13 +90,17 @@ public class Distribution_Analysis implements PlugInFilter {
 		double[] calibrationCoefficients;
 		if (getInfoProperty(imageInfo,"Stratec File") == null){
 			calibrationCoefficients = calibration.getCoefficients();
+			TextWindow checkWindow = new TextWindow(new String("Stratec File"),new String(""),800,400);
+			checkWindow.append((String) getInfoProperty(imageInfo,"Stratec File"));
 		} else {
+			TextWindow checkWindow = new TextWindow(new String("Stratec File"),new String(""),800,400);
+			checkWindow.append((String)getInfoProperty(imageInfo,"Stratec File"));
 			calibrationCoefficients = new double[2];
 			calibrationCoefficients[0] = -322.0;
 			calibrationCoefficients[1] = 1.724;
-			calibration.setFunction(Calibration.STRAIGHT_LINE,calibrationCoefficients,"mg/cm3");
-			calibration.setSigned16BitCalibration();
-			imp.setCalibration(calibration);
+			//calibration.setFunction(Calibration.STRAIGHT_LINE,calibrationCoefficients,"mg/cm3");
+			//calibration.setSigned16BitCalibration();
+			//imp.setCalibration(calibration);
 		}
 		sectorWidth = 10;
 		cOn = true;
@@ -148,15 +171,23 @@ public class Distribution_Analysis implements PlugInFilter {
 					imageName = imageInfo.substring(0,imageInfo.indexOf("\n"));
 				}
 			}
-			
-			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
-				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
-				int[] unsignedShort = new int[tempPointer.length];
+
+			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
+			int[] unsignedShort = new int[tempPointer.length];			
+			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = 0x0000FFFF & (int) (tempPointer[i]);}
-				scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
-			}else{		
-				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
+			}else{
+				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
+				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
+			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
+			
+			/* 
+			//For debugging
+			BufferedImage bi2 = getMyImage(scaledImageData.scaledImage,scaledImageData.width,scaledImageData.height,scaledImageData.minimum,scaledImageData.maximum,dialog.getParent());
+			new ImagePlus("Visual results",bi2).show();
+			*/
+			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);

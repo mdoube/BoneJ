@@ -190,7 +190,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		String[] propertyNames = {"File Name","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
-									"Width","Height","Startec File"};
+									"Width","Height","Stratec File"};
 		String[] propertyValues = {fileName,Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
 									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
 									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
