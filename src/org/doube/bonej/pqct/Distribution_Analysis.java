@@ -186,16 +186,16 @@ public class Distribution_Analysis implements PlugInFilter {
 															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 
-			ResultsTable resultsTable = Analyzer.getResultsTable();
-			if (resultsTable == null) {resultsTable = new ResultsTable();}
-			if (resultsTable.getCounter() == 0){writeHeader(resultsTable);}
-			resultsTable.incrementCounter();
-			resultsTable.updateResults();
-			printResults(resultsTable);
+			TextPanel textPanel = IJ.getTextPanel();
+			if (textPanel == null) {textPanel = new TextPanel();}
+			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
+			
+			String results = "";
+			results = printResults(results);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
-				printCorticalResults(resultsTable,cortAnalysis);
+				results = printCorticalResults(results,cortAnalysis);
 				if(!dOn){
 					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
 					resultImage = new ImagePlus("Visual results",bi);
@@ -204,6 +204,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
+				results = printDistributionResults(results,analyzeRoi);
 				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 				resultImage = new ImagePlus("Visual results",bi);
 			}
@@ -215,21 +216,51 @@ public class Distribution_Analysis implements PlugInFilter {
 				FileSaver fSaver = new FileSaver(resultImage);
 				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 			}
-			resultsTable.updateResults();
-			resultsTable.show("Results");
+			textPanel.appendLine(results);
+			textPanel.updateDisplay();			
 		}
 	}
 	
-	void writeHeader(ResultsTable resultsTable){
+	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
-			resultsTable.getFreeColumn(propertyNames[i]);
+			headings+=propertyNames[i]+"\t";
 		}
 		for (int i = 0;i<parameterNames.length;++i){
-			resultsTable.getFreeColumn(parameterNames[i]);
+			headings+=parameterNames[i]+"\t";
 		}
+		if(cOn){
+			String[] coHeadings = {"CoD [mg/cm3]","CoA [mm2]","SSI [mm3]","ToD [mg/cm3]","ToA[mm2]","BSId[g2/cm4]"};
+			for (int i = 0;i<coHeadings.length;++i){
+				headings+=coHeadings[i]+"\t";
+			}
+		}
+		if(dOn){
+			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution"};
+			for (int i = 0;i<dHeadings.length;++i){
+				headings+=dHeadings[i]+"\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical radius [mm]\t";
+			}
+			//Cortex BMD values			
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm3]\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm3]\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm3]\t";
+			}
 
+		}
+		textPanel.setColumnHeadings(headings);
 	}
 	
 	String getInfoProperty(String properties,String propertyToGet){
@@ -250,71 +281,63 @@ public class Distribution_Analysis implements PlugInFilter {
 		}
 		return null;
 	}
-	
-	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
-		resultString +=Double.toString(cortAnalysis.BMD)+"\t";
-		resultString +=Double.toString(cortAnalysis.AREA)+"\t";
-		resultString +=Double.toString(cortAnalysis.SSI)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToD)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToA)+"\t";
-		resultString +=Double.toString(cortAnalysis.BSId)+"\t";
-	}
-	
-	void printResults(ResultsTable resultsTable){
+
+	String printResults(String results){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
-		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
-				resultsTable.addLabel(propertyNames[0],getInfoProperty(imageInfo,"File Name"));
+				results+=getInfoProperty(imageInfo,"File Name")+"\t";
 			}else{
 				if(imp.getImageStackSize() == 1){
-					resultsTable.addLabel(propertyNames[0],getInfoProperty(imageInfo,"Title"));
+					results+=getInfoProperty(imageInfo,"Title")+"\t";
 				}else{
-					resultsTable.addLabel(propertyNames[0],imageInfo.substring(0,imageInfo.indexOf("\n")));
+					results+=imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
 				}
 			}
 			for (int i = 1;i<propertyNames.length;++i){
-				resultsTable.addLabel(propertyNames[i],getInfoProperty(imageInfo,propertyNames[i]));
+				results+=getInfoProperty(imageInfo,propertyNames[i])+"\t";
 			}
 		}
 		
-		for (int i = 0;i<parameterNames.length;++i){
-			resultsTable.addLabel(parameterNames[i],parameters[i]);
+		for (int i = 0;i<parameters.length;++i){
+			results+=parameters[i]+"\t";
 		}
-		
+		return results;
 	}
 	
-	void printCorticalResults(ResultsTable resultsTable,CorticalAnalysis cortAnalysis){
-		resultsTable.addValue("CoD [mg/cm3]",cortAnalysis.BMD);
-		resultsTable.addValue("CoA [mm2]",cortAnalysis.AREA);
-		resultsTable.addValue("SSI [mm3]",cortAnalysis.SSI);
-		resultsTable.addValue("ToD [mg/cm3]",cortAnalysis.ToD);
-		resultsTable.addValue("ToA[mm2]",cortAnalysis.ToA);
-		resultsTable.addValue("BSId[g2/cm4]",cortAnalysis.BSId);
+	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
+		results+=cortAnalysis.BMD+"\t";
+		results+=cortAnalysis.AREA+"\t";
+		results+=cortAnalysis.SSI+"\t";
+		results+=cortAnalysis.ToD+"\t";
+		results+=cortAnalysis.ToA+"\t";
+		results+=cortAnalysis.BSId+"\t";
+		return results;
 	}
 	
-	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
-		resultString += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
-		resultString += Boolean.toString(manualRotation)+"\t";
-		resultString += Boolean.toString(flipDistribution)+"\t";
+	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
+		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
+		results += Boolean.toString(manualRotation)+"\t";
+		results += Boolean.toString(flipDistribution)+"\t";
 		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.endocorticalRadii[pp]+"\t";
+			results += analyzeRoi.endocorticalRadii[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.pericorticalRadii[pp]+"\t";
+			results += analyzeRoi.pericorticalRadii[pp]+"\t";
 		}
 		//Cortex BMD values			
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.endoCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.endoCorticalBMDs[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.midCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.midCorticalBMDs[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.periCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.periCorticalBMDs[pp]+"\t";
 		}
+		return results;
 	}
 }
