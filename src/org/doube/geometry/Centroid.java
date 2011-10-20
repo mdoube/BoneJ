@@ -3,8 +3,8 @@ package org.doube.geometry;
 public class Centroid {
 
 	/**
-	 * Find the centroid of an array in double[n][i] format,
-	 * where n = number of points and i = number of dimensions
+	 * Find the centroid of an array in double[n][i] format, where n = number of
+	 * points and i = number of dimensions
 	 * 
 	 * @param points
 	 * @return array containing centroid in i dimensions
@@ -106,6 +106,9 @@ public class Centroid {
 		double[] sums = new double[nDimensions];
 
 		for (int n = 0; n < nPoints; n++) {
+			if (points[n].length != nDimensions)
+				throw new IllegalArgumentException(
+						"Number of dimensions must be equal");
 			for (int i = 0; i < nDimensions; i++) {
 				sums[i] += points[n][i];
 			}
@@ -117,17 +120,17 @@ public class Centroid {
 
 		return centroid;
 	}
-	
+
 	/**
 	 * Return the centroid of a 1D array, which is its mean value
 	 * 
 	 * @param points
 	 * @return the mean value of the points
 	 */
-	public static double getCentroid(double[] points){
+	public static double getCentroid(double[] points) {
 		final int nPoints = points.length;
 		double sum = 0;
-		for (int n = 0; n < nPoints; n++){
+		for (int n = 0; n < nPoints; n++) {
 			sum += points[n];
 		}
 		return sum / nPoints;

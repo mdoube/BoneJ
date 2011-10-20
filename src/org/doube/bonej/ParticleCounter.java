@@ -886,14 +886,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			ArrayList<List<Point3f>> surfacePoints, int colourMode,
 			double[] volumes, double splitValue) {
 		int p = 0;
-		int drawnParticles = 0;
 		final int nParticles = surfacePoints.size();
-		Iterator<List<Point3f>> i = surfacePoints.iterator();
-		while (i.hasNext()) {
-			List<Point3f> points = i.next();
-			if (p > 0 && points.size() > 0)
-				drawnParticles++;
-		}
 		Iterator<List<Point3f>> iter = surfacePoints.iterator();
 		while (iter.hasNext()) {
 			IJ.showStatus("Rendering surfaces...");
