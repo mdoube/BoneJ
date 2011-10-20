@@ -234,36 +234,6 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 	}
 
 	/**
-	 * Calculate the vector associated with the plane formed between neckVector
-	 * and the normal to projectionPlane from the regression vector and the
-	 * vector connecting the centroid and the femoral head centre
-	 * 
-	 * @param projectionPlane
-	 *            double[][]
-	 * @param neckVector
-	 *            double[][]
-	 * @return double[][] neckPlane
-	 */
-	private double[][] neckPlane(double[][] projectionPlane,
-			double[][] neckVector) {
-		// neckPlane is the cross product of neckVector and projectionPlane
-		return Vectors.crossProduct(projectionPlane, neckVector);
-	}
-
-	/**
-	 * Find the intersection between neckPlane and projectionPlane
-	 * 
-	 * @param projectionPlane
-	 * @param neckPlane
-	 * @return double[][] testVector.
-	 */
-	private double[][] testVector(double[][] projectionPlane,
-			double[][] neckPlane) {
-		// testVector is the cross product of neckPlane and projectionPlane
-		return Vectors.crossProduct(projectionPlane, neckPlane);
-	}
-
-	/**
 	 * Calculate the orthogonal distance regression plane of a set of points by
 	 * the covariance method and Singular Value Decomposition
 	 * 
@@ -367,8 +337,8 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 		double[][] neckVector = neckVector(headCentre, neckPoint);
 		double[][] projectionPlane = getProjectionPlane(shaftVector,
 				headCentre, this.centroid);
-		double[][] neckPlane = neckPlane(neckVector, projectionPlane);
-		double[][] testVector = testVector(projectionPlane, neckPlane);
+		double[][] neckPlane = Vectors.crossProduct(neckVector, projectionPlane);
+		double[][] testVector = Vectors.crossProduct(projectionPlane, neckPlane);
 		// P . Q = ||P|| ||Q|| cos(a) so if P and Q are unit vectors, then P.Q =
 		// cos(a)
 		Matrix PP = new Matrix(projectionPlane);
