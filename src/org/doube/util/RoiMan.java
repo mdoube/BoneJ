@@ -1,6 +1,5 @@
 package org.doube.util;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Roi;
@@ -11,8 +10,6 @@ import ij.process.ImageProcessor;
 import java.awt.List;
 import java.awt.Rectangle;
 import java.util.ArrayList;
-
-import org.doube.bonej.Moments;
 
 /**
  * Do useful things with ImageJ's ROI Manager
