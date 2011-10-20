@@ -4,13 +4,14 @@ import ij.*;
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
-import java.util.*;	//Vector
+import ij.measure.*;						//Calibration
+import java.util.*;							//Vector
 import ij.plugin.filter.*;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
-import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
-import org.doube.bonej.pqct.io.*;	//image data 
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import org.doube.bonej.pqct.io.*;			//image data 
 
-import java.awt.image.*; //Creating the result BufferedImage...
+import java.awt.image.*;					//Creating the result BufferedImage...
 import ij.plugin.filter.Info;
 import ij.io.*;
 /*
@@ -64,11 +65,23 @@ public class Distribution_Analysis implements PlugInFilter {
 	*/
 	
 	public void run(ImageProcessor ip) {
-		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());		
+		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
+		/*Check image calibration*/
+		Calibration calibration = imp.getCalibration();
+		double[] calibrationCoefficients;
+		if (calibration.calibrated()){
+			calibrationCoefficients = calibration.getCoefficients();
+		} else {
+			calibrationCoefficients = new double[2];
+			calibrationCoefficients[0] = -322.0;
+			calibrationCoefficients[1] = 1.724;
+			calibration.setFunction(Calibration.STRAIGHT_LINE,calibrationCoefficients,"mg/cm3");
+			imp.setCalibration(calibration);
+		}
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
-		resolution = 0;
+		resolution = 1.0;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -81,19 +94,9 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 550.0, 4, 8, null);
 		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
-		if (getInfoProperty(imageInfo,"Rescale Slope")!= null){//Suggest HU scaling for dicom Files
-			dialog.addNumericField("Scaling_coefficient (slope)", Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4, 8, null);
-			dialog.addNumericField("Scaling_constant (intercept)",Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4, 8, null);
-					
-		}else{
-			dialog.addNumericField("Scaling_coefficient (slope)", 1.724, 4, 8, null);
-			dialog.addNumericField("Scaling_constant (intercept)", -322.0, 4, 8, null);
-		}
-		if (resolution != 0){
-			dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
-		} else {
-			dialog.addNumericField("In-plane_pixel_size [mm]", 1.0, 4, 8, null);
-		}
+		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
+		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
+		dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
