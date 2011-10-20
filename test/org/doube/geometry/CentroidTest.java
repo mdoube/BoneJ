@@ -34,13 +34,32 @@ public class CentroidTest {
 		} catch (IllegalArgumentException e) {
 		}
 
-		//A 20-D centroid
+		// A 20-D centroid
 		double[] centroid = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
 				15, 16, 17, 18, 19, 20 };
 		assertArrayEquals(centroid, Centroid.getCentroid(goodNd), 1E-9);
+
+		// A 3-D array
+		double[][] threeD = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 },
+				{ 10, 11, 12 }, { 13, 14, 15 }, { 16, 17, 18 } };
+		// Its centroid
+		double[] centroid3d = { 8.5, 9.5, 10.5 };
+		assertArrayEquals(centroid3d, Centroid.getCentroid(threeD), 1E-9);
+
+		// A 2-D array
+		double[][] twoD = { { 1, 2 }, { 4, 5 }, { 7, 8 }, { 10, 11 },
+				{ 13, 14 }, { 16, 17 } };
+		// Its centroid
+		double[] centroid2d = { 8.5, 9.5 };
+		assertArrayEquals(centroid2d, Centroid.getCentroid(twoD), 1E-9);
 		
-		
-		
+		// A 1-D array
+		double[][] oneD = { { 1 }, { 4 }, { 7 }, { 10 },
+				{ 13 }, { 16 } };
+		// Its centroid
+		double[] centroid1d = { 8.5 };
+		assertArrayEquals(centroid1d, Centroid.getCentroid(oneD), 1E-9);
+
 	}
 
 	@Test
