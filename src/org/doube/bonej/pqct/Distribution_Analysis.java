@@ -69,13 +69,14 @@ public class Distribution_Analysis implements PlugInFilter {
 		/*Check image calibration*/
 		Calibration calibration = imp.getCalibration();
 		double[] calibrationCoefficients;
-		if (calibration.calibrated()){
+		if (getInfoProperty(imageInfo,"Stratec File") == null){
 			calibrationCoefficients = calibration.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
 			calibrationCoefficients[0] = -322.0;
 			calibrationCoefficients[1] = 1.724;
 			calibration.setFunction(Calibration.STRAIGHT_LINE,calibrationCoefficients,"mg/cm3");
+			calibration.setSigned16BitCalibration();
 			imp.setCalibration(calibration);
 		}
 		sectorWidth = 10;
