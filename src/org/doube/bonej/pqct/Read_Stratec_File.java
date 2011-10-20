@@ -79,7 +79,11 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		fi.fileName = fileName;
 		fi.info		= properties;
 		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
-        this.setFileInfo(fi);  
+        this.setFileInfo(fi);
+		if (arg.isEmpty() && this.getHeight()>0){
+			this.show();
+			return;
+		}
 		if (this.getHeight()<1) return;
 	}
 	
