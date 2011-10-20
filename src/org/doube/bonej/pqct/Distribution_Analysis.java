@@ -4,12 +4,12 @@ import ij.*;
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
-import java.awt.*;
 import java.util.*;	//Vector
 import ij.plugin.filter.*;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
 import org.doube.bonej.pqct.io.*;	//image data 
+
 import java.awt.image.*; //Creating the result BufferedImage...
 import ij.plugin.filter.Info;
 import ij.io.*;
@@ -77,22 +77,22 @@ public class Distribution_Analysis implements PlugInFilter {
 			resolution = Double.valueOf(temp);
 		}
 		//Get parameters for scaling the image and for thresholding
-		GenericDialog dialog = new GenericDialog(new String("Analysis parameters"));
-		dialog.addNumericField(new String("Fat threshold"), 40.0, 4);
-		dialog.addNumericField(new String("Area threshold"), 550.0, 4);
-		dialog.addNumericField(new String("BMD threshold"), 690.0, 4);
+		GenericDialog dialog = new GenericDialog("Analysis parameters");
+		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
+		dialog.addNumericField("Area threshold", 550.0, 4, 8, null);
+		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
 		if (getInfoProperty(imageInfo,"Rescale Slope")!= null){//Suggest HU scaling for dicom Files
-			dialog.addNumericField(new String("Scaling_coefficient (slope)"), Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4);
-			dialog.addNumericField(new String("Scaling_constant (intercept)"),Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4);
+			dialog.addNumericField("Scaling_coefficient (slope)", Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4, 8, null);
+			dialog.addNumericField("Scaling_constant (intercept)",Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4, 8, null);
 					
 		}else{
-			dialog.addNumericField(new String("Scaling_coefficient (slope)"), 1.724, 4);
-			dialog.addNumericField(new String("Scaling_constant (intercept)"), -322.0, 4);
+			dialog.addNumericField("Scaling_coefficient (slope)", 1.724, 4, 8, null);
+			dialog.addNumericField("Scaling_constant (intercept)", -322.0, 4, 8, null);
 		}
 		if (resolution != 0){
-			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), resolution, 4);
+			dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
 		} else {
-			dialog.addNumericField(new String("In-plane_pixel_size [mm]"), 1.0, 4);
+			dialog.addNumericField("In-plane_pixel_size [mm]", 1.0, 4, 8, null);
 		}
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
@@ -106,10 +106,10 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
-		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4);
+		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
-		dialog.addStringField("Image_save_path","C:/Your/Path/Goes/Here",40);
+		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..

@@ -11,6 +11,10 @@ public class DensityCalibrator implements PlugIn {
 
 	public void run(String arg) {
 		ImagePlus imp = WindowManager.getCurrentImage();
+		if (imp == null){
+			IJ.noImage();
+			return;
+		}
 		if (arg.equals("scanco"))
 			try {
 				scanco(imp);
@@ -23,8 +27,8 @@ public class DensityCalibrator implements PlugIn {
 			} catch (IllegalArgumentException e) {
 				IJ.error(e.getMessage());
 				return;
-			} catch (Exception e){
-				IJ.error("Can't calibrate image\n"+e.getMessage());
+			} catch (Exception e) {
+				IJ.error("Can't calibrate image\n" + e.getMessage());
 				return;
 			}
 	}
