@@ -90,17 +90,10 @@ public class Distribution_Analysis implements PlugInFilter {
 		double[] calibrationCoefficients;
 		if (getInfoProperty(imageInfo,"Stratec File") == null){
 			calibrationCoefficients = calibration.getCoefficients();
-			TextWindow checkWindow = new TextWindow(new String("Stratec File"),new String(""),800,400);
-			checkWindow.append((String) getInfoProperty(imageInfo,"Stratec File"));
 		} else {
-			TextWindow checkWindow = new TextWindow(new String("Stratec File"),new String(""),800,400);
-			checkWindow.append((String)getInfoProperty(imageInfo,"Stratec File"));
 			calibrationCoefficients = new double[2];
 			calibrationCoefficients[0] = -322.0;
 			calibrationCoefficients[1] = 1.724;
-			//calibration.setFunction(Calibration.STRAIGHT_LINE,calibrationCoefficients,"mg/cm3");
-			//calibration.setSigned16BitCalibration();
-			//imp.setCalibration(calibration);
 		}
 		sectorWidth = 10;
 		cOn = true;
@@ -192,18 +185,17 @@ public class Distribution_Analysis implements PlugInFilter {
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
-			TextWindow textWindow = (TextWindow) ij.WindowManager.getFrame("Distribution Analysis Results");
-			if (textWindow == null){
-				textWindow = new TextWindow(new String("Distribution Analysis Results"),new String(""),500,200);
-				writeHeader(textWindow);
+
+			ResultsTable resultsTable = Analyzer.getResultsTable();
+			if (resultsTable.getCounter() == 0){
+				writeHeader(resultsTable);
 			}
-			resultString = new String();
-			printResults(textWindow);
+			resultsTable.incrementCounter();
+			
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
-				printCorticalResults(textWindow,cortAnalysis);
-				
+				printCorticalResults(resultsTable,cortAnalysis);
 				if(!dOn){
 					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
 					resultImage = new ImagePlus("Visual results",bi);
@@ -212,7 +204,6 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
-				printDistributionResults(textWindow,analyzeRoi);
 				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 				resultImage = new ImagePlus("Visual results",bi);
 			}
@@ -224,8 +215,24 @@ public class Distribution_Analysis implements PlugInFilter {
 				FileSaver fSaver = new FileSaver(resultImage);
 				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 			}
-			textWindow.append(resultString);
+			resultsTable.updateResults();
+			printResults(resultsTable);
+			resultsTable.show("Results");
 		}
+	}
+	
+	void writeHeader(ResultsTable resultsTable){
+		resultsTable.getFreeColumn("Filename");
+		resultsTable.getFreeColumn("Subject name");
+		resultsTable.getFreeColumn("Subject ID");
+		resultsTable.getFreeColumn("Subject birthdate");
+		resultsTable.getFreeColumn("Measurement date");
+		resultsTable.getFreeColumn("Fat Threshold");
+		resultsTable.getFreeColumn("Area Threshold");
+		resultsTable.getFreeColumn("BMD Threshold");
+		resultsTable.getFreeColumn("Scaling Coefficient");
+		resultsTable.getFreeColumn("Scaling Constant");
+		resultsTable.getFreeColumn("Resolution");
 	}
 	
 	void writeHeader(TextWindow textWindow){
@@ -260,7 +267,36 @@ public class Distribution_Analysis implements PlugInFilter {
 		textWindow.append(headerRow);
 	}
 	
-	void printResults(TextWindow textWindow){
+	String getInfoProperty(String properties,String propertyToGet){
+		String toTokenize = properties;
+		StringTokenizer st = new StringTokenizer(toTokenize,"\n");
+		String currentToken = null;
+		while (st.hasMoreTokens() ) {
+			currentToken = st.nextToken();
+			if (currentToken.indexOf(propertyToGet) != -1){break;}
+		}
+		if (currentToken.indexOf(propertyToGet) != -1){
+			StringTokenizer st2 = new StringTokenizer(currentToken,":");
+			String token2 = null;
+			while (st2.hasMoreTokens()){
+				token2 = st2.nextToken();
+			}
+			return token2.trim();
+		}
+		return null;
+	}
+	
+	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
+		resultString +=Double.toString(cortAnalysis.BMD)+"\t";
+		resultString +=Double.toString(cortAnalysis.AREA)+"\t";
+		resultString +=Double.toString(cortAnalysis.SSI)+"\t";
+		resultString +=Double.toString(cortAnalysis.ToD)+"\t";
+		resultString +=Double.toString(cortAnalysis.ToA)+"\t";
+		resultString +=Double.toString(cortAnalysis.BSId)+"\t";
+	}
+	
+	void printResults(ResultsTable resultsTable){
+		String resultString = "";
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
 				resultString += getInfoProperty(imageInfo,"File Name")+"\t";
@@ -283,34 +319,16 @@ public class Distribution_Analysis implements PlugInFilter {
 		resultString += Double.toString(scalingFactor)+"\t";
 		resultString += Double.toString(constant)+"\t";	
 		resultString += Double.toString(resolution)+"\t";
+		resultsTable.setLabel(resultString,resultsTable.getCounter()-1);
 	}
 	
-		String getInfoProperty(String properties,String propertyToGet){
-			String toTokenize = properties;
-			StringTokenizer st = new StringTokenizer(toTokenize,"\n");
-			String currentToken = null;
-			while (st.hasMoreTokens() ) {
-				currentToken = st.nextToken();
-				if (currentToken.indexOf(propertyToGet) != -1){break;}
-			}
-			if (currentToken.indexOf(propertyToGet) != -1){
-				StringTokenizer st2 = new StringTokenizer(currentToken,":");
-				String token2 = null;
-				while (st2.hasMoreTokens()){
-					token2 = st2.nextToken();
-				}
-				return token2.trim();
-			}
-			return null;
-	}
-	
-	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
-		resultString +=Double.toString(cortAnalysis.BMD)+"\t";
-		resultString +=Double.toString(cortAnalysis.AREA)+"\t";
-		resultString +=Double.toString(cortAnalysis.SSI)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToD)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToA)+"\t";
-		resultString +=Double.toString(cortAnalysis.BSId)+"\t";
+	void printCorticalResults(ResultsTable resultsTable,CorticalAnalysis cortAnalysis){
+		resultsTable.addValue("CoD [mg/cm3]",cortAnalysis.BMD);
+		resultsTable.addValue("CoA [mm2]",cortAnalysis.AREA);
+		resultsTable.addValue("SSI [mm3]",cortAnalysis.SSI);
+		resultsTable.addValue("ToD [mg/cm3]",cortAnalysis.ToD);
+		resultsTable.addValue("ToA[mm2]",cortAnalysis.ToA);
+		resultsTable.addValue("BSId[g2/cm4]",cortAnalysis.BSId);
 	}
 	
 	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
