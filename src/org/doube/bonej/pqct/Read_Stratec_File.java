@@ -5,6 +5,7 @@ import ij.*;
 import ij.io.*;
 import ij.gui.*;
 import ij.plugin.*;
+import ij.measure.*;						//Calibration
 
 /*
 	This program is free software: you can redistribute it and/or modify
@@ -79,7 +80,11 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		fi.fileName = fileName;
 		fi.info		= properties;
 		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
-        this.setFileInfo(fi);  
+        this.setFileInfo(fi);
+		if (arg.isEmpty() && this.getHeight()>0){
+			this.show();
+			return;
+		}
 		if (this.getHeight()<1) return;
 	}
 	
@@ -94,24 +99,34 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			//Read some data from the file Header
 			readHeader(fileData);
 			//Create ImageJ image
-			ImagePlus tempImage = NewImage.createFloatImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
+			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
 			this.setImage(tempImage.getImage());
 			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
 			//Set ImageJ image properties
 			setProperties();
-			float[] pixels = (float[]) this.getProcessor().getPixels();
-			float min = (float) Math.pow(2,15)-1;
-			float max = (float) -Math.pow(2,15);
+			short[] pixels = (short[]) this.getProcessor().getPixels();
+			int min = (int) Math.pow(2,16);
+			int max = 0;
 			for (int j = 0;j < PicMatrixY; ++j){
 				for (int i = 0;i < PicMatrixX; ++i){
 					final int offset = 1609+2*(i+j*PicMatrixX);
-					float value =(float) ((short) (((fileData[offset+1] & 0xFF)) <<8 | ((short) (fileData[offset] & 0xFF))<<0));
-					if (value < min){min = value;}
-					if (value > max){max = value;}
-					pixels[i+j*PicMatrixX] = value;
+					int value = (int) ((short) (((fileData[offset+1] & 0xFF)) <<8 | ((short) (fileData[offset] & 0xFF))<<0));
+
+					if (value >=0){
+						value = (int) -Math.pow(2,15)+value;
+					}else{
+						value = (int) Math.pow(2,15)-1+value;
+					}
+					int tempVal = value & 0xFFFF;
+					if (tempVal < min){min =  tempVal;}
+					if (tempVal > max){max = tempVal;}					
+					pixels[i+j*PicMatrixX] = (short) value;
 				}
 			}
-			this.setDisplayRange((double) min,(double) max);
+			this.setDisplayRange( min, max);
+			Calibration tempCalib = this.getCalibration();
+			tempCalib.setSigned16BitCalibration();
+			this.setCalibration(tempCalib);
 		}catch (Exception e) {
 			IJ.error("Stratec file read failed ", e.getMessage());
 			return;
@@ -175,11 +190,11 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		String[] propertyNames = {"File Name","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
-									"Width","Height"};
+									"Width","Height","Stratec File"};
 		String[] propertyValues = {fileName,Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
 									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
 									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
-									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY)};
+									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY),"1"};
 		properties = new String();
 		for (int i = 0;i<propertyNames.length;++i){
 			properties += propertyNames[i]+": "+propertyValues[i]+"\n";
