@@ -167,15 +167,15 @@ public class AnalyzeROI{
 		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
 		//or vertical axis, whichever rotation is smaller...
 			
-		if (details.rotationChoice.equals("Furthest point")){
+		if (details.rotationChoice.equals("Furthest_point")){
 			/*Calculate alfa from periosteal radii*/
 			double[] radii = new double[roi.roiI.size()];
 			for (int i = 0; i<roi.roiI.size();++i){
 				radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
 			}
-			double[] sumRadii = new double[radii.length-10];
-			for (int i = 0;i<radii.length-10;++i){
-				for (int j = 0;j<11;++j){
+			double[] sumRadii = new double[radii.length];
+			for (int i = 5;i<radii.length-6;++i){
+				for (int j = -5;j<6;++j){
 					sumRadii[i]+=radii[i+j];
 				}
 			}
@@ -188,31 +188,34 @@ public class AnalyzeROI{
 			double x,y;
 			x = roi.roiI.get(largest)-marrowCenter[0];
 			y = roi.roiJ.get(largest)-marrowCenter[1];
-			alfa = Math.PI/2.0-Math.atan2(y,x);
-			rotationCorrection = 0-(((double) sectorWidth)/2)/180*Math.PI; 
+			alfa = Math.PI-Math.atan2(y,x);
+			rotationCorrection = (((double) sectorWidth)/2.0); 
 		}
-		if (details.rotationChoice.equals("Selection According to Imax/Imin")){
+		if (details.rotationChoice.equals("According_to_Imax/Imin")){
 			if (vali1 > vali2){
-					rotationCorrection = Math.PI/2.0+(((double) sectorWidth)/2)/180*Math.PI; 
+					rotationCorrection = (((double) sectorWidth)/2.0)+90.0;  
 			} else {
-					rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
+					rotationCorrection = (((double) sectorWidth)/2.0); 
 			}	
 		}
 		
 		if (details.manualRotation){
 			alfa = details.manualAlfa;
-			rotationCorrection = 0+(((double) sectorWidth)/2)/180*Math.PI; 
+			rotationCorrection = (((double) sectorWidth)/2.0); 
+		}
+		
+		if (details.flipDistribution){
+			rotationCorrection = -rotationCorrection;
 		}
 		
 		//figuring out the indexes for rotating vBMDs and having sector #1 directed posteriorly and having the bending axis corresponding to minimal CSMI half the sector.
 		int alkuindex;
 		alkuindex = 0;
-		if (alfa+rotationCorrection >= 0){
-			alkuindex = 360-(int) (alfa/Math.PI*180+rotationCorrection/Math.PI*180); 
+		if (alfa/Math.PI*180.0+rotationCorrection >= 0){
+			alkuindex = 360-(int) (alfa/Math.PI*180.0+rotationCorrection); 
 		}else{
-			alkuindex = -(int) (alfa/Math.PI*180+rotationCorrection/Math.PI*180);
+			alkuindex = -(int) (alfa/Math.PI*180.0+rotationCorrection);
 		}
-
 		pind = new Vector<Integer>();
 		int inde;
 		inde = alkuindex;

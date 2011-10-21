@@ -4,15 +4,18 @@ import ij.*;
 import ij.text.*;
 import ij.process.*;
 import ij.gui.*;
-import java.util.*;	//Vector
+import ij.measure.*;						//Calibration
+import java.util.*;							//Vector
 import ij.plugin.filter.*;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
-import org.doube.bonej.pqct.selectroi.*;		//ROI selection..
-import org.doube.bonej.pqct.io.*;	//image data 
-
-import java.awt.image.*; //Creating the result BufferedImage...
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import org.doube.bonej.pqct.io.*;			//image data 
+import java.awt.image.*;					//Creating the result BufferedImage...
+import java.awt.*;							//Image, component for debugging...
+import javax.swing.JPanel;					//createImage for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
+
 /*
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -58,17 +61,44 @@ public class Distribution_Analysis implements PlugInFilter {
 	}
 
 	/*
+	//For debugging
+	public BufferedImage getMyImage(double[] imageIn,int width, int height, double minimum, double maximum, Component imageCreator) {
+		int[] image = new int[width*height];
+		int pixel;
+		for (int x = 0; x < width*height;x++) {
+			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
+			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
+		}
+		Image imageToDraw = new JPanel().createImage(new MemoryImageSource(width,height,image,0,width));
+		imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
+		BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
+		Graphics2D gbuf = bufferedImage.createGraphics();
+		gbuf.drawImage(imageToDraw, 0, 0,null);
+		return bufferedImage;
+	}
+	*/
+	/*
 	//For Debugging
 	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
 	checkWindow.append((String) imp.getProperty("Info"));
 	*/
 	
 	public void run(ImageProcessor ip) {
-		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());		
+		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
+		/*Check image calibration*/
+		Calibration calibration = imp.getCalibration();
+		double[] calibrationCoefficients;
+		if (getInfoProperty(imageInfo,"Stratec File") == null){
+			calibrationCoefficients = calibration.getCoefficients();
+		} else {
+			calibrationCoefficients = new double[2];
+			calibrationCoefficients[0] = -322.0;
+			calibrationCoefficients[1] = 1.724;
+		}
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
-		resolution = 0;
+		resolution = 1.0;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -81,19 +111,9 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 550.0, 4, 8, null);
 		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
-		if (getInfoProperty(imageInfo,"Rescale Slope")!= null){//Suggest HU scaling for dicom Files
-			dialog.addNumericField("Scaling_coefficient (slope)", Double.valueOf(getInfoProperty(imageInfo,"Rescale Slope")), 4, 8, null);
-			dialog.addNumericField("Scaling_constant (intercept)",Double.valueOf(getInfoProperty(imageInfo,"Rescale Intercept")), 4, 8, null);
-					
-		}else{
-			dialog.addNumericField("Scaling_coefficient (slope)", 1.724, 4, 8, null);
-			dialog.addNumericField("Scaling_constant (intercept)", -322.0, 4, 8, null);
-		}
-		if (resolution != 0){
-			dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
-		} else {
-			dialog.addNumericField("In-plane_pixel_size [mm]", 1.0, 4, 8, null);
-		}
+		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
+		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
+		dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
@@ -144,31 +164,38 @@ public class Distribution_Analysis implements PlugInFilter {
 					imageName = imageInfo.substring(0,imageInfo.indexOf("\n"));
 				}
 			}
-			
-			if (imp.getBitDepth() ==16){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
-				short[] tempPointer = (short[]) imp.getProcessor().getPixels();
-				int[] unsignedShort = new int[tempPointer.length];
+
+			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
+			int[] unsignedShort = new int[tempPointer.length];			
+			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = 0x0000FFFF & (int) (tempPointer[i]);}
-				scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
-			}else{		
-				scaledImageData = new ScaledImageData((float[]) imp.getProcessor().getPixels(), imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
+			}else{
+				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
+				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
+			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
+			
+			/* 
+			//For debugging
+			BufferedImage bi2 = getMyImage(scaledImageData.scaledImage,scaledImageData.width,scaledImageData.height,scaledImageData.minimum,scaledImageData.maximum,dialog.getParent());
+			new ImagePlus("Visual results",bi2).show();
+			*/
+			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
-			TextWindow textWindow = (TextWindow) ij.WindowManager.getFrame("Distribution Analysis Results");
-			if (textWindow == null){
-				textWindow = new TextWindow(new String("Distribution Analysis Results"),new String(""),500,200);
-				writeHeader(textWindow);
-			}
-			resultString = new String();
-			printResults(textWindow);
+
+			TextPanel textPanel = IJ.getTextPanel();
+			if (textPanel == null) {textPanel = new TextPanel();}
+			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
+			
+			String results = "";
+			results = printResults(results);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
-				printCorticalResults(textWindow,cortAnalysis);
-				
+				results = printCorticalResults(results,cortAnalysis);
 				if(!dOn){
 					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
 					resultImage = new ImagePlus("Visual results",bi);
@@ -177,7 +204,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
-				printDistributionResults(textWindow,analyzeRoi);
+				results = printDistributionResults(results,analyzeRoi);
 				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 				resultImage = new ImagePlus("Visual results",bi);
 			}
@@ -189,115 +216,128 @@ public class Distribution_Analysis implements PlugInFilter {
 				FileSaver fSaver = new FileSaver(resultImage);
 				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 			}
-			textWindow.append(resultString);
+			textPanel.appendLine(results);
+			textPanel.updateDisplay();			
 		}
 	}
 	
-	void writeHeader(TextWindow textWindow){
-		String headerRow = new String();
-		if (imp!=null){
-			headerRow += "Filename\tSubject name\tSubject ID\tSubject birthdate\tMeasurement date\t";
+	void writeHeader(TextPanel textPanel){
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String headings = "";
+		for (int i = 0;i<propertyNames.length;++i){
+			headings+=propertyNames[i]+"\t";
 		}
-		headerRow += "Fat Threshold\tArea Threshold\tBMD Threshold\tScaling Coefficient\tScaling Constant\tResolution\t";
-		if (cOn){
-			headerRow +="CoD [mg/cm3]\tCoA [mm2]\tSSI [mm3]\tToD [mg/cm3]\tToA[mm2]\tBSId[g2/cm4]\t";
+		for (int i = 0;i<parameterNames.length;++i){
+			headings+=parameterNames[i]+"\t";
 		}
-		if (dOn){
-			headerRow +="Alfa [deg]\tManual rotation [true/false]\tFlip [true/false]\t";
-		
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Endocortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mm]\t";
+		if(cOn){
+			String[] coHeadings = {"CoD [mg/cm3]","CoA [mm2]","SSI [mm3]","ToD [mg/cm3]","ToA[mm2]","BSId[g2/cm4]"};
+			for (int i = 0;i<coHeadings.length;++i){
+				headings+=coHeadings[i]+"\t";
 			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Pericortical radius "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mm]\t";
+		}
+		if(dOn){
+			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution"};
+			for (int i = 0;i<dHeadings.length;++i){
+				headings+=dHeadings[i]+"\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
+			}
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical radius [mm]\t";
 			}
 			//Cortex BMD values			
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Endocortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm3]\t";
 			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Midcortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm3]\t";
 			}
-			for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-				headerRow +="Pericortical BMD "+pp*sectorWidth+" - "+((pp+1)*sectorWidth)+" [mg/cm3]\t";
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm3]\t";
 			}
+
 		}
-		textWindow.append(headerRow);
+		textPanel.setColumnHeadings(headings);
 	}
 	
-	void printResults(TextWindow textWindow){
+	String getInfoProperty(String properties,String propertyToGet){
+		String toTokenize = properties;
+		StringTokenizer st = new StringTokenizer(toTokenize,"\n");
+		String currentToken = null;
+		while (st.hasMoreTokens() ) {
+			currentToken = st.nextToken();
+			if (currentToken.indexOf(propertyToGet) != -1){break;}
+		}
+		if (currentToken.indexOf(propertyToGet) != -1){
+			StringTokenizer st2 = new StringTokenizer(currentToken,":");
+			String token2 = null;
+			while (st2.hasMoreTokens()){
+				token2 = st2.nextToken();
+			}
+			return token2.trim();
+		}
+		return null;
+	}
+
+	String printResults(String results){
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
+
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
-				resultString += getInfoProperty(imageInfo,"File Name")+"\t";
+				results+=getInfoProperty(imageInfo,"File Name")+"\t";
 			}else{
 				if(imp.getImageStackSize() == 1){
-					resultString += getInfoProperty(imageInfo,"Title")+"\t";
+					results+=getInfoProperty(imageInfo,"Title")+"\t";
 				}else{
-					resultString += imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
+					results+=imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
 				}
 			}
-			resultString += getInfoProperty(imageInfo,"Patient's Name")+"\t";
-			resultString += getInfoProperty(imageInfo,"Patient ID")+"\t";
-			resultString += getInfoProperty(imageInfo,"Patient's Birth Date")+"\t";
-			resultString += getInfoProperty(imageInfo,"Acquisition Date")+"\t";
+			for (int i = 1;i<propertyNames.length;++i){
+				results+=getInfoProperty(imageInfo,propertyNames[i])+"\t";
+			}
 		}
 		
-		resultString += Double.toString(fatThreshold)+"\t";
-		resultString += Double.toString(areaThreshold)+"\t";
-		resultString += Double.toString(BMDThreshold)+"\t";
-		resultString += Double.toString(scalingFactor)+"\t";
-		resultString += Double.toString(constant)+"\t";	
-		resultString += Double.toString(resolution)+"\t";
+		for (int i = 0;i<parameters.length;++i){
+			results+=parameters[i]+"\t";
+		}
+		return results;
 	}
 	
-		String getInfoProperty(String properties,String propertyToGet){
-			String toTokenize = properties;
-			StringTokenizer st = new StringTokenizer(toTokenize,"\n");
-			String currentToken = null;
-			while (st.hasMoreTokens() ) {
-				currentToken = st.nextToken();
-				if (currentToken.indexOf(propertyToGet) != -1){break;}
-			}
-			if (currentToken.indexOf(propertyToGet) != -1){
-				StringTokenizer st2 = new StringTokenizer(currentToken,":");
-				String token2 = null;
-				while (st2.hasMoreTokens()){
-					token2 = st2.nextToken();
-				}
-				return token2.trim();
-			}
-			return null;
+	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
+		results+=cortAnalysis.BMD+"\t";
+		results+=cortAnalysis.AREA+"\t";
+		results+=cortAnalysis.SSI+"\t";
+		results+=cortAnalysis.ToD+"\t";
+		results+=cortAnalysis.ToA+"\t";
+		results+=cortAnalysis.BSId+"\t";
+		return results;
 	}
 	
-	void printCorticalResults(TextWindow textWindow,CorticalAnalysis cortAnalysis){
-		resultString +=Double.toString(cortAnalysis.BMD)+"\t";
-		resultString +=Double.toString(cortAnalysis.AREA)+"\t";
-		resultString +=Double.toString(cortAnalysis.SSI)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToD)+"\t";
-		resultString +=Double.toString(cortAnalysis.ToA)+"\t";
-		resultString +=Double.toString(cortAnalysis.BSId)+"\t";
-	}
-	
-	void printDistributionResults(TextWindow textWindow,AnalyzeROI analyzeRoi){
-		resultString += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
-		resultString += Boolean.toString(manualRotation)+"\t";
-		resultString += Boolean.toString(flipDistribution)+"\t";
+	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
+		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
+		results += Boolean.toString(manualRotation)+"\t";
+		results += Boolean.toString(flipDistribution)+"\t";
 		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.endocorticalRadii[pp]+"\t";
+			results += analyzeRoi.endocorticalRadii[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.pericorticalRadii[pp]+"\t";
+			results += analyzeRoi.pericorticalRadii[pp]+"\t";
 		}
 		//Cortex BMD values			
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.endoCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.endoCorticalBMDs[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.midCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.midCorticalBMDs[pp]+"\t";
 		}
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			resultString += analyzeRoi.periCorticalBMDs[pp]+"\t";
+			results += analyzeRoi.periCorticalBMDs[pp]+"\t";
 		}
+		return results;
 	}
 }

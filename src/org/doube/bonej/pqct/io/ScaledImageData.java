@@ -30,25 +30,7 @@ public class ScaledImageData{
 	public int height;
 	public double pixelSpacing;
 	int filterSize;
-	
-	//ImageJ constructor
-	public ScaledImageData(float[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize){
-		height = heightIn;
-		width = widthIn;
-		pixelSpacing = VoxelSize;
-		filterSize = 3;		//filterSize x filterSize median filter will be used
-		double[] unFiltered = new double[width*height];
-		minimum = 0;	//Save minimum value
-		maximum = 0;	//Save maximum value
-		for (int t = 0;t<width*height;t++){	//Scale the image
-			unFiltered[t] = ((double) data[t])*scalingFactor+constant;
-			if (unFiltered[t] < minimum) {minimum = unFiltered[t];}
-			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
-		}
-		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
-	}
-	
-	//ImageJ DICOM constructor
+	//Constructor
 	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize){
 		height = heightIn;
 		width = widthIn;

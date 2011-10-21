@@ -354,7 +354,7 @@ public class SelectROI extends JPanel{
 			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
 		}
 		 //Draw rotated radii
-		for(int i = 0; i< 360;i++) {
+		for(int i = 0; i< 360;i++) {//45;i++) {//
 			image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
 			image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
 		}
