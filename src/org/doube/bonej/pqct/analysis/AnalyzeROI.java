@@ -173,9 +173,9 @@ public class AnalyzeROI{
 			for (int i = 0; i<roi.roiI.size();++i){
 				radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
 			}
-			double[] sumRadii = new double[radii.length-10];
-			for (int i = 0;i<radii.length-10;++i){
-				for (int j = 0;j<11;++j){
+			double[] sumRadii = new double[radii.length];
+			for (int i = 5;i<radii.length-6;++i){
+				for (int j = -5;j<6;++j){
 					sumRadii[i]+=radii[i+j];
 				}
 			}
