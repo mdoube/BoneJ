@@ -250,13 +250,13 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 			//Cortex BMD values			
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm3]\t";
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm3]\t";
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm3]\t";
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm³]\t";
 			}
 
 		}
