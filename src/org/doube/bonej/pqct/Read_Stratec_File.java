@@ -124,9 +124,11 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 				}
 			}
 			this.setDisplayRange( min, max);
-			Calibration tempCalib = this.getCalibration();
-			tempCalib.setSigned16BitCalibration();
-			this.setCalibration(tempCalib);
+			Calibration cal = this.getCalibration();
+			cal.setSigned16BitCalibration();
+			cal.setValueUnit("mg/cm³");
+			cal.setUnit("mm");
+			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
 			IJ.error("Stratec file read failed ", e.getMessage());
 			return;
