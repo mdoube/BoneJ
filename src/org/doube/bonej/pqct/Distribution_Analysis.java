@@ -232,7 +232,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			headings+=parameterNames[i]+"\t";
 		}
 		if(cOn){
-			String[] coHeadings = {"CoD [mg/cm3]","CoA [mm2]","SSI [mm3]","ToD [mg/cm3]","ToA[mm2]","BSId[g2/cm4]"};
+			String[] coHeadings = {"CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
