@@ -79,6 +79,7 @@ public class SelectROI extends JPanel{
 	public String imageSaveName;
 	public String imageSavePath;
 	ImagePlus imp;
+	public int bmcAlfaIndex = 0;
 	//ImageJ constructor
 	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp){
 
@@ -169,6 +170,12 @@ public class SelectROI extends JPanel{
 			details.flipDistribution = guessFlip(beginnings,iit,selection);
 		}
 		
+		/*Rotate according to both bones*/
+
+		if (details.rotationChoice.equals("All_Bones_Imax/Imin")){
+			bmcAlfaIndex = rotateBMC();
+		}
+		
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
@@ -212,6 +219,72 @@ public class SelectROI extends JPanel{
 			}
 		}
 		
+	}
+	
+	
+	int rotateBMC(){
+		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
+		double bmcAlfa;
+		double[] cortexCenter = new double[2];
+		int points = 0;
+		Vector<Integer> bmcI = new Vector<Integer>();
+		Vector<Integer> bmcJ = new Vector<Integer>();
+		for (int j = 0; j< height;j++){
+			for (int i = 0; i< width;i++){
+				if (result[i+j*width] > 0){
+					cortexCenter[0]+=(double) i;
+					cortexCenter[1]+=(double) j;
+					bmcI.add(i);
+					bmcJ.add(j);
+					++points;
+				}
+			}
+		}
+		cortexCenter[0] /=(double)points;
+		cortexCenter[1] /=(double)points;
+		
+		
+		double moment = 0;
+		double xmax = 0;
+		double ymax = 0;
+		//Calculating cross-sectional moment of inertia in the original image orientation
+		for (int i = 0;i<bmcI.size();i++){
+			xmax = xmax+((bmcI.get(i)-cortexCenter[0]))*((bmcI.get(i)-cortexCenter[0]));
+			ymax = ymax+((bmcJ.get(i)-cortexCenter[1]))*((bmcJ.get(i)-cortexCenter[1]));
+			moment = moment+((bmcI.get(i)-cortexCenter[0]))*((bmcJ.get(i)-cortexCenter[1]));
+		}
+		double vali1,vali2;		
+
+		//Ipolar caclulated
+		//Calculation of Imax and Imin
+		//Calculate rotation required to align rotation axes
+		bmcAlfa = Math.atan(2*moment/(ymax-xmax))/2;
+		//Calculate the maximal and minimial cross-sectional moments of inertia
+		vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-bmcAlfa))-moment*Math.sin(2*(-bmcAlfa));
+		vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-bmcAlfa))+moment*Math.sin(2*(-bmcAlfa));
+		
+		//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
+		//upwards. In addition it will be used in determining which way the image needs to be rotated. 
+		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
+		//or vertical axis, whichever rotation is smaller...
+		double rotationCorrection = 0;
+
+		if (vali1 > vali2){
+				rotationCorrection = (((double) details.sectorWidth)/2.0)+90.0;  
+		} else {
+				rotationCorrection = (((double) details.sectorWidth)/2.0); 
+		}	
+
+		
+		if (details.manualRotation){
+			bmcAlfa = details.manualAlfa;
+			rotationCorrection = (((double) details.sectorWidth)/2.0); 
+		}
+		
+		if (details.flipDistribution){
+			rotationCorrection = -rotationCorrection;
+		}
+		return (int) (bmcAlfa/Math.PI*180.0+rotationCorrection);
 	}
 	
 	

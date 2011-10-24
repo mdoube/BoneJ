@@ -119,7 +119,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
-		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point"};
+		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
 		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_density_distribution",true);

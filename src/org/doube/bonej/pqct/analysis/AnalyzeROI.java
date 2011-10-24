@@ -216,6 +216,16 @@ public class AnalyzeROI{
 		}else{
 			alkuindex = -(int) (alfa/Math.PI*180.0+rotationCorrection);
 		}
+		
+		if (details.rotationChoice.equals("All_Bones_Imax/Imin")){
+			if (roi.bmcAlfaIndex >= 0){
+				alkuindex = 360-roi.bmcAlfaIndex; 
+			}else{
+				alkuindex = -roi.bmcAlfaIndex;
+			}
+		}
+		
+		
 		pind = new Vector<Integer>();
 		int inde;
 		inde = alkuindex;
