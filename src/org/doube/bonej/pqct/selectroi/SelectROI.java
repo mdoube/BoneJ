@@ -27,10 +27,15 @@ import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
+import ij.text.*; 	//Debugging ...
 
 @SuppressWarnings("serial")
+
+/*	//For Debugging
+	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
+	checkWindow.append((String) imp.getProperty("Info"));*/
 public class SelectROI extends JPanel{
-	ImageAndAnalysisDetails details;
+	public ImageAndAnalysisDetails details;
 	public double[] scaledImage;
 	public double[] cortexROI;
 	public double minimum;
@@ -151,7 +156,19 @@ public class SelectROI extends JPanel{
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-
+		
+		/*
+		TextWindow checkWindow = new TextWindow(new String("guessFlip"),new String(""),400,200);
+		checkWindow.append((String) );
+		*/
+		/*Try to guess whether to flip the distribution*/
+		if (details.guessFlip && details.stacked){
+			details.flipDistribution = guessFlip(beginnings,jiit,selection);
+		}
+		if (details.guessFlip && !details.stacked){
+			details.flipDistribution = guessFlip(beginnings,iit,selection);
+		}
+		
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
@@ -196,6 +213,24 @@ public class SelectROI extends JPanel{
 		}
 		
 	}
+	
+	
+	boolean guessFlip(Vector<Integer> beginning,Vector<Integer> iit, int selection){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(0)){
+			++counter;
+		}
+		if (selection == counter){return false;}
+		return true;
+	}
+	
 	
 	int selectRoiBiggestBone(Vector<Integer> length){
 		Vector<Integer> temp = new Vector<Integer>();

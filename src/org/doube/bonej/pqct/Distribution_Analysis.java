@@ -53,6 +53,8 @@ public class Distribution_Analysis implements PlugInFilter {
 	double scalingFactor;
 	double constant;	
 	boolean flipDistribution;
+	boolean guessFlip;
+	boolean stacked;
 	boolean manualRotation;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
@@ -128,6 +130,8 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
+		dialog.addCheckbox("Guess_right",false);
+		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.showDialog();
@@ -150,6 +154,8 @@ public class Distribution_Analysis implements PlugInFilter {
 			manualRotation				= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
 			flipDistribution			= dialog.getNextBoolean();
+			guessFlip					= dialog.getNextBoolean();
+			stacked						= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
@@ -183,9 +189,11 @@ public class Distribution_Analysis implements PlugInFilter {
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
-															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
+															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution,
+															guessFlip, stacked);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
-
+			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
+			flipDistribution = imageAndAnalysisDetails.flipDistribution;
 			TextPanel textPanel = IJ.getTextPanel();
 			if (textPanel == null) {textPanel = new TextPanel();}
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
@@ -238,7 +246,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 		}
 		if(dOn){
-			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution"};
+			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution","Guess right","Stacked bones"};
 			for (int i = 0;i<dHeadings.length;++i){
 				headings+=dHeadings[i]+"\t";
 			}
@@ -321,6 +329,8 @@ public class Distribution_Analysis implements PlugInFilter {
 		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
 		results += Boolean.toString(manualRotation)+"\t";
 		results += Boolean.toString(flipDistribution)+"\t";
+		results += Boolean.toString(guessFlip)+"\t";
+		results += Boolean.toString(stacked)+"\t";
 		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 			results += analyzeRoi.endocorticalRadii[pp]+"\t";
