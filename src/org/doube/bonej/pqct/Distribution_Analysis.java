@@ -57,6 +57,9 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean guessFlip;
 	boolean stacked;
 	boolean manualRotation;
+	boolean allowCleaving;
+	String roiChoice;
+	String rotationChoice;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
@@ -145,12 +148,12 @@ public class Distribution_Analysis implements PlugInFilter {
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
 			resolution					= dialog.getNextNumber();
-			String roiChoice			= dialog.getNextChoice();
-			String rotationChoice		= dialog.getNextChoice();
+			roiChoice			= dialog.getNextChoice();
+			rotationChoice		= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
 			mOn							= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
-			boolean allowCleaving		= dialog.getNextBoolean();
+			allowCleaving		= dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
@@ -202,7 +205,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
-			results = printResults(results);
+			results = printResults(results,determineAlfa);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
@@ -240,6 +243,9 @@ public class Distribution_Analysis implements PlugInFilter {
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right"
+		,"Stacked bones","Allow Cleaving","Roi choice","Rotation choice"};
+			
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
@@ -247,6 +253,10 @@ public class Distribution_Analysis implements PlugInFilter {
 		for (int i = 0;i<parameterNames.length;++i){
 			headings+=parameterNames[i]+"\t";
 		}
+		for (int i = 0;i<dHeadings.length;++i){
+				headings+=dHeadings[i]+"\t";
+		}
+		
 		if(cOn){
 			String[] coHeadings = {"CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
@@ -260,10 +270,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		}
 		
 		if(dOn){
-			String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Stacked bones"};
-			for (int i = 0;i<dHeadings.length;++i){
-				headings+=dHeadings[i]+"\t";
-			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
 				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
 			}
@@ -304,7 +310,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		return null;
 	}
 
-	String printResults(String results){
+	String printResults(String results,DetermineAlfa determineAlfa){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 
@@ -326,6 +332,16 @@ public class Distribution_Analysis implements PlugInFilter {
 		for (int i = 0;i<parameters.length;++i){
 			results+=parameters[i]+"\t";
 		}
+		
+		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
+		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
+		results += Boolean.toString(manualRotation)+"\t";
+		results += Boolean.toString(flipDistribution)+"\t";
+		results += Boolean.toString(guessFlip)+"\t";
+		results += Boolean.toString(stacked)+"\t";
+		results += Boolean.toString(allowCleaving)+"\t";
+		results += roiChoice+"\t";
+		results += rotationChoice+"\t";
 		return results;
 	}
 	
@@ -347,13 +363,6 @@ public class Distribution_Analysis implements PlugInFilter {
 	}		
 	
 	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
-		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
-		results += Double.toString(analyzeRoi.rotationCorrection)+"\t";
-		results += Boolean.toString(manualRotation)+"\t";
-		results += Boolean.toString(flipDistribution)+"\t";
-		results += Boolean.toString(guessFlip)+"\t";
-		results += Boolean.toString(stacked)+"\t";
-		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 			results += analyzeRoi.endocorticalRadii[pp]+"\t";
 		}
