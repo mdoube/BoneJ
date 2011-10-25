@@ -43,6 +43,7 @@ public class Distribution_Analysis implements PlugInFilter {
 
 	int sectorWidth;
 	boolean cOn;
+	boolean	mOn;
 	boolean dOn;
 	String resultString;
 	String imageInfo;
@@ -100,6 +101,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
+		mOn = true;
 		resolution = 1.0;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
@@ -122,6 +124,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
 		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
 		dialog.addCheckbox("Analyse_cortical_results",true);
+		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",true);
 		dialog.addCheckbox("Allow_cleaving",false);
 		dialog.addCheckbox("Cleave_retain_smaller",false);
@@ -146,6 +149,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			String roiChoice			= dialog.getNextChoice();
 			String rotationChoice		= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
+			mOn							= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
 			boolean allowCleaving		= dialog.getNextBoolean();
 			boolean cleaveReturnSmaller = dialog.getNextBoolean();
@@ -211,6 +215,11 @@ public class Distribution_Analysis implements PlugInFilter {
 				}
 				
 			}
+			if (mOn){
+				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
+				results = printMassDistributionResults(results,massDistribution);
+			}
+			
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,analyzeRoi);
@@ -246,6 +255,12 @@ public class Distribution_Analysis implements PlugInFilter {
 				headings+=coHeadings[i]+"\t";
 			}
 		}
+		if(mOn){
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" mineral mass [mg]\t";
+			}
+		}
+		
 		if(dOn){
 			String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Stacked bones"};
 			for (int i = 0;i<dHeadings.length;++i){
@@ -325,6 +340,13 @@ public class Distribution_Analysis implements PlugInFilter {
 		results+=cortAnalysis.BSId+"\t";
 		return results;
 	}
+	
+	String printMassDistributionResults(String results,MassDistribution massDistribution){
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			results += massDistribution.BMCs[pp]+"\t";
+		}
+		return results;
+	}		
 	
 	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
 		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";

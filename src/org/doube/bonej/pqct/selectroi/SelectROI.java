@@ -748,6 +748,7 @@ public class SelectROI extends JPanel{
 			}
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
+				cleave(fatRoiI,fatRoiJ,cleavingIndices);
 			} else {
 				nextLoop = false;
 			}
