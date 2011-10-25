@@ -127,7 +127,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",true);
 		dialog.addCheckbox("Allow_cleaving",false);
-		dialog.addCheckbox("Cleave_retain_smaller",false);
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
@@ -152,7 +151,6 @@ public class Distribution_Analysis implements PlugInFilter {
 			mOn							= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
 			boolean allowCleaving		= dialog.getNextBoolean();
-			boolean cleaveReturnSmaller = dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
@@ -193,7 +191,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
-															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution,
+															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip, stacked);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);

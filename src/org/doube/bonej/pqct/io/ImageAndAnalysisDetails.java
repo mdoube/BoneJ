@@ -38,7 +38,6 @@ public class ImageAndAnalysisDetails{
 	public String rotationChoice;
 	public String[] choiceLabels;
 	public boolean allowCleaving;
-	public boolean cleaveReturnSmaller;
 	public boolean manualRoi;
 	public boolean manualRotation;
 	public double manualAlfa;
@@ -48,7 +47,7 @@ public class ImageAndAnalysisDetails{
 	//ImageJ plugin constructor
 	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,
 									double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels,
-									boolean allowCleaving, boolean cleaveReturnSmaller, boolean manualRoi,
+									boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
 									boolean guessFlip,boolean stacked){
 		scalingFactor				= scalingFactorIn;
@@ -69,7 +68,6 @@ public class ImageAndAnalysisDetails{
 		this.choiceLabels			= choiceLabels;
 		imageSavePath 				= new String("");
 		this.allowCleaving			= allowCleaving;
-		this.cleaveReturnSmaller	= cleaveReturnSmaller;
 		this.manualRoi				= manualRoi;
 		this.manualRotation			= manualRotation;
 		this.manualAlfa				= manualAlfa;

@@ -147,6 +147,11 @@ public class SelectROI extends JPanel{
 			}
 		}
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
+		
+		//For Debugging
+		TextWindow checkWindow = new TextWindow(new String("Length"),new String(""),400,400);
+		checkWindow.append("Monta loytyi "+length.size());
+		
 		/*Select correct bone outline*/
 		int selection = 0;
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
@@ -633,12 +638,12 @@ public class SelectROI extends JPanel{
 			if (details.allowCleaving){
 				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
 				//Debugging
-				/*
+				
 				TextWindow checkWindow = new TextWindow(new String("ReturnedVectors..."),new String(""),400,200);
 				checkWindow.append("size "+returnedVectors.size());
 				checkWindow.append("firstSize "+returnedVectors.get(0).get(0).size());
 				checkWindow.append("firstIndexI "+returnedVectors.get(0).get(0).get(0)+ "firstIndexJ "+returnedVectors.get(0).get(1).get(0));
-				*/
+				
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/
 					for (int ii = 0; ii<returnedVectors.get(iii).get(0).size();++ii){
@@ -646,8 +651,11 @@ public class SelectROI extends JPanel{
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
 					}
 					len = returnedVectors.get(iii).get(0).size();
+					checkWindow.append("length size "+length.size()+" vector length"+returnedVectors.get(iii).get(0).size());
 					fillResultEdge(length,beginnings,iit,jiit,len);
+					checkWindow.append("length size after "+length.size());
 				}
+				
 			}else{
 				/*Fill edge within result..*/
 				for (int ii = 0; ii<newIit.size();++ii){
@@ -845,12 +853,6 @@ public class SelectROI extends JPanel{
 		returnVectorPair.add(new Vector<Integer>());
 		returnVectorPair.get(0).addAll(cleavedI);
 		returnVectorPair.get(1).addAll(cleavedJ);
-		if (details.cleaveReturnSmaller){ /*replace fatRoiI & fatRoiJ with cleaved, if smaller is to be returned*/
-			fatRoiI.clear();
-			fatRoiJ.clear();
-			fatRoiI.addAll(cleavedI);
-			fatRoiJ.addAll(cleavedJ);
-		}
 		return  returnVectorPair;
 	}
 	
