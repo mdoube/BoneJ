@@ -49,8 +49,6 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	private byte[] PID = new byte[13];
 	private String PatID;
 	private double ObjLen; //
-	private short[] data;
-	private short min,max;
 	private String fileName;
 	private String properties;
 	
