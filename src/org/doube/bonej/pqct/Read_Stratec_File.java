@@ -56,6 +56,26 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		//this = null;
 	}
 	
+	/**
+	 * Opens a Stratec pQCT file
+	 * 
+	 * @param path full path to the file
+	 * @return ImagePlus containing the calibrated pQCT image
+	 * @throws IllegalArgumentException if the path is null or the file is not normal
+	 */
+	public ImagePlus open(String path) throws IllegalArgumentException {
+		if (path == null)
+			throw new IllegalArgumentException("Path cannot be null");
+		File theFile = new File(path);
+		if (!theFile.isFile())
+			throw new IllegalArgumentException("Path is not a normal file");
+		String directory = theFile.getParent()+"/";
+		fileName = theFile.getName();
+		read(directory);
+		fileInfo();
+		return this;
+	}
+	
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
 	public void run(String arg) { 
 		String directory;
@@ -71,6 +91,15 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}
 		if (fileName==null) return;
 		read(directory);
+		fileInfo();
+		if (arg.isEmpty() && this.getHeight()>0){
+			this.show();
+			return;
+		}
+		if (this.getHeight()<1) return;
+	}
+	
+	private void fileInfo() {
 		FileInfo fi = this.getFileInfo(); 
 		fi.pixelWidth = VoxelSize;
 		fi.pixelHeight = VoxelSize;
@@ -79,13 +108,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		fi.info		= properties;
 		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
         this.setFileInfo(fi);
-		if (arg.isEmpty() && this.getHeight()>0){
-			this.show();
-			return;
-		}
-		if (this.getHeight()<1) return;
 	}
-	
+
 	private void read(String directory){
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
