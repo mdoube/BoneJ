@@ -723,15 +723,15 @@ public class SelectROI extends JPanel{
 			if (jj<=1){possible = false;}
 			
 			if(result[kai+kaj*width]==1){possible = false;}
-			/*
+			
 			//Debugging
 			TextWindow checkWindow = new TextWindow(new String("Possible"),new String(""),400,200);
 			checkWindow.append("Possible "+possible);
-			*/
+			
 			if (possible){
 				possible = resultFill(kai,kaj);
 				
-				//checkWindow.append("Possible "+possible);
+				checkWindow.append("Possible "+possible);
 				if (!possible){
 					//Remove "extra ii and jii
 					for (int po = 0;po <length.lastElement() ;po++){
