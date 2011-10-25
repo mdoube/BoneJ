@@ -640,12 +640,12 @@ public class SelectROI extends JPanel{
 			if (details.allowCleaving){
 				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
 				//Debugging
-				
+				/*
 				TextWindow checkWindow = new TextWindow(new String("ReturnedVectors..."),new String(""),400,200);
 				//checkWindow.append("size "+returnedVectors.size());
 				//checkWindow.append("firstSize "+returnedVectors.get(0).get(0).size());
 				//checkWindow.append("firstIndexI "+returnedVectors.get(0).get(0).get(0)+ "firstIndexJ "+returnedVectors.get(0).get(1).get(0));
-				
+				*/
 				
 				
 				
@@ -656,9 +656,9 @@ public class SelectROI extends JPanel{
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
 						//checkWindow.append(returnedVectors.get(iii).get(0).get(ii)+"\t"+returnedVectors.get(iii).get(1).get(ii));
 					}
-					checkWindow.append("size "+iii+" "+returnedVectors.size()+" iit.size "+iit.size());
 					len = returnedVectors.get(iii).get(0).size();
 					fillResultEdge(length,beginnings,iit,jiit,len);
+					//checkWindow.append("size "+iii+" "+returnedVectors.get(iii).get(0).size()+" iit.size "+iit.size());
 				}
 				
 			}else{
@@ -692,7 +692,7 @@ public class SelectROI extends JPanel{
 			int kai,kaj;
 			kai = 0;
 			kaj = 0;
-			for(int zz = beginnings.lastElement() ;zz<(beginnings.lastElement()+length.lastElement()) ;zz++){
+			for(int zz = beginnings.lastElement() ;zz<beginnings.lastElement()+length.lastElement() ;++zz){
 				kai = kai+ iit.get(zz);
 				kaj = kaj+ jiit.get(zz);
 			}
@@ -735,7 +735,6 @@ public class SelectROI extends JPanel{
 			*/
 			if (possible){
 				possible = resultFill(kai,kaj);
-				
 				//checkWindow.append("Possible "+possible);
 				if (!possible){
 					//Remove "extra ii and jii
@@ -845,6 +844,7 @@ public class SelectROI extends JPanel{
 			if (replacementI !=insertionI.lastElement() || replacementJ !=insertionJ.lastElement()){
 				insertionI.add(replacementI);
 				insertionJ.add(replacementJ);
+				result[replacementI+replacementJ*width] = 1;
 			}
 		}
 		fatRoiI.addAll(cleavingIndices[0],insertionI);
