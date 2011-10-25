@@ -31,28 +31,28 @@ import ij.measure.*;						//Calibration
 public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Global variables
 	//Stratec header stuff
-	public byte[] PName = new byte[40]; //
-	public String PatName;
-	public long PatNo;
-	public int PatMeasNo;
-	public long PatBirth; //
-	public long MeasDate; //
-	public double VoxelSize; //
-	public int PicX0; //
-	public int PicY0; //
-	public int PicMatrixX; //
-	public int PicMatrixY; //
-	public byte[] MInfo = new byte[324]; //
-	public String MeasInfo;
-	public byte[] Dev = new byte[13];
-	public String Device;
-	public byte[] PID = new byte[13];
-	public String PatID;
-	public double ObjLen; //
-	public short[] data;
-	public short min,max;
-	public String fileName;
-	public String properties;
+	private byte[] PName = new byte[40]; //
+	private String PatName;
+	private long PatNo;
+	private int PatMeasNo;
+	private long PatBirth; //
+	private long MeasDate; //
+	private double VoxelSize; //
+	private int PicX0; //
+	private int PicY0; //
+	private int PicMatrixX; //
+	private int PicMatrixY; //
+	private byte[] MInfo = new byte[324]; //
+	private String MeasInfo;
+	private byte[] Dev = new byte[13];
+	private String Device;
+	private byte[] PID = new byte[13];
+	private String PatID;
+	private double ObjLen; //
+	private short[] data;
+	private short min,max;
+	private String fileName;
+	private String properties;
 	
 	public Read_Stratec_File() { //Constructor
 		//this = null;
@@ -88,7 +88,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		if (this.getHeight()<1) return;
 	}
 	
-	public void read(String directory){
+	private void read(String directory){
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
 		try{BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
@@ -135,7 +135,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}
 	}
 	
-	public void readHeader(byte[] fileData){
+	private void readHeader(byte[] fileData){
 		byte stringLength;
 		int offset =12;
 		VoxelSize = Double.longBitsToDouble((long) ( ((long) (fileData[offset+7] & 0xFF))<<56 | ((long) (fileData[offset+6] & 0xFF))<<48 | ((long) (fileData[offset+5] & 0xFF))<<40 | ((long) (fileData[offset+4] & 0xFF))<<32 | ((long) (fileData[offset+3] & 0xFF))<<24 | ((long) (fileData[offset+2] & 0xFF))<<16 | ((long) (fileData[offset+1] & 0xFF))<<8 | ((long) (fileData[offset+0] & 0xFF))<<0));
@@ -188,7 +188,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		PicMatrixY = ((int) ((int) (fileData[offset+1] & 0xFF)) <<8 | ((int) (fileData[offset+0] & 0xFF)));
 	}
 	
-	public void setProperties(){
+	private void setProperties(){
 		String[] propertyNames = {"File Name","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
