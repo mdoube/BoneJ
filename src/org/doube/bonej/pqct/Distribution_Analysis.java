@@ -113,8 +113,8 @@ public class Distribution_Analysis implements PlugInFilter {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
-		dialog.addNumericField("Area threshold", 550.0, 4, 8, null);
-		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
+		dialog.addNumericField("Area threshold", 169.0, 4, 8, null);	//550
+		dialog.addNumericField("BMD threshold", 169.0, 4, 8, null);		//690
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
@@ -125,14 +125,14 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_density_distribution",true);
-		dialog.addCheckbox("Allow_cleaving",false);
+		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Allow_cleaving",true);	//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",false);
+		dialog.addCheckbox("Guess_right",true);	//false
 		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
