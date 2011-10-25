@@ -42,10 +42,10 @@ public class DetermineAlfa{
 				byte[] tempCsmiSieve = new byte[roi.width*roi.height];
 				for (int j = 0; j< roi.height;j++){
 					for (int i = 0; i<roi.width;i++){
-						if (roi.cortexROI[i+j*width] >= details.areaThreshold){
-							tempCsmiSieve[i+j*width] = 1;
+						if (roi.cortexROI[i+j*roi.width] >= details.areaThreshold){
+							tempCsmiSieve[i+j*roi.width] = 1;
 						} else {
-							tempCsmiSieve[i+j*width] = 0;
+							tempCsmiSieve[i+j*roi.width] = 0;
 						}
 					}
 				}
@@ -75,8 +75,8 @@ public class DetermineAlfa{
 		/*Rotation according to the furthest point*/
 		if (details.rotationChoice.equals("Furthest_point")){
 			/*Calculate alfa from periosteal radii*/
-			marrowCenter = new double[2];
-			for (int i = 0; i< marrowI.size();i++){
+			double[] marrowCenter = new double[2];
+			for (int i = 0; i< roi.boneMarrowRoiI.size();i++){
 				marrowCenter[0]+=(double)roi.boneMarrowRoiI.get(i);
 				marrowCenter[1]+=(double)roi.boneMarrowRoiJ.get(i);
 			}
@@ -102,7 +102,7 @@ public class DetermineAlfa{
 			x = roi.roiI.get(largest)-marrowCenter[0];
 			y = roi.roiJ.get(largest)-marrowCenter[1];
 			alfa = Math.PI-Math.atan2(y,x);
-			rotationCorrection = (((double) sectorWidth)/2.0); 
+			rotationCorrection = (((double) details.sectorWidth)/2.0); 
 		}
 
 		/*Manual rotation*/

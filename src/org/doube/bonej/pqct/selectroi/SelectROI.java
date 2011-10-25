@@ -170,12 +170,6 @@ public class SelectROI extends JPanel{
 			details.flipDistribution = guessFlip(beginnings,iit,selection);
 		}
 		
-		/*Rotate according to both bones*/
-
-		if (details.rotationChoice.equals("All_Bones_Imax/Imin")){
-			bmcAlfaIndex = rotateBMC();
-		}
-		
 		/*fill roiI & roiJ*/
 		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
 			roiI.add(iit.get(i));
