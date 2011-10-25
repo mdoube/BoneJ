@@ -24,14 +24,15 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
+import ij.text.*;		//Debugging text window
 public class DetermineAlfa{
 	public int rotationIndex;
-
+	public double alfa = 0;
+	public double rotationCorrection = 0;
 	public DetermineAlfa(SelectROI roi,ImageAndAnalysisDetails details){
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
 		
-		double alfa = 0;
-		double rotationCorrection = 0;
+		
 		/*Rotation according to Imax/Imin for bone of interest or according to all bones*/
 		if (details.rotationChoice.equals("All_Bones_Imax/Imin") || details.rotationChoice.equals("According_to_Imax/Imin")){
 			double[] csmiValues = new double[3];
@@ -56,19 +57,38 @@ public class DetermineAlfa{
 			double moment = csmiValues[2];
 			double vali1,vali2;		
 			//Calculate rotation required to align rotation axes
-			alfa = Math.atan(2*moment/(ymax-xmax))/2;
-			//Calculate the maximal and minimial cross-sectional moments of inertia
-			vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
-			vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
-			//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
-			//upwards. In addition it will be used in determining which way the image needs to be rotated. 
-			//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
-			//or vertical axis, whichever rotation is smaller...
-			
-			if (vali1 > vali2){
-					rotationCorrection = (((double) details.sectorWidth)/2.0)+90.0;  
-			} else {
-					rotationCorrection = (((double) details.sectorWidth)/2.0); 
+			//alfa = Math.atan(2.0*moment/(ymax-xmax))/2.0;
+			if (ymax == xmax){
+				alfa = 0;	//check that xmax does not equal ymax (can't divide with 0...			
+			}else{
+				alfa = Math.atan(2.0*moment/(ymax-xmax))/2.0;
+				//Calculate the maximal and minimial cross-sectional moments of inertia
+				vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
+				vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
+				//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
+				//upwards. In addition it will be used in determining which way the image needs to be rotated. 
+				//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
+				//or vertical axis, whichever rotation is smaller...
+				rotationCorrection = (((double) details.sectorWidth)/2.0); 
+					//For Debugging
+				/*
+				TextWindow checkWindow = new TextWindow(new String("Rotation test"),new String(""),400,400);
+				checkWindow.append("xmax "+xmax+" ymax "+ymax+" vali1 "+vali1+" vali2 "+vali2+" alfa "+alfa);
+				*/
+				/*
+				//Always rotate towards horizontal axis... maximal bending axis will be aligned with horizontal axis
+				//Note that e.g. tibial mid-shaft rotation is completely different if only tibia or if both tibia and fibula
+				//are consireder!!!
+				*/
+				if (vali1 > vali2){
+					if (alfa < 0) {
+						alfa =Math.PI/2.0+alfa;
+					}else{
+						alfa =alfa-Math.PI/2.0;
+					}
+					//checkWindow.append("alfa2.. "+alfa);
+				}
+				
 			}
 		}
 

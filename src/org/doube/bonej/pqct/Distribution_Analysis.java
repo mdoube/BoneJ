@@ -192,6 +192,7 @@ public class Distribution_Analysis implements PlugInFilter {
 															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip, stacked);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
+			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
 			TextPanel textPanel = IJ.getTextPanel();
@@ -211,7 +212,7 @@ public class Distribution_Analysis implements PlugInFilter {
 				
 			}
 			if (dOn){
-				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
+				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,analyzeRoi);
 				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 				resultImage = new ImagePlus("Visual results",bi);
@@ -246,7 +247,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			}
 		}
 		if(dOn){
-			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution","Guess right","Stacked bones"};
+			String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Stacked bones"};
 			for (int i = 0;i<dHeadings.length;++i){
 				headings+=dHeadings[i]+"\t";
 			}
@@ -327,6 +328,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	
 	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
 		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
+		results += Double.toString(analyzeRoi.rotationCorrection)+"\t";
 		results += Boolean.toString(manualRotation)+"\t";
 		results += Boolean.toString(flipDistribution)+"\t";
 		results += Boolean.toString(guessFlip)+"\t";
