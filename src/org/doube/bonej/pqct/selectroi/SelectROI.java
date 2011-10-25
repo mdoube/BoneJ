@@ -148,9 +148,11 @@ public class SelectROI extends JPanel{
 		}
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 		
+		/*
 		//For Debugging
 		TextWindow checkWindow = new TextWindow(new String("Length"),new String(""),400,400);
 		checkWindow.append("Monta loytyi "+length.size());
+		*/
 		
 		/*Select correct bone outline*/
 		int selection = 0;
@@ -640,20 +642,23 @@ public class SelectROI extends JPanel{
 				//Debugging
 				
 				TextWindow checkWindow = new TextWindow(new String("ReturnedVectors..."),new String(""),400,200);
-				checkWindow.append("size "+returnedVectors.size());
-				checkWindow.append("firstSize "+returnedVectors.get(0).get(0).size());
-				checkWindow.append("firstIndexI "+returnedVectors.get(0).get(0).get(0)+ "firstIndexJ "+returnedVectors.get(0).get(1).get(0));
+				//checkWindow.append("size "+returnedVectors.size());
+				//checkWindow.append("firstSize "+returnedVectors.get(0).get(0).size());
+				//checkWindow.append("firstIndexI "+returnedVectors.get(0).get(0).get(0)+ "firstIndexJ "+returnedVectors.get(0).get(1).get(0));
+				
+				
+				
 				
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/
 					for (int ii = 0; ii<returnedVectors.get(iii).get(0).size();++ii){
 						iit.add(returnedVectors.get(iii).get(0).get(ii));
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
+						//checkWindow.append(returnedVectors.get(iii).get(0).get(ii)+"\t"+returnedVectors.get(iii).get(1).get(ii));
 					}
+					checkWindow.append("size "+iii+" "+returnedVectors.size()+" iit.size "+iit.size());
 					len = returnedVectors.get(iii).get(0).size();
-					checkWindow.append("length size "+length.size()+" vector length"+returnedVectors.get(iii).get(0).size());
 					fillResultEdge(length,beginnings,iit,jiit,len);
-					checkWindow.append("length size after "+length.size());
 				}
 				
 			}else{
@@ -723,15 +728,15 @@ public class SelectROI extends JPanel{
 			if (jj<=1){possible = false;}
 			
 			if(result[kai+kaj*width]==1){possible = false;}
-			
+			/*
 			//Debugging
 			TextWindow checkWindow = new TextWindow(new String("Possible"),new String(""),400,200);
 			checkWindow.append("Possible "+possible);
-			
+			*/
 			if (possible){
 				possible = resultFill(kai,kaj);
 				
-				checkWindow.append("Possible "+possible);
+				//checkWindow.append("Possible "+possible);
 				if (!possible){
 					//Remove "extra ii and jii
 					for (int po = 0;po <length.lastElement() ;po++){
