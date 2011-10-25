@@ -177,10 +177,11 @@ public class SelectROI extends JPanel{
 		}
 		
 		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
+		/*
 		if (details.allowCleaving){
 			cleaveEdge(roiI,roiJ,3.0,6.0);
 		}
-		
+		*/
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -191,6 +192,12 @@ public class SelectROI extends JPanel{
 		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 		imp.setRoi(ijROI);
 		sieve= new byte[width*height];
+		
+		/*
+		TextWindow checkWindow = new TextWindow(new String("RoiSize"),new String(""),400,200);
+		checkWindow.append("roiI size "+roiI.size()+" roiJ "+roiJ.size());
+		*/
+		
 		fillSieve(roiI, roiJ, sieve);
 
 		for (int j = 0;j< height;j++){
@@ -480,7 +487,7 @@ public class SelectROI extends JPanel{
 			Idea taken from some paper, couldn't locate it anymore
 			The paper traced continent edges on map/satellite image
 		*/
-	void traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int[] len,int i,int j){
+	void traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
 		boolean done = false;
@@ -524,9 +531,8 @@ public class SelectROI extends JPanel{
 				}else if (result[i+j*width] != 1){
 					result[i+j*width]++;
 				}
-				iit.add(new Integer(i));
-				jiit.add(new Integer(j));
-				len[0]++;
+				iit.add(i);
+				jiit.add(j);
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
 		}	
@@ -540,8 +546,8 @@ public class SelectROI extends JPanel{
 		boolean possible = true;
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ= new Vector<Integer>();
-		initialI.add(new Integer(i));
-		initialJ.add(new Integer(j));
+		initialI.add(i);
+		initialJ.add(j);
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
@@ -553,23 +559,23 @@ public class SelectROI extends JPanel{
 			}
 
 			if (result[i-1+j*width] == 0) {
-			initialI.add(new Integer(i-1));
-			initialJ.add(new Integer(j));
+			initialI.add(i-1);
+			initialJ.add(j);
 			}
 
 			if (result[i+1+j*width] == 0) {
-			initialI.add(new Integer(i+1));
-			initialJ.add(new Integer(j));
+			initialI.add(i+1);
+			initialJ.add(j);
 			}
 			
 			if (result[i+(j-1)*width] == 0) {
-			initialI.add(new Integer(i));
-			initialJ.add(new Integer(j-1));
+			initialI.add(i);
+			initialJ.add(j-1);
 			}
 			
 			if (result[i+(j+1)*width] == 0) {
-			initialI.add(new Integer(i));
-			initialJ.add(new Integer(j+1));
+			initialI.add(i);
+			initialJ.add(j+1);
 			}
 
 		}
@@ -580,17 +586,12 @@ public class SelectROI extends JPanel{
 	
 	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold)
 	{
-		int i,j,ii,jj,tempI,tempJ;
-		Vector<Integer> previousI = new Vector<Integer>();
-		Vector<Integer> previousJ= new Vector<Integer>();
-		int[] len = new int[1];
+		int i,j,tempI,tempJ;
+		int len;
 		i = 0;
 		j = 0;
 
 		while ((i < (width-1)) && (j < (height -1) )){
-			len[0] = 0;
-			previousI.clear();
-			previousJ.clear();
 			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
 				i++;
 				if (result[i+j*width] == 1){
@@ -613,94 +614,33 @@ public class SelectROI extends JPanel{
 			tempI = i;
 			tempJ = j;
 
-			previousI.add(new Integer(i));
-			previousJ.add(new Integer(j));
 			if (i >= width-1 && j >= height-1){
 				break;	/*Go to end...*/
 			}
 			result[i+j*width] = 1;
-			iit.add(new Integer(i));
-			jiit.add(new Integer(j));
-			len[0]++;
-
+			Vector<Integer> newIit = new Vector<Integer>();
+			Vector<Integer> newJiit = new Vector<Integer>();
+			newIit.add(i);
+			newJiit.add(j);
+			//iit.add(i);
+			//jiit.add(j);
 			/*Tracing algorithm*/
-			traceEdge(scaledImage,result,threshold,iit,jiit,len,i,j);
+			traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
+			len = newIit.size();
 			/*Tracing algorithm done...*/
-			
-			if (len[0] > 0){
-				length.add(len[0]);
-				if (length.size() < 2){
-					beginnings.add(0);
-				}else{
-					beginnings.add(iit.size()-len[0]);
+			//Allow cleaving?
+			Vector<Vector<Vector<Integer>>>  returnedVectors = null;
+			if (details.allowCleaving){
+				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
+			}else{
+				/*Fill edge within result..*/
+				for (int ii = 0; ii<newIit.size();++ii){
+					iit.add(newIit.get(ii));
+					jiit.add(newJiit.get(ii));
 				}
-				
-				
-				int kai,kaj;
-				kai = 0;
-				kaj = 0;
-				for(int zz = beginnings.lastElement() ;zz<(beginnings.lastElement()+length.lastElement()) ;zz++){
-						kai = kai+ iit.get(zz);
-					kaj = kaj+ jiit.get(zz);
-				}
-				kai = kai/length.lastElement() ;
-				kaj = kaj/length.lastElement() ;
-						while(result[kai+kaj*width]> 1){
-					kai = kai+1;
-					kaj = kaj+1;
-				}
-				
-			
-				boolean possible = true;
-					jj =kaj;
-				for (ii = kai;ii<width;ii++){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (ii>=width-1) possible = false;
-				for (ii = kai;ii>0;ii--){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (ii<=1) possible = false;
-				i = kai;
-				for (jj = kaj;jj<height;jj++){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (jj>=height-1) possible = false;
-				for (jj = kaj;jj>0;jj--){
-					if (result[ii+jj*width]> 0) break;
-				}
-				
-				if (jj<=1) possible = false;
-				
-				if(result[kai+kaj*width]==1){
-					possible = false;
-
-				}
-				
-
-				if (possible){
-					possible = resultFill(kai,kaj);
-					if (!possible){
-						//Remove "extra ii and jii
-						for (int po = 0;po <length.lastElement() ;po++){
-							iit.remove(iit.size()-1);
-							jiit.remove(jiit.size()-1);
-						}
-						length.remove(length.size()-1);
-						beginnings.remove(beginnings.size()-1);
-					}
-				}else{
-					for (int po = 0;po <length.lastElement() ;po++){
-						iit.remove(iit.size()-1);
-						jiit.remove(jiit.size()-1);
-					}
-					length.remove(length.size()-1);
-					beginnings.remove(beginnings.size()-1);
-				}
+				fillResultEdge(length,beginnings,iit,jiit,len);
 			}
+			
 			//Find next empty spot
 			i = tempI;
 			j = tempJ;
@@ -716,6 +656,77 @@ public class SelectROI extends JPanel{
 
 	}
 	
+	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len){
+		if (len > 0){
+			length.add(len);
+			beginnings.add(iit.size()-len);
+			int kai,kaj;
+			kai = 0;
+			kaj = 0;
+			for(int zz = beginnings.lastElement() ;zz<(beginnings.lastElement()+length.lastElement()) ;zz++){
+				kai = kai+ iit.get(zz);
+				kaj = kaj+ jiit.get(zz);
+			}
+			kai = kai/length.lastElement() ;
+			kaj = kaj/length.lastElement() ;
+			while(result[kai+kaj*width]> 1){
+				kai = kai+1;
+				kaj = kaj+1;
+			}
+						
+			boolean possible = true;
+			int jj =kaj;
+			int ii;
+			for (ii = kai;ii<width;ii++){
+				if (result[ii+jj*width]> 0){break;}
+			}
+			if (ii>=width-1){possible = false;}
+			
+			for (ii = kai;ii>0;ii--){
+				if (result[ii+jj*width]> 0){break;}
+			}
+			if (ii<=1){possible = false;}
+			
+			ii = kai;
+			for (jj = kaj;jj<height;jj++){
+				if (result[ii+jj*width]> 0){break;}
+			}
+			if (jj>=height-1){possible = false;}
+			
+			for (jj = kaj;jj>0;jj--){
+				if (result[ii+jj*width]> 0){break;}
+			}
+			if (jj<=1){possible = false;}
+			
+			if(result[kai+kaj*width]==1){possible = false;}
+			
+			TextWindow checkWindow = new TextWindow(new String("Possible"),new String(""),400,200);
+			checkWindow.append("Possible "+possible);
+			if (possible){
+				possible = resultFill(kai,kaj);
+				
+				checkWindow.append("Possible "+possible);
+				if (!possible){
+					//Remove "extra ii and jii
+					for (int po = 0;po <length.lastElement() ;po++){
+						iit.remove(iit.size()-1);
+						jiit.remove(jiit.size()-1);
+					}
+					length.remove(length.size()-1);
+					beginnings.remove(beginnings.size()-1);
+				}
+			}else{
+				for (int po = 0;po <length.lastElement() ;po++){
+					iit.remove(iit.size()-1);
+					jiit.remove(jiit.size()-1);
+				}
+				length.remove(length.size()-1);
+				beginnings.remove(beginnings.size()-1);
+			}
+		}
+	}
+	
+	
 	/*Cleaving is made by looking at the ratios of
 	distances between two points along the edge and the shortest distance 
 	between the points. If the maximum of the  ratio is big enough, the 
@@ -723,13 +734,14 @@ public class SelectROI extends JPanel{
 	line and the edge with higher indices will be removed. E.g. 
 	for a circle, the maximum ratio is (pi/2)/d ~= 1.57 and for square
 	it is 2/sqrt(2) = sqrt(2) ~= 1.41.*/	
-	void cleaveEdge(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
+	Vector<Vector<Vector<Integer>>> cleaveEdge(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
 		double distanceAlongTheEdge = 0;
 		double distance = 0;
 		double ratio;
 		double minEdge = (double) fatRoiI.size()/minLength;
 		int[] cleavingIndices = new int[2];
 		boolean nextLoop = true;
+		Vector<Vector<Vector<Integer>>> returnVectorVectorPointer = new Vector<Vector<Vector<Integer>>>();
 		while (nextLoop){
 			double highestRatio = minRatio-0.1;
 			/*Go through all point pairs*/
@@ -748,18 +760,30 @@ public class SelectROI extends JPanel{
 			}
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
-				cleave(fatRoiI,fatRoiJ,cleavingIndices);
+				returnVectorVectorPointer.add(cleave(fatRoiI,fatRoiJ,cleavingIndices));
 			} else {
 				nextLoop = false;
 			}
 		}
+		/*Insert the last retained part to first index.*/
+		Vector<Vector<Integer>> returnVectorPair = new Vector<Vector<Integer>>();
+		returnVectorPair.add(new Vector<Integer>());
+		returnVectorPair.add(new Vector<Integer>());
+		returnVectorPair.get(0).addAll(fatRoiI);
+		returnVectorPair.get(1).addAll(fatRoiJ);
+		if (returnVectorVectorPointer.size() < 1){
+			returnVectorVectorPointer.add(returnVectorPair);
+		}else{
+			returnVectorVectorPointer.insertElementAt(returnVectorPair, 0);
+		}
+		return returnVectorVectorPointer;
 	}
 	
 	/*
 		Remove the extra part from vectors
 		and replace with a straight line
 	*/
-	int cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
+	Vector<Vector<Integer>> cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
 		int initialLength = fatRoiI.size();
 		int initI = fatRoiI.get(cleavingIndices[0]);
 		int initJ = fatRoiJ.get(cleavingIndices[0]);
@@ -798,13 +822,18 @@ public class SelectROI extends JPanel{
 		Collections.reverse(insertionJ);
 		cleavedI.addAll(0,insertionI);
 		cleavedJ.addAll(0,insertionJ);
+		Vector<Vector<Integer>> returnVectorPair = new Vector<Vector<Integer>>();
+		returnVectorPair.add(new Vector<Integer>());
+		returnVectorPair.add(new Vector<Integer>());
+		returnVectorPair.get(0).addAll(cleavedI);
+		returnVectorPair.get(1).addAll(cleavedJ);
 		if (details.cleaveReturnSmaller){ /*replace fatRoiI & fatRoiJ with cleaved, if smaller is to be returned*/
 			fatRoiI.clear();
 			fatRoiJ.clear();
 			fatRoiI.addAll(cleavedI);
 			fatRoiJ.addAll(cleavedJ);
 		}
-		return  initialLength - fatRoiI.size();
+		return  returnVectorPair;
 	}
 	
 	double min(double a,double b){
