@@ -220,7 +220,7 @@ public class Distribution_Analysis implements PlugInFilter {
 				results = printMassDistributionResults(results,massDistribution);
 				if(!dOn){
 					//BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,(double) determineAlfa.rotationIndex);
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
 
 				}
 			}
@@ -228,7 +228,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (dOn){
 				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,analyzeRoi);
-				resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,(double) determineAlfa.rotationIndex,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2);
+				resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2);
 				//BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
 				//resultImage = new ImagePlus("Visual results",bi);
 			}

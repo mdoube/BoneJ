@@ -18,7 +18,6 @@
     Copyright (C) 2011 Timo Rantalainen
 */
 
-
 package org.doube.bonej.pqct.analysis;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
@@ -31,8 +30,7 @@ public class DetermineAlfa{
 	public double rotationCorrection = 0;
 	public DetermineAlfa(SelectROI roi,ImageAndAnalysisDetails details){
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		
-		
+		rotationCorrection = -(((double) details.sectorWidth)/2.0); 
 		/*Rotation according to Imax/Imin for bone of interest or according to all bones*/
 		if (details.rotationChoice.equals("All_Bones_Imax/Imin") || details.rotationChoice.equals("According_to_Imax/Imin")){
 			double[] csmiValues = new double[3];
@@ -57,7 +55,6 @@ public class DetermineAlfa{
 			double moment = csmiValues[2];
 			double vali1,vali2;		
 			//Calculate rotation required to align rotation axes
-			//alfa = Math.atan(2.0*moment/(ymax-xmax))/2.0;
 			if (ymax == xmax){
 				alfa = 0;	//check that xmax does not equal ymax (can't divide with 0...			
 			}else{
@@ -65,17 +62,8 @@ public class DetermineAlfa{
 				//Calculate the maximal and minimial cross-sectional moments of inertia
 				vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
 				vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
-				//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
-				//upwards. In addition it will be used in determining which way the image needs to be rotated. 
 				//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
 				//or vertical axis, whichever rotation is smaller...
-				rotationCorrection = (((double) details.sectorWidth)/2.0); 
-					//For Debugging
-				/*
-				TextWindow checkWindow = new TextWindow(new String("Rotation test"),new String(""),400,400);
-				checkWindow.append("xmax "+xmax+" ymax "+ymax+" vali1 "+vali1+" vali2 "+vali2+" alfa "+alfa);
-				*/
-				/*
 				//Always rotate towards horizontal axis... maximal bending axis will be aligned with horizontal axis
 				//Note that e.g. tibial mid-shaft rotation is completely different if only tibia or if both tibia and fibula
 				//are consireder!!!
@@ -86,7 +74,6 @@ public class DetermineAlfa{
 					}else{
 						alfa =alfa-Math.PI/2.0;
 					}
-					//checkWindow.append("alfa2.. "+alfa);
 				}
 				
 			}
@@ -122,13 +109,11 @@ public class DetermineAlfa{
 			x = roi.roiI.get(largest)-marrowCenter[0];
 			y = roi.roiJ.get(largest)-marrowCenter[1];
 			alfa = Math.PI-Math.atan2(y,x);
-			rotationCorrection = (((double) details.sectorWidth)/2.0); 
 		}
 
 		/*Manual rotation*/
 		if (details.manualRotation){
 			alfa = details.manualAlfa;
-			rotationCorrection = (((double) details.sectorWidth)/2.0); 
 		}
 		
 		/*Flip distribution*/
@@ -136,7 +121,7 @@ public class DetermineAlfa{
 			rotationCorrection = -rotationCorrection;
 		}
 		
-		rotationIndex = (int) (alfa/Math.PI*180.0+rotationCorrection);
+		rotationIndex = (int) (-alfa/Math.PI*180.0+rotationCorrection);
 	}
 	
 	double[] csmi(byte[] sieve,int width, int height){

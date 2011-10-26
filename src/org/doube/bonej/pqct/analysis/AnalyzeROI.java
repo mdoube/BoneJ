@@ -62,8 +62,6 @@ public class AnalyzeROI{
 	double[]  BMDj3;
 
 	//Variables for moment calculations
-	public double rotationCorrection;
-	public double alfa;
 	public Vector<Integer> pind;	
 	
 	//Density distribution variables
@@ -80,8 +78,6 @@ public class AnalyzeROI{
 	public double[] periCorticalBMDs;
 	
 	public AnalyzeROI(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
-		alfa = determineAlfa.alfa;
-		rotationCorrection = determineAlfa.rotationCorrection;
 		sectorWidth = details.sectorWidth;
 		divisions = 3;
 		minimum = roi.minimum;
