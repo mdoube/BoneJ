@@ -6,7 +6,8 @@ import ij.process.*;
 import ij.gui.*;
 import ij.measure.*;						//Calibration
 import java.util.*;							//Vector
-import ij.plugin.filter.*;
+
+import ij.plugin.PlugIn;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;			//image data 
@@ -38,8 +39,7 @@ import ij.io.*;
 */
 
 
-public class Distribution_Analysis implements PlugInFilter {
-	ImagePlus imp;
+public class Distribution_Analysis implements PlugIn {
 
 	int sectorWidth;
 	boolean cOn;
@@ -60,12 +60,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean allowCleaving;
 	String roiChoice;
 	String rotationChoice;
-	public int setup(String arg, ImagePlus imp) {
-		this.imp = imp;
-		//return DOES_32;
-		return DOES_ALL;
-	}
-
+	
 	/*
 	//For debugging
 	public BufferedImage getMyImage(double[] imageIn,int width, int height, double minimum, double maximum, Component imageCreator) {
@@ -89,13 +84,16 @@ public class Distribution_Analysis implements PlugInFilter {
 	checkWindow.append((String) imp.getProperty("Info"));
 	*/
 	
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
+		ImagePlus imp = WindowManager.getCurrentImage();
+		if (imp == null)
+			return;
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
-		Calibration calibration = imp.getCalibration();
+		Calibration cal = imp.getCalibration();
 		double[] calibrationCoefficients;
 		if (getInfoProperty(imageInfo,"Stratec File") == null){
-			calibrationCoefficients = calibration.getCoefficients();
+			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
 			calibrationCoefficients[0] = -322.0;
@@ -105,7 +103,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		cOn = true;
 		dOn = true;
 		mOn = true;
-		resolution = imp.getCalibration().pixelWidth;
+		resolution = cal.pixelWidth;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -203,7 +201,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
-			results = printResults(results,determineAlfa);
+			results = printResults(results,determineAlfa, imp);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
@@ -390,7 +388,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		return null;
 	}
 
-	String printResults(String results,DetermineAlfa determineAlfa){
+	String printResults(String results,DetermineAlfa determineAlfa, ImagePlus imp){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 
