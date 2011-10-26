@@ -21,9 +21,7 @@
 package org.doube.bonej.pqct.selectroi;
 import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
-import java.awt.image.*; //Creating the image...
 import java.awt.*;			//Polygon, Rectangle
-import javax.swing.*;   //for createImage
 import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
@@ -34,7 +32,7 @@ import ij.text.*; 	//Debugging ...
 /*	//For Debugging
 	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
 	checkWindow.append((String) imp.getProperty("Info"));*/
-public class SelectROI extends JPanel{
+public class SelectROI{
 	public ImageAndAnalysisDetails details;
 	public double[] scaledImage;
 	public double[] cortexROI;
@@ -391,47 +389,6 @@ public class SelectROI extends JPanel{
 			distanceFromCentreOfLimb[i] =Math.pow(softPoints[0]-bones.get(i)[0],2.0)+Math.pow(softPoints[1]-bones.get(i)[1],2.0); /*Square root omitted, as it does not affect the order...*/
 		}
 		return distanceFromCentreOfLimb;
-	}
-		
-	/*For density distribution visualization*/
-	public BufferedImage getMyImage(double[] imageIn,double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2, 
-		int width, int height, double minimum, double maximum, Component imageCreator) {
-		int[] image = new int[width*height];
-		int pixel;
-		for (int x = 0; x < width*height;x++) {
-			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0)); //Korjaa tama...
-			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-		}
-		 //Draw rotated radii
-		for(int i = 0; i< 360;i++) {//45;i++) {//
-			image[((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])))+  ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])))*width]= 255<<24 | 255 <<16| 0 <<8| 255;
-			image[(int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i]))+ ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])))*width]=255<<24 | 0 <<16| 255 <<8| 255;
-		}
-		 Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
-		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-		 Graphics2D gbuf = bufferedImage.createGraphics();
-		 gbuf.drawImage(imageToDraw, 0, 0,null);
-		 return bufferedImage;
-	}
-
-	/*For cortical analysis only visualization*/
-	public BufferedImage getMyImage(double[] imageIn,byte[] sieve,int width, int height, double minimum, double maximum, Component imageCreator) {
-		int[] image = new int[width*height];
-		int pixel;
-		for (int x = 0; x < width*height;x++) {
-			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
-			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-			if (sieve[x] == 1){   //Tint roi area color with violet
-				image[x]= 255<<24 | pixel <<16| 0 <<8| pixel; 
-			}
-		}
-		Image imageToDraw = createImage(new MemoryImageSource(width,height,image,0,width));
-		 imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-		 BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-		 Graphics2D gbuf = bufferedImage.createGraphics();
-		 gbuf.drawImage(imageToDraw, 0, 0,null);
-		 return bufferedImage;
 	}
 	
 	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
