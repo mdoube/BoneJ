@@ -422,7 +422,7 @@ public class SelectROI extends JPanel{
 		for (int x = 0; x < width*height;x++) {
 			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
 			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-			if (sieve[x] == 1){   //Ting roi area color with violet
+			if (sieve[x] == 1){   //Tint roi area color with violet
 				image[x]= 255<<24 | pixel <<16| 0 <<8| pixel; 
 			}
 		}

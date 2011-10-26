@@ -220,10 +220,9 @@ public class Distribution_Analysis implements PlugInFilter {
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
 				if(!dOn){
-					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
-					resultImage = new ImagePlus("Visual results",bi);
-					resultImage.getProcessor().setInterpolate(true);
-					resultImage.getProcessor().rotate((double) determineAlfa.rotationIndex);
+					//BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,(double) determineAlfa.rotationIndex);
+
 				}
 			}
 			
@@ -244,6 +243,25 @@ public class Distribution_Analysis implements PlugInFilter {
 			textPanel.appendLine(results);
 			textPanel.updateDisplay();			
 		}
+	}
+	
+	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
+					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		tempImage.getProcessor().setInterpolate(true);
+		tempImage.getProcessor().rotate(alfa);
+		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
 	}
 	
 	void writeHeader(TextPanel textPanel){
