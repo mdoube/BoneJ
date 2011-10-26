@@ -67,7 +67,6 @@ public class DetermineAlfa{
 				//Always rotate towards horizontal axis... maximal bending axis will be aligned with horizontal axis
 				//Note that e.g. tibial mid-shaft rotation is completely different if only tibia or if both tibia and fibula
 				//are consireder!!!
-				*/
 				if (vali1 > vali2){
 					if (alfa < 0) {
 						alfa =Math.PI/2.0+alfa;
