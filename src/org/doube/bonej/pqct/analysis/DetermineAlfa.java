@@ -23,7 +23,7 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
-import ij.text.*;		//Debugging text window
+
 public class DetermineAlfa{
 	public int rotationIndex;
 	public double alfa = 0;
