@@ -210,7 +210,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(!dOn){
+				if(!dOn && !mOn){
 					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
 					resultImage = new ImagePlus("Visual results",bi);
 				}
@@ -219,6 +219,12 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (mOn){
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
+				if(!dOn){
+					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
+					resultImage = new ImagePlus("Visual results",bi);
+					resultImage.getProcessor().setInterpolate(true);
+					resultImage.getProcessor().rotate((double) determineAlfa.rotationIndex);
+				}
 			}
 			
 			if (dOn){
