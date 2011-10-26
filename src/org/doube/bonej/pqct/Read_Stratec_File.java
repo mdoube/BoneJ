@@ -148,7 +148,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			this.setDisplayRange( min, max);
 			Calibration cal = this.getCalibration();
 			cal.setSigned16BitCalibration();
-			cal.setValueUnit("mg/cm³");
+			double[] coefficients = {1, 0.001};
+			cal.setFunction(Calibration.STRAIGHT_LINE, coefficients, "1/cm");
 			cal.setUnit("mm");
 			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
