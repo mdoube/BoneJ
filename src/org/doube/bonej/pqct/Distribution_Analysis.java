@@ -105,7 +105,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		cOn = true;
 		dOn = true;
 		mOn = true;
-		resolution = 1.0;
+		resolution = imp.getCalibration().pixelWidth;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -120,7 +120,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
-		dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
@@ -147,7 +146,6 @@ public class Distribution_Analysis implements PlugInFilter {
 			BMDThreshold				= dialog.getNextNumber();
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
-			resolution					= dialog.getNextNumber();
 			roiChoice			= dialog.getNextChoice();
 			rotationChoice		= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
