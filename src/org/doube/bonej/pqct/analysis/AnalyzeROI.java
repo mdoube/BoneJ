@@ -62,9 +62,6 @@ public class AnalyzeROI{
 	double[]  BMDj3;
 
 	//Variables for moment calculations
-	double rotationCorrection;
-	public double alfa;
-	public byte leg;
 	public Vector<Integer> pind;	
 	
 	//Density distribution variables
@@ -80,8 +77,7 @@ public class AnalyzeROI{
 	public double[] midCorticalBMDs;
 	public double[] periCorticalBMDs;
 	
-	public AnalyzeROI(SelectROI roi,ImageAndAnalysisDetails details){
-		leg = roi.leg;
+	public AnalyzeROI(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
 		sectorWidth = details.sectorWidth;
 		divisions = 3;
 		minimum = roi.minimum;
@@ -138,84 +134,18 @@ public class AnalyzeROI{
 			}
 		}
 		calculateRadii();
-		rotateResults(details,roi);
+		rotateResults(details,roi,determineAlfa.rotationIndex);
 	}
 	
-	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi){
+	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi,int rotationIndex){
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		double moment = 0;
-		double xmax = 0;
-		double ymax = 0;
-		//Calculating cross-sectional moment of inertia in the original image orientation
-		for (int i = 0;i<cortexI.size();i++){
-			xmax = xmax+((cortexI.get(i)-cortexCenter[0])*pixelSpacing)*((cortexI.get(i)-cortexCenter[0])*pixelSpacing)*pixelSpacing*pixelSpacing;
-			ymax = ymax+((cortexJ.get(i)-cortexCenter[1])*pixelSpacing)*((cortexJ.get(i)-cortexCenter[1])*pixelSpacing)*pixelSpacing*pixelSpacing;
-			moment = moment+((cortexI.get(i)-cortexCenter[0])*pixelSpacing)*((cortexJ.get(i)-cortexCenter[1])*pixelSpacing)*pixelSpacing*pixelSpacing;
-		}
-		double vali1,vali2;		
-
-		//Ipolar caclulated
-		//Calculation of Imax and Imin
-		//Calculate rotation required to align rotation axes
-		alfa = Math.atan(2*moment/(ymax-xmax))/2;
-		//Calculate the maximal and minimial cross-sectional moments of inertia
-		vali1 = (ymax+xmax)/2+(ymax-xmax)/2*Math.cos(2*(-alfa))-moment*Math.sin(2*(-alfa));
-		vali2 =(ymax+xmax)/2-(ymax-xmax)/2*Math.cos(2*(-alfa))+moment*Math.sin(2*(-alfa));
-		
-		//rotationCorrection will be used to account for sector widht in order to get the centre of 0th sector
-		//upwards. In addition it will be used in determining which way the image needs to be rotated. 
-		//The according to Imax/Imin alfa may align rotation axis corresponding to maximal CSMI with either horizontal 
-		//or vertical axis, whichever rotation is smaller...
-			
-		if (details.rotationChoice.equals("Furthest_point")){
-			/*Calculate alfa from periosteal radii*/
-			double[] radii = new double[roi.roiI.size()];
-			for (int i = 0; i<roi.roiI.size();++i){
-				radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
-			}
-			double[] sumRadii = new double[radii.length];
-			for (int i = 5;i<radii.length-6;++i){
-				for (int j = -5;j<6;++j){
-					sumRadii[i]+=radii[i+j];
-				}
-			}
-			double[] sortRadii = (double[]) sumRadii.clone();
-			Arrays.sort(sortRadii);
-			int largest =0;
-			while (sumRadii[largest] != sortRadii[sortRadii.length-1]){
-				++largest;
-			}
-			double x,y;
-			x = roi.roiI.get(largest)-marrowCenter[0];
-			y = roi.roiJ.get(largest)-marrowCenter[1];
-			alfa = Math.PI-Math.atan2(y,x);
-			rotationCorrection = (((double) sectorWidth)/2.0); 
-		}
-		if (details.rotationChoice.equals("According_to_Imax/Imin")){
-			if (vali1 > vali2){
-					rotationCorrection = (((double) sectorWidth)/2.0)+90.0;  
-			} else {
-					rotationCorrection = (((double) sectorWidth)/2.0); 
-			}	
-		}
-		
-		if (details.manualRotation){
-			alfa = details.manualAlfa;
-			rotationCorrection = (((double) sectorWidth)/2.0); 
-		}
-		
-		if (details.flipDistribution){
-			rotationCorrection = -rotationCorrection;
-		}
-		
-		//figuring out the indexes for rotating vBMDs and having sector #1 directed posteriorly and having the bending axis corresponding to minimal CSMI half the sector.
-		int alkuindex;
-		alkuindex = 0;
-		if (alfa/Math.PI*180.0+rotationCorrection >= 0){
-			alkuindex = 360-(int) (alfa/Math.PI*180.0+rotationCorrection); 
+		int alkuindex = 0;
+		if (rotationIndex >= 0){
+			alkuindex = 360-rotationIndex; 
 		}else{
-			alkuindex = -(int) (alfa/Math.PI*180.0+rotationCorrection);
+			alkuindex = -rotationIndex;
 		}
+		
 		pind = new Vector<Integer>();
 		int inde;
 		inde = alkuindex;
