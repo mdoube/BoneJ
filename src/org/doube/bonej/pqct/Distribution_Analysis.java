@@ -347,26 +347,26 @@ public class Distribution_Analysis implements PlugInFilter {
 		}
 		if(mOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" mineral mass [mg]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° mineral mass [mg]\t";
 			}
 		}
 		
 		if(dOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical radius [mm]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical radius [mm]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical radius [mm]\t";
 			}
 			//Cortex BMD values			
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° midcortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical vBMD [mg/cm³]\t";
 			}
 
 		}
