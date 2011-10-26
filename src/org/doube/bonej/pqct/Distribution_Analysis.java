@@ -43,6 +43,7 @@ public class Distribution_Analysis implements PlugInFilter {
 
 	int sectorWidth;
 	boolean cOn;
+	boolean	mOn;
 	boolean dOn;
 	String resultString;
 	String imageInfo;
@@ -53,7 +54,12 @@ public class Distribution_Analysis implements PlugInFilter {
 	double scalingFactor;
 	double constant;	
 	boolean flipDistribution;
+	boolean guessFlip;
+	boolean stacked;
 	boolean manualRotation;
+	boolean allowCleaving;
+	String roiChoice;
+	String rotationChoice;
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		//return DOES_32;
@@ -98,6 +104,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		sectorWidth = 10;
 		cOn = true;
 		dOn = true;
+		mOn = true;
 		resolution = 1.0;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
@@ -117,17 +124,19 @@ public class Distribution_Analysis implements PlugInFilter {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
-		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point"};
+		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
 		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
 		dialog.addCheckbox("Analyse_cortical_results",true);
+		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",true);
 		dialog.addCheckbox("Allow_cleaving",false);
-		dialog.addCheckbox("Cleave_retain_smaller",false);
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
+		dialog.addCheckbox("Guess_right",false);
+		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.showDialog();
@@ -139,17 +148,19 @@ public class Distribution_Analysis implements PlugInFilter {
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
 			resolution					= dialog.getNextNumber();
-			String roiChoice			= dialog.getNextChoice();
-			String rotationChoice		= dialog.getNextChoice();
+			roiChoice			= dialog.getNextChoice();
+			rotationChoice		= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
+			mOn							= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
-			boolean allowCleaving		= dialog.getNextBoolean();
-			boolean cleaveReturnSmaller = dialog.getNextBoolean();
+			allowCleaving		= dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
 			flipDistribution			= dialog.getNextBoolean();
+			guessFlip					= dialog.getNextBoolean();
+			stacked						= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
@@ -183,30 +194,43 @@ public class Distribution_Analysis implements PlugInFilter {
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
-															allowCleaving,cleaveReturnSmaller,manualRoi,manualRotation,manualAlfa,flipDistribution);
+															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
+															guessFlip, stacked);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
-
+			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
+			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
+			flipDistribution = imageAndAnalysisDetails.flipDistribution;
 			TextPanel textPanel = IJ.getTextPanel();
 			if (textPanel == null) {textPanel = new TextPanel();}
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
-			results = printResults(results);
+			results = printResults(results,determineAlfa);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(!dOn){
-					BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
-					resultImage = new ImagePlus("Visual results",bi);
+				if(!dOn && !mOn){
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height);
 				}
 				
 			}
+			if (mOn){
+				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
+				results = printMassDistributionResults(results,massDistribution);
+				if(!dOn){
+					//BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
+
+				}
+			}
+			
 			if (dOn){
-				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails);
+				AnalyzeROI analyzeRoi = new AnalyzeROI(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,analyzeRoi);
-				BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-				resultImage = new ImagePlus("Visual results",bi);
+				resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2);
+				//BufferedImage bi = roi.getMyImage(roi.scaledImage,analyzeRoi.marrowCenter,analyzeRoi.pind,analyzeRoi.R,analyzeRoi.R2,analyzeRoi.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
+				//resultImage = new ImagePlus("Visual results",bi);
 			}
 			
 			if (!suppressImages && resultImage!= null){
@@ -220,10 +244,90 @@ public class Distribution_Analysis implements PlugInFilter {
 			textPanel.updateDisplay();			
 		}
 	}
+
+	/*Cortical analysis result image*/
+	ImagePlus getResultImage(double[] values,int width,int height){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
+	}
+	
+	/*Mass distribution result image*/
+	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
+					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		tempImage.getProcessor().setInterpolate(true);
+		tempImage.getProcessor().rotate(alfa);
+		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
+	}
+	
+	/*Density distribution result image*/
+	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa,
+							double[] marrowCenter,Vector<Integer> pind, double[] R, double[] R2, double[] Theta2){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
+					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		 
+		//Draw unrotated radii
+		for(int i = 0; i< 360;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta2[i])));
+			int y = ((int) (marrowCenter[1]+R[i]*Math.sin(Theta2[i])));
+			double colorScale = ((double) pind.get(i))/359.0;
+			tempImage.getProcessor().setColor(new Color((int) (255.0*colorScale),0,(int) (255.0*(1.0-colorScale))));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = ((int) (marrowCenter[0]+R2[i]*Math.cos(Theta2[i])));
+			y = ((int) (marrowCenter[1]+R2[i]*Math.sin(Theta2[i])));
+			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
+			tempImage.getProcessor().drawPixel(x,y);
+		}
+		
+		/*		
+		//Draw rotated radii
+		for(int i = 0; i< 360;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+R[pind.get(i)]*Math.cos(Theta2[i])));
+			int y = ((int) (marrowCenter[1]+R[pind.get(i)]*Math.sin(Theta2[i])));
+			tempImage.getProcessor().setColor(new Color(255,0,255));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = ((int) (marrowCenter[0]+R2[pind.get(i)]*Math.cos(Theta2[i])));
+			y = ((int) (marrowCenter[1]+R2[pind.get(i)]*Math.sin(Theta2[i])));
+			tempImage.getProcessor().setColor(new Color(0,255,255));
+			tempImage.getProcessor().drawPixel(x,y);
+		}
+		*/
+		tempImage.getProcessor().setInterpolate(true);
+		tempImage.getProcessor().rotate(alfa);
+		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
+	}
 	
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right"
+		,"Stacked bones","Allow Cleaving","Roi choice","Rotation choice"};
+			
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
@@ -231,17 +335,23 @@ public class Distribution_Analysis implements PlugInFilter {
 		for (int i = 0;i<parameterNames.length;++i){
 			headings+=parameterNames[i]+"\t";
 		}
+		for (int i = 0;i<dHeadings.length;++i){
+				headings+=dHeadings[i]+"\t";
+		}
+		
 		if(cOn){
 			String[] coHeadings = {"CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
 		}
-		if(dOn){
-			String[] dHeadings = {"Alfa [deg]","Manual Rotation","Flip Distribution"};
-			for (int i = 0;i<dHeadings.length;++i){
-				headings+=dHeadings[i]+"\t";
+		if(mOn){
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" mineral mass [mg]\t";
 			}
+		}
+		
+		if(dOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
 				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
 			}
@@ -282,7 +392,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		return null;
 	}
 
-	String printResults(String results){
+	String printResults(String results,DetermineAlfa determineAlfa){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 
@@ -304,6 +414,16 @@ public class Distribution_Analysis implements PlugInFilter {
 		for (int i = 0;i<parameters.length;++i){
 			results+=parameters[i]+"\t";
 		}
+		
+		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
+		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
+		results += Boolean.toString(manualRotation)+"\t";
+		results += Boolean.toString(flipDistribution)+"\t";
+		results += Boolean.toString(guessFlip)+"\t";
+		results += Boolean.toString(stacked)+"\t";
+		results += Boolean.toString(allowCleaving)+"\t";
+		results += roiChoice+"\t";
+		results += rotationChoice+"\t";
 		return results;
 	}
 	
@@ -317,11 +437,14 @@ public class Distribution_Analysis implements PlugInFilter {
 		return results;
 	}
 	
+	String printMassDistributionResults(String results,MassDistribution massDistribution){
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			results += massDistribution.BMCs[pp]+"\t";
+		}
+		return results;
+	}		
+	
 	String printDistributionResults(String results,AnalyzeROI analyzeRoi){
-		results += Double.toString(analyzeRoi.alfa*180/Math.PI)+"\t";
-		results += Boolean.toString(manualRotation)+"\t";
-		results += Boolean.toString(flipDistribution)+"\t";
-		
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 			results += analyzeRoi.endocorticalRadii[pp]+"\t";
 		}
