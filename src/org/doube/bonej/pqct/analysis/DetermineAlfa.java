@@ -28,9 +28,13 @@ public class DetermineAlfa{
 	public int rotationIndex;
 	public double alfa = 0;
 	public double rotationCorrection = 0;
+	public Vector<Integer> pind;
+	public Vector<Integer> pindColor;
+	ImageAndAnalysisDetails details;
 	public DetermineAlfa(SelectROI roi,ImageAndAnalysisDetails details){
+		this.details = details;
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		rotationCorrection = -(((double) details.sectorWidth)/2.0); 
+		rotationCorrection = (((double) details.sectorWidth)/2.0); 
 		/*Rotation according to Imax/Imin for bone of interest or according to all bones*/
 		if (details.rotationChoice.equals("All_Bones_Imax/Imin") || details.rotationChoice.equals("According_to_Imax/Imin")){
 			double[] csmiValues = new double[3];
@@ -67,7 +71,6 @@ public class DetermineAlfa{
 				//Always rotate towards horizontal axis... maximal bending axis will be aligned with horizontal axis
 				//Note that e.g. tibial mid-shaft rotation is completely different if only tibia or if both tibia and fibula
 				//are consireder!!!
-				*/
 				if (vali1 > vali2){
 					if (alfa < 0) {
 						alfa =Math.PI/2.0+alfa;
@@ -121,33 +124,44 @@ public class DetermineAlfa{
 			rotationCorrection = -rotationCorrection;
 		}
 		
-		rotationIndex = (int) (-alfa/Math.PI*180.0+rotationCorrection);
+		rotationIndex = (int) (alfa/Math.PI*180.0+rotationCorrection);
 		
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		int initialIndex = 0;
-		if (rotationIndex >= 0){
-			initialIndex = 360-rotationIndex; 
-		}else{
-			initialIndex = -rotationIndex;
-		}
+		pind = rotateIndex(rotationIndex);
 		
-		pind = new Vector<Integer>();
+		if(details.flipDistribution){
+			pindColor = rotateIndex((int) (rotationIndex));
+		}else{
+			pindColor = rotateIndex(-rotationIndex);
+		}
+
+	}
+	
+	Vector<Integer> rotateIndex(int rotationAngle){
+		int initialIndex = 0;
+		Vector<Integer> rotateIndexVector = new Vector<Integer>();
+		if (rotationAngle >= 0){
+			initialIndex = 360-rotationAngle; 
+		}else{
+			initialIndex = -rotationAngle;
+		}
 		int inde;
 		inde = initialIndex;
 		while (inde<360){
-			pind.add(inde);
+			rotateIndexVector.add(inde);
 			++inde;
 		}
 		inde=0;
 		while (inde < initialIndex){
-			pind.add(inde);
+			rotateIndexVector.add(inde);
 			++inde;
 		}
 		
-		/*Flip pind, for e.g. comparing left to right*/
+		/*Flip rotateIndexVector, for e.g. comparing left to right*/
 		if (details.flipDistribution){
-			Collections.reverse(pind);
+			Collections.reverse(rotateIndexVector);
 		}
+		return rotateIndexVector;
 	}
 	
 	double[] csmi(byte[] sieve,int width, int height){

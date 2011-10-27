@@ -47,7 +47,7 @@ public class MassDistribution{
 	ImageAndAnalysisDetails details;
 	
 	public MassDistribution(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
-		this.pind = determineAlfa;
+		this.pind = determineAlfa.pind;
 		this.roi = roi;
 		this.details = details;
 		alfa = determineAlfa.alfa;

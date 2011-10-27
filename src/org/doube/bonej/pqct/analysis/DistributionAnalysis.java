@@ -24,7 +24,8 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
-public class AnalyzeROI{
+import ij.text.*;		//Debugging text window
+public class DistributionAnalysis{
 	
 	//image array pointers
 	public double[] originalROI;
@@ -51,8 +52,7 @@ public class AnalyzeROI{
 	double[] cortexCenter;
 	
 	//Variables for radii calculations
-	double[]	Theta;
-	public double[]  Theta2;
+	public double[]	Theta;
 	public double[]	R;
 	public double[]  R2;
 	double[]	Rs;
@@ -63,6 +63,7 @@ public class AnalyzeROI{
 
 	//Variables for moment calculations
 	public Vector<Integer> pind;	
+	public Vector<Integer> pindColor;
 	
 	//Density distribution variables
 	public double[] pRad;
@@ -77,8 +78,9 @@ public class AnalyzeROI{
 	public double[] midCorticalBMDs;
 	public double[] periCorticalBMDs;
 	
-	public AnalyzeROI(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
+	public DistributionAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
 		this.pind = determineAlfa.pind;
+		this.pindColor = determineAlfa.pindColor;
 		sectorWidth = details.sectorWidth;
 		divisions = 3;
 		minimum = roi.minimum;
@@ -147,7 +149,7 @@ public class AnalyzeROI{
 		pERad= new double[360];
 		
 		//Calculate the endocortical and pericortical radii along with the corresponding radii after peeling one layer of pixels
-		for (inde=0;inde<360;inde++){
+		for (int inde=0;inde<360;inde++){
 			pRad[inde] = Ru[inde]*pixelSpacing;
 			eRad[inde] = Rs[inde]*pixelSpacing;
 			pPRad[inde] = R[inde]*pixelSpacing;
@@ -165,8 +167,18 @@ public class AnalyzeROI{
 		int pp;
 		int dd;
 		//Calculate the division and sector values of vBMD
+		//For Debugging
+		/*
+		TextWindow checkWindow = new TextWindow(new String("Radii check"),new String(""),800,400);
+		*/
 		for (pp = 0;pp < (int) (360/sectorWidth); pp++){
 			for (dd = 0;dd<(int) sectorWidth;dd++){
+				/*
+				//debugging
+				checkWindow.append(eRad[pind.get((int) (pp*sectorWidth+dd))]+"\t"+eRad[(int) (pp*sectorWidth+dd)]+"\t"+
+									pRad[pind.get((int) (pp*sectorWidth+dd))]+"\t"+pRad[(int) (pp*sectorWidth+dd)]+"\t"+
+									pind.get((int) (pp*sectorWidth+dd))+"\t"+pindColor.get((int) (pp*sectorWidth+dd)));
+				*/
 				endocorticalRadii[pp] = endocorticalRadii[pp]+ eRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				pericorticalRadii[pp] = pericorticalRadii[pp]+ pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				peeledEndocorticalRadii[pp] = peeledEndocorticalRadii[pp]+ pERad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
@@ -183,7 +195,6 @@ public class AnalyzeROI{
 	void calculateRadii(){
 			//Calculate radii in polar coordinate system originating from bone marrow center of mass
 		Theta= new double[360];
-		Theta2 = new double[360];
 		R= new double[360];
 		R2= new double[360];
 		Rs= new double[360];
@@ -197,7 +208,6 @@ public class AnalyzeROI{
 //		int increments;
 		for (et = 0;et < 360;et++){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
 			Theta[et]=Math.PI/180.0*et;
-			Theta2[et]=-(((double) sectorWidth)/180.0*Math.PI)/2.0+Math.PI/180.0*et;
 			BMD_temp.clear();
 //			increments = 0;
 			//Anatomical endosteal border
