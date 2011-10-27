@@ -122,6 +122,32 @@ public class DetermineAlfa{
 		}
 		
 		rotationIndex = (int) (-alfa/Math.PI*180.0+rotationCorrection);
+		
+		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
+		int initialIndex = 0;
+		if (rotationIndex >= 0){
+			initialIndex = 360-rotationIndex; 
+		}else{
+			initialIndex = -rotationIndex;
+		}
+		
+		pind = new Vector<Integer>();
+		int inde;
+		inde = initialIndex;
+		while (inde<360){
+			pind.add(inde);
+			++inde;
+		}
+		inde=0;
+		while (inde < initialIndex){
+			pind.add(inde);
+			++inde;
+		}
+		
+		/*Flip pind, for e.g. comparing left to right*/
+		if (details.flipDistribution){
+			Collections.reverse(pind);
+		}
 	}
 	
 	double[] csmi(byte[] sieve,int width, int height){

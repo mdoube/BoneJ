@@ -47,6 +47,7 @@ public class MassDistribution{
 	ImageAndAnalysisDetails details;
 	
 	public MassDistribution(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
+		this.pind = determineAlfa;
 		this.roi = roi;
 		this.details = details;
 		alfa = determineAlfa.alfa;
@@ -71,7 +72,7 @@ public class MassDistribution{
 		boneCenter[0] /=(double)points;
 		boneCenter[1] /=(double)points;
 		calculateDistribution();
-		rotateResults(details,roi,determineAlfa.rotationIndex);
+		rotateResults(details,roi);
 	}
 	
 	void calculateDistribution(){
@@ -103,33 +104,7 @@ public class MassDistribution{
 		}
 	}
 	
-	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi,int rotationIndex){
-		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		int alkuindex = 0;
-		if (rotationIndex >= 0){
-			alkuindex = 360-rotationIndex; 
-		}else{
-			alkuindex = -rotationIndex;
-		}
-		
-		pind = new Vector<Integer>();
-		int inde;
-		inde = alkuindex;
-		while (inde<360){
-			pind.add(inde);
-			inde++;
-		}
-		inde=0;
-		while (inde < alkuindex){
-			pind.add(inde);
-			inde++;
-		}
-		
-		/*Flip pind, for e.g. comparing left to right*/
-		if (details.flipDistribution){
-			Collections.reverse(pind);
-		}
-		//Bone marrow cortexCenter[0] and cortexCenter[1]
+	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi){
 		BMCs = new double[(int) (360/sectorWidth)];
 		//Calculate the division and sector values of vBMD
 		for (int pp = 0;pp < (int) (360/sectorWidth); pp++){

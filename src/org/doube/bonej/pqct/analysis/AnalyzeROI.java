@@ -78,6 +78,7 @@ public class AnalyzeROI{
 	public double[] periCorticalBMDs;
 	
 	public AnalyzeROI(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
+		this.pind = determineAlfa.pind;
 		sectorWidth = details.sectorWidth;
 		divisions = 3;
 		minimum = roi.minimum;
@@ -134,35 +135,10 @@ public class AnalyzeROI{
 			}
 		}
 		calculateRadii();
-		rotateResults(details,roi,determineAlfa.rotationIndex);
+		rotateResults(details,roi);
 	}
 	
-	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi,int rotationIndex){
-		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
-		int alkuindex = 0;
-		if (rotationIndex >= 0){
-			alkuindex = 360-rotationIndex; 
-		}else{
-			alkuindex = -rotationIndex;
-		}
-		
-		pind = new Vector<Integer>();
-		int inde;
-		inde = alkuindex;
-		while (inde<360){
-			pind.add(inde);
-			inde++;
-		}
-		inde=0;
-		while (inde < alkuindex){
-			pind.add(inde);
-			inde++;
-		}
-		
-		/*Flip pind, for e.g. comparing left to right*/
-		if (details.flipDistribution){
-			Collections.reverse(pind);
-		}
+	void rotateResults(ImageAndAnalysisDetails details, SelectROI roi){
 		//Bone marrow cortexCenter[0] and cortexCenter[1]
 
 		pRad = new double[360];
