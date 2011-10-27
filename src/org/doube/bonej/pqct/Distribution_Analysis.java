@@ -6,13 +6,14 @@ import ij.process.*;
 import ij.gui.*;
 import ij.measure.*;						//Calibration
 import java.util.*;							//Vector
-import ij.plugin.filter.*;
+
+import ij.plugin.PlugIn;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;			//image data 
-import java.awt.image.*;					//Creating the result BufferedImage...
+//import java.awt.image.*;					//Creating the result BufferedImage...
 import java.awt.*;							//Image, component for debugging...
-import javax.swing.JPanel;					//createImage for debugging...
+//import javax.swing.JPanel;					//createImage for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
 
@@ -38,8 +39,7 @@ import ij.io.*;
 */
 
 
-public class Distribution_Analysis implements PlugInFilter {
-	ImagePlus imp;
+public class Distribution_Analysis implements PlugIn {
 
 	int sectorWidth;
 	boolean cOn;
@@ -60,12 +60,7 @@ public class Distribution_Analysis implements PlugInFilter {
 	boolean allowCleaving;
 	String roiChoice;
 	String rotationChoice;
-	public int setup(String arg, ImagePlus imp) {
-		this.imp = imp;
-		//return DOES_32;
-		return DOES_ALL;
-	}
-
+	
 	/*
 	//For debugging
 	public BufferedImage getMyImage(double[] imageIn,int width, int height, double minimum, double maximum, Component imageCreator) {
@@ -89,13 +84,16 @@ public class Distribution_Analysis implements PlugInFilter {
 	checkWindow.append((String) imp.getProperty("Info"));
 	*/
 	
-	public void run(ImageProcessor ip) {
+	public void run(String arg) {
+		ImagePlus imp = WindowManager.getCurrentImage();
+		if (imp == null)
+			return;
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
-		Calibration calibration = imp.getCalibration();
+		Calibration cal = imp.getCalibration();
 		double[] calibrationCoefficients;
 		if (getInfoProperty(imageInfo,"Stratec File") == null){
-			calibrationCoefficients = calibration.getCoefficients();
+			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
 			calibrationCoefficients[0] = -322.0;
@@ -105,7 +103,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		cOn = true;
 		dOn = true;
 		mOn = true;
-		resolution = 1.0;
+		resolution = cal.pixelWidth;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
 			if (temp.indexOf("\\")!=-1){
@@ -120,7 +118,6 @@ public class Distribution_Analysis implements PlugInFilter {
 		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
-		dialog.addNumericField("In-plane_pixel_size [mm]", resolution, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
@@ -147,7 +144,6 @@ public class Distribution_Analysis implements PlugInFilter {
 			BMDThreshold				= dialog.getNextNumber();
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
-			resolution					= dialog.getNextNumber();
 			roiChoice			= dialog.getNextChoice();
 			rotationChoice		= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
@@ -205,7 +201,7 @@ public class Distribution_Analysis implements PlugInFilter {
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
-			results = printResults(results,determineAlfa);
+			results = printResults(results,determineAlfa, imp);
 			ImagePlus resultImage = null;
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
@@ -354,26 +350,26 @@ public class Distribution_Analysis implements PlugInFilter {
 		}
 		if(mOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" mineral mass [mg]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° mineral mass [mg]\t";
 			}
 		}
 		
 		if(dOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical radius [mm]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical radius [mm]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical radius [mm]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical radius [mm]\t";
 			}
 			//Cortex BMD values			
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" endocortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" midcortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° midcortical vBMD [mg/cm³]\t";
 			}
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+" - "+((i+1)*sectorWidth)+" pericortical vBMD [mg/cm³]\t";
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical vBMD [mg/cm³]\t";
 			}
 
 		}
@@ -399,7 +395,7 @@ public class Distribution_Analysis implements PlugInFilter {
 		return null;
 	}
 
-	String printResults(String results,DetermineAlfa determineAlfa){
+	String printResults(String results,DetermineAlfa determineAlfa, ImagePlus imp){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 

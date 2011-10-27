@@ -78,7 +78,6 @@ public class MassDistribution{
 	void calculateDistribution(){
 		//Calculate radii in polar coordinate system originating from bone marrow center of mass
 		BMC= new double[360];
-		Vector<Double> BMC_temp = new Vector<Double>();
 		int et;
 		double rIncrement = 0.1;
 		for (et = 0;et < 360;et++){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
