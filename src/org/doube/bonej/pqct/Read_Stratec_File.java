@@ -123,7 +123,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			//Create ImageJ image
 			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
 			this.setImage(tempImage.getImage());
-			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
+			this.setProcessor(fileName,tempImage.getProcessor());
 			//Set ImageJ image properties
 			setProperties();
 			short[] pixels = (short[]) this.getProcessor().getPixels();
