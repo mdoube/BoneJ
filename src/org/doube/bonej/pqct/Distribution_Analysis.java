@@ -63,11 +63,16 @@ public class Distribution_Analysis implements PlugIn {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null)
 			return;
+		if (imp.getType() != ImagePlus.GRAY16){
+			IJ.error("Distribution analysis expects 16-bit greyscale data");
+			return;
+		}
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
 		Calibration cal = imp.getCalibration();
-		double[] calibrationCoefficients;
-		if (getInfoProperty(imageInfo,"Stratec File") == null){
+		double[] calibrationCoefficients = {0,1};
+		if (getInfoProperty(imageInfo,"Stratec File") == null){ 
+				if (cal.getCoefficients() != null)
 			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
