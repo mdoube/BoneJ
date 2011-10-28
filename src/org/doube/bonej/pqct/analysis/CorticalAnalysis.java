@@ -30,7 +30,6 @@ public class CorticalAnalysis{
 	public double ToD;
 	public double maxRadiusY;
 	public double[] cortexCenter;
-	//Variables for moment calculations
 	public double SSI;
 	public double BSId;
 	public double IPo;

@@ -29,9 +29,6 @@ import ij.text.*; 	//Debugging ...
 
 @SuppressWarnings("serial")
 
-/*	//For Debugging
-	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
-	checkWindow.append((String) imp.getProperty("Info"));*/
 public class SelectROI{
 	public ImageAndAnalysisDetails details;
 	public double[] scaledImage;
@@ -145,13 +142,7 @@ public class SelectROI{
 			}
 		}
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
-		
-		/*
-		//For Debugging
-		TextWindow checkWindow = new TextWindow(new String("Length"),new String(""),400,400);
-		checkWindow.append("Monta loytyi "+length.size());
-		*/
-		
+				
 		/*Select correct bone outline*/
 		int selection = 0;
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
@@ -163,10 +154,6 @@ public class SelectROI{
 		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		
-		/*
-		TextWindow checkWindow = new TextWindow(new String("guessFlip"),new String(""),400,200);
-		checkWindow.append((String) );
-		*/
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
 			details.flipDistribution = guessFlip(beginnings,jiit,selection);
@@ -182,11 +169,6 @@ public class SelectROI{
 		}
 		
 		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
-		/*
-		if (details.allowCleaving){
-			cleaveEdge(roiI,roiJ,3.0,6.0);
-		}
-		*/
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -197,11 +179,6 @@ public class SelectROI{
 		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 		imp.setRoi(ijROI);
 		sieve= new byte[width*height];
-		
-		/*
-		TextWindow checkWindow = new TextWindow(new String("RoiSize"),new String(""),400,200);
-		checkWindow.append("roiI size "+roiI.size()+" roiJ "+roiJ.size());
-		*/
 		
 		fillSieve(roiI, roiJ, sieve);
 
@@ -444,13 +421,13 @@ public class SelectROI{
 			}
 	}
 	
-	/*New algorithm 
-			trace edge by advancing according to the previous direction
-			if above threshold, turn to negative direction
-			if below threshold, turn to positive direction
-			Idea taken from some paper, couldn't locate it anymore
-			The paper traced continent edges on map/satellite image
-		*/
+	/*	Edge Tracing 
+		trace edge by advancing according to the previous direction
+		if above threshold, turn to negative direction
+		if below threshold, turn to positive direction
+		Idea taken from http://www.math.ucla.edu/~bertozzi/RTG/zhong07/report_zhong.pdf
+		The paper traced continent edges on map/satellite image
+	*/
 	void traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
@@ -586,36 +563,23 @@ public class SelectROI{
 			Vector<Integer> newJiit = new Vector<Integer>();
 			newIit.add(i);
 			newJiit.add(j);
-			//iit.add(i);
-			//jiit.add(j);
+
 			/*Tracing algorithm*/
 			traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
 			len = newIit.size();
 			/*Tracing algorithm done...*/
-			//Allow cleaving?
+
 			Vector<Vector<Vector<Integer>>>  returnedVectors = null;
 			if (details.allowCleaving){
 				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
-				//Debugging
-				/*
-				TextWindow checkWindow = new TextWindow(new String("ReturnedVectors..."),new String(""),400,200);
-				//checkWindow.append("size "+returnedVectors.size());
-				//checkWindow.append("firstSize "+returnedVectors.get(0).get(0).size());
-				//checkWindow.append("firstIndexI "+returnedVectors.get(0).get(0).get(0)+ "firstIndexJ "+returnedVectors.get(0).get(1).get(0));
-				*/
-				
-				
-				
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/
 					for (int ii = 0; ii<returnedVectors.get(iii).get(0).size();++ii){
 						iit.add(returnedVectors.get(iii).get(0).get(ii));
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
-						//checkWindow.append(returnedVectors.get(iii).get(0).get(ii)+"\t"+returnedVectors.get(iii).get(1).get(ii));
 					}
 					len = returnedVectors.get(iii).get(0).size();
 					fillResultEdge(length,beginnings,iit,jiit,len);
-					//checkWindow.append("size "+iii+" "+returnedVectors.get(iii).get(0).size()+" iit.size "+iit.size());
 				}
 				
 			}else{
@@ -626,7 +590,6 @@ public class SelectROI{
 				}
 				fillResultEdge(length,beginnings,iit,jiit,len);
 			}
-			
 			//Find next empty spot
 			i = tempI;
 			j = tempJ;
@@ -637,9 +600,7 @@ public class SelectROI{
 				j++;
 				}
 			}
-
 		}
-
 	}
 	
 	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len){
@@ -685,14 +646,9 @@ public class SelectROI{
 			if (jj<=1){possible = false;}
 			
 			if(result[kai+kaj*width]==1){possible = false;}
-			/*
-			//Debugging
-			TextWindow checkWindow = new TextWindow(new String("Possible"),new String(""),400,200);
-			checkWindow.append("Possible "+possible);
-			*/
+
 			if (possible){
 				possible = resultFill(kai,kaj);
-				//checkWindow.append("Possible "+possible);
 				if (!possible){
 					//Remove "extra ii and jii
 					for (int po = 0;po <length.lastElement() ;po++){
@@ -765,11 +721,7 @@ public class SelectROI{
 		}
 		return returnVectorVectorPointer;
 	}
-	
-	/*
-		Remove the extra part from vectors
-		and replace with a straight line
-	*/
+	/*	Remove the extra part from vectors and replace with a straight line	*/
 	Vector<Vector<Integer>> cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
 		int initialLength = fatRoiI.size();
 		int initI = fatRoiI.get(cleavingIndices[0]);

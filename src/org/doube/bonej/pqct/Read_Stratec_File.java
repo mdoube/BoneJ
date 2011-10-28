@@ -1,12 +1,3 @@
-package org.doube.bonej.pqct;
-
-import java.io.*;
-import ij.*;
-import ij.io.*;
-import ij.gui.*;
-import ij.plugin.*;
-import ij.measure.*;						//Calibration
-
 /*
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,6 +18,15 @@ import ij.measure.*;						//Calibration
 	ImageJ Stratec file reader plugin
     Copyright (C) 2011 Timo Rantalainen
 */
+
+package org.doube.bonej.pqct;
+
+import java.io.*;
+import ij.*;
+import ij.io.*;
+import ij.gui.*;
+import ij.plugin.*;
+import ij.measure.*;						//Calibration
 
 public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Global variables
