@@ -1,22 +1,3 @@
-package org.doube.bonej.pqct;
-
-import ij.*;
-import ij.text.*;
-import ij.process.*;
-import ij.gui.*;
-import ij.measure.*;						//Calibration
-import java.util.*;							//Vector
-
-import ij.plugin.PlugIn;
-import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
-import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
-import org.doube.bonej.pqct.io.*;			//image data 
-//import java.awt.image.*;					//Creating the result BufferedImage...
-import java.awt.*;							//Image, component for debugging...
-//import javax.swing.JPanel;					//createImage for debugging...
-import ij.plugin.filter.Info;
-import ij.io.*;
-
 /*
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,6 +19,22 @@ import ij.io.*;
     Copyright (C) 2011 Timo Rantalainen
 */
 
+package org.doube.bonej.pqct;
+
+import ij.*;
+import ij.text.*;
+import ij.process.*;
+import ij.gui.*;
+import ij.measure.*;						//Calibration
+import java.util.*;							//Vector
+
+import ij.plugin.PlugIn;
+import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
+import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import org.doube.bonej.pqct.io.*;			//image data 
+import java.awt.*;							//Image, component for debugging...
+import ij.plugin.filter.Info;
+import ij.io.*;
 
 public class Distribution_Analysis implements PlugIn {
 
@@ -61,28 +58,6 @@ public class Distribution_Analysis implements PlugIn {
 	String roiChoice;
 	String rotationChoice;
 	
-	/*
-	//For debugging
-	public BufferedImage getMyImage(double[] imageIn,int width, int height, double minimum, double maximum, Component imageCreator) {
-		int[] image = new int[width*height];
-		int pixel;
-		for (int x = 0; x < width*height;x++) {
-			pixel = (int) (((((double) (imageIn[x] -minimum))/((double)(maximum-minimum)))*255.0));
-			image[x]= 255<<24 | pixel <<16| pixel <<8| pixel; 
-		}
-		Image imageToDraw = new JPanel().createImage(new MemoryImageSource(width,height,image,0,width));
-		imageToDraw= imageToDraw.getScaledInstance(1000, -1, Image.SCALE_SMOOTH);
-		BufferedImage bufferedImage = (BufferedImage) imageCreator.createImage(imageToDraw.getWidth(null), imageToDraw.getHeight(null));
-		Graphics2D gbuf = bufferedImage.createGraphics();
-		gbuf.drawImage(imageToDraw, 0, 0,null);
-		return bufferedImage;
-	}
-	*/
-	/*
-	//For Debugging
-	TextWindow checkWindow = new TextWindow(new String("DICOM info"),new String(""),800,400);
-	checkWindow.append((String) imp.getProperty("Info"));
-	*/
 	
 	public void run(String arg) {
 		ImagePlus imp = WindowManager.getCurrentImage();
@@ -182,12 +157,6 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			
-			/* 
-			//For debugging
-			BufferedImage bi2 = getMyImage(scaledImageData.scaledImage,scaledImageData.width,scaledImageData.height,scaledImageData.minimum,scaledImageData.maximum,dialog.getParent());
-			new ImagePlus("Visual results",bi2).show();
-			*/
-			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
@@ -215,7 +184,6 @@ public class Distribution_Analysis implements PlugIn {
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
 				if(!dOn){
-					//BufferedImage bi = roi.getMyImage(roi.scaledImage,roi.sieve,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent());
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
 
 				}
@@ -225,8 +193,6 @@ public class Distribution_Analysis implements PlugIn {
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
 				resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
-				//BufferedImage bi = roi.getMyImage(roi.scaledImage,DistributionAnalysis.marrowCenter,DistributionAnalysis.pind,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta2,roi.width,roi.height,roi.minimum,roi.maximum,dialog.getParent()); // retrieve image
-				//resultImage = new ImagePlus("Visual results",bi);
 			}
 			
 			if (!suppressImages && resultImage!= null){
@@ -298,7 +264,7 @@ public class Distribution_Analysis implements PlugIn {
 			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
 			tempImage.getProcessor().drawPixel(x,y);
 		}
-		/*debugging, plot marrowCenter*/
+		/*plot marrowCenter*/
 		for(int i = 0; i< 10;i++) {//45;i++) {//
 			int x = ((int) (marrowCenter[0]+i));
 			int y = ((int) (marrowCenter[1]));
