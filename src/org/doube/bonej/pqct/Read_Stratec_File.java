@@ -123,7 +123,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			//Create ImageJ image
 			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
 			this.setImage(tempImage.getImage());
-			this.setProcessor(fileName+" "+Double.toString(VoxelSize),tempImage.getProcessor());
+			this.setProcessor(fileName,tempImage.getProcessor());
 			//Set ImageJ image properties
 			setProperties();
 			short[] pixels = (short[]) this.getProcessor().getPixels();
@@ -147,8 +147,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			}
 			this.setDisplayRange( min, max);
 			Calibration cal = this.getCalibration();
-			cal.setSigned16BitCalibration();
-			double[] coefficients = {1, 0.001};
+			double[] coefficients = {-32.768, 0.001};
 			cal.setFunction(Calibration.STRAIGHT_LINE, coefficients, "1/cm");
 			cal.setUnit("mm");
 			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
