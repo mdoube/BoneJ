@@ -167,18 +167,8 @@ public class DistributionAnalysis{
 		int pp;
 		int dd;
 		//Calculate the division and sector values of vBMD
-		//For Debugging
-		/*
-		TextWindow checkWindow = new TextWindow(new String("Radii check"),new String(""),800,400);
-		*/
 		for (pp = 0;pp < (int) (360/sectorWidth); pp++){
 			for (dd = 0;dd<(int) sectorWidth;dd++){
-				/*
-				//debugging
-				checkWindow.append(eRad[pind.get((int) (pp*sectorWidth+dd))]+"\t"+eRad[(int) (pp*sectorWidth+dd)]+"\t"+
-									pRad[pind.get((int) (pp*sectorWidth+dd))]+"\t"+pRad[(int) (pp*sectorWidth+dd)]+"\t"+
-									pind.get((int) (pp*sectorWidth+dd))+"\t"+pindColor.get((int) (pp*sectorWidth+dd)));
-				*/
 				endocorticalRadii[pp] = endocorticalRadii[pp]+ eRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				pericorticalRadii[pp] = pericorticalRadii[pp]+ pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				peeledEndocorticalRadii[pp] = peeledEndocorticalRadii[pp]+ pERad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
@@ -204,12 +194,9 @@ public class DistributionAnalysis{
 		BMDj3= new double[360];
 		Vector<Double> BMD_temp = new Vector<Double>();
 		int et;
-//		byte continuousCortex= 1;
-//		int increments;
 		for (et = 0;et < 360;et++){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
 			Theta[et]=Math.PI/180.0*et;
 			BMD_temp.clear();
-//			increments = 0;
 			//Anatomical endosteal border
 			while (originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] < threshold 
 					&& R[et] < maxRadius/pixelSpacing){
@@ -255,7 +242,6 @@ public class DistributionAnalysis{
 			mo = 0;
 			//Dividing the cortex to three divisions -> save the mean vBMD for each division
 			if (analysisThickness < 3){
-//				continuousCortex = 0; //No point in continuing analysis if the cortex is not continuous
 				break;
 			} else {
 				//cortex 

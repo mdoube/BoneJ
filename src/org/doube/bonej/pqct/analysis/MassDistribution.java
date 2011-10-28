@@ -108,7 +108,6 @@ public class MassDistribution{
 		//Calculate the division and sector values of vBMD
 		for (int pp = 0;pp < (int) (360/sectorWidth); pp++){
 			for (int dd = 0;dd<(int) sectorWidth;dd++){
-				//Cortex
 				BMCs[pp] += BMC[pind.get((int) (pp*sectorWidth+dd))];
 			}
 		}
