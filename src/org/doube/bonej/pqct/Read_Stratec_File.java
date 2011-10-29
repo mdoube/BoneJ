@@ -100,7 +100,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	}
 	
 	private void fileInfo() {
-		FileInfo fi = this.getFileInfo(); 
+		FileInfo fi = new FileInfo(); 
 		fi.pixelWidth = VoxelSize;
 		fi.pixelHeight = VoxelSize;
 		fi.valueUnit = "mm";
