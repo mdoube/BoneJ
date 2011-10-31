@@ -22,6 +22,8 @@
 package org.doube.bonej.pqct;
 
 import java.io.*;
+
+import sun.java2d.NullSurfaceData;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
@@ -101,8 +103,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	
 	private void fileInfo() {
 		FileInfo fi = new FileInfo();
-		if (this.getFileInfo() != null)
-			fi = this.getFileInfo();
+		try { fi = this.getFileInfo();}
+		catch (NullPointerException npe){} 
 		fi.pixelWidth = VoxelSize;
 		fi.pixelHeight = VoxelSize;
 		fi.valueUnit = "mm";
