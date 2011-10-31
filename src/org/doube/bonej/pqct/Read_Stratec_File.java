@@ -72,7 +72,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		String directory = theFile.getParent()+"/";
 		fileName = theFile.getName();
 		try{
-			read(directory);
+			boolean success = read(directory);
+			if (!success){throw new Exception("Not a stratec file");}
 			fileInfo();
 			return this;
 		}catch (Exception err){
@@ -96,7 +97,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}
 		if (fileName==null) return;
 		try{
-			read(directory);
+			boolean success = read(directory);
+			if (!success){throw new Exception("Not a stratec file");}
 			fileInfo();
 			if (arg.isEmpty() && this.getHeight()>0){
 				this.show();
@@ -119,7 +121,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
         this.setFileInfo(fi);
 	}
 
-	private void read(String directory){
+	private boolean read(String directory){
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
 		try{BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
@@ -134,7 +136,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 				throw new Exception("Apparently not a Stratec file",new Throwable("File length < 1609 bytes"));
 			}
 			if (Device.toLowerCase().indexOf(".typ")<0){
-					throw new Exception("Not a Stratec file",new Throwable("Device string not found"));
+				throw new Exception("Not a Stratec file",new Throwable("Device string not found"));
 			}
 			//Create ImageJ image
 			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
@@ -168,9 +170,9 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			cal.setUnit("mm");
 			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
-			IJ.error("Stratec file read failed ", e.getMessage());
-			return;
+			return false;
 		}
+		return true;
 	}
 	
 	private void readHeader(byte[] fileData){
