@@ -23,7 +23,6 @@ package org.doube.bonej.pqct;
 
 import java.io.*;
 
-import sun.java2d.NullSurfaceData;
 import ij.*;
 import ij.io.*;
 import ij.gui.*;
