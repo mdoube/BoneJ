@@ -73,8 +73,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		String directory = theFile.getParent()+"/";
 		fileName = theFile.getName();
 		try{
-			boolean success = read(directory);
-			if (!success){throw new Exception("Not a stratec file");}
+			read(directory);
 			fileInfo();
 			return this;
 		}catch (Exception err){
@@ -98,8 +97,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}
 		if (fileName==null) return;
 		try{
-			boolean success = read(directory);
-			if (!success){throw new Exception("Not a stratec file");}
+			read(directory);
 			fileInfo();
 			if (arg.isEmpty() && this.getHeight()>0){
 				this.show();
@@ -123,11 +121,17 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		fi.fileType = ij.io.FileInfo.GRAY16_SIGNED;	//
         this.setFileInfo(fi);
 	}
-
-	private boolean read(String directory){
+	/**
+	* Read a file in the given directory. The fileName field must be set.
+	* 
+	* @param directory
+	* @throws Exception
+	*/
+	private void read(String directory) throws Exception {
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
-		try{BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
+		try{
+			BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
 			DataInputStream dataInputStream = new DataInputStream(inputStream);
 			byte[] fileData = new byte[(int) fileLength];		//Allocate memory for reading the file into memory
 			dataInputStream.read(fileData,0,(int) fileLength);		//Read the data to memory
@@ -173,9 +177,8 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			cal.setUnit("mm");
 			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
-			return false;
+			throw new Exception("File cannot be read by the Stratec pQCT importer", new Throwable("Stratec read failed"));
 		}
-		return true;
 	}
 	
 	private void readHeader(byte[] fileData){
