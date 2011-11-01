@@ -73,9 +73,15 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			throw new IllegalArgumentException("Path is not a normal file");
 		String directory = theFile.getParent()+"/";
 		fileName = theFile.getName();
-		read(directory);
-		fileInfo();
-		return this;
+		try{
+			boolean success = read(directory);
+			if (!success){throw new Exception("Not a stratec file");}
+			fileInfo();
+			return this;
+		}catch (Exception err){
+			IJ.error("Stratec file read failed ", err.getMessage());
+			return null;
+		}
 	}
 	
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
@@ -92,13 +98,18 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			fileName = od.getFileName();
 		}
 		if (fileName==null) return;
-		read(directory);
-		fileInfo();
-		if (arg.isEmpty() && this.getHeight()>0){
-			this.show();
-			return;
+		try{
+			boolean success = read(directory);
+			if (!success){throw new Exception("Not a stratec file");}
+			fileInfo();
+			if (arg.isEmpty() && this.getHeight()>0){
+				this.show();
+				return;
+			}
+			if (this.getHeight()<1) return;
+		}catch (Exception err){
+			IJ.error("Stratec file read failed ", err.getMessage());
 		}
-		if (this.getHeight()<1) return;
 	}
 	
 	private void fileInfo() {
@@ -114,7 +125,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
         this.setFileInfo(fi);
 	}
 
-	private void read(String directory){
+	private boolean read(String directory){
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
 		try{BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
@@ -123,7 +134,14 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			dataInputStream.read(fileData,0,(int) fileLength);		//Read the data to memory
 			dataInputStream.close();	//Close the file after reading
 			//Read some data from the file Header
-			readHeader(fileData);
+			if (fileLength > 1609){
+				readHeader(fileData);
+			}else{
+				throw new Exception("Apparently not a Stratec file",new Throwable("File length < 1609 bytes"));
+			}
+			if (Device.toLowerCase().indexOf(".typ")<0){
+				throw new Exception("Not a Stratec file",new Throwable("Device string not found"));
+			}
 			//Create ImageJ image
 			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
 			this.setImage(tempImage.getImage());
@@ -156,9 +174,9 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 			cal.setUnit("mm");
 			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
-			IJ.error("Stratec file read failed ", e.getMessage());
-			return;
+			return false;
 		}
+		return true;
 	}
 	
 	private void readHeader(byte[] fileData){
