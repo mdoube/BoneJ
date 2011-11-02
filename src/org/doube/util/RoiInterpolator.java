@@ -19,8 +19,8 @@ public class RoiInterpolator implements PlugIn {
 
 	public void run(String arg) {
 		RoiManager roiman = RoiManager.getInstance();
-		if (roiman == null){
-			IJ.error("Please populate the ROI Manager with ROIs");
+		if (roiman == null || roiman.getCount() < 2){
+			IJ.error("Please populate the ROI Manager with multiple ROIs");
 			return;
 		}
 		Roi[] rois = roiman.getRoisAsArray();
