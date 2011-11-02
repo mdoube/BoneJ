@@ -33,7 +33,8 @@ public class RoiInterpolator implements PlugIn {
 		ArrayList<Integer> templateSlices = new ArrayList<Integer>();
 		for (Roi roi : rois){
 			final int slice = roiman.getSliceNumber(roi.getName());
-			templateSlices.add(new Integer(slice));
+			if (!templateSlices.contains(new Integer(slice)))
+				templateSlices.add(new Integer(slice));
 			if (slice == 0) //ignore non-slice associated ROIs
 				continue;
 			zmin = Math.min(slice, zmin);
@@ -43,6 +44,10 @@ public class RoiInterpolator implements PlugIn {
 			ymin = Math.min(ymin, bounds.y);
 			xmax = Math.max(xmax, bounds.x + bounds.width);
 			ymax = Math.max(ymax, bounds.y + bounds.height);
+		}
+		if (templateSlices.size() < 2){
+			IJ.error("ROIs are all on the same slice, nothing to interpolate");
+			return;
 		}
 		//create the binary stack
 		final int nSlices = zmax - zmin + 1;
