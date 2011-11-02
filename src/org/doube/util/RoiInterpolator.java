@@ -1,8 +1,17 @@
 package org.doube.util;
 
 import ij.plugin.PlugIn;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.process.ByteProcessor;
+import ij.process.ImageProcessor;
+import ij.gui.Roi;
+import ij.plugin.filter.ThresholdToSelection;
 
 public class RoiInterpolator implements PlugIn {
+	int[][] idt;
+	int w, h;
 
 	@Override
 	public void run(String arg) {
@@ -10,24 +19,8 @@ public class RoiInterpolator implements PlugIn {
 
 	}
 
-}
-
 //------------------ From Fiji --------------------------//
 //http://fiji.sc/cgi-bin/gitweb.cgi?p=fiji.git;a=blob_plain;f=src-plugins/VIB-lib/vib/BinaryInterpolator.java;h=f6a610659ad624d13f94639bc5c0149712071f9f;hb=refs/heads/master
-package vib;
-
-import ij.IJ;
-import ij.ImagePlus;
-import ij.ImageStack;
-import ij.gui.GenericDialog;
-import ij.process.ByteProcessor;
-import ij.process.ImageProcessor;
-import ij.gui.Roi;
-import ij.plugin.filter.ThresholdToSelection;
-import java.util.ArrayList;
-import java.util.Iterator;
-import math3d.Point3d;
-import math3d.FastMatrixN;
 
 /*
  * This plugin takes a binary stack as input, where some slices are
@@ -35,10 +28,6 @@ import math3d.FastMatrixN;
  * regions are interpolated by weighting the signed integer distance
  * transformed labeled slices.
  */
-
-public class BinaryInterpolator {
-	int[][] idt;
-	int w, h;
 
 	public void run(ImagePlus image, Roi[] rois) {
 		w = image.getWidth();
