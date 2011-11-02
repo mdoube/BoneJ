@@ -50,14 +50,18 @@ public class RoiInterpolator implements PlugIn {
 			return;
 		}
 		//create the binary stack
+		final int stackW = xmax - xmin + 1;
+		final int stackH = ymax - ymin + 1;
 		final int nSlices = zmax - zmin + 1;
-		ImageStack stack = new ImageStack(xmax, ymax);
+		ImageStack stack = new ImageStack(stackW, stackH);
 		for (int s = 0; s < nSlices; s++){
-			ByteProcessor bp = new ByteProcessor(xmax, ymax);
+			ByteProcessor bp = new ByteProcessor(stackW, stackH);
 			bp.setColor(255);
 			for (Roi roi : rois){
 				final int slice = roiman.getSliceNumber(roi.getName());
 				if (slice == zmin + s){
+					Rectangle bounds = roi.getBounds();
+					roi.setLocation(bounds.x - xmin, bounds.y - ymin);
 					bp.setRoi(roi);
 					if (roi.getType() == Roi.RECTANGLE)
 						bp.fill();
@@ -82,7 +86,13 @@ public class RoiInterpolator implements PlugIn {
 			bp.setThreshold(threshold, threshold, ImageProcessor.NO_LUT_UPDATE);
 			Roi roi = ts.convert(bp);
 			roi.setPosition(s + zmin);
+			Rectangle bounds = roi.getBounds();
+			roi.setLocation(bounds.x + xmin, bounds.y + ymin);			
 			roiman.addRoi(roi);
+		}
+		for (Roi roi : rois){
+			Rectangle bounds = roi.getBounds();
+			roi.setLocation(bounds.x + xmin, bounds.y + ymin);
 		}
 		IJ.showStatus("ROIs interpolated");
 	}
