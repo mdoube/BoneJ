@@ -28,6 +28,7 @@ import ij.io.*;
 import ij.gui.*;
 import ij.plugin.*;
 import ij.measure.*;						//Calibration
+import javax.activation.*;					//UnsupportedDataTypeException
 
 public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Global variables
@@ -130,55 +131,59 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	private void read(String directory) throws Exception {
 		File fileIn = new File(directory+fileName);
 		long fileLength = fileIn.length();
+		byte[] fileData;
 		try{
 			BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(fileIn));
 			DataInputStream dataInputStream = new DataInputStream(inputStream);
-			byte[] fileData = new byte[(int) fileLength];		//Allocate memory for reading the file into memory
+			fileData = new byte[(int) fileLength];		//Allocate memory for reading the file into memory
 			dataInputStream.read(fileData,0,(int) fileLength);		//Read the data to memory
 			dataInputStream.close();	//Close the file after reading
-			//Read some data from the file Header
-			if (fileLength > 1609){
-				readHeader(fileData);
-			}else{
-				throw new Exception("Apparently not a Stratec file",new Throwable("File length < 1609 bytes"));
-			}
-			if (Device.toLowerCase().indexOf(".typ")<0){
-				throw new Exception("Not a Stratec file",new Throwable("Device string not found"));
-			}
-			//Create ImageJ image
-			ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
-			this.setImage(tempImage.getImage());
-			this.setProcessor(fileName,tempImage.getProcessor());
-			//Set ImageJ image properties
-			setProperties();
-			short[] pixels = (short[]) this.getProcessor().getPixels();
-			int min = (int) Math.pow(2,16);
-			int max = 0;
-			for (int j = 0;j < PicMatrixY; ++j){
-				for (int i = 0;i < PicMatrixX; ++i){
-					final int offset = 1609+2*(i+j*PicMatrixX);
-					int value = (int) ((short) (((fileData[offset+1] & 0xFF)) <<8 | ((short) (fileData[offset] & 0xFF))<<0));
-
-					if (value >=0){
-						value = (int) -Math.pow(2,15)+value;
-					}else{
-						value = (int) Math.pow(2,15)-1+value;
-					}
-					int tempVal = value & 0xFFFF;
-					if (tempVal < min){min =  tempVal;}
-					if (tempVal > max){max = tempVal;}					
-					pixels[i+j*PicMatrixX] = (short) value;
-				}
-			}
-			this.setDisplayRange( min, max);
-			Calibration cal = this.getCalibration();
-			double[] coefficients = {-32.768, 0.001};
-			cal.setFunction(Calibration.STRAIGHT_LINE, coefficients, "1/cm");
-			cal.setUnit("mm");
-			cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 		}catch (Exception e) {
-			throw new Exception("File cannot be read by the Stratec pQCT importer", new Throwable("Stratec read failed"));
+			throw new UnsupportedDataTypeException("Could not read input file.");
 		}
+		//Read some data from the file Header
+		if (fileLength > 1609){
+			Device  = new String(fileData,1051,12);
+		}else{
+			throw new UnsupportedDataTypeException("Apparently not a Stratec file, file length < 1609 bytes.");
+		}
+
+		if (fileLength > 1609 && Device.toLowerCase().indexOf(".typ")>=0){
+			readHeader(fileData);
+		}else{
+			throw new UnsupportedDataTypeException("Apparently not a Stratec file, device string not found.");
+		}
+		//Create ImageJ image
+		ImagePlus tempImage = NewImage.createShortImage(fileName+" "+Double.toString(VoxelSize), PicMatrixX, PicMatrixY, 1, NewImage.FILL_BLACK);
+		this.setImage(tempImage.getImage());
+		this.setProcessor(fileName,tempImage.getProcessor());
+		//Set ImageJ image properties
+		setProperties();
+		short[] pixels = (short[]) this.getProcessor().getPixels();
+		int min = (int) Math.pow(2,16);
+		int max = 0;
+		for (int j = 0;j < PicMatrixY; ++j){
+			for (int i = 0;i < PicMatrixX; ++i){
+				final int offset = 1609+2*(i+j*PicMatrixX);
+				int value = (int) ((short) (((fileData[offset+1] & 0xFF)) <<8 | ((short) (fileData[offset] & 0xFF))<<0));
+
+				if (value >=0){
+					value = (int) -Math.pow(2,15)+value;
+				}else{
+					value = (int) Math.pow(2,15)-1+value;
+				}
+				int tempVal = value & 0xFFFF;
+				if (tempVal < min){min =  tempVal;}
+				if (tempVal > max){max = tempVal;}					
+				pixels[i+j*PicMatrixX] = (short) value;
+			}
+		}
+		this.setDisplayRange( min, max);
+		Calibration cal = this.getCalibration();
+		double[] coefficients = {-32.768, 0.001};
+		cal.setFunction(Calibration.STRAIGHT_LINE, coefficients, "1/cm");
+		cal.setUnit("mm");
+		cal.pixelWidth = cal.pixelHeight = cal.pixelDepth = VoxelSize;
 	}
 	
 	private void readHeader(byte[] fileData){
@@ -197,11 +202,13 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		offset = 986;
 		MeasDate =  (long) (((long) (fileData[offset+3] & 0xFF)) <<24 | ((long) (fileData[offset+2] & 0xFF))<<16 | ((long) (fileData[offset+1] & 0xFF)) <<8 | ((long) (fileData[offset+0] & 0xFF)));
 
+		/*
 		offset = 1050;
 		stringLength = fileData[offset];
 		for (int i=0;i<stringLength;++i){Dev[i] = fileData[offset+1+i];}
 		Device = new String(Dev);		//DeviceType
-
+		*/
+		
 		offset = 1085;
 		PatMeasNo = ((int) ((int) (fileData[offset+1] & 0xFF)) <<8 | ((int) (fileData[offset+0] & 0xFF)));
 
