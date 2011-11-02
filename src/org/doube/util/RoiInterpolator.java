@@ -1,5 +1,7 @@
 package org.doube.util;
 
+import java.awt.Rectangle;
+
 import ij.plugin.PlugIn;
 import ij.IJ;
 import ij.ImagePlus;
@@ -8,15 +10,76 @@ import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij.gui.Roi;
 import ij.plugin.filter.ThresholdToSelection;
+import ij.plugin.frame.RoiManager;
 
 public class RoiInterpolator implements PlugIn {
 	int[][] idt;
 	int w, h;
 
-	@Override
 	public void run(String arg) {
-		// TODO Auto-generated method stub
-
+		RoiManager roiman = RoiManager.getInstance();
+		if (roiman == null){
+			IJ.error("Please populate the ROI Manager with ROIs");
+			return;
+		}
+		Roi[] rois = roiman.getRoisAsArray();
+		int xmax = 0;
+		int xmin = Integer.MAX_VALUE;
+		int ymax = 0;
+		int ymin = Integer.MAX_VALUE;
+		int zmax = 1;
+		int zmin = Integer.MAX_VALUE;
+		for (Roi roi : rois){
+			IJ.log(roi.getTypeAsString());
+			final int slice = roiman.getSliceNumber(roi.getName());
+			IJ.log("slice = "+slice);
+			if (slice == 0) //ignore non-slice associated ROIs
+				continue;
+			zmin = Math.min(slice, zmin);
+			zmax = Math.max(slice, zmax);
+			Rectangle bounds = roi.getBounds();
+			xmin = Math.min(xmin, bounds.x);
+			ymin = Math.min(ymin, bounds.y);
+			xmax = Math.max(xmax, bounds.x + bounds.width);
+			ymax = Math.max(ymax, bounds.y + bounds.height);
+		}
+		//create the binary stack
+		final int nSlices = zmax - zmin + 1;
+		ImageStack stack = new ImageStack(xmax, ymax);
+		IJ.log("Created new stack width "+xmax+" height "+ymax);
+		for (int s = 0; s < nSlices; s++){
+			ByteProcessor bp = new ByteProcessor(xmax, ymax);
+			bp.setColor(255);
+			for (Roi roi : rois){
+				final int slice = roiman.getSliceNumber(roi.getName());
+				if (slice == zmin + s){
+					bp.setRoi(roi);
+					if (roi.getType() == Roi.RECTANGLE)
+						bp.fill();
+					else 
+						bp.fill(roi);
+				}
+			}
+			stack.addSlice(""+s, bp);
+		}
+		//do the binary interpolation
+		run(stack);
+		
+		ImagePlus binary = new ImagePlus("interpolated", stack);
+		binary.show();
+		//get the ROIs
+		
+		ThresholdToSelection ts = new ThresholdToSelection();
+		ts.setup("", binary);
+		for(int s = 0; s < nSlices ; s++) {
+			ImageProcessor bp = stack.getProcessor(s+1);
+			int threshold = 255;
+			bp.setThreshold(threshold, threshold, ImageProcessor.NO_LUT_UPDATE);
+			Roi roi = ts.convert(bp);
+			roi.setPosition(s + zmin);
+			roiman.addRoi(roi);
+		}
+		IJ.showStatus("ROIs interpolated");
 	}
 
 //------------------ From Fiji --------------------------//
