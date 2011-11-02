@@ -30,9 +30,7 @@ public class RoiInterpolator implements PlugIn {
 		int zmax = 1;
 		int zmin = Integer.MAX_VALUE;
 		for (Roi roi : rois){
-			IJ.log(roi.getTypeAsString());
 			final int slice = roiman.getSliceNumber(roi.getName());
-			IJ.log("slice = "+slice);
 			if (slice == 0) //ignore non-slice associated ROIs
 				continue;
 			zmin = Math.min(slice, zmin);
@@ -46,7 +44,6 @@ public class RoiInterpolator implements PlugIn {
 		//create the binary stack
 		final int nSlices = zmax - zmin + 1;
 		ImageStack stack = new ImageStack(xmax, ymax);
-		IJ.log("Created new stack width "+xmax+" height "+ymax);
 		for (int s = 0; s < nSlices; s++){
 			ByteProcessor bp = new ByteProcessor(xmax, ymax);
 			bp.setColor(255);
@@ -64,11 +61,9 @@ public class RoiInterpolator implements PlugIn {
 		}
 		//do the binary interpolation
 		run(stack);
-		
 		ImagePlus binary = new ImagePlus("interpolated", stack);
-		binary.show();
+
 		//get the ROIs
-		
 		ThresholdToSelection ts = new ThresholdToSelection();
 		ts.setup("", binary);
 		for(int s = 0; s < nSlices ; s++) {
