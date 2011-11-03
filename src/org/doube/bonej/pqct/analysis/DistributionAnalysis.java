@@ -57,9 +57,7 @@ public class DistributionAnalysis{
 	public double[]  R2;
 	double[]	Rs;
 	double[]  Ru;
-	double[]  BMDj1;
-	double[]	BMDj2;
-	double[]  BMDj3;
+	Vector<double[]> BMDj;
 
 	//Variables for moment calculations
 	public Vector<Integer> pind;	
@@ -82,7 +80,7 @@ public class DistributionAnalysis{
 		this.pind = determineAlfa.pind;
 		this.pindColor = determineAlfa.pindColor;
 		sectorWidth = details.sectorWidth;
-		divisions = 3;
+		divisions = details.divisions;
 		minimum = roi.minimum;
 		maximum = roi.maximum;
 		marrowI = roi.boneMarrowRoiI;
@@ -169,14 +167,14 @@ public class DistributionAnalysis{
 		//Calculate the division and sector values of vBMD
 		for (pp = 0;pp < (int) (360/sectorWidth); pp++){
 			for (dd = 0;dd<(int) sectorWidth;dd++){
-				endocorticalRadii[pp] = endocorticalRadii[pp]+ eRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
-				pericorticalRadii[pp] = pericorticalRadii[pp]+ pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
-				peeledEndocorticalRadii[pp] = peeledEndocorticalRadii[pp]+ pERad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
-				peeledPericorticalRadii[pp] = peeledPericorticalRadii[pp]+ pPRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				endocorticalRadii[pp] += eRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				pericorticalRadii[pp] += pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				peeledEndocorticalRadii[pp] += pERad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				peeledPericorticalRadii[pp] += pPRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				//Cortex
-				endoCorticalBMDs[pp] = endoCorticalBMDs[pp]+BMDj1[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
-				midCorticalBMDs[pp] = midCorticalBMDs[pp]+BMDj2[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
-				periCorticalBMDs[pp] = periCorticalBMDs[pp]+BMDj3[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				endoCorticalBMDs[pp] += BMDj.get(0)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				midCorticalBMDs[pp] += BMDj.get(1)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+				periCorticalBMDs[pp] += BMDj.get(2)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 			}
 		}
 		
@@ -189,12 +187,13 @@ public class DistributionAnalysis{
 		R2= new double[360];
 		Rs= new double[360];
 		Ru= new double[360];
-		BMDj1= new double[360];
-		BMDj2= new double[360];
-		BMDj3= new double[360];
+		BMDj = new Vector<double[]>();
+		for (int i = 0;i<divisions;++i){
+			BMDj.add(new double[360]);
+		}
 		Vector<Double> BMD_temp = new Vector<Double>();
 		int et;
-		for (et = 0;et < 360;et++){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
+		for (et = 0;et < 360;++et){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
 			Theta[et]=Math.PI/180.0*et;
 			BMD_temp.clear();
 			//Anatomical endosteal border
@@ -235,34 +234,20 @@ public class DistributionAnalysis{
 				Ru[et] = Ru[et] + 0.1;
 			}
 
-			int analysisThickness;
-			int ka;
-			int mo;
-			analysisThickness = BMD_temp.size();
-			mo = 0;
+			int analysisThickness = BMD_temp.size();
 			//Dividing the cortex to three divisions -> save the mean vBMD for each division
-			if (analysisThickness < 3){
+			if (analysisThickness < divisions){
 				break;
 			} else {
 				//cortex 
-				for (ka = 0;ka <(int)(analysisThickness*1/divisions);ka++){
-					BMDj1[et] = BMDj1[et]+BMD_temp.get(ka);
-					mo++;
+				for (int div = 0; div<divisions;++div){
+					int mo = 0;
+					for (int ka = (int) ((double)analysisThickness*(double)div/(double)divisions);ka <(int) ((double)analysisThickness*((double)div+1.0)/(double)divisions);ka++){
+						BMDj.get(div)[et] += BMD_temp.get(ka);
+						mo++;
+					}
+					BMDj.get(div)[et] /= (double) mo;
 				}
-				BMDj1[et] = BMDj1[et]/mo;
-				mo = 0;
-				for (ka = (int) (analysisThickness/divisions);ka <(int) (analysisThickness*2.0/divisions);ka++){
-					BMDj2[et] = BMDj2[et]+BMD_temp.get(ka);
-					mo++;
-				}
-				BMDj2[et] = BMDj2[et]/mo;
-				mo = 0;
-				for (ka = (int) (analysisThickness*2.0/divisions);ka <(int) (analysisThickness*3.0/divisions);ka++){
-					BMDj3[et] = BMDj3[et]+BMD_temp.get(ka);
-					mo++;
-				}
-				BMDj3[et] = BMDj3[et]/mo;
-				mo = 0;
 			}
 
 		}

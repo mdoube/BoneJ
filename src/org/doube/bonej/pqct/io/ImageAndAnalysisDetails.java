@@ -33,6 +33,7 @@ public class ImageAndAnalysisDetails{
 	public int filterSize;
 	public int softFilterSize;
 	public int sectorWidth;
+	public int divisions;
 	public String imageSavePath;
 	public String roiChoice;
 	public String rotationChoice;
@@ -63,6 +64,7 @@ public class ImageAndAnalysisDetails{
 		filterSize					= 3;
 		softFilterSize				= 7;
 		sectorWidth 				= 10;
+		divisions					= 3;
 		roiChoice					= roiChoiceIn;
 		this.rotationChoice			= rotationChoice;
 		this.choiceLabels			= choiceLabels;
