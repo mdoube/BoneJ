@@ -186,10 +186,15 @@ public class Distribution_Analysis implements PlugIn {
 			String results = "";
 			results = printResults(results,determineAlfa, imp);
 			ImagePlus resultImage = null;
+			boolean makeImage = true;
+			if(suppressImages && !saveImageOnDisk){
+				makeImage = false;
+			}
+			
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(!dOn && !mOn && !conOn){
+				if(!dOn && !mOn && !conOn && makeImage){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height);
 				}
 				
@@ -197,7 +202,7 @@ public class Distribution_Analysis implements PlugIn {
 			if (mOn){
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
-				if(!dOn && !conOn){
+				if(!dOn && !conOn && makeImage){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
 
 				}
@@ -205,7 +210,7 @@ public class Distribution_Analysis implements PlugIn {
 			if (conOn){
 				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printConcentricRingResults(results,concentricRingAnalysis);
-				if(!dOn){
+				if(!dOn && makeImage){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter,determineAlfa.pind, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 
 				}
@@ -215,7 +220,9 @@ public class Distribution_Analysis implements PlugIn {
 			if (dOn){
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
-				resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+				if (makeImage){
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+				}
 			}
 			
 			if (!suppressImages && resultImage!= null){
@@ -395,12 +402,12 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(conOn){
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° concentric analysis pericortical radius [mm]\t";
+			for (int i = 0;i<((int) 360/concentricSector);++i){
+				headings+=i*concentricSector+"° - "+((i+1)*concentricSector)+"° concentric analysis pericortical radius [mm]\t";
 			}
 			for (int j = 0;j<concentricDivisions;++j){
 				for (int i = 0;i<((int) 360/concentricSector);++i){
-					headings+="Division "+(j+1)+" sector "+i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° vBMD [mg/cm³]\t";
+					headings+="Division "+(j+1)+" sector "+i*concentricSector+"° - "+((i+1)*concentricSector)+"° vBMD [mg/cm³]\t";
 				}
 			}
 		}
@@ -500,8 +507,8 @@ public class Distribution_Analysis implements PlugIn {
 	
 	
 	String printConcentricRingResults(String results,ConcentricRingAnalysis concentricRingAnalysis){
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			results += concentricRingAnalysis.pericorticalRadii[pp]+"\t";
+		for (int i = 0;i<((int) 360/concentricSector);++i){
+			results += concentricRingAnalysis.pericorticalRadii[i]+"\t";
 		}
 		for (int j = 0;j<concentricDivisions;++j){
 			for (int i = 0;i<((int) 360/concentricSector);++i){
@@ -514,20 +521,20 @@ public class Distribution_Analysis implements PlugIn {
 
 	
 	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis){
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.endocorticalRadii[pp]+"\t";
 		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.pericorticalRadii[pp]+"\t";
 		}
 		//Cortex BMD values			
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.endoCorticalBMDs[pp]+"\t";
 		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.midCorticalBMDs[pp]+"\t";
 		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.periCorticalBMDs[pp]+"\t";
 		}
 		return results;

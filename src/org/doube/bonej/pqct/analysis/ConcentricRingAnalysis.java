@@ -106,7 +106,7 @@ public class ConcentricRingAnalysis{
 			for (dd = 0;dd<(int) sectorWidth;dd++){
 				pericorticalRadii[pp] += pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				for (int div = 0;div<divisions;++div){
-					BMDs.get(div)[pp] += BMDj.get(0)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
+					BMDs.get(div)[pp] += BMDj.get(div)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				}
 			}
 		}
