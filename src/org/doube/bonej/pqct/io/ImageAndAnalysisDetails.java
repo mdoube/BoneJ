@@ -48,31 +48,32 @@ public class ImageAndAnalysisDetails{
 	public boolean guessFlip;
 	public boolean stacked;
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactorIn, double constantIn,double fatThreshold,double areaThresholdIn,
-									double BMDthresholdIn, String roiChoiceIn,String rotationChoice,String[] choiceLabels,
+	public ImageAndAnalysisDetails(double scalingFactor, double constant,double fatThreshold,double areaThreshold,
+									double BMDthreshold, String roiChoice,String rotationChoice,String[] choiceLabels,
 									boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
-									boolean guessFlip,boolean stacked){
-		scalingFactor				= scalingFactorIn;
-		constant 					= constantIn;
-		airThreshold				= -100;
-		this.fatThreshold 			= fatThreshold;
-		muscleThreshold 			= 200;
-		marrowThreshold 			= 300;
-		areaThreshold 				= areaThresholdIn;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		BMDthreshold 				= BMDthresholdIn;		//For cortical BMD analyses
-		softThreshold 				= 300;	//Thresholding soft tissues + marrow from bone
-		boneThreshold 				= areaThresholdIn;
-		filterSize					= 3;
-		softFilterSize				= 7;
-		sectorWidth 				= 10;
-		divisions					= 3;
-		concentricSector			= 10;
-		concentricDivisions			= 10;
-		roiChoice					= roiChoiceIn;
+									boolean guessFlip,boolean stacked,
+									int sectorWidth,int divisions,int concentricSector,int concentricDivisions){
+		this.scalingFactor			= scalingFactor;
+		this.constant 				= constant;
+		this.airThreshold			= -100;
+		this.fatThreshold	 		= fatThreshold;
+		this.muscleThreshold 		= 200;
+		this.marrowThreshold 		= 300;
+		this.areaThreshold 			= areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+		this.BMDthreshold 			= BMDthreshold;		//For cortical BMD analyses
+		this.softThreshold 			= 300;	//Thresholding soft tissues + marrow from bone
+		this.boneThreshold 			= areaThreshold;
+		this.filterSize				= 3;
+		this.softFilterSize			= 7;
+		this.sectorWidth			=sectorWidth;
+		this.divisions				= divisions;
+		this.concentricSector		= concentricSector;
+		this.concentricDivisions	= concentricDivisions;
+		this.roiChoice				= roiChoice;
 		this.rotationChoice			= rotationChoice;
 		this.choiceLabels			= choiceLabels;
-		imageSavePath 				= new String("");
+		this.imageSavePath 			= new String("");
 		this.allowCleaving			= allowCleaving;
 		this.manualRoi				= manualRoi;
 		this.manualRotation			= manualRotation;
@@ -80,5 +81,9 @@ public class ImageAndAnalysisDetails{
 		this.flipDistribution		= flipDistribution;
 		this.guessFlip				= guessFlip;
 		this.stacked				= stacked;
+		this.sectorWidth			=sectorWidth;
+		this.divisions				= divisions;
+		this.concentricSector		= concentricSector;
+		this.concentricDivisions	= concentricDivisions;
 	}
 }

@@ -38,7 +38,11 @@ import ij.io.*;
 
 public class Distribution_Analysis implements PlugIn {
 
+	
 	int sectorWidth;
+	int divisions;
+	int concentricSector;
+	int concentricDivisions;
 	boolean cOn;		//Basic analyses
 	boolean	mOn;		//Mass distribution
 	boolean	conOn;		//Concentric rings analysis
@@ -68,6 +72,12 @@ public class Distribution_Analysis implements PlugIn {
 			IJ.error("Distribution analysis expects 16-bit greyscale data");
 			return;
 		}
+		/*Set sector widths and division numbers*/
+		sectorWidth 		= 10;
+		divisions			= 3;
+		concentricSector	= 10;
+		concentricDivisions = 10;		
+		
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
 		Calibration cal = imp.getCalibration();
@@ -80,7 +90,7 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients[0] = -322.0;
 			calibrationCoefficients[1] = 1.724;
 		}
-		sectorWidth = 10;
+		
 		resolution = cal.pixelWidth;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
@@ -161,11 +171,10 @@ public class Distribution_Analysis implements PlugIn {
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
-			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip, stacked);
+															guessFlip, stacked,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
@@ -195,7 +204,7 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			if (conOn){
 				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
-				//results = printConcentricRingResults(results,concentricRingAnalysis);
+				results = printConcentricRingResults(results,concentricRingAnalysis);
 				if(!dOn){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter,determineAlfa.pind, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 
@@ -385,6 +394,14 @@ public class Distribution_Analysis implements PlugIn {
 			}
 		}
 		
+		if(conOn){
+			for (int j = 0;j<concentricDivisions;++j){
+				for (int i = 0;i<((int) 360/concentricSector);++i){
+					headings+="Division "+(j+1)+" sector "+i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° vBMD [mg/cm³]\t";
+				}
+			}
+		}
+		
 		if(dOn){
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
 				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical radius [mm]\t";
@@ -470,13 +487,25 @@ public class Distribution_Analysis implements PlugIn {
 		results+=cortAnalysis.BSId+"\t";
 		return results;
 	}
-	
+		
 	String printMassDistributionResults(String results,MassDistribution massDistribution){
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
 			results += massDistribution.BMCs[pp]+"\t";
 		}
 		return results;
 	}		
+	
+	
+	String printConcentricRingResults(String results,ConcentricRingAnalysis concentricRingAnalysis){
+		for (int j = 0;j<concentricDivisions;++j){
+			for (int i = 0;i<((int) 360/concentricSector);++i){
+				results += concentricRingAnalysis.BMDs.get(j)[i]+"\t";
+			}
+		}
+		return results;
+	}
+	
+
 	
 	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis){
 		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){

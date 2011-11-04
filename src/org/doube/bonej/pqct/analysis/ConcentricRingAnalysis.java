@@ -51,7 +51,7 @@ public class ConcentricRingAnalysis{
 	//Density distribution variables
 	public double[] pRad;
 	public double[] pericorticalRadii;
-	Vector<double[]> BMDs;
+	public Vector<double[]> BMDs;
 	SelectROI roi;
 	
 	public ConcentricRingAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
