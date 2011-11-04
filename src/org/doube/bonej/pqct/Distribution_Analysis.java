@@ -395,6 +395,9 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(conOn){
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° concentric analysis pericortical radius [mm]\t";
+			}
 			for (int j = 0;j<concentricDivisions;++j){
 				for (int i = 0;i<((int) 360/concentricSector);++i){
 					headings+="Division "+(j+1)+" sector "+i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° vBMD [mg/cm³]\t";
@@ -497,6 +500,9 @@ public class Distribution_Analysis implements PlugIn {
 	
 	
 	String printConcentricRingResults(String results,ConcentricRingAnalysis concentricRingAnalysis){
+		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
+			results += concentricRingAnalysis.pericorticalRadii[pp]+"\t";
+		}
 		for (int j = 0;j<concentricDivisions;++j){
 			for (int i = 0;i<((int) 360/concentricSector);++i){
 				results += concentricRingAnalysis.BMDs.get(j)[i]+"\t";
