@@ -39,9 +39,10 @@ import ij.io.*;
 public class Distribution_Analysis implements PlugIn {
 
 	int sectorWidth;
-	boolean cOn;
-	boolean	mOn;
-	boolean dOn;
+	boolean cOn;		//Basic analyses
+	boolean	mOn;		//Mass distribution
+	boolean	conOn;		//Concentric rings analysis
+	boolean dOn;		//Distribution analysis
 	String resultString;
 	String imageInfo;
 	double resolution;
@@ -80,9 +81,6 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients[1] = 1.724;
 		}
 		sectorWidth = 10;
-		cOn = true;
-		dOn = true;
-		mOn = true;
 		resolution = cal.pixelWidth;
 		if (getInfoProperty(imageInfo,"Pixel Spacing")!= null){
 			String temp = getInfoProperty(imageInfo,"Pixel Spacing");
@@ -105,6 +103,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Rotation_selection", rotationLabels, "According_to_Imax/Imin");
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
+		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",true);
 		dialog.addCheckbox("Allow_cleaving",false);
 		dialog.addCheckbox("Suppress_result_image",false);
@@ -124,12 +123,13 @@ public class Distribution_Analysis implements PlugIn {
 			BMDThreshold				= dialog.getNextNumber();
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
-			roiChoice			= dialog.getNextChoice();
-			rotationChoice		= dialog.getNextChoice();
+			roiChoice					= dialog.getNextChoice();
+			rotationChoice				= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
 			mOn							= dialog.getNextBoolean();
+			conOn						= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
-			allowCleaving		= dialog.getNextBoolean();
+			allowCleaving				= dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
@@ -180,7 +180,7 @@ public class Distribution_Analysis implements PlugIn {
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(!dOn && !mOn){
+				if(!dOn && !mOn && !conOn){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height);
 				}
 				
@@ -188,11 +188,20 @@ public class Distribution_Analysis implements PlugIn {
 			if (mOn){
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
-				if(!dOn){
+				if(!dOn && !conOn){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
 
 				}
 			}
+			if (conOn){
+				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
+				//results = printConcentricRingResults(results,concentricRingAnalysis);
+				if(!dOn){
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter,determineAlfa.pind, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
+
+				}
+			}
+			
 			
 			if (dOn){
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
@@ -234,6 +243,57 @@ public class Distribution_Analysis implements PlugIn {
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
+		}
+		tempImage.getProcessor().setInterpolate(true);
+		tempImage.getProcessor().rotate(alfa);
+		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
+	}
+
+	/*Concentric rings distribution result image*/
+	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa,
+							double[] marrowCenter,Vector<Integer> pind,Vector<Integer> pindColor, double[] R, double[] Theta){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
+					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		 
+		//Draw unrotated radii
+		for(int i = 0; i< Theta.length;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])));
+			int y = ((int) (marrowCenter[1]+R[i]*Math.sin(Theta[i])));
+			double colorScale = ((double) pindColor.get(i))/359.0;
+			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
+			tempImage.getProcessor().drawPixel(x,y);
+		}
+		/*plot marrowCenter*/
+		for(int i = 0; i< 10;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+i));
+			int y = ((int) (marrowCenter[1]));
+			tempImage.getProcessor().setColor(new Color(0,255,255));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = (int) (marrowCenter[0]);
+			y = (int) (marrowCenter[1]+i);
+			tempImage.getProcessor().setColor(new Color(255,0,255));
+			tempImage.getProcessor().drawPixel(x,y);
+			/*Plot rotated axes...*/
+			x = ((int) ((double) marrowCenter[0]+((double) i)*Math.cos(-alfa/180*Math.PI)));
+			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.sin(-alfa/180*Math.PI)));
+			tempImage.getProcessor().setColor(new Color(0,255,0));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = ((int) ((double) marrowCenter[0]+((double) -i)*Math.sin(-alfa/180*Math.PI)));
+			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.cos(-alfa/180*Math.PI)));
+			tempImage.getProcessor().setColor(new Color(0,0,255));
+			tempImage.getProcessor().drawPixel(x,y);
+
 		}
 		tempImage.getProcessor().setInterpolate(true);
 		tempImage.getProcessor().rotate(alfa);

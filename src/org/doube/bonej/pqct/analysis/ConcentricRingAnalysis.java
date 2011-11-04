@@ -37,11 +37,11 @@ public class ConcentricRingAnalysis{
 	public int width;
 	public double threshold;	
 	
-	public double boneCenter;
+	public double[] boneCenter;
 	
 	//Variables for radii calculations
 	public double[]	Theta;
-	double[]  Ru;
+	public double[]  Ru;
 	Vector<double[]> BMDj;
 
 	//Variables for moment calculations
@@ -52,17 +52,16 @@ public class ConcentricRingAnalysis{
 	public double[] pRad;
 	public double[] pericorticalRadii;
 	Vector<double[]> BMDs;
-	
+	SelectROI roi;
 	
 	public ConcentricRingAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
 		this.pind = determineAlfa.pind;
 		this.pindColor = determineAlfa.pindColor;
+		this.roi = roi;
 		sectorWidth = details.concentricSector;
 		divisions = details.concentricDivisions;
 		minimum = roi.minimum;
 		maximum = roi.maximum;
-		marrowI = roi.boneMarrowRoiI;
-		marrowJ = roi.boneMarrowRoiJ;
 		height = roi.height;
 		width = roi.width;
 		pixelSpacing = roi.pixelSpacing;
@@ -96,6 +95,7 @@ public class ConcentricRingAnalysis{
 
 
 		pericorticalRadii = new double[(int) (360/sectorWidth)];
+		BMDs = new Vector<double[]>();
 		for (int div = 0;div<divisions;++div){
 			BMDs.add(new double[(int) (360/sectorWidth)]);
 		}
@@ -127,19 +127,19 @@ public class ConcentricRingAnalysis{
 			Theta[et]=Math.PI/180.0*et;
 			BMD_temp.clear();
 			double R = 0;
-						while (roi.sieve[(int) (boneCenter[0]+R*Math.cos(Theta))+ ((int) ((boneCenter[1]+R*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+0.5)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+0.5)*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+1)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+1)*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+2)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+2)*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+3)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+3)*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+4)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+4)*Math.sin(Theta)))*width)] > 0
-					|| roi.sieve[(int) (boneCenter[0]+(R+6)*Math.cos(Theta))+ ((int) ((boneCenter[1]+(R+6)*Math.sin(Theta)))*width)] > 0){
+						while (roi.sieve[(int) (boneCenter[0]+R*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+R*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+0.5)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+0.5)*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+1)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+1)*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+2)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+2)*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+3)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+3)*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+4)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+4)*Math.sin(Theta[et])))*width)] > 0
+					|| roi.sieve[(int) (boneCenter[0]+(R+6)*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+(R+6)*Math.sin(Theta[et])))*width)] > 0){
 						//Calculate BMC rho*dV, dV=dA*slice_thickness
 						//dA=pi*((R(et)*resolution)^2-((R(et)-0.1)*resolution)^2), slice_thickness = 1 mm
 						//(could be set to actual slice thickness, but makes no
 						//difference for comparisons -> 1 mm is used BMD divided by
 						//1000, because unit is mg/cm3 and area is mm2
-						BMD_temp.add(roi.scaledImage[(int) (boneCenter[0]+R*Math.cos(Theta))+ ((int) ((boneCenter[1]+R*Math.sin(Theta)))*width)]);
+						BMD_temp.add(roi.scaledImage[(int) (boneCenter[0]+R*Math.cos(Theta[et]))+ ((int) ((boneCenter[1]+R*Math.sin(Theta[et])))*width)]);
 						R += rIncrement;
 			}
 			Ru[et] = R;
