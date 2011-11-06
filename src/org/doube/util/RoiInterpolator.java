@@ -67,13 +67,9 @@ public class RoiInterpolator implements PlugIn {
 			}
 			stack.addSlice(""+s, bp);
 		}
-		//do the binary interpolation with IDT
-//		run(stack);
-//		ImagePlus binary = new ImagePlus("interpolated", stack);
-		
-		//do the binary interpolation with EDT
-		ImagePlus binary = compute(stack);
-		binary.show();
+		//do the binary interpolation
+		run(stack);
+		ImagePlus binary = new ImagePlus("interpolated", stack);
 
 		//get the ROIs
 		ThresholdToSelection ts = new ThresholdToSelection();
