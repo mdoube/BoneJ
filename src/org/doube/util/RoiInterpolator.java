@@ -15,12 +15,7 @@ import ij.plugin.frame.RoiManager;
 
 public class RoiInterpolator implements PlugIn {
 	int[][] idt;
-//	int w, h;
-	
-	ImagePlus image;
-	int w, h, d;
-	int current, total;
-
+	int w, h;
 
 	public void run(String arg) {
 		RoiManager roiman = RoiManager.getInstance();
@@ -318,6 +313,16 @@ public class RoiInterpolator implements PlugIn {
 	
 	//--------------- From Fiji --------------------------
 	//http://fiji.sc/cgi-bin/gitweb.cgi?p=fiji.git;a=blob_plain;f=src-plugins/Fiji_Plugins/fiji/process3d/EDT.java;h=eb433b2912a3a7955e0c56b91b009d9ff6fabb5e;hb=refs/heads/master
+	
+	package fiji.process3d;
+
+	import ij.IJ;
+	import ij.ImagePlus;
+	import ij.ImageStack;
+
+	import ij.plugin.filter.PlugInFilter;
+
+	import ij.process.ImageProcessor;
 
 	/*
 	 * The idea of the Euclidean Distance Transform is to get the
@@ -368,7 +373,19 @@ public class RoiInterpolator implements PlugIn {
 	 * After this step, the list of parabolae is iterated to calculate
 	 * the values for g(x).
 	 */
+	public class EDT implements PlugInFilter {
+		ImagePlus image;
+		int w, h, d;
+		int current, total;
 
+		public int setup(String arg, ImagePlus image) {
+			this.image = image;
+			return DOES_8G | NO_CHANGES;
+		}
+
+		public void run(ImageProcessor ip) {
+			compute(image.getStack()).show();
+		}
 
 		public ImagePlus compute(ImageStack stack) {
 			w = stack.getWidth();
@@ -538,4 +555,5 @@ public class RoiInterpolator implements PlugIn {
 				slice[x * columnStride + offset] = (float)Math.sqrt(value);
 			}
 		}
+	}
 }
