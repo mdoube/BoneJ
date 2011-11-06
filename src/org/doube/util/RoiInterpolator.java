@@ -21,8 +21,8 @@ public class RoiInterpolator implements PlugIn {
 
 	public void run(String arg) {
 		RoiManager roiman = RoiManager.getInstance();
-		if (roiman == null){
-			IJ.error("Please populate the ROI Manager with ROIs");
+		if (roiman == null || roiman.getCount() < 2){
+			IJ.error("Please populate the ROI Manager with multiple ROIs");
 			return;
 		}
 		Roi[] rois = roiman.getRoisAsArray();
@@ -35,7 +35,8 @@ public class RoiInterpolator implements PlugIn {
 		ArrayList<Integer> templateSlices = new ArrayList<Integer>();
 		for (Roi roi : rois){
 			final int slice = roiman.getSliceNumber(roi.getName());
-			templateSlices.add(new Integer(slice));
+			if (!templateSlices.contains(new Integer(slice)))
+				templateSlices.add(new Integer(slice));
 			if (slice == 0) //ignore non-slice associated ROIs
 				continue;
 			zmin = Math.min(slice, zmin);
@@ -46,15 +47,23 @@ public class RoiInterpolator implements PlugIn {
 			xmax = Math.max(xmax, bounds.x + bounds.width);
 			ymax = Math.max(ymax, bounds.y + bounds.height);
 		}
+		if (templateSlices.size() < 2){
+			IJ.error("ROIs are all on the same slice, nothing to interpolate");
+			return;
+		}
 		//create the binary stack
+		final int stackW = xmax - xmin + 1;
+		final int stackH = ymax - ymin + 1;
 		final int nSlices = zmax - zmin + 1;
-		ImageStack stack = new ImageStack(xmax, ymax);
+		ImageStack stack = new ImageStack(stackW, stackH);
 		for (int s = 0; s < nSlices; s++){
-			ByteProcessor bp = new ByteProcessor(xmax, ymax);
+			ByteProcessor bp = new ByteProcessor(stackW, stackH);
 			bp.setColor(255);
 			for (Roi roi : rois){
 				final int slice = roiman.getSliceNumber(roi.getName());
 				if (slice == zmin + s){
+					Rectangle bounds = roi.getBounds();
+					roi.setLocation(bounds.x - xmin, bounds.y - ymin);
 					bp.setRoi(roi);
 					if (roi.getType() == Roi.RECTANGLE)
 						bp.fill();
@@ -80,7 +89,13 @@ public class RoiInterpolator implements PlugIn {
 			bp.setThreshold(threshold, threshold, ImageProcessor.NO_LUT_UPDATE);
 			Roi roi = ts.convert(bp);
 			roi.setPosition(s + zmin);
+			Rectangle bounds = roi.getBounds();
+			roi.setLocation(bounds.x + xmin, bounds.y + ymin);			
 			roiman.addRoi(roi);
+		}
+		for (Roi roi : rois){
+			Rectangle bounds = roi.getBounds();
+			roi.setLocation(bounds.x + xmin, bounds.y + ymin);
 		}
 		IJ.showStatus("ROIs interpolated");
 	}
