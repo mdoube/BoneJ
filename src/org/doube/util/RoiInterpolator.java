@@ -3,6 +3,8 @@ package org.doube.util;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 
+import org.doube.geometry.EDT;
+
 import ij.plugin.PlugIn;
 import ij.IJ;
 import ij.ImagePlus;
@@ -62,9 +64,15 @@ public class RoiInterpolator implements PlugIn {
 			}
 			stack.addSlice(""+s, bp);
 		}
-		//do the binary interpolation
-		run(stack);
-		ImagePlus binary = new ImagePlus("interpolated", stack);
+		//do the binary interpolation with IDT
+//		run(stack);
+//		ImagePlus binary = new ImagePlus("interpolated", stack);
+		
+		//do the binary interpolation with EDT
+		EDT edt = new EDT();
+		ImagePlus binary = edt.compute(stack);
+		binary.show();
+		
 
 		//get the ROIs
 		ThresholdToSelection ts = new ThresholdToSelection();
@@ -73,7 +81,7 @@ public class RoiInterpolator implements PlugIn {
 			if (templateSlices.contains(new Integer(s + zmin)))
 				continue;
 			ImageProcessor bp = stack.getProcessor(s+1);
-			int threshold = 255;
+			int threshold = 1;
 			bp.setThreshold(threshold, threshold, ImageProcessor.NO_LUT_UPDATE);
 			Roi roi = ts.convert(bp);
 			roi.setPosition(s + zmin);
