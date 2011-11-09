@@ -153,6 +153,7 @@ public class SelectROI{
 		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
 		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (details.roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
 		
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
@@ -235,6 +236,19 @@ public class SelectROI{
 		Collections.sort(temp);
 		int counter=0;
 		while (length.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
+	}
+	
+	int selectRoiSecondLargestBone(Vector<Integer> length){
+		Vector<Integer> temp = new Vector<Integer>();
+		for (int iii =0;iii<length.size();++iii){
+			temp.add(length.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (length.get(counter) !=temp.get(temp.size()-2)){ //Select second largest...
 			++counter;
 		}
 		return counter;

@@ -107,7 +107,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		//Get ROI selection
-		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral"};
+		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
 		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[2]); //"According_to_Imax/Imin"
