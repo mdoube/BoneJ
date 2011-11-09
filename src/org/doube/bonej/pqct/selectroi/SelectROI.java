@@ -160,6 +160,9 @@ public class SelectROI{
 		}
 		if (details.guessFlip && !details.stacked){
 			details.flipDistribution = guessFlip(beginnings,iit,selection);
+			if (details.roiChoice.equals(details.choiceLabels[1])){	//Flip flip, if roiChoice is smaller..
+				details.flipDistribution = !details.flipDistribution;			
+			}
 		}
 		
 		/*fill roiI & roiJ*/
