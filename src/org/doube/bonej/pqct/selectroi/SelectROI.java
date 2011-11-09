@@ -157,6 +157,9 @@ public class SelectROI{
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
 			details.flipDistribution = guessFlip(beginnings,jiit,selection);
+			if (details.roiChoice.equals(details.choiceLabels[1])){	//Flip flip, if roiChoice is smaller..
+				details.flipDistribution = !details.flipDistribution;			
+			}
 		}
 		if (details.guessFlip && !details.stacked){
 			details.flipDistribution = guessFlip(beginnings,iit,selection);
