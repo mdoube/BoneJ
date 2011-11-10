@@ -362,9 +362,19 @@ public class SelectROI{
 			}
 		}
 		/*Find the centre of area of the limb*/
+		
+				byte[] limbSieve = new byte[tempScaledImage.length];
+				limbSieve[iit.get(0)+jiit.get(0)*width] = 1;
+				/*Dilate muscleSieve, into neighbouring fat pixels*/
+				int tempDil = 1;
+				while (tempDil>0){
+					tempDil=dilateLimb(limbSieve,(byte)1,(byte)0,(byte)4,fatThreshold,tempScaledImage);
+				}
+		
+		
 		for (int j = 0; j<height;++j){
 			for (int i = 0; i<width;++i){
-				if (tempScaledImage[i+j*width]>=fatThreshold){
+				if (limbSieve[i+j*width]==(byte)1){
 				softPoints[0]+=i;
 				softPoints[1]+=j;
 				softPoints[2]+=1;
@@ -386,6 +396,29 @@ public class SelectROI{
 			distanceFromCentreOfLimb[i] =Math.pow(softPoints[0]-bones.get(i)[0],2.0)+Math.pow(softPoints[1]-bones.get(i)[1],2.0); /*Square root omitted, as it does not affect the order...*/
 		}
 		return distanceFromCentreOfLimb;
+	}
+	
+	public int dilateLimb(byte[] data,byte dilateVal,byte min, byte temp, double threshold,double[] scaledImage){
+		//Dilate algorithm
+		// Best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
+		int dilated = 0;
+		for (int i=0; i<height; i++){
+			for (int j=0; j<width; j++){
+				if (data[i*width+j] ==dilateVal){
+					if (i	>0 		&& data[(i-1)*width+j]==min && scaledImage[(i-1)*width+j]	>= threshold) {data[(i-1)*width+j] = temp;}
+					if (j	>0		&& data[(i)*width+j-1]==min && scaledImage[(i)*width+j-1]	>= threshold) {data[(i)*width+j-1] = temp;}
+					if (i+1	<height	&& data[(i+1)*width+j]==min && scaledImage[(i+1)*width+j]	>= threshold) {data[(i+1)*width+j] = temp;}
+					if (j+1	<width	&& data[(i)*width+j+1]==min && scaledImage[(i)*width+j+1]	>= threshold) {data[(i)*width+j+1] = temp;}
+				}
+			}
+		}
+		for (int i=0; i<width*height; i++){
+			if (data[i] == temp){
+				data[i] = dilateVal;	//Set to proper value here...
+				++dilated;
+			}
+		}
+		return dilated;
 	}
 	
 	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
