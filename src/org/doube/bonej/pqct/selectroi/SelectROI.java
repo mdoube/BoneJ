@@ -157,13 +157,21 @@ public class SelectROI{
 		
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
-			details.flipDistribution = guessFlip(length,beginnings,jiit);
+			if (details.guessLarger){
+				details.flipDistribution = guessFlipLarger(length,beginnings,jiit);
+			}else{
+				details.flipDistribution = guessFlipSelection(beginnings,jiit,selection);
+			}
 			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
 			}
 		}
 		if (details.guessFlip && !details.stacked){
-			details.flipDistribution = guessFlip(length,beginnings,iit);
+			if (details.guessLarger){
+				details.flipDistribution = guessFlipLarger(length,beginnings,iit);
+			}else{	
+				details.flipDistribution = guessFlipSelection(beginnings,iit,selection);
+			}
 			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
 			}
@@ -211,7 +219,23 @@ public class SelectROI{
 		
 	}
 	
-	boolean guessFlip(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit){
+	boolean guessFlipSelection(Vector<Integer> beginning,Vector<Integer> iit, int selection){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<beginning.size();iii++){
+			temp.add(iit.get(beginning.get(iii)));
+			temp2.add(iit.get(beginning.get(iii)));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(0)){
+			++counter;
+		}
+		if (selection == counter){return false;}
+		return true;
+	}	
+	
+	boolean guessFlipLarger(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
 		for (int iii =0;iii<length.size();iii++){

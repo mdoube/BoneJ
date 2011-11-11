@@ -57,6 +57,7 @@ public class Distribution_Analysis implements PlugIn {
 	double constant;	
 	boolean flipDistribution;
 	boolean guessFlip;
+	boolean guessLarger;
 	boolean stacked;
 	boolean invertGuess;
 	boolean manualRotation;
@@ -123,6 +124,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
 		dialog.addCheckbox("Guess_right",true);
+		dialog.addCheckbox("Guess_larger",false);
 		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
@@ -148,6 +150,7 @@ public class Distribution_Analysis implements PlugIn {
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
 			flipDistribution			= dialog.getNextBoolean();
 			guessFlip					= dialog.getNextBoolean();
+			guessLarger					= dialog.getNextBoolean();
 			stacked						= dialog.getNextBoolean();
 			invertGuess					= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
@@ -177,7 +180,7 @@ public class Distribution_Analysis implements PlugIn {
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip, stacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
+															guessFlip,guessLarger, stacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
@@ -378,8 +381,8 @@ public class Distribution_Analysis implements PlugIn {
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
-		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right"
-		,"Stacked bones","Allow Cleaving","Roi choice","Rotation choice"};
+		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
+		,"Stacked bones","Invert guess","Allow Cleaving","Roi choice","Rotation choice"};
 			
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
@@ -484,7 +487,9 @@ public class Distribution_Analysis implements PlugIn {
 		results += Boolean.toString(manualRotation)+"\t";
 		results += Boolean.toString(flipDistribution)+"\t";
 		results += Boolean.toString(guessFlip)+"\t";
+		results += Boolean.toString(guessLarger)+"\t";
 		results += Boolean.toString(stacked)+"\t";
+		results += Boolean.toString(invertGuess)+"\t";
 		results += Boolean.toString(allowCleaving)+"\t";
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";

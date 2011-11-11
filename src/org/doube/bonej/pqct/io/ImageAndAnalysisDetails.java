@@ -46,14 +46,16 @@ public class ImageAndAnalysisDetails{
 	public double manualAlfa;
 	public boolean flipDistribution;
 	public boolean guessFlip;
+	public boolean guessLarger;
 	public boolean stacked;
 	public boolean invertGuess;
+	
 	//ImageJ plugin constructor
 	public ImageAndAnalysisDetails(double scalingFactor, double constant,double fatThreshold,double areaThreshold,
 									double BMDthreshold, String roiChoice,String rotationChoice,String[] choiceLabels,
 									boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
-									boolean guessFlip,boolean stacked, boolean invertGuess,
+									boolean guessFlip,boolean guessLarger,boolean stacked, boolean invertGuess,
 									int sectorWidth,int divisions,int concentricSector,int concentricDivisions){
 		this.scalingFactor			= scalingFactor;
 		this.constant 				= constant;
@@ -81,6 +83,7 @@ public class ImageAndAnalysisDetails{
 		this.manualAlfa				= manualAlfa;
 		this.flipDistribution		= flipDistribution;
 		this.guessFlip				= guessFlip;
+		this.guessLarger			= guessLarger;
 		this.stacked				= stacked;
 		this.invertGuess			= invertGuess;
 		this.sectorWidth			=sectorWidth;
