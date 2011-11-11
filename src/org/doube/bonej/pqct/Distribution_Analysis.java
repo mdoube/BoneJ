@@ -111,8 +111,8 @@ public class Distribution_Analysis implements PlugIn {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
-		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
-		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[2]); //"According_to_Imax/Imin"
+		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right"};
+		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
@@ -178,7 +178,7 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
-															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
+															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);

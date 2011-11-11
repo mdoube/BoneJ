@@ -36,12 +36,12 @@ public class DetermineAlfa{
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
 		rotationCorrection = (((double) details.sectorWidth)/2.0); 
 		/*Rotation according to Imax/Imin for bone of interest or according to all bones*/
-		if (details.rotationChoice.equals("All_Bones_Imax/Imin") || details.rotationChoice.equals("According_to_Imax/Imin")){
+		if (details.rotationChoice.equals(details.rotationLabels[0]) || details.rotationChoice.equals(details.rotationLabels[2])){
 			double[] csmiValues = new double[3];
-			if (details.rotationChoice.equals("All_Bones_Imax/Imin")){
+			if (details.rotationChoice.equals(details.rotationLabels[0])){
 				csmiValues = csmi(roi.result,roi.width,roi.height);
 			}
-			if (details.rotationChoice.equals("According_to_Imax/Imin")){
+			if (details.rotationChoice.equals(details.rotationLabels[2])){
 				byte[] tempCsmiSieve = new byte[roi.width*roi.height];
 				for (int j = 0; j< roi.height;j++){
 					for (int i = 0; i<roi.width;i++){
@@ -83,7 +83,7 @@ public class DetermineAlfa{
 		}
 
 		/*Rotation according to the furthest point*/
-		if (details.rotationChoice.equals("Furthest_point")){
+		if (details.rotationChoice.equals(details.rotationLabels[1])){
 			/*Calculate alfa from periosteal radii*/
 			double[] marrowCenter = new double[2];
 			for (int i = 0; i< roi.boneMarrowRoiI.size();i++){
@@ -114,6 +114,33 @@ public class DetermineAlfa{
 			alfa = Math.PI-Math.atan2(y,x);
 		}
 
+		/*Rotate unselected bone to right*/
+		if (details.rotationChoice.equals(details.rotationLabels[3])){
+			
+			/*Find the second biggest bone (could be bigger than the selected roi...*/
+			int[] twoBones = roi.twoLargestBones(roi.length);
+			int otherBoneSelection = 0;
+			if (roi.selection == twoBones[0]){
+				otherBoneSelection = twoBones[1];
+			}else{
+				otherBoneSelection = twoBones[0];
+			}
+			/*Fill a sieve with a second bone and acquire coordinates...*/
+			Vector<Integer> sRoiI = new Vector<Integer>();
+			Vector<Integer> sRoiJ = new Vector<Integer>();
+			for (int i = roi.beginnings.get(otherBoneSelection);i < roi.beginnings.get(otherBoneSelection)+roi.length.get(otherBoneSelection);++i){
+				sRoiI.add(roi.iit.get(i));
+				sRoiJ.add(roi.jiit.get(i));
+			}
+			byte[] secondBoneSieve = roi.fillSieve(sRoiI, sRoiJ, roi.width,roi.height);
+			
+			double[] originBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate originBone centre*/
+			double[] secondBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);	/*Calculate secondBone centre*/
+			double x = secondBoneCenter[0]-originBoneCenter[0];
+			double y = secondBoneCenter[1]-originBoneCenter[1];
+			alfa = -Math.atan2(y,x);
+		}
+		
 		/*Manual rotation*/
 		if (details.manualRotation){
 			alfa = details.manualAlfa;
@@ -137,6 +164,21 @@ public class DetermineAlfa{
 
 	}
 	
+	double[] calculateCenter(byte[] sieve,int width,int height){
+		double[] originBone = new double[3];
+		for (int j = 0; j< height;++j){
+			for (int i = 0; i< width;++i){
+				if (sieve[i+j*width]>0){
+					originBone[0]+=(double) i;
+					originBone[1]+=(double) j;
+					originBone[2]+=1;
+				}
+			}
+		}
+		originBone[0] /=originBone[2];
+		originBone[1] /=originBone[2];
+		return originBone;
+	}
 	Vector<Integer> rotateIndex(int rotationAngle){
 		int initialIndex = 0;
 		Vector<Integer> rotateIndexVector = new Vector<Integer>();

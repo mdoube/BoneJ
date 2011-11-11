@@ -48,12 +48,10 @@ public class SelectROI{
 	public Vector<Integer> cortexAreaRoiJ;	//For AREA analyses
 	public Vector<Integer> length;
 	public Vector<Integer> beginnings;
-	public Vector<Integer> lengthMarrow;
-	public Vector<Integer> beginningsMarrow;
-	public Vector<Double> marrowDensities;	//For storing mean BMD of marrow concentric rings
-	public byte leg;
+
 	public int height;
 	public int width;
+	public int selection;
 
 	public double marrowThreshold;
 	public double airThreshold;
@@ -67,9 +65,8 @@ public class SelectROI{
 	public double pixelSpacing;
 	public byte[] result;			//Will contain filled bones
 	public byte[] sieve;
-	public byte[] marrowSieve;
-	public int[] longestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
-	public int[] marrowLongestEdge;	//For storing which traced edge is the longest (i.e. outlines the bone of interest)
+
+
 
 	public String imageSaveName;
 	public String imageSavePath;
@@ -103,16 +100,14 @@ public class SelectROI{
 		jiit = new Vector<Integer>();
 		length = new Vector<Integer>();
 		beginnings = new Vector<Integer>();
-		lengthMarrow = new Vector<Integer>();
-		beginningsMarrow = new Vector<Integer>();
-		marrowDensities = new Vector<Double>();
-		longestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
-		marrowLongestEdge = new int[4];	//Larger than one to accommodate a second bone if required (e.g. longest = tibia, second longest = fibula)
+
+
+
+
 		result = new byte[width*height];
 
 		/*Select ROI and set everything else than the roi to minimum*/
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
-		marrowSieve= new byte[width*height];
 		roiI = new Vector<Integer>();
 		roiJ = new Vector<Integer>();
 		cortexRoiI = new Vector<Integer>();
@@ -144,7 +139,7 @@ public class SelectROI{
 		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
 				
 		/*Select correct bone outline*/
-		int selection = 0;
+		selection = 0;
 		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
 		if (details.roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
@@ -178,12 +173,11 @@ public class SelectROI{
 		}
 		
 		/*fill roiI & roiJ*/
-		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);i++){
+		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);++i){
 			roiI.add(iit.get(i));
 			roiJ.add(jiit.get(i));
 		}
 		
-		/*Cleaving function to separate bones attached with a narrow ridge. Useful e.g. for distal tibia*/
 		/*Add the roi to the image*/
 		int[] xcoordinates = new int[roiI.size()];
 		int[] ycoordinates = new int[roiJ.size()];
@@ -193,9 +187,8 @@ public class SelectROI{
 		}
 		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 		imp.setRoi(ijROI);
-		sieve= new byte[width*height];
 		
-		fillSieve(roiI, roiJ, sieve);
+		sieve=fillSieve(roiI, roiJ,width,height);
 
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
@@ -219,9 +212,7 @@ public class SelectROI{
 		
 	}
 	
-	/*Only two biggest bone will be considered..*/
-	boolean guessFlipSelection(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit, int selection){
-		
+	public int[] twoLargestBones(Vector<Integer> length){
 		//Identify the two longest circumferences
 		Vector<Integer> temp3 = new Vector<Integer>();
 		for (int iii =0;iii<length.size();++iii){
@@ -229,17 +220,29 @@ public class SelectROI{
 		}
 		Collections.sort(temp3);
 		int counter=0;
-		int[] considered = new int[2];
+		int[] twoLongest = new int[2];
 		while (length.get(counter) !=temp3.get(temp3.size()-1)){
 			++counter;
 		}
-		considered[0] = counter;
+		twoLongest[0] = counter;
 		counter=0;
-		while (length.get(counter) !=temp3.get(temp3.size()-2)){
-			++counter;
+		if (temp3.size() > 1){
+			while (length.get(counter) !=temp3.get(temp3.size()-2)){
+				++counter;
+			}
+			twoLongest[1] = counter;
+		} else {
+			twoLongest[1] = 0;
 		}
-		considered[1] = counter;
+		return twoLongest;
+	}
+	
+	
+	/*Only two biggest bone will be considered..*/
+	boolean guessFlipSelection(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit, int selection){
 		
+
+		int[] considered = twoLargestBones(length);
 		if (selection != considered[0] && selection != considered[1]){	//selection is not the biggest or the second biggest bone -> can't make a guess, return false
 			//IJ.error("Aborted guess..."+" select "+selection+" con0 "+considered[0]+" con1 "+considered[1]);
 			return false;
@@ -480,57 +483,59 @@ public class SelectROI{
 		return dilated;
 	}
 	
-	void fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ, byte[] sieveTemp){	
+	public byte[] fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ,int width,int height){	
 		//Fill the area enclosed by the traced edge contained in roiI,roiJ
 		//beginning needs to be within the traced edge
-			int z=0;
-			int kai,kaj,i,j;
-			kai = 0;
-			kaj = 0;
-			for(z = 0;z<roiI.size();z++){
-				kai = kai+roiI.get(z);
-				kaj = kaj+roiJ.get(z);
-				sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
+		byte[] sieveTemp = new byte[width*height];
+		int z=0;
+		int kai,kaj,i,j;
+		kai = 0;
+		kaj = 0;
+		for(z = 0;z<roiI.size();++z){
+			kai = kai+roiI.get(z);
+			kaj = kaj+roiJ.get(z);
+			sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
+		}
+		i = kai/roiI.size();
+		j = kaj/roiJ.size();
+		
+		Vector<Integer> initialI = new Vector<Integer>();
+		Vector<Integer> initialJ = new Vector<Integer>();
+		initialI.add(i);
+		initialJ.add(j);
+		while (initialI.size()>0){
+			i =initialI.lastElement();
+			j =initialJ.lastElement();
+			initialI.remove(initialI.size()-1);
+			initialJ.remove(initialJ.size()-1);
+		
+			if (sieveTemp[i+j*width] == 0){
+				sieveTemp[i+j*width] = 1;
+		
 			}
-			i = kai/roiI.size();
-			j = kaj/roiJ.size();
-			
-			Vector<Integer> initialI = new Vector<Integer>();
-			Vector<Integer> initialJ = new Vector<Integer>();
-			initialI.add(i);
+			//check whether the neighbour to the left should be added to the que
+			if (sieveTemp[i-1+j*width] == 0) {
+			initialI.add(i-1);
 			initialJ.add(j);
-			while (initialI.size()>0){
-				i =initialI.lastElement();
-				j =initialJ.lastElement();
-				initialI.remove(initialI.size()-1);;
-				initialJ.remove(initialJ.size()-1);;
-			
-				if (sieveTemp[i+j*width] == 0){
-					sieveTemp[i+j*width] = 1;
-			
-				}
-				//check whether the neighbour to the left should be added to the que
-				if (sieveTemp[i-1+j*width] == 0) {
-				initialI.add(i-1);
-				initialJ.add(j);
-				}
-				//check whether the neighbour to the right should be added to the que
-				if (sieveTemp[i+1+j*width] == 0) {
-				initialI.add(i+1);
-				initialJ.add(j);
-				}
-				//check whether the neighbour below should be added to the que
-				if (sieveTemp[i+(j-1)*width] == 0) {
-				initialI.add(i);
-				initialJ.add(j-1);
-				}
-				//check whether the neighbour above should be added to the que
-				if (sieveTemp[i+(j+1)*width] == 0) {
-				initialI.add(i);
-				initialJ.add(j+1);
-				}
-			
 			}
+			//check whether the neighbour to the right should be added to the que
+			if (sieveTemp[i+1+j*width] == 0) {
+			initialI.add(i+1);
+			initialJ.add(j);
+			}
+			//check whether the neighbour below should be added to the que
+			if (sieveTemp[i+(j-1)*width] == 0) {
+			initialI.add(i);
+			initialJ.add(j-1);
+			}
+			//check whether the neighbour above should be added to the que
+			if (sieveTemp[i+(j+1)*width] == 0) {
+			initialI.add(i);
+			initialJ.add(j+1);
+			}
+		
+		}
+		return sieveTemp;
 	}
 	
 	/*	Edge Tracing 
