@@ -157,14 +157,14 @@ public class SelectROI{
 		
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
-			details.flipDistribution = guessFlip(beginnings,jiit,selection);
-			if (details.roiChoice.equals(details.choiceLabels[1])){	//Flip flip, if roiChoice is smaller..
+			details.flipDistribution = guessFlip(length,beginnings,jiit);
+			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
 			}
 		}
 		if (details.guessFlip && !details.stacked){
-			details.flipDistribution = guessFlip(beginnings,iit,selection);
-			if (details.roiChoice.equals(details.choiceLabels[1])){	//Flip flip, if roiChoice is smaller..
+			details.flipDistribution = guessFlip(length,beginnings,iit);
+			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
 			}
 		}
@@ -211,22 +211,29 @@ public class SelectROI{
 		
 	}
 	
-	boolean guessFlip(Vector<Integer> beginning,Vector<Integer> iit, int selection){
+	boolean guessFlip(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+		for (int iii =0;iii<length.size();iii++){
+			temp.add(iit.get(length.get(iii)));
+			temp2.add(iit.get(length.get(iii)));
 		}
 		Collections.sort(temp);
-		int counter=0;
-		while (temp2.get(counter) !=temp.get(0)){
-			++counter;
+		int[] counter= new int[2];
+		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
+			++counter[0];
 		}
-		if (selection == counter){return false;}
-		return true;
+		if (temp.size() > 1){
+			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
+				++counter[1];
+			}
+			if (iit.get(beginning.get(counter[0]))<iit.get(beginning.get(counter[1]))){
+				return false;
+			}
+			return true;
+		}		
+		return false;
 	}
-	
 	
 	int selectRoiBiggestBone(Vector<Integer> length){
 		Vector<Integer> temp = new Vector<Integer>();

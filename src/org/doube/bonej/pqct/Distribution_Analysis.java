@@ -58,6 +58,7 @@ public class Distribution_Analysis implements PlugIn {
 	boolean flipDistribution;
 	boolean guessFlip;
 	boolean stacked;
+	boolean invertGuess;
 	boolean manualRotation;
 	boolean allowCleaving;
 	String roiChoice;
@@ -87,8 +88,8 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
-			calibrationCoefficients[0] = -322.0;
-			calibrationCoefficients[1] = 1.724;
+			calibrationCoefficients[0] = -341.0;
+			calibrationCoefficients[1] = 1.495;
 		}
 		
 		resolution = cal.pixelWidth;
@@ -108,7 +109,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
-		dialog.addChoice("Roi_selection", choiceLabels, "Bigger"); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[2]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
@@ -121,8 +122,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",false);
+		dialog.addCheckbox("Guess_right",true);
 		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.showDialog();
@@ -147,6 +149,7 @@ public class Distribution_Analysis implements PlugIn {
 			flipDistribution			= dialog.getNextBoolean();
 			guessFlip					= dialog.getNextBoolean();
 			stacked						= dialog.getNextBoolean();
+			invertGuess					= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
@@ -174,7 +177,7 @@ public class Distribution_Analysis implements PlugIn {
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip, stacked,sectorWidth,divisions,concentricSector,concentricDivisions);
+															guessFlip, stacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
