@@ -160,7 +160,7 @@ public class SelectROI{
 			if (details.guessLarger){
 				details.flipDistribution = guessFlipLarger(length,beginnings,jiit);
 			}else{
-				details.flipDistribution = guessFlipSelection(beginnings,jiit,selection);
+				details.flipDistribution = guessFlipSelection(length,beginnings,jiit,selection);
 			}
 			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
@@ -170,7 +170,7 @@ public class SelectROI{
 			if (details.guessLarger){
 				details.flipDistribution = guessFlipLarger(length,beginnings,iit);
 			}else{	
-				details.flipDistribution = guessFlipSelection(beginnings,iit,selection);
+				details.flipDistribution = guessFlipSelection(length,beginnings,iit,selection);
 			}
 			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
@@ -219,20 +219,47 @@ public class SelectROI{
 		
 	}
 	
-	boolean guessFlipSelection(Vector<Integer> beginning,Vector<Integer> iit, int selection){
-		Vector<Integer> temp = new Vector<Integer>();
-		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+	/*Only two biggest bone will be considered..*/
+	boolean guessFlipSelection(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit, int selection){
+		
+		//Identify the two longest circumferences
+		Vector<Integer> temp3 = new Vector<Integer>();
+		for (int iii =0;iii<length.size();++iii){
+			temp3.add(length.get(iii));
 		}
-		Collections.sort(temp);
+		Collections.sort(temp3);
 		int counter=0;
-		while (temp2.get(counter) !=temp.get(0)){
+		int[] considered = new int[2];
+		while (length.get(counter) !=temp3.get(temp3.size()-1)){
 			++counter;
 		}
-		if (selection == counter){return false;}
-		return true;
+		considered[0] = counter;
+		counter=0;
+		while (length.get(counter) !=temp3.get(temp3.size()-2)){
+			++counter;
+		}
+		considered[1] = counter;
+		
+		if (selection != considered[0] && selection != considered[1]){	//selection is not the biggest or the second biggest bone -> can't make a guess, return false
+			//IJ.error("Aborted guess..."+" select "+selection+" con0 "+considered[0]+" con1 "+considered[1]);
+			return false;
+		}
+		
+		int[] possibleCoords = new int[2];
+		int selectionCoord = iit.get(beginning.get(selection));
+		for (int i = 0; i< 2; ++i){
+			possibleCoords[i] = iit.get(beginning.get(considered[i]));
+		}
+		
+		boolean returnValue = false;
+		if (selection == considered[0]){
+			if(selectionCoord > possibleCoords[1]){returnValue = true;}
+		}
+		if (selection == considered[1]){
+			if(selectionCoord > possibleCoords[0]){returnValue = true;}
+		}
+		//IJ.error("Select RV "+returnValue+" s0 "+selectionCoord+" c0 "+possibleCoords[0]+" c1 "+possibleCoords[1]+" select "+selection+" con0 "+considered[0]+" con1 "+considered[1]);
+		return returnValue;
 	}	
 	
 	boolean guessFlipLarger(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit){
@@ -247,16 +274,17 @@ public class SelectROI{
 		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
 			++counter[0];
 		}
+		boolean returnValue = false;
 		if (temp.size() > 1){
 			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
 				++counter[1];
 			}
 			if (iit.get(beginning.get(counter[0]))<iit.get(beginning.get(counter[1]))){
-				return false;
-			}
-			return true;
+				returnValue = false;
+			}else{returnValue = true;}
 		}		
-		return false;
+		//IJ.error("RV "+returnValue+" c0 "+iit.get(beginning.get(counter[0]))+" c1 "+iit.get(beginning.get(counter[1])));
+		return returnValue;
 	}
 	
 	int selectRoiBiggestBone(Vector<Integer> length){
