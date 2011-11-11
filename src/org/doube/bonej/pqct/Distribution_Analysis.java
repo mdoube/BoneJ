@@ -59,6 +59,7 @@ public class Distribution_Analysis implements PlugIn {
 	boolean guessFlip;
 	boolean guessLarger;
 	boolean stacked;
+	boolean guessStacked;
 	boolean invertGuess;
 	boolean manualRotation;
 	boolean allowCleaving;
@@ -126,6 +127,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Guess_right",true);
 		dialog.addCheckbox("Guess_larger",false);
 		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
@@ -152,6 +154,7 @@ public class Distribution_Analysis implements PlugIn {
 			guessFlip					= dialog.getNextBoolean();
 			guessLarger					= dialog.getNextBoolean();
 			stacked						= dialog.getNextBoolean();
+			guessStacked				= dialog.getNextBoolean();
 			invertGuess					= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
@@ -180,11 +183,13 @@ public class Distribution_Analysis implements PlugIn {
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
 															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip,guessLarger, stacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
+															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
+			imageAndAnalysisDetails.stacked = roi.details.stacked;
+			stacked = imageAndAnalysisDetails.stacked;
 			TextPanel textPanel = IJ.getTextPanel();
 			if (textPanel == null) {textPanel = new TextPanel();}
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}

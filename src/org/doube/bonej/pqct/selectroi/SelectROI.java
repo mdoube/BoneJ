@@ -150,6 +150,17 @@ public class SelectROI{
 		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (details.roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
 		
+		//Try to guess whether the bones were stacked or not....
+		if(details.guessStacked){
+			int[] guessingStack = twoLargestBones(length);
+			if (Math.abs((double)jiit.get(beginnings.get(guessingStack[0]))- (double)jiit.get(beginnings.get(guessingStack[1])))>1.1*Math.abs((double)iit.get(beginnings.get(guessingStack[0]))- (double)iit.get(beginnings.get(guessingStack[1])))){
+				details.stacked = true;
+			} else{
+				details.stacked = false;
+			}
+		}
+		
+		
 		/*Try to guess whether to flip the distribution*/
 		if (details.guessFlip && details.stacked){
 			if (details.guessLarger){
