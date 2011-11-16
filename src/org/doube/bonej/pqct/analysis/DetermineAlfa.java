@@ -134,12 +134,39 @@ public class DetermineAlfa{
 			}
 			byte[] secondBoneSieve = roi.fillSieve(sRoiI, sRoiJ, roi.width,roi.height);
 			
-			double[] originBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate originBone centre*/
-			double[] secondBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);	/*Calculate secondBone centre*/
-			double x = secondBoneCenter[0]-originBoneCenter[0];
-			double y = secondBoneCenter[1]-originBoneCenter[1];
+			double[] selectedBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate selected bone centre*/
+			double[] otherBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);			/*Calculate other bone centre*/
+			double x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
+			double y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
 			alfa = -Math.atan2(y,x);
 		}
+		
+		/*Rotate selected bone to right*/
+		if (details.rotationChoice.equals(details.rotationLabels[4])){
+			
+			/*Find the second biggest bone (could be bigger than the selected roi...*/
+			int[] twoBones = roi.twoLargestBones(roi.length);
+			int otherBoneSelection = 0;
+			if (roi.selection == twoBones[0]){
+				otherBoneSelection = twoBones[1];
+			}else{
+				otherBoneSelection = twoBones[0];
+			}
+			/*Fill a sieve with a second bone and acquire coordinates...*/
+			Vector<Integer> sRoiI = new Vector<Integer>();
+			Vector<Integer> sRoiJ = new Vector<Integer>();
+			for (int i = roi.beginnings.get(otherBoneSelection);i < roi.beginnings.get(otherBoneSelection)+roi.length.get(otherBoneSelection);++i){
+				sRoiI.add(roi.iit.get(i));
+				sRoiJ.add(roi.jiit.get(i));
+			}
+			byte[] secondBoneSieve = roi.fillSieve(sRoiI, sRoiJ, roi.width,roi.height);
+			
+			double[] selectedBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate selected bone centre*/
+			double[] otherBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);			/*Calculate other bone centre*/
+			double x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
+			double y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
+			alfa = -Math.atan2(y,x);
+		}		
 		
 		/*Manual rotation*/
 		if (details.manualRotation){
