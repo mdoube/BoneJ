@@ -253,7 +253,7 @@ public class Distribution_Analysis implements PlugIn {
 		ImagePlus tempImage = new ImagePlus("Visual results");
 		tempImage.setProcessor(new FloatProcessor(width,height,values));
 		new ImageConverter(tempImage).convertToRGB();
-		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
 	
@@ -273,7 +273,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		tempImage.getProcessor().setInterpolate(true);
 		tempImage.getProcessor().rotate(alfa);
-		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
 
@@ -324,7 +324,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		tempImage.getProcessor().setInterpolate(true);
 		tempImage.getProcessor().rotate(alfa);
-		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
 	
@@ -379,7 +379,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		tempImage.getProcessor().setInterpolate(true);
 		tempImage.getProcessor().rotate(alfa);
-		tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
 	
