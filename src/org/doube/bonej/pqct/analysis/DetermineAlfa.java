@@ -28,6 +28,7 @@ public class DetermineAlfa{
 	public int rotationIndex;
 	public double alfa = 0;
 	public double rotationCorrection = 0;
+	public double distanceBetweenBones = 0;
 	public Vector<Integer> pind;
 	public Vector<Integer> pindColor;
 	ImageAndAnalysisDetails details;
@@ -139,6 +140,7 @@ public class DetermineAlfa{
 			double x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
 			double y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
 			alfa = -Math.atan2(y,x);
+			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
 		}
 		
 		/*Rotate selected bone to right*/
@@ -166,6 +168,7 @@ public class DetermineAlfa{
 			double x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
 			double y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
 			alfa = -Math.atan2(y,x);
+			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
 		}		
 		
 		/*Manual rotation*/

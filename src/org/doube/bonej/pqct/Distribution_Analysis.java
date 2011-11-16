@@ -386,7 +386,7 @@ public class Distribution_Analysis implements PlugIn {
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
-		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
+		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
 		,"Stacked bones","Invert guess","Allow Cleaving","Roi choice","Rotation choice"};
 			
 		String headings = "";
@@ -489,6 +489,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
 		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
+		results += Double.toString(determineAlfa.distanceBetweenBones)+"\t";
 		results += Boolean.toString(manualRotation)+"\t";
 		results += Boolean.toString(flipDistribution)+"\t";
 		results += Boolean.toString(guessFlip)+"\t";
