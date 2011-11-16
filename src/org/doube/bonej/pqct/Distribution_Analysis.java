@@ -112,7 +112,7 @@ public class Distribution_Analysis implements PlugIn {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
-		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_rigth"};
+		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
