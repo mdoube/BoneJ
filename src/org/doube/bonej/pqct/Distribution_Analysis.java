@@ -384,7 +384,7 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	void writeHeader(TextPanel textPanel){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Alfa [deg]","Rotation correction [deg]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
 		,"Stacked bones","Invert guess","Allow Cleaving","Roi choice","Rotation choice"};
@@ -465,7 +465,7 @@ public class Distribution_Analysis implements PlugIn {
 	}
 
 	String printResults(String results,DetermineAlfa determineAlfa, ImagePlus imp){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing"};
+		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
 
 		if (imp != null){
