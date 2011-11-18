@@ -92,8 +92,8 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
-			calibrationCoefficients[0] = -341.0;
-			calibrationCoefficients[1] = 1.495;
+			calibrationCoefficients[0] = -322.0;	//-341.0
+			calibrationCoefficients[1] = 1.724;		//1.495
 		}
 		
 		resolution = cal.pixelWidth;
@@ -107,9 +107,9 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
-		dialog.addNumericField("Rotation_threshold", 280.0, 4, 8, null);
-		dialog.addNumericField("Area threshold", 169.0, 4, 8, null); 	//550.0
-		dialog.addNumericField("BMD threshold", 169.0, 4, 8, null);		//690.0
+		dialog.addNumericField("Rotation_threshold", 169.0, 4, 8, null);
+		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
+		dialog.addNumericField("BMD threshold", 550.0, 4, 8, null);		//690.0
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		//Get ROI selection
@@ -119,10 +119,10 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
-		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
+		dialog.addCheckbox("Analyse_density_distribution",true);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
-		dialog.addCheckbox("Allow_cleaving",true);					//false
+		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
@@ -186,8 +186,8 @@ public class Distribution_Analysis implements PlugIn {
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
-															areaThreshold,rotationThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold,rotationThreshold, 
+															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold);
