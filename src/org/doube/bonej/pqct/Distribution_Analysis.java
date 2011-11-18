@@ -51,6 +51,7 @@ public class Distribution_Analysis implements PlugIn {
 	String imageInfo;
 	double resolution;
 	double fatThreshold;
+	double rotationThreshold;
 	double areaThreshold;
 	double BMDThreshold;
 	double scalingFactor;
@@ -63,6 +64,7 @@ public class Distribution_Analysis implements PlugIn {
 	boolean invertGuess;
 	boolean manualRotation;
 	boolean allowCleaving;
+	boolean preventPeeling;
 	String roiChoice;
 	String rotationChoice;
 	
@@ -105,6 +107,7 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
+		dialog.addNumericField("Rotation_threshold", 280.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 169.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 169.0, 4, 8, null);		//690.0
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
@@ -118,6 +121,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",true);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
@@ -135,6 +139,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			fatThreshold				= dialog.getNextNumber();
+			rotationThreshold			= dialog.getNextNumber();
 			areaThreshold				= dialog.getNextNumber();
 			BMDThreshold				= dialog.getNextNumber();
 			scalingFactor				= dialog.getNextNumber();
@@ -145,6 +150,7 @@ public class Distribution_Analysis implements PlugIn {
 			mOn							= dialog.getNextBoolean();
 			conOn						= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
+			preventPeeling				= dialog.getNextBoolean();
 			allowCleaving				= dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
 			boolean manualRoi			= dialog.getNextBoolean();
@@ -181,10 +187,10 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3);	//Scale and 3x3 median filter the data
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(scalingFactor, constant,fatThreshold, 
-															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
-															allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
+															areaThreshold,rotationThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
+															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
-			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp);
+			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold);
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
@@ -387,7 +393,7 @@ public class Distribution_Analysis implements PlugIn {
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Roi choice","Rotation choice"};
+		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice"};
 			
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
@@ -497,6 +503,7 @@ public class Distribution_Analysis implements PlugIn {
 		results += Boolean.toString(stacked)+"\t";
 		results += Boolean.toString(invertGuess)+"\t";
 		results += Boolean.toString(allowCleaving)+"\t";
+		results += Boolean.toString(preventPeeling)+"\t";
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";
 		return results;

@@ -46,7 +46,7 @@ public class DetermineAlfa{
 				byte[] tempCsmiSieve = new byte[roi.width*roi.height];
 				for (int j = 0; j< roi.height;j++){
 					for (int i = 0; i<roi.width;i++){
-						if (roi.cortexROI[i+j*roi.width] >= details.areaThreshold){
+						if (roi.cortexROI[i+j*roi.width] >= details.rotationThreshold){
 							tempCsmiSieve[i+j*roi.width] = 1;
 						} else {
 							tempCsmiSieve[i+j*roi.width] = 0;
@@ -116,12 +116,14 @@ public class DetermineAlfa{
 		}
 
 		/*Rotate unselected bone to right*/
-		if (details.rotationChoice.equals(details.rotationLabels[3])){
+		if (details.rotationChoice.equals(details.rotationLabels[3]) || details.rotationChoice.equals(details.rotationLabels[4])){
+			/*Create temp roi for rotating using rotationThreshold..*/
+			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold);
 			
 			/*Find the second biggest bone (could be bigger than the selected roi...*/
-			int[] twoBones = roi.twoLargestBones(roi.length);
+			int[] twoBones = tempRoi.twoLargestBones(tempRoi.length);
 			int otherBoneSelection = 0;
-			if (roi.selection == twoBones[0]){
+			if (tempRoi.selection == twoBones[0]){
 				otherBoneSelection = twoBones[1];
 			}else{
 				otherBoneSelection = twoBones[0];
@@ -129,47 +131,31 @@ public class DetermineAlfa{
 			/*Fill a sieve with a second bone and acquire coordinates...*/
 			Vector<Integer> sRoiI = new Vector<Integer>();
 			Vector<Integer> sRoiJ = new Vector<Integer>();
-			for (int i = roi.beginnings.get(otherBoneSelection);i < roi.beginnings.get(otherBoneSelection)+roi.length.get(otherBoneSelection);++i){
-				sRoiI.add(roi.iit.get(i));
-				sRoiJ.add(roi.jiit.get(i));
+			for (int i = tempRoi.beginnings.get(otherBoneSelection);i < tempRoi.beginnings.get(otherBoneSelection)+tempRoi.length.get(otherBoneSelection);++i){
+				sRoiI.add(tempRoi.iit.get(i));
+				sRoiJ.add(tempRoi.jiit.get(i));
 			}
-			byte[] secondBoneSieve = roi.fillSieve(sRoiI, sRoiJ, roi.width,roi.height);
+			byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height);
 			
-			double[] selectedBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate selected bone centre*/
-			double[] otherBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);			/*Calculate other bone centre*/
-			double x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
-			double y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
+			double[] selectedBoneCenter = calculateCenter(tempRoi.sieve, tempRoi.width, tempRoi.height);			/*Calculate selected bone centre*/
+			double[] otherBoneCenter = calculateCenter(secondBoneSieve, tempRoi.width, tempRoi.height);			/*Calculate other bone centre*/
+			double x = 0;
+			double y = 0;
+			/*Rotate unselected bone to right*/
+			if (details.rotationChoice.equals(details.rotationLabels[3])){
+				x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
+				y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
+			}
+			/*Rotate selected bone to right*/
+			if (details.rotationChoice.equals(details.rotationLabels[4])){
+				x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
+				y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
+			}
 			alfa = -Math.atan2(y,x);
 			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
 		}
 		
-		/*Rotate selected bone to right*/
-		if (details.rotationChoice.equals(details.rotationLabels[4])){
-			
-			/*Find the second biggest bone (could be bigger than the selected roi...*/
-			int[] twoBones = roi.twoLargestBones(roi.length);
-			int otherBoneSelection = 0;
-			if (roi.selection == twoBones[0]){
-				otherBoneSelection = twoBones[1];
-			}else{
-				otherBoneSelection = twoBones[0];
-			}
-			/*Fill a sieve with a second bone and acquire coordinates...*/
-			Vector<Integer> sRoiI = new Vector<Integer>();
-			Vector<Integer> sRoiJ = new Vector<Integer>();
-			for (int i = roi.beginnings.get(otherBoneSelection);i < roi.beginnings.get(otherBoneSelection)+roi.length.get(otherBoneSelection);++i){
-				sRoiI.add(roi.iit.get(i));
-				sRoiJ.add(roi.jiit.get(i));
-			}
-			byte[] secondBoneSieve = roi.fillSieve(sRoiI, sRoiJ, roi.width,roi.height);
-			
-			double[] selectedBoneCenter = calculateCenter(roi.sieve, roi.width, roi.height);			/*Calculate selected bone centre*/
-			double[] otherBoneCenter = calculateCenter(secondBoneSieve, roi.width, roi.height);			/*Calculate other bone centre*/
-			double x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
-			double y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
-			alfa = -Math.atan2(y,x);
-			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
-		}		
+		
 		
 		/*Manual rotation*/
 		if (details.manualRotation){

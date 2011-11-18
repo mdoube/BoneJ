@@ -56,6 +56,7 @@ public class SelectROI{
 	public double marrowThreshold;
 	public double airThreshold;
 	public double fatThreshold;
+	public double rotationThreshold;
 	public double muscleThreshold;
 	public double areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 	public double BMDthreshold;		//For cortical BMD analyses
@@ -65,16 +66,16 @@ public class SelectROI{
 	public double pixelSpacing;
 	public byte[] result;			//Will contain filled bones
 	public byte[] sieve;
-
+	public ScaledImageData scaledImageData;
 
 
 	public String imageSaveName;
 	public String imageSavePath;
-	ImagePlus imp;
+	public ImagePlus imp;
 	public int bmcAlfaIndex = 0;
 	//ImageJ constructor
-	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp){
-
+	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold){
+		this.scaledImageData = dataIn;
 		this.imp = imp;
 		details =detailsIn;
 		scaledImage = (double[])dataIn.scaledImage.clone();
@@ -86,12 +87,13 @@ public class SelectROI{
 
 		airThreshold = details.airThreshold;
 		fatThreshold = details.fatThreshold;
+		rotationThreshold = details.rotationThreshold;
 		muscleThreshold = details.muscleThreshold;
 		marrowThreshold = details.marrowThreshold;
 		areaThreshold = details.areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 		BMDthreshold = details.BMDthreshold;		//For cortical BMD analyses
 		softThreshold = details.softThreshold;	//Thresholding soft tissues + marrow from bone
-		boneThreshold = details.boneThreshold;
+		this.boneThreshold = boneThreshold;
 		minimum = dataIn.minimum;
 		maximum = dataIn.maximum;
 		//Select ROI

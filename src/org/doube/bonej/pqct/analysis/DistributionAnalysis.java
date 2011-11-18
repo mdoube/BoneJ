@@ -75,12 +75,14 @@ public class DistributionAnalysis{
 	public double[] endoCorticalBMDs;
 	public double[] midCorticalBMDs;
 	public double[] periCorticalBMDs;
+	public boolean preventPeeling;
 	
 	public DistributionAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
 		this.pind = determineAlfa.pind;
 		this.pindColor = determineAlfa.pindColor;
 		sectorWidth = details.sectorWidth;
 		divisions = details.divisions;
+		preventPeeling = details.preventPeeling;
 		minimum = roi.minimum;
 		maximum = roi.maximum;
 		marrowI = roi.boneMarrowRoiI;
@@ -134,7 +136,11 @@ public class DistributionAnalysis{
 				+((double)cortexJ.get(i)-cortexCenter[1])*((double)cortexJ.get(i)-cortexCenter[1]));
 			}
 		}
-		calculateRadii();
+		if (preventPeeling){
+			calculateRadiiNoPeeling();
+		}else{
+			calculateRadii();
+		}
 		rotateResults(details,roi);
 	}
 	
@@ -179,7 +185,62 @@ public class DistributionAnalysis{
 		}
 		
 	}
-	
+	void calculateRadiiNoPeeling(){
+				//Calculate radii in polar coordinate system originating from bone marrow center of mass
+		Theta= new double[360];
+		R= new double[360];
+		R2= new double[360];
+		Rs= new double[360];
+		Ru= new double[360];
+		BMDj = new Vector<double[]>();
+		for (int i = 0;i<divisions;++i){
+			BMDj.add(new double[360]);
+		}
+		Vector<Double> BMD_temp = new Vector<Double>();
+		int et;
+		for (et = 0;et < 360;++et){ //Finding endocortical and pericortical borders uMath.sing polar coordinates
+			Theta[et]=Math.PI/180.0*et;
+			BMD_temp.clear();
+			//Anatomical endosteal border
+			while (originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] < threshold 
+					&& R[et] < maxRadius/pixelSpacing){
+				R[et] = R[et] + 0.1;
+			}
+			R2[et] = R[et];
+			Rs[et] = R[et];
+			//Anatomical periosteal border
+			while (originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+0.5)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+0.5)*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+1)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+1)*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+2)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+2)*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+3)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+3)*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+4)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+4)*Math.sin(Theta[et])))*width)] > 0
+					|| originalROI[(int) (marrowCenter[0]+(R[et]+6)*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+(R[et]+6)*Math.sin(Theta[et])))*width)] > 0){
+				R[et] = R[et] + 0.1;
+//				increments++;
+				if (originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)] > 0){
+					BMD_temp.add(originalROI[(int) (marrowCenter[0]+R[et]*Math.cos(Theta[et]))+ ((int) ((marrowCenter[1]+R[et]*Math.sin(Theta[et])))*width)]);}
+			}
+			Ru[et] = R[et];
+			int analysisThickness = BMD_temp.size();
+			//Dividing the cortex to three divisions -> save the mean vBMD for each division
+			if (analysisThickness < divisions){
+				break;
+			} else {
+				//cortex 
+				for (int div = 0; div<divisions;++div){
+					int mo = 0;
+					for (int ka = (int) ((double)analysisThickness*(double)div/(double)divisions);ka <(int) ((double)analysisThickness*((double)div+1.0)/(double)divisions);ka++){
+						BMDj.get(div)[et] += BMD_temp.get(ka);
+						mo++;
+					}
+					BMDj.get(div)[et] /= (double) mo;
+				}
+			}
+
+		}
+
+	}
 	void calculateRadii(){
 			//Calculate radii in polar coordinate system originating from bone marrow center of mass
 		Theta= new double[360];

@@ -27,6 +27,7 @@ public class ImageAndAnalysisDetails{
 	public double fatThreshold;
 	public double muscleThreshold;
 	public double areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+	public double rotationThreshold;
 	public double BMDthreshold;		//For cortical BMD analyses
 	public double softThreshold;	//Thresholding soft tissues + marrow from bone
 	public double boneThreshold;	//Thresholding bone from the rest and cortical AREA analyses (CoA, SSI, I)
@@ -41,6 +42,7 @@ public class ImageAndAnalysisDetails{
 	public String rotationChoice;
 	public String[] choiceLabels;
 	public String[] rotationLabels;
+	public boolean preventPeeling;
 	public boolean allowCleaving;
 	public boolean manualRoi;
 	public boolean manualRotation;
@@ -53,15 +55,16 @@ public class ImageAndAnalysisDetails{
 	public boolean invertGuess;
 	
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(double scalingFactor, double constant,double fatThreshold,double areaThreshold,
+	public ImageAndAnalysisDetails(double scalingFactor, double constant,double fatThreshold,double rotationThreshold,double areaThreshold,
 									double BMDthreshold, String roiChoice,String rotationChoice,String[] choiceLabels,
-									String[] rotationLabels, boolean allowCleaving, boolean manualRoi,
+									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
 									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
 									int sectorWidth,int divisions,int concentricSector,int concentricDivisions){
 		this.scalingFactor			= scalingFactor;
 		this.constant 				= constant;
 		this.airThreshold			= -100;
+		this.rotationThreshold		= rotationThreshold;
 		this.fatThreshold	 		= fatThreshold;
 		this.muscleThreshold 		= 200;
 		this.marrowThreshold 		= 300;
@@ -80,6 +83,7 @@ public class ImageAndAnalysisDetails{
 		this.choiceLabels			= choiceLabels;
 		this.rotationLabels			= rotationLabels;
 		this.imageSavePath 			= new String("");
+		this.preventPeeling			= preventPeeling;
 		this.allowCleaving			= allowCleaving;
 		this.manualRoi				= manualRoi;
 		this.manualRotation			= manualRotation;
