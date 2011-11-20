@@ -45,7 +45,7 @@ import ij.process.ShortProcessor;
  * 2D/3D skeleton images.
  * <p>
  * For more detailed information, visit the AnalyzeSkeleton home page:
- * <A target="_blank" href="http://pacific.mpi-cbg.de/wiki/index.php/AnalyzeSkeleton">http://pacific.mpi-cbg.de/wiki/index.php/AnalyzeSkeleton</A>
+ * <A target="_blank" href="http://fiji.sc/wiki/index.php/AnalyzeSkeleton">http://fiji.sc/wiki/index.php/AnalyzeSkeleton</A>
  *
  *
  * @version 09/03/2010
@@ -245,7 +245,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 		gd.addCheckbox("Prune ends", pruneEnds);
 		gd.addCheckbox("Calculate largest shortest path", calculateShortestPath);
 		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
-		gd.addHelp("http://pacific.mpi-cbg.de/wiki/index.php/AnalyzeSkeleton");
+		gd.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
 		gd.showDialog();
 		
 		// Exit when canceled
@@ -786,7 +786,6 @@ public class AnalyzeSkeleton implements PlugInFilter
 		
 		for(final Edge e : loopEdges)
 		{
-			// Check slab points
 			for(final Point p : e.getSlabs())
 			{
 				final double avg = getAverageNeighborhoodValue(originalGrayImage, p,
@@ -2487,6 +2486,10 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * 
 	 * @param image input image
 	 * @param p image coordinates
+	 * @param x_offset x- neighborhood offset
+	 * @param y_offset y- neighborhood offset
+	 * @param z_offset z- neighborhood offset
+	 * @return average neighborhood pixel value 
 	 */
 	public static double getAverageNeighborhoodValue(
 			final ImageStack image, 
@@ -2527,9 +2530,9 @@ public class AnalyzeSkeleton implements PlugInFilter
 	{
 		final byte[] neighborhood = new byte[(2*x_offset+1) * (2*y_offset+1) * (2*z_offset+1)];
 		
-		for(int l= 0, k = p.z - x_offset; k < p.z + z_offset; k++)
-			for(int j = p.y - y_offset; j < p.y + y_offset; j++)
-				for(int i = p.x - x_offset; i < p.x + x_offset; i++, l++)							
+		for(int l= 0, k = p.z - z_offset; k <= p.z + z_offset; k++)
+			for(int j = p.y - y_offset; j <= p.y + y_offset; j++)
+				for(int i = p.x - x_offset; i <= p.x + x_offset; i++, l++)							
 					neighborhood[l] = getPixel(image, i,   j,   k);				
 		return neighborhood;
 	} // end getNeighborhood 
@@ -2616,9 +2619,10 @@ public class AnalyzeSkeleton implements PlugInFilter
 		final int width = image.getWidth();
 		final int height = image.getHeight();
 		final int depth = image.getSize();
+				
 		if(x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth)
 			return ((byte[]) image.getPixels(z + 1))[x + y * width];
-		else return 0;
+		else return 0;		
 	} // end getPixel 
 	
 	
