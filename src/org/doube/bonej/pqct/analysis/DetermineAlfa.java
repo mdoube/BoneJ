@@ -23,7 +23,6 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
-
 public class DetermineAlfa{
 	public int rotationIndex;
 	public double alfa = 0;
@@ -40,7 +39,7 @@ public class DetermineAlfa{
 		if (details.rotationChoice.equals(details.rotationLabels[0]) || details.rotationChoice.equals(details.rotationLabels[2])){
 			double[] csmiValues = new double[3];
 			if (details.rotationChoice.equals(details.rotationLabels[0])){
-				csmiValues = csmi(roi.result,roi.width,roi.height);
+				csmiValues = csmi(roi.sieve,roi.width,roi.height);
 			}
 			if (details.rotationChoice.equals(details.rotationLabels[2])){
 				byte[] tempCsmiSieve = new byte[roi.width*roi.height];
@@ -117,7 +116,6 @@ public class DetermineAlfa{
 
 		/*Rotate unselected bone to right*/
 		if (details.rotationChoice.equals(details.rotationLabels[3]) || details.rotationChoice.equals(details.rotationLabels[4])){
-			
 			/*Create temp roi for rotating using rotationThreshold..*/
 			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold);
 			/*Find the second biggest bone (could be bigger than the selected roi...*/
