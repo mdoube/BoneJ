@@ -114,19 +114,19 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
 		dialog.addNumericField("Rotation_threshold", 169.0, 4, 8, null);
-		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
-		dialog.addNumericField("BMD threshold", 550.0, 4, 8, null);		//690.0
+		dialog.addNumericField("Area threshold", 280.0, 4, 8, null); 	//550.0
+		dialog.addNumericField("BMD threshold", 280.0, 4, 8, null);		//690.0
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[1]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",true);	//true
+		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
+		dialog.addCheckbox("Analyse_density_distribution",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
@@ -138,7 +138,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Guess_larger",false);
 		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Guess_stacked",false);
-		dialog.addCheckbox("Invert_flip_guess",false);
+		dialog.addCheckbox("Invert_flip_guess",true);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.showDialog();
