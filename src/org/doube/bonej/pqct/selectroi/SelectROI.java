@@ -201,7 +201,7 @@ public class SelectROI{
 		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 		imp.setRoi(ijROI);
 		
-		sieve=fillSieve(roiI, roiJ,width,height);
+		sieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
 
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
@@ -496,7 +496,7 @@ public class SelectROI{
 		return dilated;
 	}
 	
-	public byte[] fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ,int width,int height){	
+	public byte[] fillSieve(Vector<Integer> roiI, Vector<Integer> roiJ,int width,int height,double[] scaledImage,double threshold){	
 		//Fill the area enclosed by the traced edge contained in roiI,roiJ
 		//beginning needs to be within the traced edge
 		byte[] sieveTemp = new byte[width*height];
@@ -509,9 +509,15 @@ public class SelectROI{
 			kaj = kaj+roiJ.get(z);
 			sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
 		}
+		
+		/*Determine the flood fill init*/
+		int[] tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
+		i = tempCoordinates[0];
+		j = tempCoordinates[1];
+		/*
 		i = kai/roiI.size();
 		j = kaj/roiJ.size();
-		
+		*/
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ = new Vector<Integer>();
 		initialI.add(i);
@@ -709,7 +715,7 @@ public class SelectROI{
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
 					}
 					len = returnedVectors.get(iii).get(0).size();
-					fillResultEdge(length,beginnings,iit,jiit,len);
+					fillResultEdge(length,beginnings,iit,jiit,len,scaledImage,threshold);
 				}
 				
 			}else{
@@ -718,7 +724,7 @@ public class SelectROI{
 					iit.add(newIit.get(ii));
 					jiit.add(newJiit.get(ii));
 				}
-				fillResultEdge(length,beginnings,iit,jiit,len);
+				fillResultEdge(length,beginnings,iit,jiit,len,scaledImage,threshold);
 			}
 			//Find next empty spot
 			i = tempI;
@@ -733,24 +739,37 @@ public class SelectROI{
 		}
 	}
 	
-	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len){
+	int [] findFillInit(byte[] result, int initIndex, Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold,int len){
+		int[] returnCoordinates = new int[2];
+		
+		int[][] pixelNeigbourhood = {{0,-1,-1,-1,-1,0,1,1,1},{1,1,0,-1,-1,-1,0,1}};
+		
+		for (int j = 0; j< len; ++j){
+			returnCoordinates[0] = iit.get(initIndex+j);
+			returnCoordinates[1] = jiit.get(initIndex+j);
+			for (int i = 0; i< 8; ++i){
+				if (result[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] == 0 
+					&& scaledImage[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] >= threshold){
+						returnCoordinates[0] +=pixelNeigbourhood[0][i];
+						returnCoordinates[1] +=pixelNeigbourhood[1][i];
+						return returnCoordinates;
+					}
+			}
+		}
+		return returnCoordinates;
+	}
+	
+	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
 		if (len > 0){
 			length.add(len);
 			beginnings.add(iit.size()-len);
 			int kai,kaj;
-			kai = 0;
-			kaj = 0;
-			for(int zz = beginnings.lastElement() ;zz<beginnings.lastElement()+length.lastElement() ;++zz){
-				kai = kai+ iit.get(zz);
-				kaj = kaj+ jiit.get(zz);
-			}
-			kai = kai/length.lastElement() ;
-			kaj = kaj/length.lastElement() ;
-			while(result[kai+kaj*width]> 1){
-				kai = kai+1;
-				kaj = kaj+1;
-			}
-						
+			/*Set initial fill pixel to the first pixel above threshold not on the border*/
+			/*Select the first pixel found*/
+			int[] tempCoordinates = findFillInit(result, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
+			kai = tempCoordinates[0];
+			kaj = tempCoordinates[1];
+
 			boolean possible = true;
 			int jj =kaj;
 			int ii;
