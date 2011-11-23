@@ -92,8 +92,14 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients = cal.getCoefficients();
 		} else {
 			calibrationCoefficients = new double[2];
-			calibrationCoefficients[0] = -322.0;	//-341.0
-			calibrationCoefficients[1] = 1.724;		//1.495
+			if (getInfoProperty(imageInfo,"Device").toLowerCase().indexOf("20")>=0){
+				calibrationCoefficients[0] = -322.0;	//-341.0
+				calibrationCoefficients[1] = 1.724;		//1.495
+			}
+			if (getInfoProperty(imageInfo,"Device").toLowerCase().indexOf("30")>=0){
+				calibrationCoefficients[0] = -341.0;	//-341.0
+				calibrationCoefficients[1] = 1.495;		//1.495
+			}
 		}
 		
 		resolution = cal.pixelWidth;
