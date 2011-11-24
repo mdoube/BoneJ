@@ -501,12 +501,8 @@ public class SelectROI{
 		//beginning needs to be within the traced edge
 		byte[] sieveTemp = new byte[width*height];
 		int z=0;
-		int kai,kaj,i,j;
-		kai = 0;
-		kaj = 0;
+		int i,j;
 		for(z = 0;z<roiI.size();++z){
-			kai = kai+roiI.get(z);
-			kaj = kaj+roiJ.get(z);
 			sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
 		}
 		
@@ -514,10 +510,7 @@ public class SelectROI{
 		int[] tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
 		i = tempCoordinates[0];
 		j = tempCoordinates[1];
-		/*
-		i = kai/roiI.size();
-		j = kaj/roiJ.size();
-		*/
+
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ = new Vector<Integer>();
 		initialI.add(i);
