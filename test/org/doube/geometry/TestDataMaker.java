@@ -72,4 +72,30 @@ public class TestDataMaker {
 		ImagePlus imp = new ImagePlus("rod", stack);
 		return imp;
 	}
+
+	/**
+	 * Draw a solid sphere in the foreground, padded with 1 voxel of background
+	 * on all stack faces
+	 * 
+	 * @param radius
+	 * @return stack containing solid binary sphere
+	 */
+	public static ImagePlus sphere(int radius) {
+		final int side = 2 * radius + 2;
+		ImageStack stack = new ImageStack(side, side);
+		ImageProcessor ip = new ByteProcessor(side, side);
+		stack.addSlice("", ip); // padding
+		for (int zd = -radius; zd <= radius; zd++) {
+			final int rc = (int) Math.round(Math
+					.sqrt(radius * radius - zd * zd));
+			ImageProcessor ipr = new ByteProcessor(side, side);
+			ipr.setColor(255);
+			ipr.fillOval(radius + 1 - rc, radius + 1 - rc, 2 * rc, 2 * rc);
+			stack.addSlice("", ipr);
+		}
+		ImageProcessor ipe = new ByteProcessor(side, side);
+		stack.addSlice("", ipe); // padding
+		ImagePlus imp = new ImagePlus("sphere", stack);
+		return imp;
+	}
 }
