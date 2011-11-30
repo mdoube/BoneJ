@@ -53,16 +53,20 @@ public class TestDataMaker {
 	}
 
 	/**
-	 * Generate a rod of circular cross-section, 16384 long and diameter 64
+	 * Generate a rod of circular cross-section. The rod is oriented with its
+	 * axis in the z direction and in a stack of 2*diameter wide and high.
+	 * 
+	 * @param diameter
+	 * @param length
 	 * 
 	 * @return
 	 */
-	public static ImagePlus rod() {
-		ImageStack stack = new ImageStack(128, 128);
-		for (int i = 0; i < 16384; i++) {
-			ImageProcessor ip = new ByteProcessor(128, 128);
+	public static ImagePlus rod(int length, int diameter) {
+		ImageStack stack = new ImageStack(2 * diameter, 2 * diameter);
+		for (int i = 0; i < length; i++) {
+			ImageProcessor ip = new ByteProcessor(2 * diameter, 2 * diameter);
 			ip.setColor(255);
-			ip.fillOval(32, 32, 64, 64);
+			ip.fillOval(diameter / 2, diameter / 2, diameter, diameter);
 			stack.addSlice("" + i, ip);
 		}
 		ImagePlus imp = new ImagePlus("rod", stack);
