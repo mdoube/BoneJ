@@ -1,5 +1,10 @@
 package org.doube.geometry;
 
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.process.ByteProcessor;
+import ij.process.ImageProcessor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,5 +50,22 @@ public class TestDataMaker {
 		points.add(new Point3f(a, a, c));
 		points.add(new Point3f(a, c, a));
 		return points;
+	}
+
+	/**
+	 * Generate a rod of circular cross-section, 16384 long and diameter 64
+	 * 
+	 * @return
+	 */
+	public static ImagePlus rod() {
+		ImageStack stack = new ImageStack(128, 128);
+		for (int i = 0; i < 16384; i++) {
+			ImageProcessor ip = new ByteProcessor(128, 128);
+			ip.setColor(255);
+			ip.fillOval(32, 32, 64, 64);
+			stack.addSlice("" + i, ip);
+		}
+		ImagePlus imp = new ImagePlus("rod", stack);
+		return imp;
 	}
 }
