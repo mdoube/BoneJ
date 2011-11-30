@@ -24,6 +24,8 @@ public class StructureModelIndexTest {
 	
 	@Test
 	public void testHildRuegSphere() {
-		//TODO not yet implemented
+		ImagePlus imp = TestDataMaker.sphere(256);
+		double smi = StructureModelIndex.hildRueg(imp, 6, 0.5f);
+		assertEquals(4.0, smi, 0.01);
 	}
 }
