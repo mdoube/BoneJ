@@ -98,4 +98,31 @@ public class TestDataMaker {
 		ImagePlus imp = new ImagePlus("sphere", stack);
 		return imp;
 	}
+
+	/**
+	 * Create a binary brick of arbitrary width, height and depth, padded with 1
+	 * voxel of background on all faces.
+	 * 
+	 * @param width
+	 * @param height
+	 * @param depth
+	 * @return image with brick in foreground
+	 */
+	public static ImagePlus brick(int width, int height, int depth) {
+		ImageStack stack = new ImageStack(width + 2, height + 2);
+		ImageProcessor ip = new ByteProcessor(width + 2, height + 2);
+		stack.addSlice("", ip);
+		for (int i = 0; i < depth; i++) {
+			ImageProcessor ip2 = new ByteProcessor(width + 2, height + 2);
+			ip2.setColor(255);
+			ip2.setRoi(1, 1, width, height);
+			ip2.fill();
+			stack.addSlice("", ip2);
+		}
+		ImageProcessor ip3 = new ByteProcessor(width + 2, height + 2);
+		stack.addSlice("", ip3);
+		ImagePlus imp = new ImagePlus("brick", stack);
+		return imp;
+	}
+
 }
