@@ -19,7 +19,9 @@ public class StructureModelIndexTest {
 	
 	@Test
 	public void testHildRuegPlate() {
-		//TODO not yet implemented
+		ImagePlus imp = TestDataMaker.brick(2048, 2048, 6);
+		double smi = StructureModelIndex.hildRueg(imp, 6, 0.5f);
+		assertEquals(0.0, smi, 0.05);
 	}
 	
 	@Test
