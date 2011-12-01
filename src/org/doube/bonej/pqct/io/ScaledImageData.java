@@ -31,7 +31,7 @@ public class ScaledImageData{
 	public double pixelSpacing;
 	int filterSize;
 	//Constructor
-	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize){
+	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize,boolean flipHorizontal){
 		height = heightIn;
 		width = widthIn;
 		pixelSpacing = VoxelSize;
@@ -45,6 +45,14 @@ public class ScaledImageData{
 			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
 		}
 		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
+		double[] temp = (double[]) scaledImage.clone();
+		if (flipHorizontal){//Flip the image around the horizontal axis...
+			for (int j = 0;j<height;++j){
+				for (int i = 0;i<width;++i){
+					scaledImage[i+(height-1-j)*width] = temp[i+j*width];
+				}
+			}
+		}
 	}
 	
 
