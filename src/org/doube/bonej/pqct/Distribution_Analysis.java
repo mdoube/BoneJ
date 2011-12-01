@@ -222,7 +222,7 @@ public class Distribution_Analysis implements PlugIn {
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
 				if(!dOn && !mOn && !conOn && makeImage){
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height);
+					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve);
 				}
 				
 			}
@@ -265,10 +265,19 @@ public class Distribution_Analysis implements PlugIn {
 	}
 
 	/*Cortical analysis result image*/
-	ImagePlus getResultImage(double[] values,int width,int height){
+	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve){
 		ImagePlus tempImage = new ImagePlus("Visual results");
 		tempImage.setProcessor(new FloatProcessor(width,height,values));
 		new ImageConverter(tempImage).convertToRGB();
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
+					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
 		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}

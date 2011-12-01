@@ -507,47 +507,51 @@ public class SelectROI{
 		}
 		
 		/*Determine the flood fill init*/
-		int[] tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
-		i = tempCoordinates[0];
-		j = tempCoordinates[1];
+		int[] tempCoordinates;
+		while (true){
+			tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
+			if (tempCoordinates == null){return sieveTemp;}
+			i = tempCoordinates[0];
+			j = tempCoordinates[1];
 
-		Vector<Integer> initialI = new Vector<Integer>();
-		Vector<Integer> initialJ = new Vector<Integer>();
-		initialI.add(i);
-		initialJ.add(j);
-		while (initialI.size()>0){
-			i =initialI.lastElement();
-			j =initialJ.lastElement();
-			initialI.remove(initialI.size()-1);
-			initialJ.remove(initialJ.size()-1);
-		
-			if (sieveTemp[i+j*width] == 0){
-				sieveTemp[i+j*width] = 1;
-		
-			}
-			//check whether the neighbour to the left should be added to the que
-			if (sieveTemp[i-1+j*width] == 0) {
-			initialI.add(i-1);
-			initialJ.add(j);
-			}
-			//check whether the neighbour to the right should be added to the que
-			if (sieveTemp[i+1+j*width] == 0) {
-			initialI.add(i+1);
-			initialJ.add(j);
-			}
-			//check whether the neighbour below should be added to the que
-			if (sieveTemp[i+(j-1)*width] == 0) {
+			Vector<Integer> initialI = new Vector<Integer>();
+			Vector<Integer> initialJ = new Vector<Integer>();
 			initialI.add(i);
-			initialJ.add(j-1);
+			initialJ.add(j);
+			while (initialI.size()>0){
+				i =initialI.lastElement();
+				j =initialJ.lastElement();
+				initialI.remove(initialI.size()-1);
+				initialJ.remove(initialJ.size()-1);
+			
+				if (sieveTemp[i+j*width] == 0){
+					sieveTemp[i+j*width] = 1;
+			
+				}
+				//check whether the neighbour to the left should be added to the que
+				if (sieveTemp[i-1+j*width] == 0) {
+				initialI.add(i-1);
+				initialJ.add(j);
+				}
+				//check whether the neighbour to the right should be added to the que
+				if (sieveTemp[i+1+j*width] == 0) {
+				initialI.add(i+1);
+				initialJ.add(j);
+				}
+				//check whether the neighbour below should be added to the que
+				if (sieveTemp[i+(j-1)*width] == 0) {
+				initialI.add(i);
+				initialJ.add(j-1);
+				}
+				//check whether the neighbour above should be added to the que
+				if (sieveTemp[i+(j+1)*width] == 0) {
+				initialI.add(i);
+				initialJ.add(j+1);
+				}
+			
 			}
-			//check whether the neighbour above should be added to the que
-			if (sieveTemp[i+(j+1)*width] == 0) {
-			initialI.add(i);
-			initialJ.add(j+1);
-			}
-		
 		}
-		return sieveTemp;
+		//return sieveTemp;
 	}
 	
 	/*	Edge Tracing 
@@ -749,7 +753,7 @@ public class SelectROI{
 					}
 			}
 		}
-		return returnCoordinates;
+		return null;
 	}
 	
 	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
@@ -760,35 +764,41 @@ public class SelectROI{
 			/*Set initial fill pixel to the first pixel above threshold not on the border*/
 			/*Select the first pixel found*/
 			int[] tempCoordinates = findFillInit(result, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
-			kai = tempCoordinates[0];
-			kaj = tempCoordinates[1];
-
 			boolean possible = true;
-			int jj =kaj;
-			int ii;
-			for (ii = kai;ii<width;ii++){
-				if (result[ii+jj*width]> 0){break;}
-			}
-			if (ii>=width-1){possible = false;}
-			
-			for (ii = kai;ii>0;ii--){
-				if (result[ii+jj*width]> 0){break;}
-			}
-			if (ii<=1){possible = false;}
-			
-			ii = kai;
-			for (jj = kaj;jj<height;jj++){
-				if (result[ii+jj*width]> 0){break;}
-			}
-			if (jj>=height-1){possible = false;}
-			
-			for (jj = kaj;jj>0;jj--){
-				if (result[ii+jj*width]> 0){break;}
-			}
-			if (jj<=1){possible = false;}
-			
-			if(result[kai+kaj*width]==1){possible = false;}
+			if (tempCoordinates == null){
+				possible = false;
+				kai = 0;
+				kaj = 0;
+			}else{
+				kai = tempCoordinates[0];
+				kaj = tempCoordinates[1];
 
+				
+				int jj =kaj;
+				int ii;
+				for (ii = kai;ii<width;ii++){
+					if (result[ii+jj*width]> 0){break;}
+				}
+				if (ii>=width-1){possible = false;}
+				
+				for (ii = kai;ii>0;ii--){
+					if (result[ii+jj*width]> 0){break;}
+				}
+				if (ii<=1){possible = false;}
+				
+				ii = kai;
+				for (jj = kaj;jj<height;jj++){
+					if (result[ii+jj*width]> 0){break;}
+				}
+				if (jj>=height-1){possible = false;}
+				
+				for (jj = kaj;jj>0;jj--){
+					if (result[ii+jj*width]> 0){break;}
+				}
+				if (jj<=1){possible = false;}
+				
+				if(result[kai+kaj*width]==1){possible = false;}
+			}
 			if (possible){
 				possible = resultFill(kai,kaj);
 				if (!possible){
