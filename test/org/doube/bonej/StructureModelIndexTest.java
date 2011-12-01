@@ -10,9 +10,7 @@ public class StructureModelIndexTest {
 
 	@Test
 	public void testHildRuegRod() {
-		int length = 16384;
-		int diameter = 64;
-		ImagePlus imp = TestDataMaker.rod(length, diameter);
+		ImagePlus imp = TestDataMaker.rod(16384, 64);
 		double smi = StructureModelIndex.hildRueg(imp, 6, 0.5f);
 		assertEquals(3.0, smi, 0.03);
 	}
