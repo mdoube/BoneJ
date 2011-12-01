@@ -617,45 +617,49 @@ public class SelectROI{
 	}
 	
 	boolean resultFill(int i, int j){	
-		boolean possible = true;
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ= new Vector<Integer>();
 		initialI.add(i);
 		initialJ.add(j);
+		byte[] tempResult = (byte[]) result.clone();
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
 			initialI.remove( initialI.size()-1);
 			initialJ.remove( initialJ.size()-1);
 
-			if (result[i+j*width] == 0){
-				result[i+j*width] = 1;
+			if (tempResult[i+j*width] == 0 ){
+				tempResult[i+j*width] = 1;
 			}
 
-			if (result[i-1+j*width] == 0) {
+			if (tempResult[i-1+j*width] == 0) {
 			initialI.add(i-1);
 			initialJ.add(j);
 			}
 
-			if (result[i+1+j*width] == 0) {
+			if (tempResult[i+1+j*width] == 0) {
 			initialI.add(i+1);
 			initialJ.add(j);
 			}
 			
-			if (result[i+(j-1)*width] == 0) {
+			if (tempResult[i+(j-1)*width] == 0) {
 			initialI.add(i);
 			initialJ.add(j-1);
 			}
 			
-			if (result[i+(j+1)*width] == 0) {
+			if (tempResult[i+(j+1)*width] == 0) {
 			initialI.add(i);
 			initialJ.add(j+1);
 			}
 
 		}
 
-		if (initialI.size() > 0 || initialJ.size()>0) {possible = false;}		
-		return possible;
+		if (initialI.size() > 0 || initialJ.size()>0) {
+			return false;
+		}else{
+			result = (byte[]) tempResult.clone();
+			return true;
+		}
 	}
 	
 	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold)
@@ -763,8 +767,17 @@ public class SelectROI{
 			int kai,kaj;
 			/*Set initial fill pixel to the first pixel above threshold not on the border*/
 			/*Select the first pixel found*/
-			int[] tempCoordinates = findFillInit(result, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
-			boolean possible = true;
+			
+			boolean possible = false;
+			while (true){
+				int[] tempCoordinates = findFillInit(result, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
+				if (tempCoordinates == null){
+					break;
+				}
+				
+								
+			}
+			
 			if (tempCoordinates == null){
 				possible = false;
 				kai = 0;
@@ -799,6 +812,7 @@ public class SelectROI{
 				
 				if(result[kai+kaj*width]==1){possible = false;}
 			}
+			
 			if (possible){
 				possible = resultFill(kai,kaj);
 				if (!possible){
