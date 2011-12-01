@@ -143,6 +143,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
+		dialog.addHelp("http://bonej.org/densitydistribution");
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
