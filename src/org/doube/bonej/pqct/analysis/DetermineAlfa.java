@@ -23,6 +23,8 @@ import java.util.*;	//Vector, Collections
 import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
+//import ij.text.*;		//Debugging text window
+import ij.*;
 public class DetermineAlfa{
 	public int rotationIndex;
 	public double alfa = 0;
@@ -151,6 +153,7 @@ public class DetermineAlfa{
 			}
 			alfa = -Math.atan2(y,x);
 			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
+			IJ.error(twoBones[0]+" "+twoBones[1]+" "+otherBoneSelection+" "+tempRoi.selection+" "+alfa*180.0/Math.PI+" "+tempRoi.length.size());
 		}
 		
 		

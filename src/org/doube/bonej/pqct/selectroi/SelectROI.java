@@ -240,7 +240,7 @@ public class SelectROI{
 		twoLongest[0] = counter;
 		counter=0;
 		if (temp3.size() > 1){
-			while (length.get(counter) !=temp3.get(temp3.size()-2)){
+			while (length.get(counter) !=temp3.get(temp3.size()-2) || counter == twoLongest[0]){
 				++counter;
 			}
 			twoLongest[1] = counter;
@@ -437,9 +437,9 @@ public class SelectROI{
 			}
 		}
 		/*Find the centre of area of the limb*/
-		
+				int maxIndice = selectRoiBiggestBone(length);
 				byte[] limbSieve = new byte[tempScaledImage.length];
-				limbSieve[iit.get(0)+jiit.get(0)*width] = 1;
+				limbSieve[iit.get(beginnings.get(maxIndice))+jiit.get(beginnings.get(maxIndice))*width] = 1;
 				/*Dilate muscleSieve, into neighbouring fat pixels*/
 				int tempDil = 1;
 				while (tempDil>0){
