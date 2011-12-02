@@ -328,7 +328,6 @@ public class VolumeFraction implements PlugIn, DialogListener {
 					final int rTop = r.y;
 					final int rRight = rLeft + r.width;
 					final int rBottom = rTop + r.height;
-					IJ.log("rLeft "+rLeft+" rTop "+rTop+" rRight "+rRight+" rBottom "+rBottom+" xmin "+xmin+" ymin "+ymin+" zmin "+zmin);
 					boolean hasMask = (mask != null);
 					for (int v = rTop; v < rBottom; v++) {
 						final int vrTop = v - rTop;
