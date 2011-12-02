@@ -502,15 +502,21 @@ public class SelectROI{
 		byte[] sieveTemp = new byte[width*height];
 		int z=0;
 		int i,j;
+		//IJ.error("Coordinates");
+		TextWindow tw = new TextWindow("coordinates","I\tJ\tr\tno","",200,200);
 		for(z = 0;z<roiI.size();++z){
 			sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
+			tw.append(roiI.get(z)+"\t"+roiJ.get(z));
 		}
 		
 		/*Determine the flood fill init*/
 		int[] tempCoordinates;
+		int tempC = 0;
 		while (true){
+			
 			tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
 			if (tempCoordinates == null){return sieveTemp;}
+			tw.append(tempCoordinates[0]+"\t"+tempCoordinates[1]+"\t"+"round"+(++tempC));
 			i = tempCoordinates[0];
 			j = tempCoordinates[1];
 
@@ -518,37 +524,46 @@ public class SelectROI{
 			Vector<Integer> initialJ = new Vector<Integer>();
 			initialI.add(i);
 			initialJ.add(j);
+			sieveTemp[i+j*width] = 1;
+			byte[] sieveTemp2 = (byte[]) sieveTemp.clone();
+			boolean noLeak = true;
 			while (initialI.size()>0){
 				i =initialI.lastElement();
 				j =initialJ.lastElement();
 				initialI.remove(initialI.size()-1);
 				initialJ.remove(initialJ.size()-1);
 			
-				if (sieveTemp[i+j*width] == 0){
-					sieveTemp[i+j*width] = 1;
+				if (sieveTemp2[i+j*width] == 0){
+					sieveTemp2[i+j*width] = 1;
 			
 				}
-				//check whether the neighbour to the left should be added to the que
-				if (sieveTemp[i-1+j*width] == 0) {
+				if (i< 1 || i>=width-1 || j<1 || j >= height-1){
+					noLeak = false;
+					break;
+				}
+				//check whether the neighbour to the left should be added to the queue
+				if (sieveTemp2[i-1+j*width] == 0) {
 				initialI.add(i-1);
 				initialJ.add(j);
 				}
-				//check whether the neighbour to the right should be added to the que
-				if (sieveTemp[i+1+j*width] == 0) {
+				//check whether the neighbour to the right should be added to the queue
+				if (sieveTemp2[i+1+j*width] == 0) {
 				initialI.add(i+1);
 				initialJ.add(j);
 				}
-				//check whether the neighbour below should be added to the que
-				if (sieveTemp[i+(j-1)*width] == 0) {
+				//check whether the neighbour below should be added to the queue
+				if (sieveTemp2[i+(j-1)*width] == 0) {
 				initialI.add(i);
 				initialJ.add(j-1);
 				}
-				//check whether the neighbour above should be added to the que
-				if (sieveTemp[i+(j+1)*width] == 0) {
+				//check whether the neighbour above should be added to the queue
+				if (sieveTemp2[i+(j+1)*width] == 0) {
 				initialI.add(i);
 				initialJ.add(j+1);
-				}
-			
+				}			
+			}
+			if (noLeak){
+				sieveTemp = (byte[]) sieveTemp2.clone();
 			}
 		}
 		//return sieveTemp;
@@ -616,12 +631,11 @@ public class SelectROI{
 		
 	}
 	
-	boolean resultFill(int i, int j){	
+	boolean resultFill(int i, int j, byte[] tempResult){	
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ= new Vector<Integer>();
 		initialI.add(i);
 		initialJ.add(j);
-		byte[] tempResult = (byte[]) result.clone();
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
@@ -657,7 +671,6 @@ public class SelectROI{
 		if (initialI.size() > 0 || initialJ.size()>0) {
 			return false;
 		}else{
-			result = (byte[]) tempResult.clone();
 			return true;
 		}
 	}
@@ -740,21 +753,73 @@ public class SelectROI{
 		}
 	}
 	
+	
+	/*
+			double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
+		double previousDirection;
+		boolean done = false;
+		int initI,initJ;
+		initI = i;
+		initJ = j;
+		while(!done){
+			int counter = 0;
+			previousDirection = direction;
+			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
+				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
+				)
+				&& counter < 8 
+				){
+					direction-=Math.PI/4.0;
+					++counter;
+					if (Math.abs(direction-previousDirection) >= 180){
+						break;
+					}
+					
+				}
+			}else{//Rotate clockwise
+				while((scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold 
+				)
+				&& counter < 8){
+					direction+=Math.PI/4.0;
+					++counter;
+					if (Math.abs(direction-previousDirection) >= 180){
+						break;
+					}
+				}
+			}
+			i += (int) Math.round(Math.cos(direction));
+			j += (int) Math.round(Math.sin(direction));
+			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
+				done = true;
+			}
+			else{
+				if (result[i+j*width] == 0){
+					result[i+j*width] = 2;
+				}else if (result[i+j*width] != 1){
+					result[i+j*width]++;
+				}
+				iit.add(i);
+				jiit.add(j);
+			}
+			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
+		}
+	
+	*/
+	
+	
 	int [] findFillInit(byte[] result, int initIndex, Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold,int len){
 		int[] returnCoordinates = new int[2];
-		
 		int[][] pixelNeigbourhood = {{0,-1,-1,-1,-1,0,1,1,1},{1,1,0,-1,-1,-1,0,1}};
-		
 		for (int j = 0; j< len; ++j){
 			returnCoordinates[0] = iit.get(initIndex+j);
 			returnCoordinates[1] = jiit.get(initIndex+j);
 			for (int i = 0; i< 8; ++i){
 				if (result[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] == 0 
 					&& scaledImage[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] >= threshold){
-						returnCoordinates[0] +=pixelNeigbourhood[0][i];
-						returnCoordinates[1] +=pixelNeigbourhood[1][i];
-						return returnCoordinates;
-					}
+					returnCoordinates[0] +=pixelNeigbourhood[0][i];
+					returnCoordinates[1] +=pixelNeigbourhood[1][i];
+					return returnCoordinates;
+				}
 			}
 		}
 		return null;
@@ -767,63 +832,23 @@ public class SelectROI{
 			int kai,kaj;
 			/*Set initial fill pixel to the first pixel above threshold not on the border*/
 			/*Select the first pixel found*/
-			
-			boolean possible = false;
-			while (true){
-				int[] tempCoordinates = findFillInit(result, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
-				if (tempCoordinates == null){
-					break;
-				}
-				
-								
-			}
-			
+			boolean possible = true;
+			byte[] tempResult = (byte[]) result.clone();
+			int[] tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
 			if (tempCoordinates == null){
 				possible = false;
-				kai = 0;
-				kaj = 0;
-			}else{
-				kai = tempCoordinates[0];
-				kaj = tempCoordinates[1];
-
-				
-				int jj =kaj;
-				int ii;
-				for (ii = kai;ii<width;ii++){
-					if (result[ii+jj*width]> 0){break;}
+			}
+			while (possible){
+				if (tempCoordinates == null){
+					break;
+				}else{
+					possible = resultFill(tempCoordinates[0],tempCoordinates[1],tempResult);
 				}
-				if (ii>=width-1){possible = false;}
-				
-				for (ii = kai;ii>0;ii--){
-					if (result[ii+jj*width]> 0){break;}
-				}
-				if (ii<=1){possible = false;}
-				
-				ii = kai;
-				for (jj = kaj;jj<height;jj++){
-					if (result[ii+jj*width]> 0){break;}
-				}
-				if (jj>=height-1){possible = false;}
-				
-				for (jj = kaj;jj>0;jj--){
-					if (result[ii+jj*width]> 0){break;}
-				}
-				if (jj<=1){possible = false;}
-				
-				if(result[kai+kaj*width]==1){possible = false;}
+				tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
 			}
 			
 			if (possible){
-				possible = resultFill(kai,kaj);
-				if (!possible){
-					//Remove "extra ii and jii
-					for (int po = 0;po <length.lastElement() ;po++){
-						iit.remove(iit.size()-1);
-						jiit.remove(jiit.size()-1);
-					}
-					length.remove(length.size()-1);
-					beginnings.remove(beginnings.size()-1);
-				}
+				result = (byte[]) tempResult.clone();
 			}else{
 				for (int po = 0;po <length.lastElement() ;po++){
 					iit.remove(iit.size()-1);

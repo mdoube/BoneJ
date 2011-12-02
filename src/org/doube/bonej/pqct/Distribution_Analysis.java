@@ -122,15 +122,15 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[6]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",true);	//true
+		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
+		dialog.addCheckbox("Analyse_density_distribution",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
-		dialog.addCheckbox("Allow_cleaving",false);					//false
+		dialog.addCheckbox("Allow_cleaving",true);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);

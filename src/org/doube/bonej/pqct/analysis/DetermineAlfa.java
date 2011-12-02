@@ -135,7 +135,7 @@ public class DetermineAlfa{
 				sRoiI.add(tempRoi.iit.get(i));
 				sRoiJ.add(tempRoi.jiit.get(i));
 			}
-			byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,roi.scaledImage,details.rotationThreshold);
+			byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,tempRoi.scaledImage,details.rotationThreshold);
 			
 			double[] selectedBoneCenter = calculateCenter(tempRoi.sieve, tempRoi.width, tempRoi.height);			/*Calculate selected bone centre*/
 			double[] otherBoneCenter = calculateCenter(secondBoneSieve, tempRoi.width, tempRoi.height);			/*Calculate other bone centre*/
