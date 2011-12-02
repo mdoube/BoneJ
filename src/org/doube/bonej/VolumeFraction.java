@@ -292,7 +292,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int s = ai.getAndIncrement(); s <= di + zm; s = ai
+					for (int s = ai.getAndIncrement(); s < di + zm; s = ai
 							.getAndIncrement()) {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, di);
