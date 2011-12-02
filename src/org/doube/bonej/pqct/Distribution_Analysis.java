@@ -200,8 +200,43 @@ public class Distribution_Analysis implements PlugIn {
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal);	//Scale and 3x3 median filter the data
-			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold);
+			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
+			/*testing*/
+			/*
+			ImagePlus tempImage = new ImagePlus("Sieve");
+			tempImage.setProcessor(new ByteProcessor(roi.width,roi.height));
+			tempImage.getProcessor().setBackgroundValue(0.0);
+			tempImage.getProcessor().setValue(255.0);
+
+			for (int y = 0; y < roi.height;++y) {
+				for (int x = 0; x < roi.width;++x) {
+					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
+						tempImage.getProcessor().drawPixel(x,y);
+					}
+				}
+			}
+			tempImage.show();
+			*/
+			
+			
 			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
+			
+			/*
+			ImagePlus tempImage2 = new ImagePlus("Determine");
+			tempImage2.setProcessor(new ByteProcessor(roi.width,roi.height));
+			tempImage2.getProcessor().setBackgroundValue(0.0);
+			tempImage2.getProcessor().setValue(255.0);
+
+			for (int y = 0; y < roi.height;++y) {
+				for (int x = 0; x < roi.width;++x) {
+					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
+						tempImage2.getProcessor().drawPixel(x,y);
+					}
+				}
+			}
+			tempImage2.show();
+			*/
+			
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
 			imageAndAnalysisDetails.stacked = roi.details.stacked;

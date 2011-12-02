@@ -119,7 +119,7 @@ public class DetermineAlfa{
 		/*Rotate unselected bone to right*/
 		if (details.rotationChoice.equals(details.rotationLabels[3]) || details.rotationChoice.equals(details.rotationLabels[4])){
 			/*Create temp roi for rotating using rotationThreshold..*/
-			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold);
+			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold,false);
 			/*Find the second biggest bone (could be bigger than the selected roi...*/
 			int[] twoBones = tempRoi.twoLargestBones(tempRoi.length);
 			int otherBoneSelection = 0;

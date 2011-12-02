@@ -26,7 +26,7 @@ import org.doube.bonej.pqct.io.*;	//image data
 import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
-
+import ij.process.*;	//Debugging
 @SuppressWarnings("serial")
 
 public class SelectROI{
@@ -74,7 +74,7 @@ public class SelectROI{
 	public ImagePlus imp;
 	public int bmcAlfaIndex = 0;
 	//ImageJ constructor
-	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold){
+	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi){
 		this.scaledImageData = dataIn;
 		this.imp = imp;
 		details =detailsIn;
@@ -192,17 +192,20 @@ public class SelectROI{
 		}
 		
 		/*Add the roi to the image*/
-		int[] xcoordinates = new int[roiI.size()];
-		int[] ycoordinates = new int[roiJ.size()];
-		for (int i = 0;i<roiI.size();++i){
-			xcoordinates[i] = roiI.get(i);
-			ycoordinates[i] = roiJ.get(i);
+		if (setRoi){
+			int[] xcoordinates = new int[roiI.size()];
+			int[] ycoordinates = new int[roiJ.size()];
+			for (int i = 0;i<roiI.size();++i){
+				xcoordinates[i] = roiI.get(i);
+				ycoordinates[i] = roiJ.get(i);
+			}
+			ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
+			imp.setRoi(ijROI);
 		}
-		ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
-		imp.setRoi(ijROI);
 		
 		sieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
-
+		
+		
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
 				if (scaledImage[i+j*width]<marrowThreshold && sieve[i+j*width] > 0){
@@ -222,7 +225,23 @@ public class SelectROI{
 				}
 			}
 		}
+		/*Plot sieve figure*/
 		
+		ImagePlus tempImage = new ImagePlus("Sieve");
+		tempImage.setProcessor(new ByteProcessor(width,height));
+		tempImage.getProcessor().setBackgroundValue(0.0);
+		tempImage.getProcessor().setValue(255.0);
+
+		for (int y = 0; y < height;++y) {
+			for (int x = 0; x < width;++x) {
+				//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+				if (result[x+y*width] == 1){   //Tint roi area color with violet
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		tempImage.show();
+		//IJ.error("selectroi");
 	}
 	
 	public int[] twoLargestBones(Vector<Integer> length){
@@ -503,10 +522,10 @@ public class SelectROI{
 		int z=0;
 		int i,j;
 		//IJ.error("Coordinates");
-		TextWindow tw = new TextWindow("coordinates","I\tJ\tr\tno","",200,200);
+		//TextWindow tw = new TextWindow("coordinates","I\tJ\tr\tno","",200,200);
 		for(z = 0;z<roiI.size();++z){
 			sieveTemp[roiI.get(z)+roiJ.get(z)*width]=1;
-			tw.append(roiI.get(z)+"\t"+roiJ.get(z));
+			//tw.append(roiI.get(z)+"\t"+roiJ.get(z));
 		}
 		
 		/*Determine the flood fill init*/
@@ -516,7 +535,7 @@ public class SelectROI{
 			
 			tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
 			if (tempCoordinates == null){return sieveTemp;}
-			tw.append(tempCoordinates[0]+"\t"+tempCoordinates[1]+"\t"+"round"+(++tempC));
+			//tw.append(tempCoordinates[0]+"\t"+tempCoordinates[1]+"\t"+"round"+(++tempC));
 			i = tempCoordinates[0];
 			j = tempCoordinates[1];
 
@@ -753,73 +772,28 @@ public class SelectROI{
 		}
 	}
 	
-	
-	/*
-			double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
-		double previousDirection;
-		boolean done = false;
-		int initI,initJ;
-		initI = i;
-		initJ = j;
-		while(!done){
-			int counter = 0;
-			previousDirection = direction;
-			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
-				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
-				)
-				&& counter < 8 
-				){
-					direction-=Math.PI/4.0;
-					++counter;
-					if (Math.abs(direction-previousDirection) >= 180){
-						break;
-					}
-					
-				}
-			}else{//Rotate clockwise
-				while((scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold 
-				)
-				&& counter < 8){
-					direction+=Math.PI/4.0;
-					++counter;
-					if (Math.abs(direction-previousDirection) >= 180){
-						break;
-					}
-				}
-			}
-			i += (int) Math.round(Math.cos(direction));
-			j += (int) Math.round(Math.sin(direction));
-			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
-				done = true;
-			}
-			else{
-				if (result[i+j*width] == 0){
-					result[i+j*width] = 2;
-				}else if (result[i+j*width] != 1){
-					result[i+j*width]++;
-				}
-				iit.add(i);
-				jiit.add(j);
-			}
-			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
-		}
-	
-	*/
-	
-	
+	/*Find fill init by steering clockwise from next to previous*/
 	int [] findFillInit(byte[] result, int initIndex, Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold,int len){
 		int[] returnCoordinates = new int[2];
 		int[][] pixelNeigbourhood = {{0,-1,-1,-1,-1,0,1,1,1},{1,1,0,-1,-1,-1,0,1}};
-		for (int j = 0; j< len; ++j){
+		int[] steer = new int[2];
+		for (int j = 0; j< len-1; ++j){
 			returnCoordinates[0] = iit.get(initIndex+j);
 			returnCoordinates[1] = jiit.get(initIndex+j);
+			double direction = Math.atan2(jiit.get(initIndex+j+1)-returnCoordinates[1],iit.get(initIndex+j+1)-returnCoordinates[0]);
 			for (int i = 0; i< 8; ++i){
-				if (result[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] == 0 
-					&& scaledImage[returnCoordinates[0]+pixelNeigbourhood[0][i]+(returnCoordinates[1]+pixelNeigbourhood[1][i])*width] >= threshold){
-					returnCoordinates[0] +=pixelNeigbourhood[0][i];
-					returnCoordinates[1] +=pixelNeigbourhood[1][i];
+				direction+=Math.PI/4.0;
+				steer[0] = (int) Math.round(Math.cos(direction));
+				steer[1]= (int) Math.round(Math.sin(direction));
+				if (result[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] == 0 
+					&& scaledImage[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] >= threshold){
+					returnCoordinates[0] +=steer[0];
+					returnCoordinates[1] +=steer[1];
 					return returnCoordinates;
 				}
+				if (result[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] == 1){
+					break;
+				}				
 			}
 		}
 		return null;
