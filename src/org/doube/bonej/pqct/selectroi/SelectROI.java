@@ -226,7 +226,7 @@ public class SelectROI{
 			}
 		}
 		/*Plot sieve figure*/
-		
+		/*
 		ImagePlus tempImage = new ImagePlus("Sieve");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
@@ -242,6 +242,7 @@ public class SelectROI{
 		}
 		tempImage.show();
 		//IJ.error("selectroi");
+		*/
 	}
 	
 	public int[] twoLargestBones(Vector<Integer> length){
