@@ -262,7 +262,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final int nSlices = imp.getStackSize();
 		final RoiManager roiMan = RoiManager.getInstance();
 		final int[] limits = RoiMan.getLimits(roiMan);
-		int xmin = 0, xmax = w - 1, ymin = 1, ymax = h - 1, zmin = 1, zmax = nSlices;
+		int xmin = 0, xmax = w - 1, ymin = 0, ymax = h - 1, zmin = 1, zmax = nSlices;
 		if (useRoiMan && limits != null) {
 			xmin = Math.max(limits[0], xmin);
 			xmax = Math.min(limits[1], xmax);
@@ -297,7 +297,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, di);
 						ImageProcessor ipSlice = stack.getProcessor(s);
-						ipSlice.setRoi(imp.getRoi());
+							ipSlice.setRoi(imp.getRoi());
 						if (roiMan != null && useRoiMan) {
 							ipSlice.resetRoi();
 							ArrayList<Roi> rois = new ArrayList<Roi>();
@@ -328,6 +328,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 					final int rTop = r.y;
 					final int rRight = rLeft + r.width;
 					final int rBottom = rTop + r.height;
+					IJ.log("rLeft "+rLeft+" rTop "+rTop+" rRight "+rRight+" rBottom "+rBottom+" xmin "+xmin+" ymin "+ymin+" zmin "+zmin);
 					boolean hasMask = (mask != null);
 					for (int v = rTop; v < rBottom; v++) {
 						final int vrTop = v - rTop;
