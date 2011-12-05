@@ -142,6 +142,7 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
+		dialog.addCheckbox("No_filtering",false);
 		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
 		dialog.addNumericField("Rotation_threshold", 169.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 280.0, 4, 8, null); 	//550.0
@@ -176,6 +177,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
+			boolean noFiltering			= dialog.getNextBoolean();
 			fatThreshold				= dialog.getNextNumber();
 			rotationThreshold			= dialog.getNextNumber();
 			areaThreshold				= dialog.getNextNumber();
@@ -223,11 +225,11 @@ public class Distribution_Analysis implements PlugIn {
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,scalingFactor, constant,fatThreshold,rotationThreshold, 
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,fatThreshold,rotationThreshold, 
 															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
-			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal);	//Scale and 3x3 median filter the data
+			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,noFiltering);	//Scale and 3x3 median filter the data
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 			/*testing*/
 			/*
