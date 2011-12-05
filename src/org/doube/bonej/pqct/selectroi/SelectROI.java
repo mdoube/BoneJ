@@ -170,6 +170,7 @@ public class SelectROI{
 		}
 		
 		//Soft tissue analysis
+		softSieve = null;
 		if (details.stOn){
 			Vector<Integer> stLength		= new Vector<Integer> ();
 			Vector<Integer> stBeginnings	= new Vector<Integer> ();
@@ -177,12 +178,12 @@ public class SelectROI{
 			Vector<Integer> stJiit			= new Vector<Integer> ();
 			Vector<Integer> stRoiI		= new Vector<Integer> ();
 			Vector<Integer> stRoiJ		= new Vector<Integer> ();
-			sieve = getSieve(scaledImage,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
+			softSieve = getSieve(scaledImage,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
 			
 		}
 		
 		/*Plot sieve figure*/
-		/*
+		
 		ImagePlus tempImage = new ImagePlus("Sieve");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
@@ -191,14 +192,14 @@ public class SelectROI{
 		for (int y = 0; y < height;++y) {
 			for (int x = 0; x < width;++x) {
 				//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-				if (result[x+y*width] == 1){   //Tint roi area color with violet
+				if (softSieve[x+y*width] == 1){   //Tint roi area color with violet
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
 		}
 		tempImage.show();
 		//IJ.error("selectroi");
-		*/
+		
 	}
 	
 	private byte[] getSieve(double[] tempScaledImage,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
