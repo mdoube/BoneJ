@@ -99,8 +99,6 @@ public class SelectROI{
 		maximum = dataIn.maximum;
 		//Select ROI
 
-		result = new byte[width*height];
-
 		/*Select ROI and set everything else than the roi to minimum*/
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
 		roiI = new Vector<Integer>();
@@ -135,7 +133,8 @@ public class SelectROI{
 		beginnings	= new Vector<Integer> ();
 		iit			= new Vector<Integer> ();
 		jiit		= new Vector<Integer> ();
-		sieve = getSieve(tempScaledImage,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
+		result = new byte[width*height];
+		sieve = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
 		
 		/*Add the roi to the image*/
 		if (setRoi){
@@ -178,7 +177,8 @@ public class SelectROI{
 			Vector<Integer> stJiit			= new Vector<Integer> ();
 			Vector<Integer> stRoiI		= new Vector<Integer> ();
 			Vector<Integer> stRoiJ		= new Vector<Integer> ();
-			softSieve = getSieve(scaledImage,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
+			byte[] softResult = new byte[width*height];
+			softSieve = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
 			
 		}
 		
@@ -202,9 +202,9 @@ public class SelectROI{
 		
 	}
 	
-	private byte[] getSieve(double[] tempScaledImage,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+	private byte[] getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
 
-		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+		findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
 		/*Select correct bone outline*/
 		int selection = 0;
 		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
@@ -611,20 +611,29 @@ public class SelectROI{
 		Idea taken from http://www.math.ucla.edu/~bertozzi/RTG/zhong07/report_zhong.pdf
 		The paper traced continent edges on map/satellite image
 	*/
-	void traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
+	boolean traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
 		boolean done = false;
 		int initI,initJ;
 		initI = i;
 		initJ = j;
-		while(!done){
+		
+		/*Debugging*/
+		ImagePlus tempImage = new ImagePlus("Edge Trace");
+		tempImage.setProcessor(new ByteProcessor(width,height));
+		tempImage.getProcessor().setBackgroundValue(0.0);
+		tempImage.getProcessor().setValue(255.0);
+		
+		while(true){
 			int counter = 0;
 			previousDirection = direction;
 			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
 				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
 				)
-				&& counter < 8 
+				&& counter < 8
+				&& i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  >0 && i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  < width-1
+				&& j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  >0 && i+j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  < height-1
 				){
 					direction-=Math.PI/4.0;
 					++counter;
@@ -642,14 +651,21 @@ public class SelectROI{
 					if (Math.abs(direction-previousDirection) >= 180){
 						break;
 					}
+					/*Handle going out of bounds*/
+					while ((i+((int) Math.round(Math.cos(direction)))  <=0 || i+((int) Math.round(Math.cos(direction)))  >= width-1
+					|| j+((int) Math.round(Math.sin(direction)))  <=0 || i+j+((int) Math.round(Math.sin(direction)))  >= height-1 )
+					&& counter < 8){
+						direction+=Math.PI/4.0;
+						++counter;
+					}
 				}
+
 			}
 			i += (int) Math.round(Math.cos(direction));
 			j += (int) Math.round(Math.sin(direction));
 			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
-				done = true;
-			}
-			else{
+				return = true;
+			}else{
 				if (result[i+j*width] == 0){
 					result[i+j*width] = 2;
 				}else if (result[i+j*width] != 1){
@@ -657,6 +673,16 @@ public class SelectROI{
 				}
 				iit.add(i);
 				jiit.add(j);
+				for (int y = 0; y < height;++y) {
+					for (int x = 0; x < width;++x) {
+						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+						if (result[x+y*width] > 0){   //Tint roi area color with violet
+							tempImage.getProcessor().drawPixel(x,y);
+						}
+					}
+				}
+				tempImage.show();
+				try {Thread.sleep(100);}catch (Exception err){System.out.println("Couldn't sleep");}
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
 		}	
@@ -710,7 +736,7 @@ public class SelectROI{
 		}
 	}
 	
-	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
+	void findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;

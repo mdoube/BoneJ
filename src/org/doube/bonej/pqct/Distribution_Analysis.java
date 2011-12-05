@@ -149,24 +149,28 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
 		dialog.addCheckbox("No_filtering",false);
-		dialog.addNumericField("Air_threshold", -40.0, 4, 8, null);	//Anything above this is fat or more dense
-		dialog.addNumericField("Fat threshold", 20.0, 4, 8, null);		//Anything between this and air threshold is fat
-		dialog.addNumericField("Muscle_threshold", 100.0, 4, 8, null);		//Anything above this is muscle or more dense
+		dialog.addNumericField("Air_threshold", -190.0, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", -30.0, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
 		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
-		dialog.addNumericField("Rotation_threshold", 169.0, 4, 8, null);
-		dialog.addNumericField("Area threshold", 280.0, 4, 8, null); 	//550.0
-		dialog.addNumericField("BMD threshold", 280.0, 4, 8, null);		//690.0
+		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
+		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
+		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
+		/*
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
+		*/
+		dialog.addNumericField("Scaling_coefficient (slope)", 0.743, 4, 8, null);
+		dialog.addNumericField("Scaling_constant (intercept)",-751.873, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[3]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
-		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
+		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[1]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
-		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
+		dialog.addCheckbox("Analyse_density_distribution",true);	//true
 		dialog.addCheckbox("Analyse_soft_tissues",true);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",true);					//false
