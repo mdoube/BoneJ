@@ -25,13 +25,13 @@ public class ImageAndAnalysisDetails{
 	public double scalingFactor;
 	public double constant;
 	public double marrowThreshold;
-	public double airThreshold;
-	public double fatThreshold;
-	public double muscleThreshold;
+	public double airThreshold;		//Fat lower threshold
+	public double fatThreshold;		//Fat higher threshold
+	public double muscleThreshold;	//Muscle lower threshold
 	public double areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 	public double rotationThreshold;
 	public double BMDthreshold;		//For cortical BMD analyses
-	public double softThreshold;	//Thresholding soft tissues + marrow from bone
+	public double softThreshold;	//Soft tissues higher threshold
 	public double boneThreshold;	//Thresholding bone from the rest and cortical AREA analyses (CoA, SSI, I)
 	public int filterSize;
 	public int softFilterSize;
@@ -55,26 +55,28 @@ public class ImageAndAnalysisDetails{
 	public boolean stacked;
 	public boolean guessStacked;
 	public boolean invertGuess;
+	public boolean stOn;
 	
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,double scalingFactor, double constant,double fatThreshold,double rotationThreshold,double areaThreshold,
-									double BMDthreshold, String roiChoice,String rotationChoice,String[] choiceLabels,
+	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,double scalingFactor, double constant,
+									double airThreshold,double fatThreshold, double muscleThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
+									String roiChoice,String rotationChoice,String[] choiceLabels,
 									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
 									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
-									int sectorWidth,int divisions,int concentricSector,int concentricDivisions){
+									int sectorWidth,int divisions,int concentricSector,int concentricDivisions, boolean stOn){
 		this.flipHorizontal			=flipHorizontal;
 		this.noFiltering			=noFiltering;
 		this.scalingFactor			= scalingFactor;
 		this.constant 				= constant;
-		this.airThreshold			= -100;
+		this.airThreshold			= airThreshold;
 		this.rotationThreshold		= rotationThreshold;
 		this.fatThreshold	 		= fatThreshold;
-		this.muscleThreshold 		= 200;
+		this.muscleThreshold 		= muscleThreshold;
 		this.marrowThreshold 		= 300;
 		this.areaThreshold 			= areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 		this.BMDthreshold 			= BMDthreshold;		//For cortical BMD analyses
-		this.softThreshold 			= 300;	//Thresholding soft tissues + marrow from bone
+		this.softThreshold 			= softThreshold;	//Thresholding soft tissues + marrow from bone
 		this.boneThreshold 			= areaThreshold;
 		this.filterSize				= 3;
 		this.softFilterSize			= 7;
@@ -102,5 +104,6 @@ public class ImageAndAnalysisDetails{
 		this.divisions				= divisions;
 		this.concentricSector		= concentricSector;
 		this.concentricDivisions	= concentricDivisions;
+		this.stOn					= stOn;
 	}
 }

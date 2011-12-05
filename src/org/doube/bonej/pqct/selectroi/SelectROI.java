@@ -66,6 +66,7 @@ public class SelectROI{
 	public double pixelSpacing;
 	public byte[] result;			//Will contain filled bones
 	public byte[] sieve;
+	public byte[] softSieve;		//Mask for soft tissues
 	public ScaledImageData scaledImageData;
 
 
@@ -97,14 +98,6 @@ public class SelectROI{
 		minimum = dataIn.minimum;
 		maximum = dataIn.maximum;
 		//Select ROI
-		
-		iit = new Vector<Integer>();
-		jiit = new Vector<Integer>();
-		length = new Vector<Integer>();
-		beginnings = new Vector<Integer>();
-
-
-
 
 		result = new byte[width*height];
 
@@ -138,58 +131,11 @@ public class SelectROI{
 				}
 			}
 		}
-		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold);	//Trace bone edges	
-				
-		/*Select correct bone outline*/
-		selection = 0;
-		if (details.roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
-		if (details.roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
-		if (details.roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
-		if (details.roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
-		if (details.roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
-		if (details.roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (details.roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (details.roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (details.roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
-		
-		//Try to guess whether the bones were stacked or not....
-		if(details.guessStacked){
-			int[] guessingStack = twoLargestBones(length);
-			if (Math.abs((double)jiit.get(beginnings.get(guessingStack[0]))- (double)jiit.get(beginnings.get(guessingStack[1])))>1.1*Math.abs((double)iit.get(beginnings.get(guessingStack[0]))- (double)iit.get(beginnings.get(guessingStack[1])))){
-				details.stacked = true;
-			} else{
-				details.stacked = false;
-			}
-		}
-		
-		
-		/*Try to guess whether to flip the distribution*/
-		if (details.guessFlip && details.stacked){
-			if (details.guessLarger){
-				details.flipDistribution = guessFlipLarger(length,beginnings,jiit);
-			}else{
-				details.flipDistribution = guessFlipSelection(length,beginnings,jiit,selection);
-			}
-			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
-				details.flipDistribution = !details.flipDistribution;			
-			}
-		}
-		if (details.guessFlip && !details.stacked){
-			if (details.guessLarger){
-				details.flipDistribution = guessFlipLarger(length,beginnings,iit);
-			}else{	
-				details.flipDistribution = guessFlipSelection(length,beginnings,iit,selection);
-			}
-			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
-				details.flipDistribution = !details.flipDistribution;			
-			}
-		}
-		
-		/*fill roiI & roiJ*/
-		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);++i){
-			roiI.add(iit.get(i));
-			roiJ.add(jiit.get(i));
-		}
+		length		= new Vector<Integer> ();
+		beginnings	= new Vector<Integer> ();
+		iit			= new Vector<Integer> ();
+		jiit		= new Vector<Integer> ();
+		sieve = getSieve(tempScaledImage,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
 		
 		/*Add the roi to the image*/
 		if (setRoi){
@@ -202,9 +148,6 @@ public class SelectROI{
 			ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 			imp.setRoi(ijROI);
 		}
-		
-		sieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
-		
 		
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
@@ -225,6 +168,19 @@ public class SelectROI{
 				}
 			}
 		}
+		
+		//Soft tissue analysis
+		if (details.stOn){
+			Vector<Integer> stLength		= new Vector<Integer> ();
+			Vector<Integer> stBeginnings	= new Vector<Integer> ();
+			Vector<Integer> stIit			= new Vector<Integer> ();
+			Vector<Integer> stJiit			= new Vector<Integer> ();
+			Vector<Integer> stRoiI		= new Vector<Integer> ();
+			Vector<Integer> stRoiJ		= new Vector<Integer> ();
+			sieve = getSieve(scaledImage,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
+			
+		}
+		
 		/*Plot sieve figure*/
 		/*
 		ImagePlus tempImage = new ImagePlus("Sieve");
@@ -244,6 +200,64 @@ public class SelectROI{
 		//IJ.error("selectroi");
 		*/
 	}
+	
+	private byte[] getSieve(double[] tempScaledImage,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+
+		findEdge(tempScaledImage,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+		/*Select correct bone outline*/
+		int selection = 0;
+		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
+		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
+		if (roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
+		if (roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
+		if (roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
+		if (roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
+		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
+		
+		//Try to guess whether the bones were stacked or not....
+		if(guessStacked){
+			int[] guessingStack = twoLargestBones(length);
+			if (Math.abs((double)jiit.get(beginnings.get(guessingStack[0]))- (double)jiit.get(beginnings.get(guessingStack[1])))>1.1*Math.abs((double)iit.get(beginnings.get(guessingStack[0]))- (double)iit.get(beginnings.get(guessingStack[1])))){
+				details.stacked = true;
+			} else{
+				details.stacked = false;
+			}
+		}
+		
+		
+		/*Try to guess whether to flip the distribution*/
+		if (guessFlip && stacked){
+			if (details.guessLarger){
+				details.flipDistribution = guessFlipLarger(length,beginnings,jiit);
+			}else{
+				details.flipDistribution = guessFlipSelection(length,beginnings,jiit,selection);
+			}
+			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
+				details.flipDistribution = !details.flipDistribution;			
+			}
+		}
+		if (guessFlip && !stacked){
+			if (details.guessLarger){
+				details.flipDistribution = guessFlipLarger(length,beginnings,iit);
+			}else{	
+				details.flipDistribution = guessFlipSelection(length,beginnings,iit,selection);
+			}
+			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
+				details.flipDistribution = !details.flipDistribution;			
+			}
+		}
+		
+		/*fill roiI & roiJ*/
+		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);++i){
+			roiI.add(iit.get(i));
+			roiJ.add(jiit.get(i));
+		}
+		byte[] tempSieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
+		return tempSieve;
+	}
+	
 	
 	public int[] twoLargestBones(Vector<Integer> length){
 		//Identify the two longest circumferences
@@ -695,7 +709,7 @@ public class SelectROI{
 		}
 	}
 	
-	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold)
+	void findEdge(double[] scaledImage,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;
@@ -740,7 +754,7 @@ public class SelectROI{
 			/*Tracing algorithm done...*/
 
 			Vector<Vector<Vector<Integer>>>  returnedVectors = null;
-			if (details.allowCleaving){
+			if (allowCleaving){
 				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/

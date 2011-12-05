@@ -47,14 +47,20 @@ public class Distribution_Analysis implements PlugIn {
 	boolean	mOn;		//Mass distribution
 	boolean	conOn;		//Concentric rings analysis
 	boolean dOn;		//Distribution analysis
+	boolean stOn;		//Soft tissue analysis
 	String resultString;
 	String imageInfo;
 	boolean flipHorizontal;
 	double resolution;
+	//Thresholds
+	double airThreshold;
 	double fatThreshold;
+	double muscleThreshold;
+	double softThreshold;	
 	double rotationThreshold;
 	double areaThreshold;
 	double BMDThreshold;
+
 	double scalingFactor;
 	double constant;	
 	boolean flipDistribution;
@@ -124,7 +130,7 @@ public class Distribution_Analysis implements PlugIn {
 						}
 						calibrationCoefficients[i] = Double.valueOf(typFileLineTokens.get(1));
 					} else {
-						calibrationCoefficients[i] = (double) i;
+						calibrationCoefficients[i] = (double) i*1000.0;
 					}
 				}
 				calibrationCoefficients[1] /= 1000.0;		//1.495
@@ -143,7 +149,10 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
 		dialog.addCheckbox("No_filtering",false);
-		dialog.addNumericField("Fat threshold", 40.0, 4, 8, null);
+		dialog.addNumericField("Air_threshold", -190.0, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", -30.0, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
+		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 169.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 280.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 280.0, 4, 8, null);		//690.0
@@ -158,6 +167,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Analyse_mass_distribution",true);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
 		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",true);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
@@ -178,7 +188,10 @@ public class Distribution_Analysis implements PlugIn {
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
 			boolean noFiltering			= dialog.getNextBoolean();
+			airThreshold				= dialog.getNextNumber();
 			fatThreshold				= dialog.getNextNumber();
+			muscleThreshold				= dialog.getNextNumber();
+			softThreshold				= dialog.getNextNumber();
 			rotationThreshold			= dialog.getNextNumber();
 			areaThreshold				= dialog.getNextNumber();
 			BMDThreshold				= dialog.getNextNumber();
@@ -190,6 +203,7 @@ public class Distribution_Analysis implements PlugIn {
 			mOn							= dialog.getNextBoolean();
 			conOn						= dialog.getNextBoolean();
 			dOn							= dialog.getNextBoolean();
+			stOn						= dialog.getNextBoolean();
 			preventPeeling				= dialog.getNextBoolean();
 			allowCleaving				= dialog.getNextBoolean();
 			boolean suppressImages		= dialog.getNextBoolean();
@@ -225,10 +239,12 @@ public class Distribution_Analysis implements PlugIn {
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,fatThreshold,rotationThreshold, 
-															areaThreshold,BMDThreshold,roiChoice,rotationChoice,choiceLabels,rotationLabels,
+			
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,
+															airThreshold, fatThreshold, muscleThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
+															roiChoice,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions);
+															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,noFiltering);	//Scale and 3x3 median filter the data
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 			/*testing*/
