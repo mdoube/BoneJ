@@ -95,12 +95,8 @@ public class Distribution_Analysis implements PlugIn {
 			calibrationCoefficients = new double[2];
 			/*Read calibration from TYP file database*/
 			String typFileName = getInfoProperty(imageInfo,"Device");
-			//TextWindow debug = new TextWindow("Calibrations", "", 200, 200);
-			
-			//debug.append(typFileName);
 			try {
 				InputStream ir = this.getClass().getClassLoader().getResourceAsStream("org/doube/bonej/pqct/typ/"+typFileName);
-				//debug.append(ir.getClass().toString());
 				byte[] typFileData = new byte[ir.available()];
 				ir.read(typFileData);
 				ir.close();
@@ -110,9 +106,7 @@ public class Distribution_Analysis implements PlugIn {
 				Vector<String> typFileLines = new Vector<String>();
 				while(st.hasMoreTokens()){
 					typFileLines.add(st.nextToken());
-					//debug.append(typFileLines.lastElement());
 				}
-				//debug.append(typFileLines.size()+" Lines of data");
 				//Search for XSlope and XInter
 				String[] searchFor = {"XInter","XSlope"};
 				for (int i = 0;i<searchFor.length;++i){
@@ -121,20 +115,17 @@ public class Distribution_Analysis implements PlugIn {
 					while (temp.indexOf(searchFor[i]) < 0 && index < typFileLines.size()){
 						++index;
 						temp = typFileLines.get(index);
-						
 					}
 					if (temp.indexOf(searchFor[i]) >= 0){	//Found line
 						StringTokenizer st2 = new StringTokenizer(temp, "=");
 						Vector<String> typFileLineTokens = new Vector<String>();
 						while(st2.hasMoreTokens()){
 							typFileLineTokens.add(st2.nextToken().trim());
-							//debug.append(typFileLineTokens.lastElement());
 						}
 						calibrationCoefficients[i] = Double.valueOf(typFileLineTokens.get(1));
 					} else {
 						calibrationCoefficients[i] = (double) i;
 					}
-					
 				}
 				calibrationCoefficients[1] /= 1000.0;		//1.495
 			} catch (Exception err){System.err.println("Error: "+err.getMessage());}
