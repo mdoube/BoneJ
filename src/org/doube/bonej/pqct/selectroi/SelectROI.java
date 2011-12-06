@@ -172,14 +172,30 @@ public class SelectROI{
 		softSieve = null;
 		byte[] softResult = null;
 		if (details.stOn){
-			Vector<Integer> stLength		= new Vector<Integer> ();
-			Vector<Integer> stBeginnings	= new Vector<Integer> ();
-			Vector<Integer> stIit			= new Vector<Integer> ();
-			Vector<Integer> stJiit			= new Vector<Integer> ();
-			Vector<Integer> stRoiI		= new Vector<Integer> ();
-			Vector<Integer> stRoiJ		= new Vector<Integer> ();
+			Vector<Integer> stLength		= new Vector<Integer>();
+			Vector<Integer> stBeginnings	= new Vector<Integer>();
+			Vector<Integer> stIit			= new Vector<Integer>();
+			Vector<Integer> stJiit			= new Vector<Integer>();
+			Vector<Integer> stRoiI			= new Vector<Integer>();
+			Vector<Integer> stRoiJ			= new Vector<Integer>();
 			softResult = new byte[width*height];
-			softSieve = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			softSieve = getSieve(scaledImage,softResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			/*create temp boneResult to wipe out bone and marrow*/
+			byte[] boneResult = new byte[width*height];
+			getSieve(scaledImage,boneResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			
+			for (int i = 0;i<softSieve.length;++i){
+				if (softSieve[i] ==1 && scaledImage[i] >= airThreshold && scaledImage[i] < fatThreshold){
+					softSieve[i] =2;	//Fat
+				}
+				if (softSieve[i] ==1 && scaledImage[i] >= muscleThreshold && scaledImage[i] < softThreshold){
+					softSieve[i] = 3;	//Muscle
+				}
+				if (boneResult[i] ==1 ){
+					softSieve[i] = 4;	//Bone & marrow
+				}
+			}
+			
 			
 		}
 		
