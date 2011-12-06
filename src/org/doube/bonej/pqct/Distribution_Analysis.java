@@ -178,12 +178,12 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Allow_cleaving",true);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
-		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
+		dialog.addCheckbox("Set_distribution_results_rotation_manually",true);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",true);
+		dialog.addCheckbox("Guess_right",false);
 		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Stacked_bones",false);
 		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);

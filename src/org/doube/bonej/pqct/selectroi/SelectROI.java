@@ -134,9 +134,14 @@ public class SelectROI{
 		iit			= new Vector<Integer> ();
 		jiit		= new Vector<Integer> ();
 		result = new byte[width*height];
-		Vector<byte[]> boneMasks = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
-		sieve		= boneMasks.get(0);
-		result		= boneMasks.get(1);
+		Vector<Object> boneMasks = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
+		sieve			= (byte[]) boneMasks.get(0);
+		result	 		= (byte[]) boneMasks.get(1);
+		iit 		 	= (Vector<Integer>) boneMasks.get(2);
+		jiit 			= (Vector<Integer>) boneMasks.get(3);
+		beginnings		= (Vector<Integer>) boneMasks.get(4);
+		length			= (Vector<Integer>) boneMasks.get(5);
+		
 		/*Add the roi to the image*/
 		if (setRoi){
 			int[] xcoordinates = new int[roiI.size()];
@@ -180,13 +185,19 @@ public class SelectROI{
 			Vector<Integer> stRoiI			= new Vector<Integer>();
 			Vector<Integer> stRoiJ			= new Vector<Integer>();
 			softResult = new byte[width*height];
-			Vector<byte[]> masks = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
-			softSieve	= masks.get(0);
-			softResult	= masks.get(1);
+			Vector<Object> masks = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			softSieve		= (byte[]) masks.get(0);
+			softResult	 	= (byte[]) masks.get(1);
+			stIit 		 	= (Vector<Integer>) masks.get(2);
+			stJiit 			= (Vector<Integer>) masks.get(3);
+			stBeginnings	= (Vector<Integer>) masks.get(4);
+			stLength		= (Vector<Integer>) masks.get(5);
+			
+			
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
-			Vector<byte[]> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
-			boneResult	= masks2.get(1);
+			Vector<Object> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			boneResult	= (byte[]) masks2.get(1);
 			for (int i = 0;i<softSieve.length;++i){
 				if (softSieve[i] ==1 && scaledImage[i] >= airThreshold && scaledImage[i] < fatThreshold){
 					softSieve[i] =2;	//Fat
@@ -200,30 +211,64 @@ public class SelectROI{
 			}
 			
 			/*Plot sieve figure*/			
+			int[] two = twoLargestBones(stLength);
+			
+			//IJ.error("beg "+stBeginnings.size()+" len "+stLength.size()+" t1 "+two[0]+" t2 "+two[1]);
 			/*
+			TextWindow testW = new TextWindow("jep","",200,200);
+			for (int i = 0;i<stBeginnings.size();++i){
+				testW.append("length "+stLength.get(i));
+				for (int j = 0;j<stLength.get(i);++j){
+					testW.append(stIit.get(stBeginnings.get(i)+j)+"\t"+stJiit.get(stBeginnings.get(i)+j));
+				}
+			}
+			*/
+			byte[] tempSieve= new byte[width*height];
+			
+			for (int i = 0;i<2;++i){
+				for(int z = stBeginnings.get(two[i]);z<stBeginnings.get(two[i])+stLength.get(two[i]);++z){
+					tempSieve[stIit.get(z)+stJiit.get(z)*width]=1;
+				}
+			}
+			
 			ImagePlus tempImage = new ImagePlus("Soft Sieve");
 			tempImage.setProcessor(new ByteProcessor(width,height));
 			tempImage.getProcessor().setBackgroundValue(0.0);
 			tempImage.getProcessor().setValue(255.0);
-			for (int y = 0; y < height;++y) {
-				for (int x = 0; x < width;++x) {
-					//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
-					//if (softSieve[x+y*width] > 0){   //Tint roi area color with violet
-					//if (softSieve[x+y*width] == 3){   //Tint roi area color with violet
-					if (boneResult[x+y*width] == 1){   //Tint roi area color with violet
-					
-						tempImage.getProcessor().drawPixel(x,y);
+			
+			
+			
+			tempImage.show();
+			/*
+			for (int i = 0;i<stBeginnings.size();++i){
+				for(int z = stBeginnings.get(i);z<stLength.get(i);++z){
+					tempSieve[stIit.get(z)+stJiit.get(z)*width]=1;
+				}
+				*/
+				for (int y = 0; y < height;++y) {
+					for (int x = 0; x < width;++x) {
+						//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
+						//if (softSieve[x+y*width] > 0){   //Tint roi area color with violet
+						//if (softSieve[x+y*width] == 3){   //Tint roi area color with violet
+						//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
+						if (tempSieve[x+y*width] == 1){   //Tint roi area color with violet
+							tempImage.getProcessor().drawPixel(x,y);
+						}
 					}
 				}
+				/*
+				//try{Thread.sleep(500);}catch (Exception err){System.out.println("Hyps");}
 			}
-			tempImage.show();
-			IJ.error(" ");
-			System.exit(0);			
 			*/
+			tempImage.updateAndDraw();
+				IJ.error(" ");
+
+			//System.exit(0);			
+			
 		}
 	}
 	
-	private Vector<byte[]> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+	private Vector<Object> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
 		Vector<Object> results = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
 		result = (byte[]) results.get(0);
 		iit = (Vector<Integer>) results.get(1);
@@ -244,7 +289,7 @@ public class SelectROI{
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,length);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,length);}	
-		
+		//IJ.error(roiChoice + " selection "+selection);
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
 			int[] guessingStack = twoLargestBones(length);
@@ -284,10 +329,41 @@ public class SelectROI{
 			roiJ.add(jiit.get(i));
 		}
 		byte[] tempSieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
-		Vector<byte[]> returnVector = new Vector<byte[]>();
+		Vector<Object> returnVector = new Vector<Object>();
 		returnVector.add(tempSieve);
 		returnVector.add(result);
+		returnVector.add(iit);
+		returnVector.add(jiit);
+		returnVector.add(beginnings);
+		returnVector.add(length);
 		return returnVector;
+	}
+	
+
+	public int[] twoLargestBonesRetainOrder(Vector<Integer> length){
+		//Identify the two longest circumferences
+		Vector<Integer> temp3 = new Vector<Integer>();
+		for (int iii =0;iii<length.size();++iii){
+			temp3.add(length.get(iii));
+		}
+		Collections.sort(temp3);
+		int counter=0;
+		int[] twoLongest = new int[2];
+		while (length.get(counter) !=temp3.get(temp3.size()-1)){
+			++counter;
+		}
+		twoLongest[0] = counter;
+		counter=0;
+		if (temp3.size() > 1){
+			while (length.get(counter) !=temp3.get(temp3.size()-2) || counter == twoLongest[0]){
+				++counter;
+			}
+			twoLongest[1] = counter;
+		} else {
+			twoLongest[1] = 0;
+		}
+		Arrays.sort(twoLongest);
+		return twoLongest;
 	}
 	
 	
@@ -410,7 +486,7 @@ public class SelectROI{
 	
 	int selectRoiTwoLargestLeft(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
 		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
-		int[] twoBones = twoLargestBones(length);
+		int[] twoBones = twoLargestBonesRetainOrder(length);
 		Vector<Integer> tempBeginning = new Vector<Integer>();
 		for (int i =0;i<twoBones.length;++i){
 			tempBeginning.add(beginning.get(twoBones[i]));
@@ -421,7 +497,7 @@ public class SelectROI{
 	
 	int selectRoiTwoLargestRight(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
 		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
-		int[] twoBones = twoLargestBones(length);
+		int[] twoBones = twoLargestBonesRetainOrder(length);
 		Vector<Integer> tempBeginning = new Vector<Integer>();
 		for (int i =0;i<twoBones.length;++i){
 			tempBeginning.add(beginning.get(twoBones[i]));
