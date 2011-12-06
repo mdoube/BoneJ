@@ -37,13 +37,15 @@ public class ScaledImageData{
 		pixelSpacing = VoxelSize;
 		filterSize = 3;		//filterSize x filterSize median filter will be used
 		double[] unFiltered = new double[width*height];
-		minimum = 0;	//Save minimum value
-		maximum = 0;	//Save maximum value
+
 		for (int t = 0;t<width*height;t++){	//Scale the image
 			unFiltered[t] = ((double) data[t])*scalingFactor+constant;
-			if (unFiltered[t] < minimum) {minimum = unFiltered[t];}
-			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
 		}
+		/*Get the min and max values*/
+		double[] tempSort = (double[]) unFiltered.clone();
+		Arrays.sort(tempSort);
+		minimum = tempSort[0];
+		maximum = tempSort[tempSort.length-1];
 		if (noFiltering){
 			scaledImage = (double[]) unFiltered.clone();
 		}else{		
@@ -64,6 +66,9 @@ public class ScaledImageData{
 	public double[] medianFilter(double[] data, int width, int height,int filterSize){
 		double[] filtered = new double[width*height];
 		double[] toMedian = new double[filterSize*filterSize];
+		for (int i = 0; i< filtered.length; ++i) {filtered[i] = minimum;}
+		/*Fill filtered with min value to get the frame from messing up with edge detection*/
+		
 		int noGo = (int)Math.floor(((double)filterSize)/2.0);
 		int median = (int)Math.floor(((double)(filterSize*filterSize))/2.0);	//would be ceil, but indexing begins from 0!
 		int rowTotal,colTotal;
@@ -82,6 +87,8 @@ public class ScaledImageData{
 				filtered[row*width+col] = toMedian[median];
 			}
 		}
+		
+		
 		return filtered;
 	}
 	

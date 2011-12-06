@@ -620,11 +620,23 @@ public class SelectROI{
 		initJ = j;
 		
 		/*Debugging*/
+		IJ.error("initI "+i+" initJ "+j);
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
-		
+		tempImage.show();
+		/*
+				for (int y = 0; y < height;++y) {
+					for (int x = 0; x < width;++x) {
+						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+						if (result[x+y*width] > 0){   //Tint roi area color with violet
+							tempImage.getProcessor().drawPixel(x,y);
+						}
+					}
+				}
+				tempImage.show();
+				*/
 		while(true){
 			int counter = 0;
 			previousDirection = direction;
@@ -652,19 +664,24 @@ public class SelectROI{
 						break;
 					}
 					/*Handle going out of bounds*/
+					/*
 					while ((i+((int) Math.round(Math.cos(direction)))  <=0 || i+((int) Math.round(Math.cos(direction)))  >= width-1
 					|| j+((int) Math.round(Math.sin(direction)))  <=0 || i+j+((int) Math.round(Math.sin(direction)))  >= height-1 )
 					&& counter < 8){
 						direction+=Math.PI/4.0;
 						++counter;
 					}
+					*/
 				}
 
 			}
 			i += (int) Math.round(Math.cos(direction));
 			j += (int) Math.round(Math.sin(direction));
 			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
-				return = true;
+				for (int ii = 0; ii< result.length;++ii){
+					if(result[ii] > 1){result[ii]=1;}
+				}
+				return true;
 			}else{
 				if (result[i+j*width] == 0){
 					result[i+j*width] = 2;
@@ -673,6 +690,7 @@ public class SelectROI{
 				}
 				iit.add(i);
 				jiit.add(j);
+				
 				for (int y = 0; y < height;++y) {
 					for (int x = 0; x < width;++x) {
 						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
@@ -681,15 +699,12 @@ public class SelectROI{
 						}
 					}
 				}
-				tempImage.show();
-				try {Thread.sleep(100);}catch (Exception err){System.out.println("Couldn't sleep");}
+				tempImage.updateAndDraw();
+				
+				try {Thread.sleep(10);}catch (Exception err){System.out.println("Couldn't sleep");}
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
 		}	
-		for (int ii = 0; ii< result.length;++ii){
-			if(result[ii] > 1){result[ii]=1;}
-		}
-		
 	}
 	
 	boolean resultFill(int i, int j, byte[] tempResult){	
@@ -742,7 +757,15 @@ public class SelectROI{
 		int len;
 		i = 0;
 		j = 0;
-
+			
+		/*Debugging*/
+		/*
+		ImagePlus tempImage = new ImagePlus("Edge Trace");
+		tempImage.setProcessor(new ByteProcessor(width,height));
+		tempImage.getProcessor().setBackgroundValue(0.0);
+		tempImage.getProcessor().setValue(255.0);
+		tempImage.show();
+		*/
 		while ((i < (width-1)) && (j < (height -1) )){
 			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
 				i++;
@@ -790,7 +813,7 @@ public class SelectROI{
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
 					}
 					len = returnedVectors.get(iii).get(0).size();
-					fillResultEdge(length,beginnings,iit,jiit,len,scaledImage,threshold);
+					result = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
 				}
 				
 			}else{
@@ -799,8 +822,28 @@ public class SelectROI{
 					iit.add(newIit.get(ii));
 					jiit.add(newJiit.get(ii));
 				}
-				fillResultEdge(length,beginnings,iit,jiit,len,scaledImage,threshold);
+				result = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
 			}
+							/*Debugging*/
+				/*
+				ImagePlus tempImage = new ImagePlus("Edge Trace");
+				tempImage.setProcessor(new ByteProcessor(width,height));
+				tempImage.getProcessor().setBackgroundValue(0.0);
+				tempImage.getProcessor().setValue(255.0);
+				*/
+				/*
+				for (int y = 0; y < height;++y) {
+					for (int x = 0; x < width;++x) {
+						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+						if (result[x+y*width] > 0){   //Tint roi area color with violet
+							tempImage.getProcessor().drawPixel(x,y);
+						}
+					}
+				}
+				tempImage.updateAndDraw(); 
+				IJ.error(" ");
+				*/
+				//System.exit(0);
 			//Find next empty spot
 			i = tempI;
 			j = tempJ;
@@ -827,6 +870,14 @@ public class SelectROI{
 				direction+=Math.PI/4.0;
 				steer[0] = (int) Math.round(Math.cos(direction));
 				steer[1]= (int) Math.round(Math.sin(direction));
+				/*Handle OOB*/
+				while ((returnCoordinates[0]+steer[0])<0 && (returnCoordinates[0]+steer[0])>=width &&
+						(returnCoordinates[1]+steer[1])<0 && (returnCoordinates[1]+steer[1])>=height){
+					direction+=Math.PI/4.0;
+					steer[0] = (int) Math.round(Math.cos(direction));
+					steer[1]= (int) Math.round(Math.sin(direction));
+				}
+				
 				if (result[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] == 0 
 					&& scaledImage[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] >= threshold){
 					returnCoordinates[0] +=steer[0];
@@ -841,7 +892,7 @@ public class SelectROI{
 		return null;
 	}
 	
-	void fillResultEdge(Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
+	byte[] fillResultEdge(byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
 		if (len > 0){
 			length.add(len);
 			beginnings.add(iit.size()-len);
@@ -850,6 +901,7 @@ public class SelectROI{
 			/*Select the first pixel found*/
 			boolean possible = true;
 			byte[] tempResult = (byte[]) result.clone();
+
 			int[] tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
 			if (tempCoordinates == null){
 				possible = false;
@@ -862,7 +914,7 @@ public class SelectROI{
 				}
 				tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
 			}
-			
+
 			if (possible){
 				result = (byte[]) tempResult.clone();
 			}else{
@@ -874,6 +926,7 @@ public class SelectROI{
 				beginnings.remove(beginnings.size()-1);
 			}
 		}
+		return result;
 	}
 	
 	
