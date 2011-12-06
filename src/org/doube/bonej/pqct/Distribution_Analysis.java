@@ -307,7 +307,7 @@ public class Distribution_Analysis implements PlugIn {
 			}else{
 				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
 			}
-			
+
 			if(stOn){
 				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis(roi);
 				results = printSoftTissueResults(results,softTissueAnalysis);
@@ -327,18 +327,22 @@ public class Distribution_Analysis implements PlugIn {
 			if (mOn){
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
+				/*
 				if(!dOn && !conOn && makeImage){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
 
 				}
+				*/
 			}
 			if (conOn){
 				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printConcentricRingResults(results,concentricRingAnalysis);
+				/*
 				if(!dOn && makeImage){
 					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter,determineAlfa.pind, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 
 				}
+				*/
 			}
 			
 			
@@ -346,7 +350,7 @@ public class Distribution_Analysis implements PlugIn {
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
 				if (makeImage){
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+					resultImage = addDensityDistribution(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
 				}
 			}
 			
@@ -367,28 +371,29 @@ public class Distribution_Analysis implements PlugIn {
 		ImagePlus tempImage = new ImagePlus("Visual results");
 		tempImage.setProcessor(new FloatProcessor(width,height,values));
 		new ImageConverter(tempImage).convertToRGB();
+		return tempImage;
 	}
 	
 	/*Add soft sieve*/
 	ImagePlus addSoftTissueSieve(ImagePlus tempImage, byte[] sieve){
 		for (int y = 0; y < tempImage.getHeight();++y) {
 			for (int x = 0; x < tempImage.getWidth();++x) {
-				if (sieve[x+y*width] == 2){   //Tint fat area with yellow
+				if (sieve[x+y*tempImage.getWidth()] == 2){   //Tint fat area with yellow
 					int value = tempImage.getProcessor().getPixel(x,y);
-					int[] rgb = byte[3];
+					int[] rgb = new int[3];
 					for (int i = 0; i<3;++i){
-						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+						rgb[i] = (value >>(i*8))& 0XFF;
 					}
-					tempImage.getProcessor().setColor(new Color(0,rgb[1],rgb[0]);
+					tempImage.getProcessor().setColor(new Color(rgb[2],rgb[1],0));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
-				if (sieve[x+y*width] == 2){   //Tint muscle area with red
+				if (sieve[x+y*tempImage.getWidth()] == 3){   //Tint muscle area with red
 					int value = tempImage.getProcessor().getPixel(x,y);
-					int[] rgb = byte[3];
+					int[] rgb = new int[3];
 					for (int i = 0; i<3;++i){
-						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+						rgb[i] = (value >>(i*8))& 0XFF;
 					}
-					tempImage.getProcessor().setColor(new Color(rgb[2],0,0);
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,0));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
@@ -401,35 +406,58 @@ public class Distribution_Analysis implements PlugIn {
 	ImagePlus addBoneSieve(ImagePlus tempImage, byte[] sieve){
 		for (int y = 0; y < tempImage.getHeight();++y) {
 			for (int x = 0; x < tempImage.getWidth();++x) {
-				if (sieve[x+y*width] == 1){   //Tint bone area with purple
+				if (sieve[x+y*tempImage.getWidth()] == 1){   //Tint bone area with purple
 					int value = tempImage.getProcessor().getPixel(x,y);
-					int[] rgb = byte[3];
+					int[] rgb = new int[3];
 					for (int i = 0; i<3;++i){
-						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+						rgb[i] = (value >>(i*8))& 0XFF;
 					}
-					tempImage.getProcessor().setColor(new Color(rgb[2],rgb[1],0);
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[1]));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
 		}
 		return tempImage;
 	}
-	
-	/*Cortical analysis result image*/
-	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve){
-		ImagePlus tempImage = new ImagePlus("Visual results");
-		tempImage.setProcessor(new FloatProcessor(width,height,values));
-		new ImageConverter(tempImage).convertToRGB();
-		for (int y = 0; y < height;++y) {
-			for (int x = 0; x < width;++x) {
-				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
-					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
-					tempImage.getProcessor().drawPixel(x,y);
-				}
-			}
+		
+	/*addDenstiyDistribution*/
+	ImagePlus addDensityDistribution(ImagePlus tempImage,double alfa,double[] marrowCenter,Vector<Integer> pind,Vector<Integer> pindColor,
+										double[] R, double[] R2, double[] Theta){
+		//Draw unrotated radii
+		for(int i = 0; i< 360;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])));
+			int y = ((int) (marrowCenter[1]+R[i]*Math.sin(Theta[i])));
+			double colorScale = ((double) pindColor.get(i))/359.0;
+			tempImage.getProcessor().setColor(new Color((int) (255.0*colorScale),0,(int) (255.0*(1.0-colorScale))));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = ((int) (marrowCenter[0]+R2[i]*Math.cos(Theta[i])));
+			y = ((int) (marrowCenter[1]+R2[i]*Math.sin(Theta[i])));
+			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
+			tempImage.getProcessor().drawPixel(x,y);
 		}
-		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		/*plot marrowCenter*/
+		for(int i = 0; i< 10;i++) {//45;i++) {//
+			int x = ((int) (marrowCenter[0]+i));
+			int y = ((int) (marrowCenter[1]));
+			tempImage.getProcessor().setColor(new Color(0,255,255));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = (int) (marrowCenter[0]);
+			y = (int) (marrowCenter[1]+i);
+			tempImage.getProcessor().setColor(new Color(255,0,255));
+			tempImage.getProcessor().drawPixel(x,y);
+			/*Plot rotated axes...*/
+			x = ((int) ((double) marrowCenter[0]+((double) i)*Math.cos(-alfa/180*Math.PI)));
+			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.sin(-alfa/180*Math.PI)));
+			tempImage.getProcessor().setColor(new Color(0,255,0));
+			tempImage.getProcessor().drawPixel(x,y);
+			x = ((int) ((double) marrowCenter[0]+((double) -i)*Math.sin(-alfa/180*Math.PI)));
+			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.cos(-alfa/180*Math.PI)));
+			tempImage.getProcessor().setColor(new Color(0,0,255));
+			tempImage.getProcessor().drawPixel(x,y);
+
+		}
+		tempImage.getProcessor().setInterpolate(true);
+		tempImage.getProcessor().rotate(alfa);
 		return tempImage;
 	}
 	
@@ -474,63 +502,6 @@ public class Distribution_Analysis implements PlugIn {
 			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])));
 			int y = ((int) (marrowCenter[1]+R[i]*Math.sin(Theta[i])));
 			double colorScale = ((double) pindColor.get(i))/359.0;
-			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
-			tempImage.getProcessor().drawPixel(x,y);
-		}
-		/*plot marrowCenter*/
-		for(int i = 0; i< 10;i++) {//45;i++) {//
-			int x = ((int) (marrowCenter[0]+i));
-			int y = ((int) (marrowCenter[1]));
-			tempImage.getProcessor().setColor(new Color(0,255,255));
-			tempImage.getProcessor().drawPixel(x,y);
-			x = (int) (marrowCenter[0]);
-			y = (int) (marrowCenter[1]+i);
-			tempImage.getProcessor().setColor(new Color(255,0,255));
-			tempImage.getProcessor().drawPixel(x,y);
-			/*Plot rotated axes...*/
-			x = ((int) ((double) marrowCenter[0]+((double) i)*Math.cos(-alfa/180*Math.PI)));
-			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.sin(-alfa/180*Math.PI)));
-			tempImage.getProcessor().setColor(new Color(0,255,0));
-			tempImage.getProcessor().drawPixel(x,y);
-			x = ((int) ((double) marrowCenter[0]+((double) -i)*Math.sin(-alfa/180*Math.PI)));
-			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.cos(-alfa/180*Math.PI)));
-			tempImage.getProcessor().setColor(new Color(0,0,255));
-			tempImage.getProcessor().drawPixel(x,y);
-
-		}
-		tempImage.getProcessor().setInterpolate(true);
-		tempImage.getProcessor().rotate(alfa);
-		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
-		return tempImage;
-	}
-	
-
-	
-	/*Density distribution result image*/
-	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa,
-							double[] marrowCenter,Vector<Integer> pind,Vector<Integer> pindColor, double[] R, double[] R2, double[] Theta){
-		ImagePlus tempImage = new ImagePlus("Visual results");
-		tempImage.setProcessor(new FloatProcessor(width,height,values));
-		new ImageConverter(tempImage).convertToRGB();
-		for (int y = 0; y < height;++y) {
-			for (int x = 0; x < width;++x) {
-				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
-					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
-					tempImage.getProcessor().drawPixel(x,y);
-				}
-			}
-		}
-		 
-		//Draw unrotated radii
-		for(int i = 0; i< 360;i++) {//45;i++) {//
-			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])));
-			int y = ((int) (marrowCenter[1]+R[i]*Math.sin(Theta[i])));
-			double colorScale = ((double) pindColor.get(i))/359.0;
-			tempImage.getProcessor().setColor(new Color((int) (255.0*colorScale),0,(int) (255.0*(1.0-colorScale))));
-			tempImage.getProcessor().drawPixel(x,y);
-			x = ((int) (marrowCenter[0]+R2[i]*Math.cos(Theta[i])));
-			y = ((int) (marrowCenter[1]+R2[i]*Math.sin(Theta[i])));
 			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
 			tempImage.getProcessor().drawPixel(x,y);
 		}

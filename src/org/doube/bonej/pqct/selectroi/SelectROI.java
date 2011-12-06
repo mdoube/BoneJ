@@ -134,8 +134,9 @@ public class SelectROI{
 		iit			= new Vector<Integer> ();
 		jiit		= new Vector<Integer> ();
 		result = new byte[width*height];
-		sieve = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
-		
+		Vector<byte[]> boneMasks = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
+		sieve		= boneMasks.get(0);
+		result		= boneMasks.get(1);
 		/*Add the roi to the image*/
 		if (setRoi){
 			int[] xcoordinates = new int[roiI.size()];
@@ -179,11 +180,13 @@ public class SelectROI{
 			Vector<Integer> stRoiI			= new Vector<Integer>();
 			Vector<Integer> stRoiJ			= new Vector<Integer>();
 			softResult = new byte[width*height];
-			softSieve = getSieve(scaledImage,softResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			Vector<byte[]> masks = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			softSieve	= masks.get(0);
+			softResult	= masks.get(1);
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
-			getSieve(scaledImage,boneResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
-			
+			Vector<byte[]> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			boneResult	= masks2.get(1);
 			for (int i = 0;i<softSieve.length;++i){
 				if (softSieve[i] ==1 && scaledImage[i] >= airThreshold && scaledImage[i] < fatThreshold){
 					softSieve[i] =2;	//Fat
@@ -196,31 +199,31 @@ public class SelectROI{
 				}
 			}
 			
-			
-		}
-		
-		/*Plot sieve figure*/
-		/*
-		ImagePlus tempImage = new ImagePlus("Soft Sieve");
-		tempImage.setProcessor(new ByteProcessor(width,height));
-		tempImage.getProcessor().setBackgroundValue(0.0);
-		tempImage.getProcessor().setValue(255.0);
-
-		for (int y = 0; y < height;++y) {
-			for (int x = 0; x < width;++x) {
-				//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
-				if (softSieve[x+y*width] == 1){   //Tint roi area color with violet
-					tempImage.getProcessor().drawPixel(x,y);
+			/*Plot sieve figure*/			
+			/*
+			ImagePlus tempImage = new ImagePlus("Soft Sieve");
+			tempImage.setProcessor(new ByteProcessor(width,height));
+			tempImage.getProcessor().setBackgroundValue(0.0);
+			tempImage.getProcessor().setValue(255.0);
+			for (int y = 0; y < height;++y) {
+				for (int x = 0; x < width;++x) {
+					//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
+					//if (softSieve[x+y*width] > 0){   //Tint roi area color with violet
+					//if (softSieve[x+y*width] == 3){   //Tint roi area color with violet
+					if (boneResult[x+y*width] == 1){   //Tint roi area color with violet
+					
+						tempImage.getProcessor().drawPixel(x,y);
+					}
 				}
 			}
+			tempImage.show();
+			IJ.error(" ");
+			System.exit(0);			
+			*/
 		}
-		tempImage.show();
-		IJ.error(" ");
-		*/
-		
 	}
 	
-	private byte[] getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+	private Vector<byte[]> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
 		Vector<Object> results = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
 		result = (byte[]) results.get(0);
 		iit = (Vector<Integer>) results.get(1);
@@ -281,7 +284,10 @@ public class SelectROI{
 			roiJ.add(jiit.get(i));
 		}
 		byte[] tempSieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
-		return tempSieve;
+		Vector<byte[]> returnVector = new Vector<byte[]>();
+		returnVector.add(tempSieve);
+		returnVector.add(result);
+		return returnVector;
 	}
 	
 	
