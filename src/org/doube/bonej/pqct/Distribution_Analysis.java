@@ -304,18 +304,23 @@ public class Distribution_Analysis implements PlugIn {
 			boolean makeImage = true;
 			if(suppressImages && !saveImageOnDisk){
 				makeImage = false;
+			}else{
+				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
 			}
 			
 			if(stOn){
 				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis(roi);
 				results = printSoftTissueResults(results,softTissueAnalysis);
+				if(makeImage){
+					resultImage = addSoftTissueSieve(resultImage,roi.softSieve);
+				}
 			}
 			
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(!dOn && !mOn && !conOn && makeImage){
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve);
+				if(makeImage){
+					resultImage = addBoneSieve(resultImage,roi.sieve);
 				}
 				
 			}
@@ -357,6 +362,59 @@ public class Distribution_Analysis implements PlugIn {
 		}
 	}
 
+	/*Get image into which we'll start adding stuff*/
+	ImagePlus getRGBResultImage(double[] values,int width,int height){
+		ImagePlus tempImage = new ImagePlus("Visual results");
+		tempImage.setProcessor(new FloatProcessor(width,height,values));
+		new ImageConverter(tempImage).convertToRGB();
+	}
+	
+	/*Add soft sieve*/
+	ImagePlus addSoftTissueSieve(ImagePlus tempImage, byte[] sieve){
+		for (int y = 0; y < tempImage.getHeight();++y) {
+			for (int x = 0; x < tempImage.getWidth();++x) {
+				if (sieve[x+y*width] == 2){   //Tint fat area with yellow
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = byte[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+					}
+					tempImage.getProcessor().setColor(new Color(0,rgb[1],rgb[0]);
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+				if (sieve[x+y*width] == 2){   //Tint muscle area with red
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = byte[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+					}
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,0);
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
+		return tempImage;
+	}
+	
+	/*Add bone sieve*/
+	ImagePlus addBoneSieve(ImagePlus tempImage, byte[] sieve){
+		for (int y = 0; y < tempImage.getHeight();++y) {
+			for (int x = 0; x < tempImage.getWidth();++x) {
+				if (sieve[x+y*width] == 1){   //Tint bone area with purple
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = byte[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value | (0XFF<<(i*8)))>>(i*8);
+					}
+					tempImage.getProcessor().setColor(new Color(rgb[2],rgb[1],0);
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		return tempImage;
+	}
+	
 	/*Cortical analysis result image*/
 	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve){
 		ImagePlus tempImage = new ImagePlus("Visual results");
@@ -445,6 +503,8 @@ public class Distribution_Analysis implements PlugIn {
 		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
+	
+
 	
 	/*Density distribution result image*/
 	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa,
