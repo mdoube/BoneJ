@@ -170,6 +170,7 @@ public class SelectROI{
 		
 		//Soft tissue analysis
 		softSieve = null;
+		byte[] softResult = null;
 		if (details.stOn){
 			Vector<Integer> stLength		= new Vector<Integer> ();
 			Vector<Integer> stBeginnings	= new Vector<Integer> ();
@@ -177,34 +178,35 @@ public class SelectROI{
 			Vector<Integer> stJiit			= new Vector<Integer> ();
 			Vector<Integer> stRoiI		= new Vector<Integer> ();
 			Vector<Integer> stRoiJ		= new Vector<Integer> ();
-			byte[] softResult = new byte[width*height];
+			softResult = new byte[width*height];
 			softSieve = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
 			
 		}
 		
 		/*Plot sieve figure*/
 		
-		ImagePlus tempImage = new ImagePlus("Sieve");
+		ImagePlus tempImage = new ImagePlus("Soft Sieve");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
 
 		for (int y = 0; y < height;++y) {
 			for (int x = 0; x < width;++x) {
-				//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+				//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
 				if (softSieve[x+y*width] == 1){   //Tint roi area color with violet
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
 		}
 		tempImage.show();
-		//IJ.error("selectroi");
+		IJ.error(" ");
+		
 		
 	}
 	
 	private byte[] getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
 
-		findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+		result = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
 		/*Select correct bone outline*/
 		int selection = 0;
 		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
@@ -611,7 +613,7 @@ public class SelectROI{
 		Idea taken from http://www.math.ucla.edu/~bertozzi/RTG/zhong07/report_zhong.pdf
 		The paper traced continent edges on map/satellite image
 	*/
-	boolean traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
+	byte[] traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
 		boolean done = false;
@@ -620,12 +622,14 @@ public class SelectROI{
 		initJ = j;
 		
 		/*Debugging*/
+		/*
 		IJ.error("initI "+i+" initJ "+j);
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
 		tempImage.show();
+		*/
 		/*
 				for (int y = 0; y < height;++y) {
 					for (int x = 0; x < width;++x) {
@@ -681,7 +685,7 @@ public class SelectROI{
 				for (int ii = 0; ii< result.length;++ii){
 					if(result[ii] > 1){result[ii]=1;}
 				}
-				return true;
+				return result;
 			}else{
 				if (result[i+j*width] == 0){
 					result[i+j*width] = 2;
@@ -690,7 +694,7 @@ public class SelectROI{
 				}
 				iit.add(i);
 				jiit.add(j);
-				
+				/*
 				for (int y = 0; y < height;++y) {
 					for (int x = 0; x < width;++x) {
 						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
@@ -700,8 +704,8 @@ public class SelectROI{
 					}
 				}
 				tempImage.updateAndDraw();
-				
 				try {Thread.sleep(10);}catch (Exception err){System.out.println("Couldn't sleep");}
+				*/
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
 		}	
@@ -751,7 +755,7 @@ public class SelectROI{
 		}
 	}
 	
-	void findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
+	byte[] findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;
@@ -759,13 +763,13 @@ public class SelectROI{
 		j = 0;
 			
 		/*Debugging*/
-		/*
+		
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
 		tempImage.show();
-		*/
+		
 		while ((i < (width-1)) && (j < (height -1) )){
 			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
 				i++;
@@ -799,21 +803,40 @@ public class SelectROI{
 			newJiit.add(j);
 
 			/*Tracing algorithm*/
-			traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
+			result = traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
 			len = newIit.size();
 			/*Tracing algorithm done...*/
 
 			Vector<Vector<Vector<Integer>>>  returnedVectors = null;
 			if (allowCleaving){
-				returnedVectors = cleaveEdge(newIit,newJiit,3.0,6.0);
+				returnedVectors = cleaveEdge(result,newIit,newJiit,3.0,6.0);
+				byte[] tempRes = new byte[width*height];
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/
 					for (int ii = 0; ii<returnedVectors.get(iii).get(0).size();++ii){
 						iit.add(returnedVectors.get(iii).get(0).get(ii));
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
+						tempRes[iit.lastElement()+jiit.lastElement()*width] = 1;
 					}
 					len = returnedVectors.get(iii).get(0).size();
-					result = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+					Vector<Object> results = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+					result = (byte[]) results.get(0);
+					iit = (Vector<Integer>) results.get(1);
+					jiit = (Vector<Integer>) results.get(2);
+					beginnings = (Vector<Integer>) results.get(3);
+					length = (Vector<Integer>) results.get(4);
+					
+					//IJ.error("begs "+beginnings.size()+" lengths "+length.size()+"retVects"+returnedVectors.size());
+					for (int y = 0; y < height;++y) {
+						for (int x = 0; x < width;++x) {
+							//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
+							if (tempRes[x+y*width] > 0){   //Tint roi area color with violet
+								tempImage.getProcessor().drawPixel(x,y);
+							}
+						}
+					}
+					tempImage.updateAndDraw(); 
+					//IJ.error(" ");
 				}
 				
 			}else{
@@ -822,7 +845,12 @@ public class SelectROI{
 					iit.add(newIit.get(ii));
 					jiit.add(newJiit.get(ii));
 				}
-				result = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+				Vector<Object> results = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+				result = (byte[]) results.get(0);
+				iit = (Vector<Integer>) results.get(1);
+				jiit = (Vector<Integer>) results.get(2);
+				beginnings = (Vector<Integer>) results.get(3);
+				length = (Vector<Integer>) results.get(4);
 			}
 							/*Debugging*/
 				/*
@@ -855,6 +883,11 @@ public class SelectROI{
 				}
 			}
 		}
+		
+		
+		
+		
+		return result;
 	}
 	
 	/*Find fill init by steering clockwise from next to previous*/
@@ -892,7 +925,7 @@ public class SelectROI{
 		return null;
 	}
 	
-	byte[] fillResultEdge(byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
+	Vector<Object> fillResultEdge(byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
 		if (len > 0){
 			length.add(len);
 			beginnings.add(iit.size()-len);
@@ -918,6 +951,7 @@ public class SelectROI{
 			if (possible){
 				result = (byte[]) tempResult.clone();
 			}else{
+				//IJ.error("removing");
 				for (int po = 0;po <length.lastElement() ;po++){
 					iit.remove(iit.size()-1);
 					jiit.remove(jiit.size()-1);
@@ -926,7 +960,14 @@ public class SelectROI{
 				beginnings.remove(beginnings.size()-1);
 			}
 		}
-		return result;
+		Vector<Object> results = new Vector<Object>();
+		results.add(result);
+		results.add(iit);
+		results.add(jiit);
+		results.add(beginnings);
+		results.add(length);
+		//IJ.error("begs "+beginnings.size()+" lengths "+length.size());
+		return results;
 	}
 	
 	
@@ -937,7 +978,7 @@ public class SelectROI{
 	line and the edge with higher indices will be removed. E.g. 
 	for a circle, the maximum ratio is (pi/2)/d ~= 1.57 and for square
 	it is 2/sqrt(2) = sqrt(2) ~= 1.41.*/	
-	Vector<Vector<Vector<Integer>>> cleaveEdge(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
+	Vector<Vector<Vector<Integer>>> cleaveEdge(byte[] result,Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,double minRatio,double minLength){
 		double distanceAlongTheEdge = 0;
 		double distance = 0;
 		double ratio;
@@ -961,9 +1002,10 @@ public class SelectROI{
 
 				}
 			}
+			//IJ.error("Highest ratio "+highestRatio);
 			/*If ratio is high enough, cleave at the highest ratio point pair*/
 			if (highestRatio >= minRatio){
-				returnVectorVectorPointer.add(cleave(fatRoiI,fatRoiJ,cleavingIndices));
+				returnVectorVectorPointer.add(cleave(result,fatRoiI,fatRoiJ,cleavingIndices));
 			} else {
 				nextLoop = false;
 			}
@@ -982,7 +1024,7 @@ public class SelectROI{
 		return returnVectorVectorPointer;
 	}
 	/*	Remove the extra part from vectors and replace with a straight line	*/
-	Vector<Vector<Integer>> cleave(Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
+	Vector<Vector<Integer>> cleave(byte[] result,Vector<Integer> fatRoiI,Vector<Integer> fatRoiJ,int[] cleavingIndices){
 		int initialLength = fatRoiI.size();
 		int initI = fatRoiI.get(cleavingIndices[0]);
 		int initJ = fatRoiJ.get(cleavingIndices[0]);
