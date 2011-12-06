@@ -223,6 +223,7 @@ public class SelectROI{
 				}
 			}
 			*/
+			/*
 			byte[] tempSieve= new byte[width*height];
 			
 			for (int i = 0;i<2;++i){
@@ -239,12 +240,14 @@ public class SelectROI{
 			
 			
 			tempImage.show();
+			*/
 			/*
 			for (int i = 0;i<stBeginnings.size();++i){
 				for(int z = stBeginnings.get(i);z<stLength.get(i);++z){
 					tempSieve[stIit.get(z)+stJiit.get(z)*width]=1;
 				}
 				*/
+				/*
 				for (int y = 0; y < height;++y) {
 					for (int x = 0; x < width;++x) {
 						//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
@@ -256,13 +259,15 @@ public class SelectROI{
 						}
 					}
 				}
+				*/
 				/*
 				//try{Thread.sleep(500);}catch (Exception err){System.out.println("Hyps");}
 			}
 			*/
+			/*
 			tempImage.updateAndDraw();
 				IJ.error(" ");
-
+			*/
 			//System.exit(0);			
 			
 		}
