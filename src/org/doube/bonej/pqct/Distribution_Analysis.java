@@ -73,6 +73,7 @@ public class Distribution_Analysis implements PlugIn {
 	boolean allowCleaving;
 	boolean preventPeeling;
 	String roiChoice;
+	String roiChoiceSt;
 	String rotationChoice;
 	
 	
@@ -163,8 +164,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_coefficient (slope)", 0.743, 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",-751.873, 4, 8, null);
 		//Get ROI selection
-		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest"};
+		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[3]); 
+		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[10]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[1]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
@@ -202,6 +204,7 @@ public class Distribution_Analysis implements PlugIn {
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
 			roiChoice					= dialog.getNextChoice();
+			roiChoiceSt					= dialog.getNextChoice();
 			rotationChoice				= dialog.getNextChoice();
 			cOn							= dialog.getNextBoolean();
 			mOn							= dialog.getNextBoolean();
@@ -246,7 +249,7 @@ public class Distribution_Analysis implements PlugIn {
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,
 															airThreshold, fatThreshold, muscleThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
-															roiChoice,rotationChoice,choiceLabels,rotationLabels,
+															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,noFiltering);	//Scale and 3x3 median filter the data

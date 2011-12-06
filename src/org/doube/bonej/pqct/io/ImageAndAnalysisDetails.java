@@ -41,6 +41,7 @@ public class ImageAndAnalysisDetails{
 	public int concentricDivisions;
 	public String imageSavePath;
 	public String roiChoice;
+	public String roiChoiceSt;
 	public String rotationChoice;
 	public String[] choiceLabels;
 	public String[] rotationLabels;
@@ -60,7 +61,7 @@ public class ImageAndAnalysisDetails{
 	//ImageJ plugin constructor
 	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,double scalingFactor, double constant,
 									double airThreshold,double fatThreshold, double muscleThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
-									String roiChoice,String rotationChoice,String[] choiceLabels,
+									String roiChoice,String roiChoiceSt,String rotationChoice,String[] choiceLabels,
 									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
 									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
@@ -80,11 +81,12 @@ public class ImageAndAnalysisDetails{
 		this.boneThreshold 			= areaThreshold;
 		this.filterSize				= 3;
 		this.softFilterSize			= 7;
-		this.sectorWidth			=sectorWidth;
+		this.sectorWidth			= sectorWidth;
 		this.divisions				= divisions;
 		this.concentricSector		= concentricSector;
 		this.concentricDivisions	= concentricDivisions;
 		this.roiChoice				= roiChoice;
+		this.roiChoiceSt			= roiChoiceSt;
 		this.rotationChoice			= rotationChoice;
 		this.choiceLabels			= choiceLabels;
 		this.rotationLabels			= rotationLabels;

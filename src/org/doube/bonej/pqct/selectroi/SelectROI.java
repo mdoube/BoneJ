@@ -179,7 +179,7 @@ public class SelectROI{
 			Vector<Integer> stRoiI		= new Vector<Integer> ();
 			Vector<Integer> stRoiJ		= new Vector<Integer> ();
 			softResult = new byte[width*height];
-			softSieve = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoice,details.guessStacked,details.stacked,false,true);
+			softSieve = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
 			
 		}
 		
@@ -204,9 +204,14 @@ public class SelectROI{
 		
 	}
 	
-	private byte[] getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> RoiI,Vector<Integer> RoiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
-
-		result = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+	private byte[] getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+		Vector<Object> results = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+		result = (byte[]) results.get(0);
+		iit = (Vector<Integer>) results.get(1);
+		jiit = (Vector<Integer>) results.get(2);
+		beginnings = (Vector<Integer>) results.get(3);
+		length = (Vector<Integer>) results.get(4);
+		
 		/*Select correct bone outline*/
 		int selection = 0;
 		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
@@ -218,6 +223,8 @@ public class SelectROI{
 		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
+		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,length);}
+		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,length);}	
 		
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
@@ -378,6 +385,29 @@ public class SelectROI{
 		}
 		return counter;
 	}
+	
+	int selectRoiTwoLargestLeft(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
+		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
+		int[] twoBones = twoLargestBones(length);
+		Vector<Integer> tempBeginning = new Vector<Integer>();
+		for (int i =0;i<twoBones.length;++i){
+			tempBeginning.add(beginning.get(twoBones[i]));
+		}
+		int returnValue =  selectRoiLeftMostBone(tempBeginning,iit);
+		return returnValue;
+	}
+	
+	int selectRoiTwoLargestRight(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
+		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
+		int[] twoBones = twoLargestBones(length);
+		Vector<Integer> tempBeginning = new Vector<Integer>();
+		for (int i =0;i<twoBones.length;++i){
+			tempBeginning.add(beginning.get(twoBones[i]));
+		}
+		int returnValue =  selectRoiRightMostBone(tempBeginning,iit);
+		return returnValue;
+	}
+	
 	
 	int selectRoiLeftMostBone(Vector<Integer> beginning,Vector<Integer> iit){
 		Vector<Integer> temp = new Vector<Integer>();
@@ -755,7 +785,7 @@ public class SelectROI{
 		}
 	}
 	
-	byte[] findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
+	Vector<Object> findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;
@@ -830,13 +860,14 @@ public class SelectROI{
 					for (int y = 0; y < height;++y) {
 						for (int x = 0; x < width;++x) {
 							//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-							if (tempRes[x+y*width] > 0){   //Tint roi area color with violet
+							//if (tempRes[x+y*width] > 0){   //Tint roi area color with violet
+							if (result[x+y*width] > 0){   //Tint roi area color with violet
 								tempImage.getProcessor().drawPixel(x,y);
 							}
 						}
 					}
 					tempImage.updateAndDraw(); 
-					//IJ.error(" ");
+					IJ.error(" ");
 				}
 				
 			}else{
@@ -884,10 +915,15 @@ public class SelectROI{
 			}
 		}
 		
+		Vector<Object> returnVector = new Vector<Object>();
+		returnVector.add(result);
+		returnVector.add(iit);
+		returnVector.add(jiit);
+		returnVector.add(beginnings);
+		returnVector.add(length);
+		//IJ.error("begs "+begi
 		
-		
-		
-		return result;
+		return returnVector;
 	}
 	
 	/*Find fill init by steering clockwise from next to previous*/
