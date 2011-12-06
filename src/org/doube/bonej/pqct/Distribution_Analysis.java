@@ -232,7 +232,7 @@ public class Distribution_Analysis implements PlugIn {
 				imageName = getInfoProperty(imageInfo,"File Name");
 			}else{
 				if(imp.getImageStackSize() == 1){
-					imageName = getInfoProperty(imageInfo,"Title");
+					imageName = imp.getTitle();
 				}else{
 					imageName = imageInfo.substring(0,imageInfo.indexOf("\n"));
 				}
