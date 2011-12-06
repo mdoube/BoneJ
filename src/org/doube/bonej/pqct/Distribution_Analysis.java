@@ -306,6 +306,11 @@ public class Distribution_Analysis implements PlugIn {
 				makeImage = false;
 			}
 			
+			if(stOn){
+				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis(roi);
+				results = printSoftTissueResults(results,softTissueAnalysis);
+			}
+			
 			if (cOn ){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
@@ -513,6 +518,13 @@ public class Distribution_Analysis implements PlugIn {
 				headings+=dHeadings[i]+"\t";
 		}
 		
+		if(stOn){
+			String[] coHeadings = {"MuD [mg/cm³]","MuA [mm²]","FatD [mg/cm³]","FatA [mm²]","LimbD [mg/cm³]","LimbA [mm²]"};
+			for (int i = 0;i<coHeadings.length;++i){
+				headings+=coHeadings[i]+"\t";
+			}
+		}
+		
 		if(cOn){
 			String[] coHeadings = {"CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
@@ -613,6 +625,16 @@ public class Distribution_Analysis implements PlugIn {
 		results += Boolean.toString(preventPeeling)+"\t";
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";
+		return results;
+	}
+	
+	String printSoftTissueResults(String results,SoftTissueAnalysis softTissueAnalysis){
+		results+=softTissueAnalysis.MuD+"\t";
+		results+=softTissueAnalysis.MuA+"\t";
+		results+=softTissueAnalysis.FatD+"\t";
+		results+=softTissueAnalysis.FatA+"\t";
+		results+=softTissueAnalysis.LimbD+"\t";
+		results+=softTissueAnalysis.LimbA+"\t";
 		return results;
 	}
 	
