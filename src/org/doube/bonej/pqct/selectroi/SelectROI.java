@@ -184,7 +184,7 @@ public class SelectROI{
 		}
 		
 		/*Plot sieve figure*/
-		
+		/*
 		ImagePlus tempImage = new ImagePlus("Soft Sieve");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
@@ -200,7 +200,7 @@ public class SelectROI{
 		}
 		tempImage.show();
 		IJ.error(" ");
-		
+		*/
 		
 	}
 	
@@ -793,13 +793,13 @@ public class SelectROI{
 		j = 0;
 			
 		/*Debugging*/
-		
+		/*
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
 		tempImage.show();
-		
+		*/
 		while ((i < (width-1)) && (j < (height -1) )){
 			while (j < height-1 && i < width && scaledImage[i+j*width] <threshold){
 				i++;
@@ -857,6 +857,7 @@ public class SelectROI{
 					length = (Vector<Integer>) results.get(4);
 					
 					//IJ.error("begs "+beginnings.size()+" lengths "+length.size()+"retVects"+returnedVectors.size());
+					/*
 					for (int y = 0; y < height;++y) {
 						for (int x = 0; x < width;++x) {
 							//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
@@ -868,6 +869,7 @@ public class SelectROI{
 					}
 					tempImage.updateAndDraw(); 
 					IJ.error(" ");
+					*/
 				}
 				
 			}else{
