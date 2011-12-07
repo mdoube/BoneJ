@@ -213,13 +213,13 @@ public class SelectROI{
 			}
 			
 			/*Plot sieve figure*/			
-			int[] two = twoLargestBones(stLength);
+			int[] two = twoLargestBones(stArea);
 			
 			//IJ.error("beg "+stBeginnings.size()+" len "+stLength.size()+" t1 "+two[0]+" t2 "+two[1]);
 			
 			TextWindow testW = new TextWindow("jep","",200,200);
 			for (int i = 0;i<stBeginnings.size();++i){
-				testW.append("length "+stLength.get(i));
+				testW.append("area "+stArea.get(i));
 				for (int j = 0;j<stLength.get(i);++j){
 					testW.append(stIit.get(stBeginnings.get(i)+j)+"\t"+stJiit.get(stBeginnings.get(i)+j));
 				}
@@ -286,21 +286,21 @@ public class SelectROI{
 		
 		/*Select correct bone outline*/
 		int selection = 0;
-		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(length);}
-		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(length);}
+		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(area);}
+		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(area);}
 		if (roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
 		if (roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
 		if (roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
 		if (roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(length);}
-		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,length);}
-		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,length);}	
+		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,area,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,area,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(area);}
+		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,area);}
+		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,area);}	
 		//IJ.error(roiChoice + " selection "+selection);
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
-			int[] guessingStack = twoLargestBones(length);
+			int[] guessingStack = twoLargestBones(area);
 			if (Math.abs((double)jiit.get(beginnings.get(guessingStack[0]))- (double)jiit.get(beginnings.get(guessingStack[1])))>1.1*Math.abs((double)iit.get(beginnings.get(guessingStack[0]))- (double)iit.get(beginnings.get(guessingStack[1])))){
 				details.stacked = true;
 			} else{
