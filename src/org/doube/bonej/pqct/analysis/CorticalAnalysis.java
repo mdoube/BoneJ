@@ -26,6 +26,9 @@ import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 public class CorticalAnalysis{
 	public double BMD;
 	public double AREA;
+	public double MeA;
+	public double MeD;
+	public double medMassD;
 	public double ToA;
 	public double ToD;
 	public double maxRadiusY;
@@ -44,14 +47,33 @@ public class CorticalAnalysis{
 	{
 		ToA =0;
 		ToD = 0;
+		MeA =0;
+		MeD = 0;
 		for (int i =0;i<roi.width*roi.height;i++){
 			if (roi.sieve[i] >0){
 				ToA +=1;
 				ToD +=roi.scaledImage[i];
+				if (roi.scaledImage[i] < roi.details.marrowThreshold){ //Marrow analysis
+					MeA +=1;
+					MeD +=roi.scaledImage[i];
+				}
 			}
 		}
 		ToD/=ToA;
 		ToA*=roi.pixelSpacing*roi.pixelSpacing;
+		MeD/=MeA;
+		MeA*=roi.pixelSpacing*roi.pixelSpacing;
+		/*Mass density is calculated by converting the BMD to Hounsfield Units, and scaling the HUs to comparable HUs between machines
+		**HUs are then scaled to mass density as described in Schneider et al. Phys. Med. Biol. 45 (2000) 459–478.
+		*/
+		double H;		//Machine comparable Hounsfield Unit
+		double mu;		//Med BMD as attenuation coefficient
+		double muH2O;	//Water as attenuation coefficient
+		muH2O = (0.0-roi.details.constant)/roi.details.scalingFactor;
+		mu = (MeD-roi.details.constant)/roi.details.scalingFactor;
+		H = mu/muH2O-1.0;	//Equation 6 in Schneider et al. 2000 *1000 omitted
+		medMassD = 1.018+0.893*H;					//Equation 21 in Schneider et al. 2000 *10^-3 omitted
+
 		BSId = ToD*ToD*ToA/100000000.0; //To make it look nicer, we'll use a unit of g^2/cm^4
 		BMD = 0;
 		AREA = 0;
