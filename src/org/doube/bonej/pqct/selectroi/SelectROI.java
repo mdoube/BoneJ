@@ -1113,6 +1113,7 @@ public class SelectROI{
 
 			if (possible){
 				result = (byte[]) tempResult.clone();
+				area.add(pixelsFilled);
 			}else{
 				//IJ.error("removing");
 				for (int po = 0;po <length.lastElement() ;po++){
@@ -1123,7 +1124,7 @@ public class SelectROI{
 				beginnings.remove(beginnings.size()-1);
 			}
 		}
-		area.add(pixelsFilled);
+		
 		Vector<Object> results = new Vector<Object>();
 		results.add(result);
 		results.add(iit);
