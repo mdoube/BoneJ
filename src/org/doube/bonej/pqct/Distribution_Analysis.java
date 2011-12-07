@@ -56,6 +56,7 @@ public class Distribution_Analysis implements PlugIn {
 	double airThreshold;
 	double fatThreshold;
 	double muscleThreshold;
+	double marrowThreshold;
 	double softThreshold;	
 	double rotationThreshold;
 	double areaThreshold;
@@ -150,10 +151,11 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
 		dialog.addCheckbox("No_filtering",false);
-		dialog.addNumericField("Air_threshold", -190.0, 4, 8, null);	//Anything above this is fat or more dense
-		dialog.addNumericField("Fat threshold", -30.0, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addNumericField("Air_threshold", -155.3, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", -23.295, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
+		dialog.addNumericField("Marrow_threshold", 54.35493, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Soft_tissue_threshold", 155.2998, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
@@ -165,8 +167,8 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_constant (intercept)",-751.873, 4, 8, null);
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[3]); 
-		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[10]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[2]); 
+		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[9]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[1]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
@@ -197,6 +199,7 @@ public class Distribution_Analysis implements PlugIn {
 			airThreshold				= dialog.getNextNumber();
 			fatThreshold				= dialog.getNextNumber();
 			muscleThreshold				= dialog.getNextNumber();
+			marrowThreshold				= dialog.getNextNumber();
 			softThreshold				= dialog.getNextNumber();
 			rotationThreshold			= dialog.getNextNumber();
 			areaThreshold				= dialog.getNextNumber();
@@ -248,7 +251,7 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,
-															airThreshold, fatThreshold, muscleThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
+															airThreshold, fatThreshold, muscleThreshold,marrowThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
@@ -534,7 +537,7 @@ public class Distribution_Analysis implements PlugIn {
 	
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
-		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
 		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice"};
 			
@@ -624,7 +627,9 @@ public class Distribution_Analysis implements PlugIn {
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
 		String[] parameters = {Double.toString(airThreshold)
 								,Double.toString(fatThreshold),Double.toString(muscleThreshold)
+								,Double.toString(marrowThreshold)
 								,Double.toString(softThreshold),Double.toString(rotationThreshold)
+								,Double.toString(areaThreshold),Double.toString(BMDThreshold)
 								,Double.toString(scalingFactor),Double.toString(constant)};
 
 		if (imp != null){

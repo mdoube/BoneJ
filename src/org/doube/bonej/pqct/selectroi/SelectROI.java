@@ -27,7 +27,7 @@ import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
 import ij.process.*;	//Debugging
-@SuppressWarnings("serial")
+@SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectROI{
 	public ImageAndAnalysisDetails details;
@@ -129,19 +129,20 @@ public class SelectROI{
 				}
 			}
 		}
-		length		= new Vector<Integer> ();
-		beginnings	= new Vector<Integer> ();
-		iit			= new Vector<Integer> ();
-		jiit		= new Vector<Integer> ();
-		result = new byte[width*height];
-		Vector<Object> boneMasks = getSieve(tempScaledImage,result,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
+		length					= new Vector<Integer> ();
+		beginnings				= new Vector<Integer> ();
+		iit						= new Vector<Integer> ();
+		jiit					= new Vector<Integer> ();
+		Vector<Integer> area	= new Vector<Integer> ();
+		result 					= new byte[width*height];
+		Vector<Object> boneMasks = getSieve(tempScaledImage,result,area,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
 		sieve			= (byte[]) boneMasks.get(0);
 		result	 		= (byte[]) boneMasks.get(1);
 		iit 		 	= (Vector<Integer>) boneMasks.get(2);
 		jiit 			= (Vector<Integer>) boneMasks.get(3);
 		beginnings		= (Vector<Integer>) boneMasks.get(4);
 		length			= (Vector<Integer>) boneMasks.get(5);
-		
+		area			= (Vector<Integer>) boneMasks.get(6);
 		/*Add the roi to the image*/
 		if (setRoi){
 			int[] xcoordinates = new int[roiI.size()];
@@ -184,19 +185,20 @@ public class SelectROI{
 			Vector<Integer> stJiit			= new Vector<Integer>();
 			Vector<Integer> stRoiI			= new Vector<Integer>();
 			Vector<Integer> stRoiJ			= new Vector<Integer>();
+			Vector<Integer> stArea		= new Vector<Integer> ();
 			softResult = new byte[width*height];
-			Vector<Object> masks = getSieve(scaledImage,softResult,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			Vector<Object> masks = getSieve(scaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
 			softSieve		= (byte[]) masks.get(0);
 			softResult	 	= (byte[]) masks.get(1);
 			stIit 		 	= (Vector<Integer>) masks.get(2);
 			stJiit 			= (Vector<Integer>) masks.get(3);
 			stBeginnings	= (Vector<Integer>) masks.get(4);
 			stLength		= (Vector<Integer>) masks.get(5);
-			
+			stArea			= (Vector<Integer>) masks.get(6);
 			
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
-			Vector<Object> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			Vector<Object> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
 			boneResult	= (byte[]) masks2.get(1);
 			for (int i = 0;i<softSieve.length;++i){
 				if (softSieve[i] ==1 && scaledImage[i] >= airThreshold && scaledImage[i] < fatThreshold){
@@ -214,7 +216,7 @@ public class SelectROI{
 			int[] two = twoLargestBones(stLength);
 			
 			//IJ.error("beg "+stBeginnings.size()+" len "+stLength.size()+" t1 "+two[0]+" t2 "+two[1]);
-			/*
+			
 			TextWindow testW = new TextWindow("jep","",200,200);
 			for (int i = 0;i<stBeginnings.size();++i){
 				testW.append("length "+stLength.get(i));
@@ -222,8 +224,8 @@ public class SelectROI{
 					testW.append(stIit.get(stBeginnings.get(i)+j)+"\t"+stJiit.get(stBeginnings.get(i)+j));
 				}
 			}
-			*/
-			/*
+			
+			
 			byte[] tempSieve= new byte[width*height];
 			
 			for (int i = 0;i<2;++i){
@@ -240,14 +242,14 @@ public class SelectROI{
 			
 			
 			tempImage.show();
-			*/
+			
 			/*
 			for (int i = 0;i<stBeginnings.size();++i){
 				for(int z = stBeginnings.get(i);z<stLength.get(i);++z){
 					tempSieve[stIit.get(z)+stJiit.get(z)*width]=1;
 				}
 				*/
-				/*
+				
 				for (int y = 0; y < height;++y) {
 					for (int x = 0; x < width;++x) {
 						//if (softResult[x+y*width] == 1){   //Tint roi area color with violet
@@ -259,27 +261,28 @@ public class SelectROI{
 						}
 					}
 				}
-				*/
+				
 				/*
 				//try{Thread.sleep(500);}catch (Exception err){System.out.println("Hyps");}
 			}
 			*/
-			/*
+			
 			tempImage.updateAndDraw();
 				IJ.error(" ");
-			*/
+			
 			//System.exit(0);			
 			
 		}
 	}
 	
-	private Vector<Object> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
-		Vector<Object> results = findEdge(tempScaledImage,result,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+	private Vector<Object> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> area,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+		Vector<Object> results = findEdge(tempScaledImage,result,area,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
 		result = (byte[]) results.get(0);
 		iit = (Vector<Integer>) results.get(1);
 		jiit = (Vector<Integer>) results.get(2);
 		beginnings = (Vector<Integer>) results.get(3);
 		length = (Vector<Integer>) results.get(4);
+		area = (Vector<Integer>) results.get(5);
 		
 		/*Select correct bone outline*/
 		int selection = 0;
@@ -341,6 +344,7 @@ public class SelectROI{
 		returnVector.add(jiit);
 		returnVector.add(beginnings);
 		returnVector.add(length);
+		returnVector.add(area);
 		return returnVector;
 	}
 	
@@ -746,7 +750,7 @@ public class SelectROI{
 		Idea taken from http://www.math.ucla.edu/~bertozzi/RTG/zhong07/report_zhong.pdf
 		The paper traced continent edges on map/satellite image
 	*/
-	byte[] traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
+	Vector<Object> traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
 		boolean done = false;
@@ -818,7 +822,11 @@ public class SelectROI{
 				for (int ii = 0; ii< result.length;++ii){
 					if(result[ii] > 1){result[ii]=1;}
 				}
-				return result;
+				Vector<Object> returnVector = new Vector<Object>();
+				returnVector.add(result);
+				returnVector.add(iit);
+				returnVector.add(jiit);
+				return returnVector;
 			}else{
 				if (result[i+j*width] == 0){
 					result[i+j*width] = 2;
@@ -844,11 +852,12 @@ public class SelectROI{
 		}	
 	}
 	
-	boolean resultFill(int i, int j, byte[] tempResult){	
+	Vector<Object> resultFill(int i, int j, byte[] tempResult){	
 		Vector<Integer> initialI = new Vector<Integer>();
 		Vector<Integer> initialJ= new Vector<Integer>();
 		initialI.add(i);
 		initialJ.add(j);
+		int pixelsFilled = 0;
 		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
 			i =initialI.lastElement();
 			j = initialJ.lastElement();
@@ -857,6 +866,7 @@ public class SelectROI{
 
 			if (tempResult[i+j*width] == 0 ){
 				tempResult[i+j*width] = 1;
+				++pixelsFilled;
 			}
 
 			if (tempResult[i-1+j*width] == 0) {
@@ -880,15 +890,17 @@ public class SelectROI{
 			}
 
 		}
-
+		Vector<Object> returnValue = new Vector<Object>();
 		if (initialI.size() > 0 || initialJ.size()>0) {
-			return false;
+			returnValue.add(new Boolean(false));
 		}else{
-			return true;
+			returnValue.add(new Boolean(true));
 		}
+		returnValue.add(new Integer(pixelsFilled));
+		return returnValue;
 	}
 	
-	Vector<Object> findEdge(double[] scaledImage,byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
+	Vector<Object> findEdge(double[] scaledImage,byte[] result,Vector<Integer> area,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;
@@ -936,7 +948,10 @@ public class SelectROI{
 			newJiit.add(j);
 
 			/*Tracing algorithm*/
-			result = traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
+			Vector<Object> returned = traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
+			result = (byte[]) returned.get(0);
+			newIit = (Vector<Integer>) returned.get(1);
+			newJiit = (Vector<Integer>) returned.get(2);
 			len = newIit.size();
 			/*Tracing algorithm done...*/
 
@@ -952,12 +967,13 @@ public class SelectROI{
 						tempRes[iit.lastElement()+jiit.lastElement()*width] = 1;
 					}
 					len = returnedVectors.get(iii).get(0).size();
-					Vector<Object> results = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+					Vector<Object> results = fillResultEdge(result,area,length,beginnings,iit,jiit,len,scaledImage,threshold);
 					result = (byte[]) results.get(0);
 					iit = (Vector<Integer>) results.get(1);
 					jiit = (Vector<Integer>) results.get(2);
 					beginnings = (Vector<Integer>) results.get(3);
 					length = (Vector<Integer>) results.get(4);
+					area = (Vector<Integer>) results.get(5);
 					
 					//IJ.error("begs "+beginnings.size()+" lengths "+length.size()+"retVects"+returnedVectors.size());
 					/*
@@ -981,12 +997,13 @@ public class SelectROI{
 					iit.add(newIit.get(ii));
 					jiit.add(newJiit.get(ii));
 				}
-				Vector<Object> results = fillResultEdge(result,length,beginnings,iit,jiit,len,scaledImage,threshold);
+				Vector<Object> results = fillResultEdge(result,area,length,beginnings,iit,jiit,len,scaledImage,threshold);
 				result = (byte[]) results.get(0);
 				iit = (Vector<Integer>) results.get(1);
 				jiit = (Vector<Integer>) results.get(2);
 				beginnings = (Vector<Integer>) results.get(3);
 				length = (Vector<Integer>) results.get(4);
+				area = (Vector<Integer>) results.get(5);
 			}
 							/*Debugging*/
 				/*
@@ -1026,6 +1043,7 @@ public class SelectROI{
 		returnVector.add(jiit);
 		returnVector.add(beginnings);
 		returnVector.add(length);
+		returnVector.add(area);
 		//IJ.error("begs "+begi
 		
 		return returnVector;
@@ -1066,7 +1084,8 @@ public class SelectROI{
 		return null;
 	}
 	
-	Vector<Object> fillResultEdge(byte[] result,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
+	Vector<Object> fillResultEdge(byte[] result,Vector<Integer> area,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
+		int pixelsFilled = 0;
 		if (len > 0){
 			length.add(len);
 			beginnings.add(iit.size()-len);
@@ -1084,7 +1103,9 @@ public class SelectROI{
 				if (tempCoordinates == null){
 					break;
 				}else{
-					possible = resultFill(tempCoordinates[0],tempCoordinates[1],tempResult);
+					Vector<Object> returned = resultFill(tempCoordinates[0],tempCoordinates[1],tempResult);
+					possible = (Boolean) returned.get(0);
+					pixelsFilled+= (Integer) returned.get(1);
 				}
 				tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
 			}
@@ -1101,12 +1122,14 @@ public class SelectROI{
 				beginnings.remove(beginnings.size()-1);
 			}
 		}
+		area.add(pixelsFilled);
 		Vector<Object> results = new Vector<Object>();
 		results.add(result);
 		results.add(iit);
 		results.add(jiit);
 		results.add(beginnings);
 		results.add(length);
+		results.add(area);
 		//IJ.error("begs "+beginnings.size()+" lengths "+length.size());
 		return results;
 	}

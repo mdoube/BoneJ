@@ -24,14 +24,15 @@ public class ImageAndAnalysisDetails{
 	public boolean noFiltering;
 	public double scalingFactor;
 	public double constant;
-	public double marrowThreshold;
+	
 	public double airThreshold;		//Fat lower threshold
 	public double fatThreshold;		//Fat higher threshold
 	public double muscleThreshold;	//Muscle lower threshold
+	public double marrowThreshold;	//Marrow higher threshold
+	public double softThreshold;	//Soft tissues higher threshold
 	public double areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 	public double rotationThreshold;
-	public double BMDthreshold;		//For cortical BMD analyses
-	public double softThreshold;	//Soft tissues higher threshold
+	public double BMDthreshold;		//For cortical BMD analyses	
 	public double boneThreshold;	//Thresholding bone from the rest and cortical AREA analyses (CoA, SSI, I)
 	public int filterSize;
 	public int softFilterSize;
@@ -60,7 +61,7 @@ public class ImageAndAnalysisDetails{
 	
 	//ImageJ plugin constructor
 	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,double scalingFactor, double constant,
-									double airThreshold,double fatThreshold, double muscleThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
+									double airThreshold,double fatThreshold, double muscleThreshold, double marrowThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
 									String roiChoice,String roiChoiceSt,String rotationChoice,String[] choiceLabels,
 									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
@@ -74,7 +75,7 @@ public class ImageAndAnalysisDetails{
 		this.rotationThreshold		= rotationThreshold;
 		this.fatThreshold	 		= fatThreshold;
 		this.muscleThreshold 		= muscleThreshold;
-		this.marrowThreshold 		= 300;
+		this.marrowThreshold 		= marrowThreshold;
 		this.areaThreshold 			= areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
 		this.BMDthreshold 			= BMDthreshold;		//For cortical BMD analyses
 		this.softThreshold 			= softThreshold;	//Thresholding soft tissues + marrow from bone
