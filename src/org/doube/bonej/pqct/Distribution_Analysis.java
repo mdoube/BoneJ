@@ -534,7 +534,7 @@ public class Distribution_Analysis implements PlugIn {
 	
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
-		String[] parameterNames = {"Fat Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
+		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
 		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice"};
 			
@@ -622,7 +622,10 @@ public class Distribution_Analysis implements PlugIn {
 
 	String printResults(String results,DetermineAlfa determineAlfa, ImagePlus imp){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
-		String[] parameters = {Double.toString(fatThreshold),Double.toString(areaThreshold),Double.toString(BMDThreshold),Double.toString(scalingFactor),Double.toString(constant)};
+		String[] parameters = {Double.toString(airThreshold)
+								,Double.toString(fatThreshold),Double.toString(muscleThreshold)
+								,Double.toString(softThreshold),Double.toString(rotationThreshold)
+								,Double.toString(scalingFactor),Double.toString(constant)};
 
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
