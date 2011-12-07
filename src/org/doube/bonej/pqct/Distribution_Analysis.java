@@ -236,8 +236,10 @@ public class Distribution_Analysis implements PlugIn {
 			}else{
 				if(imp.getImageStackSize() == 1){
 					imageName = imp.getTitle();
+					imageInfo+="File Name:"+imageName+"\n";
 				}else{
 					imageName = imageInfo.substring(0,imageInfo.indexOf("\n"));
+					imageInfo+="File Name:"+imageName+"\n";
 				}
 			}
 
