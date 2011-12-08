@@ -46,8 +46,10 @@ public class SelectROI{
 	public Vector<Integer> cortexRoiJ;	//For BMD analyses
 	public Vector<Integer> cortexAreaRoiI;	//For AREA analyses
 	public Vector<Integer> cortexAreaRoiJ;	//For AREA analyses
+	public Vector<Integer> area;
 	public Vector<Integer> length;
 	public Vector<Integer> beginnings;
+	
 
 	public int height;
 	public int width;
@@ -133,7 +135,7 @@ public class SelectROI{
 		beginnings				= new Vector<Integer> ();
 		iit						= new Vector<Integer> ();
 		jiit					= new Vector<Integer> ();
-		Vector<Integer> area	= new Vector<Integer> ();
+		area	= new Vector<Integer> ();
 		result 					= new byte[width*height];
 		Vector<Object> boneMasks = getSieve(tempScaledImage,result,area,length,beginnings, iit, jiit,roiI,roiJ,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
 		sieve			= (byte[]) boneMasks.get(0);
@@ -143,6 +145,7 @@ public class SelectROI{
 		beginnings		= (Vector<Integer>) boneMasks.get(4);
 		length			= (Vector<Integer>) boneMasks.get(5);
 		area			= (Vector<Integer>) boneMasks.get(6);
+		selection		= (Integer)	 boneMasks.get(7);
 		/*Add the roi to the image*/
 		if (setRoi){
 			int[] xcoordinates = new int[roiI.size()];
@@ -346,6 +349,7 @@ public class SelectROI{
 		returnVector.add(beginnings);
 		returnVector.add(length);
 		returnVector.add(area);
+		returnVector.add(new Integer(selection));
 		return returnVector;
 	}
 	
