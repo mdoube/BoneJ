@@ -562,7 +562,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(cOn){
-			String[] coHeadings = {"MedMassD [g/cm³]","MeD [mg/cm³]","MeA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","BSId[g²/cm4]"};
+			String[] coHeadings = {"MaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -681,13 +681,14 @@ public class Distribution_Analysis implements PlugIn {
 	
 	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
 		results+=cortAnalysis.medMassD+"\t";
-		results+=cortAnalysis.MeD+"\t";
-		results+=cortAnalysis.MeA+"\t";
+		results+=cortAnalysis.MaD+"\t";
+		results+=cortAnalysis.MaA+"\t";
 		results+=cortAnalysis.BMD+"\t";
 		results+=cortAnalysis.AREA+"\t";
 		results+=cortAnalysis.SSI+"\t";
 		results+=cortAnalysis.ToD+"\t";
 		results+=cortAnalysis.ToA+"\t";
+		results+=cortAnalysis.MeA+"\t";
 		results+=cortAnalysis.BSId+"\t";
 		return results;
 	}

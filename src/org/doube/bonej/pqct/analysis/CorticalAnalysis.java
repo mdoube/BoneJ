@@ -26,8 +26,9 @@ import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 public class CorticalAnalysis{
 	public double BMD;
 	public double AREA;
-	public double MeA;
-	public double MeD;
+	public double MeA;	//Medullary area = ToA-CoA
+	public double MaA;	//Marrow area
+	public double MaD;	//Marrow density
 	public double medMassD;
 	public double ToA;
 	public double ToD;
@@ -47,22 +48,22 @@ public class CorticalAnalysis{
 	{
 		ToA =0;
 		ToD = 0;
-		MeA =0;
-		MeD = 0;
+		MaA =0;
+		MaD = 0;
 		for (int i =0;i<roi.width*roi.height;i++){
 			if (roi.sieve[i] >0){
 				ToA +=1;
 				ToD +=roi.scaledImage[i];
 				if (roi.scaledImage[i] < roi.details.marrowThreshold){ //Marrow analysis
-					MeA +=1;
-					MeD +=roi.scaledImage[i];
+					MaA +=1;
+					MaD +=roi.scaledImage[i];
 				}
 			}
 		}
 		ToD/=ToA;
 		ToA*=roi.pixelSpacing*roi.pixelSpacing;
-		MeD/=MeA;
-		MeA*=roi.pixelSpacing*roi.pixelSpacing;
+		MaD/=MaA;
+		MaA*=roi.pixelSpacing*roi.pixelSpacing;
 		/*Mass density is calculated by converting the BMD to Hounsfield Units, and scaling the HUs to comparable HUs between machines
 		**HUs are then scaled to mass density as described in Schneider et al. Phys. Med. Biol. 45 (2000) 459–478.
 		*/
@@ -88,6 +89,7 @@ public class CorticalAnalysis{
 			cortexCenter[1]+=(double)roi.cortexAreaRoiJ.get(j);
 		}
 		AREA=(double)roi.cortexAreaRoiI.size()*roi.pixelSpacing*roi.pixelSpacing;
+		MeA = ToA - AREA;
 		cortexCenter[0] /=(double)roi.cortexAreaRoiI.size();
 		cortexCenter[1] /=(double)roi.cortexAreaRoiJ.size();
 		maxRadiusY = 0; //y for cortical pixels. used for BSI calculations, i.e. density weighted section modulus

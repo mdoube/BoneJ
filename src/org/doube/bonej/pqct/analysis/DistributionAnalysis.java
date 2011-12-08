@@ -75,6 +75,8 @@ public class DistributionAnalysis{
 	public double[] endoCorticalBMDs;
 	public double[] midCorticalBMDs;
 	public double[] periCorticalBMDs;
+	public double[] radialDistribution;
+	public double[] polarDistribution;
 	public boolean preventPeeling;
 	
 	public DistributionAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
@@ -183,6 +185,9 @@ public class DistributionAnalysis{
 				periCorticalBMDs[pp] += BMDj.get(2)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 			}
 		}
+		radialDistribution	= new double[divisions];
+		polarDistribution	= new double[(int) (360/sectorWidth)];
+		
 		
 	}
 	void calculateRadiiNoPeeling(){
