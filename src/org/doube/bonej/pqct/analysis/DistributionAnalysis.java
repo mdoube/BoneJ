@@ -172,9 +172,11 @@ public class DistributionAnalysis{
 		periCorticalBMDs = new double[(int) (360/sectorWidth)];
 		int pp;
 		int dd;
+		
+		double[][] corticalDensity = new double[(int) divisions][(int) (360/sectorWidth)];
 		//Calculate the division and sector values of vBMD
-		for (pp = 0;pp < (int) (360/sectorWidth); pp++){
-			for (dd = 0;dd<(int) sectorWidth;dd++){
+		for (pp = 0;pp < (int) (360/sectorWidth); ++pp){
+			for (dd = 0;dd<(int) sectorWidth;++dd){
 				endocorticalRadii[pp] += eRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				pericorticalRadii[pp] += pRad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				peeledEndocorticalRadii[pp] += pERad[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
@@ -184,10 +186,30 @@ public class DistributionAnalysis{
 				midCorticalBMDs[pp] += BMDj.get(1)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 				periCorticalBMDs[pp] += BMDj.get(2)[pind.get((int) (pp*sectorWidth+dd))]/(double) sectorWidth;
 			}
+			corticalDensity[0][pp] = endoCorticalBMDs[pp];
+			corticalDensity[1][pp] = midCorticalBMDs[pp];
+			corticalDensity[2][pp] = periCorticalBMDs[pp];
 		}
-		radialDistribution	= new double[divisions];
-		polarDistribution	= new double[(int) (360/sectorWidth)];
+				
+		//Radial distribution
+		radialDistribution	= new double[(int) divisions];
+		for (int i =0; i<divisions; ++i){
+			radialDistribution[i] = 0;
+			for (int j = 0;j < (int) (360/sectorWidth); ++j){
+				radialDistribution[i] += corticalDensity[i][j];
+			}
+			radialDistribution[i]/= (double) ((int) (360/sectorWidth));
+		}
 		
+		//Polar distribution
+		polarDistribution	= new double[(int) (360/sectorWidth)];
+		for (int j = 0;j < (int) (360/sectorWidth); ++j){
+			polarDistribution[j] = 0;
+			for (int i =0; i<divisions; ++i){		
+				polarDistribution[j] += corticalDensity[i][j];
+			}
+			polarDistribution[j]/= (double) divisions;
+		}
 		
 	}
 	void calculateRadiiNoPeeling(){

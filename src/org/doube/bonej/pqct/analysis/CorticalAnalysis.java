@@ -29,7 +29,7 @@ public class CorticalAnalysis{
 	public double MeA;	//Medullary area = ToA-CoA
 	public double MaA;	//Marrow area
 	public double MaD;	//Marrow density
-	public double medMassD;
+	public double MaMassD;
 	public double ToA;
 	public double ToD;
 	public double maxRadiusY;
@@ -71,9 +71,9 @@ public class CorticalAnalysis{
 		double mu;		//Med BMD as attenuation coefficient
 		double muH2O;	//Water as attenuation coefficient
 		muH2O = (0.0-roi.details.constant)/roi.details.scalingFactor;
-		mu = (MeD-roi.details.constant)/roi.details.scalingFactor;
+		mu = (MaD-roi.details.constant)/roi.details.scalingFactor;
 		H = mu/muH2O-1.0;	//Equation 6 in Schneider et al. 2000 *1000 omitted
-		medMassD = 1.018+0.893*H;					//Equation 21 in Schneider et al. 2000 *10^-3 omitted
+		MaMassD = 1.018+0.893*H;					//Equation 21 in Schneider et al. 2000 *10^-3 omitted
 
 		BSId = ToD*ToD*ToA/100000000.0; //To make it look nicer, we'll use a unit of g^2/cm^4
 		BMD = 0;

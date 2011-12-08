@@ -159,12 +159,13 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
-		/*
+		
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
-		*/
+		/*
 		dialog.addNumericField("Scaling_coefficient (slope)", 0.743, 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",-751.873, 4, 8, null);
+		*/
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[2]); 
@@ -325,29 +326,21 @@ public class Distribution_Analysis implements PlugIn {
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
 				results = printCorticalResults(results,cortAnalysis);
 				if(makeImage){
-					resultImage = addBoneSieve(resultImage,roi.sieve);
+					resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
 				}
 				
 			}
 			if (mOn){
 				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
-				/*
-				if(!dOn && !conOn && makeImage){
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0);
-
-				}
-				*/
 			}
 			if (conOn){
 				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printConcentricRingResults(results,concentricRingAnalysis);
-				/*
 				if(!dOn && makeImage){
-					resultImage = getResultImage(roi.scaledImage,roi.width,roi.height,roi.minimum,roi.maximum,roi.sieve,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter,determineAlfa.pind, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
-
+					resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
+					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
 				}
-				*/
 			}
 			
 			
@@ -355,8 +348,13 @@ public class Distribution_Analysis implements PlugIn {
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
 				if (makeImage){
-					resultImage = addDensityDistribution(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter,determineAlfa.pind, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+					resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
 				}
+			}
+			
+			if (dOn || conOn && makeImage){
+				resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 			}
 			
 			if (!suppressImages && resultImage!= null){
@@ -408,7 +406,7 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	/*Add bone sieve*/
-	ImagePlus addBoneSieve(ImagePlus tempImage, byte[] sieve){
+	ImagePlus addBoneSieve(ImagePlus tempImage, byte[] sieve,double[] scaledImage, double marrowThreshold){
 		for (int y = 0; y < tempImage.getHeight();++y) {
 			for (int x = 0; x < tempImage.getWidth();++x) {
 				if (sieve[x+y*tempImage.getWidth()] == 1){   //Tint bone area with purple
@@ -417,7 +415,19 @@ public class Distribution_Analysis implements PlugIn {
 					for (int i = 0; i<3;++i){
 						rgb[i] = (value >>(i*8))& 0XFF;
 					}
-					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[1]));
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[0]));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+				if (sieve[x+y*tempImage.getWidth()] == 1 && scaledImage[x+y*tempImage.getWidth()] <=marrowThreshold){   //Tint marrow area with green
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					if (rgb[0] < 255-50){
+						rgb[0]+=50;
+					}
+					tempImage.getProcessor().setColor(new Color(0,0,rgb[0]));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
@@ -426,7 +436,7 @@ public class Distribution_Analysis implements PlugIn {
 	}
 		
 	/*addDenstiyDistribution*/
-	ImagePlus addDensityDistribution(ImagePlus tempImage,double alfa,double[] marrowCenter,Vector<Integer> pind,Vector<Integer> pindColor,
+	ImagePlus addRadii(ImagePlus tempImage,double alfa,double[] marrowCenter,Vector<Integer> pindColor,
 										double[] R, double[] R2, double[] Theta){
 		//Draw unrotated radii
 		for(int i = 0; i< 360;i++) {//45;i++) {//
@@ -440,6 +450,9 @@ public class Distribution_Analysis implements PlugIn {
 			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
 			tempImage.getProcessor().drawPixel(x,y);
 		}
+		return tempImage;
+	}
+	ImagePlus addMarrowCenter(ImagePlus tempImage,double alfa,double[] marrowCenter){
 		/*plot marrowCenter*/
 		for(int i = 0; i< 10;i++) {//45;i++) {//
 			int x = ((int) (marrowCenter[0]+i));
@@ -459,49 +472,18 @@ public class Distribution_Analysis implements PlugIn {
 			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.cos(-alfa/180*Math.PI)));
 			tempImage.getProcessor().setColor(new Color(0,0,255));
 			tempImage.getProcessor().drawPixel(x,y);
-
 		}
+		return tempImage;
+	}
+	
+	ImagePlus addRotate(ImagePlus tempImage,double alfa){
 		tempImage.getProcessor().setInterpolate(true);
 		tempImage.getProcessor().rotate(alfa);
 		return tempImage;
 	}
 	
-	/*Mass distribution result image*/
-	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa){
-		ImagePlus tempImage = new ImagePlus("Visual results");
-		tempImage.setProcessor(new FloatProcessor(width,height,values));
-		new ImageConverter(tempImage).convertToRGB();
-		for (int y = 0; y < height;++y) {
-			for (int x = 0; x < width;++x) {
-				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
-					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
-					tempImage.getProcessor().drawPixel(x,y);
-				}
-			}
-		}
-		tempImage.getProcessor().setInterpolate(true);
-		tempImage.getProcessor().rotate(alfa);
-		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
-		return tempImage;
-	}
-
 	/*Concentric rings distribution result image*/
-	ImagePlus getResultImage(double[] values,int width,int height, double min, double max, byte[] sieve, double alfa,
-							double[] marrowCenter,Vector<Integer> pind,Vector<Integer> pindColor, double[] R, double[] Theta){
-		ImagePlus tempImage = new ImagePlus("Visual results");
-		tempImage.setProcessor(new FloatProcessor(width,height,values));
-		new ImageConverter(tempImage).convertToRGB();
-		for (int y = 0; y < height;++y) {
-			for (int x = 0; x < width;++x) {
-				if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-					double scale = (values[x+y*tempImage.getWidth()]-min)/(max-min);
-					tempImage.getProcessor().setColor(new Color((int) (127.0*scale),0,(int) (255.0*scale)));
-					tempImage.getProcessor().drawPixel(x,y);
-				}
-			}
-		}
-		 
+	ImagePlus addPeriRadii(ImagePlus tempImage,double[] marrowCenter,Vector<Integer> pindColor, double[] R, double[] Theta){
 		//Draw unrotated radii
 		for(int i = 0; i< Theta.length;i++) {//45;i++) {//
 			int x = ((int) (marrowCenter[0]+R[i]*Math.cos(Theta[i])));
@@ -510,30 +492,6 @@ public class Distribution_Analysis implements PlugIn {
 			tempImage.getProcessor().setColor(new Color(0,(int) (255.0*colorScale),(int) (255.0*(1.0-colorScale))));
 			tempImage.getProcessor().drawPixel(x,y);
 		}
-		/*plot marrowCenter*/
-		for(int i = 0; i< 10;i++) {//45;i++) {//
-			int x = ((int) (marrowCenter[0]+i));
-			int y = ((int) (marrowCenter[1]));
-			tempImage.getProcessor().setColor(new Color(0,255,255));
-			tempImage.getProcessor().drawPixel(x,y);
-			x = (int) (marrowCenter[0]);
-			y = (int) (marrowCenter[1]+i);
-			tempImage.getProcessor().setColor(new Color(255,0,255));
-			tempImage.getProcessor().drawPixel(x,y);
-			/*Plot rotated axes...*/
-			x = ((int) ((double) marrowCenter[0]+((double) i)*Math.cos(-alfa/180*Math.PI)));
-			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.sin(-alfa/180*Math.PI)));
-			tempImage.getProcessor().setColor(new Color(0,255,0));
-			tempImage.getProcessor().drawPixel(x,y);
-			x = ((int) ((double) marrowCenter[0]+((double) -i)*Math.sin(-alfa/180*Math.PI)));
-			y = ((int) ((double) marrowCenter[1]+((double) i)*Math.cos(-alfa/180*Math.PI)));
-			tempImage.getProcessor().setColor(new Color(0,0,255));
-			tempImage.getProcessor().drawPixel(x,y);
-
-		}
-		tempImage.getProcessor().setInterpolate(true);
-		tempImage.getProcessor().rotate(alfa);
-		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
 		return tempImage;
 	}
 	
@@ -585,6 +543,15 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(dOn){
+			//Radial distribution
+			for (int i =0; i < (int) divisions; ++i){
+				headings+= "Radial division "+i+" vBMD [mg/cm³]\t";
+			}
+			//Polar distribution
+			for (int i = 0;i<((int) 360/sectorWidth);++i){
+				headings+= "Polar sector "+i+" vBMD [mg/cm³]\t";
+			}
+			
 			for (int i = 0;i<((int) 360/sectorWidth);++i){
 				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical radius [mm]\t";
 			}
@@ -680,7 +647,7 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
-		results+=cortAnalysis.medMassD+"\t";
+		results+=cortAnalysis.MaMassD+"\t";
 		results+=cortAnalysis.MaD+"\t";
 		results+=cortAnalysis.MaA+"\t";
 		results+=cortAnalysis.BMD+"\t";
@@ -716,6 +683,16 @@ public class Distribution_Analysis implements PlugIn {
 
 	
 	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis){
+		//Radial distribution
+		for (int i =0; i < (int) divisions; ++i){
+			results+= DistributionAnalysis.radialDistribution[i]+"\t";
+		}
+		//Polar distribution
+		for (int i = 0;i<((int) 360/sectorWidth);++i){
+			results+= DistributionAnalysis.polarDistribution[i]+"\t";
+		}
+		
+		
 		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
 			results += DistributionAnalysis.endocorticalRadii[pp]+"\t";
 		}
