@@ -141,7 +141,7 @@ public class DetermineAlfa{
 			double[] otherBoneCenter = calculateCenter(secondBoneSieve, tempRoi.width, tempRoi.height);			/*Calculate other bone centre*/
 			double x = 0;
 			double y = 0;
-			IJ.log(selectedBoneCenter[0]+" "+selectedBoneCenter[1]+" "+otherBoneCenter[0]+" "+otherBoneCenter[1]);
+			//IJ.log(selectedBoneCenter[0]+" "+selectedBoneCenter[1]+" "+otherBoneCenter[0]+" "+otherBoneCenter[1]);
 			/*Rotate unselected bone to right*/
 			if (details.rotationChoice.equals(details.rotationLabels[3])){
 				x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
