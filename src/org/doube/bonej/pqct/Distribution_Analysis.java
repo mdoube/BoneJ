@@ -150,12 +150,12 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("No_filtering",false);
-		dialog.addNumericField("Air_threshold", -176.5910994, 4, 8, null);	//Anything above this is fat or more dense
-		dialog.addNumericField("Fat threshold", -26.488664916, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addCheckbox("No_filtering",true);
+		dialog.addNumericField("Air_threshold", -171.2, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", -25.7, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 61.8068848040001, 4, 8, null);		//Anything above this is muscle or more dense		
-		dialog.addNumericField("Soft_tissue_threshold", 176.59109944, 4, 8, null);		//Anything  between this and muscle threshold is muscle
+		dialog.addNumericField("Marrow_threshold", 59.9, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Soft_tissue_threshold", 171.2, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
@@ -164,8 +164,8 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
 		*/
-		dialog.addNumericField("Scaling_coefficient (slope)", 0.848, 4, 8, null);
-		dialog.addNumericField("Scaling_constant (intercept)",-882.955, 4, 8, null);
+		dialog.addNumericField("Scaling_coefficient (slope)", 0.821, 4, 8, null);
+		dialog.addNumericField("Scaling_constant (intercept)",-856.036, 4, 8, null);
 		
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
@@ -182,12 +182,12 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
-		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
+		dialog.addCheckbox("Set_distribution_results_rotation_manually",true);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",true);
+		dialog.addCheckbox("Guess_right",false);
 		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Stacked_bones",false);
 		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);

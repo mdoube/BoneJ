@@ -1056,8 +1056,8 @@ public class SelectROI{
 				steer[0] = (int) Math.round(Math.cos(direction));
 				steer[1]= (int) Math.round(Math.sin(direction));
 				/*Handle OOB*/
-				while ((returnCoordinates[0]+steer[0])<0 && (returnCoordinates[0]+steer[0])>=width &&
-						(returnCoordinates[1]+steer[1])<0 && (returnCoordinates[1]+steer[1])>=height){
+				while ((returnCoordinates[0]+steer[0])<0 || (returnCoordinates[0]+steer[0])>=width ||
+						(returnCoordinates[1]+steer[1])<0 || (returnCoordinates[1]+steer[1])>=height){
 					direction+=Math.PI/4.0;
 					steer[0] = (int) Math.round(Math.cos(direction));
 					steer[1]= (int) Math.round(Math.sin(direction));
