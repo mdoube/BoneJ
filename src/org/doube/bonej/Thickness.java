@@ -10,6 +10,7 @@ import ij.process.*;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+import org.doube.util.StackStats;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -124,7 +125,7 @@ public class Thickness implements PlugIn {
 				impLTC = getLocalThickness(imp, inverse);
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
-			double[] stats = meanStdDev(impLTC);
+			double[] stats = StackStats.meanStdDev(impLTC);
 			insertResults(imp, stats, inverse);
 			if (doGraphic && !Interpreter.isBatchMode()) {
 				impLTC.show();
@@ -146,7 +147,7 @@ public class Thickness implements PlugIn {
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
-			double[] stats = meanStdDev(impLTCi);
+			double[] stats = StackStats.meanStdDev(impLTCi);
 			insertResults(imp, stats, inverse);
 			if (doGraphic && !Interpreter.isBatchMode()) {
 				impLTCi.show();
@@ -1276,56 +1277,7 @@ public class Thickness implements PlugIn {
 		return sNew[k][i + w * j];
 	}
 
-	/**
-	 * Work out some summary stats
-	 * 
-	 * @param imp
-	 *            32-bit thickness image
-	 * @param inverse
-	 *            true if Tb.Sp, false if Tb.Th
-	 * @return double[] containing mean, standard deviation and maximum as its
-	 *         0th and 1st and 2nd elements respectively
-	 * 
-	 */
-	private double[] meanStdDev(ImagePlus imp) {
-		final int w = imp.getWidth();
-		final int h = imp.getHeight();
-		final int d = imp.getStackSize();
-		final int wh = w * h;
-		final ImageStack stack = imp.getStack();
-		long pixCount = 0;
-		double sumThick = 0;
-		double maxThick = 0;
-
-		for (int s = 1; s <= d; s++) {
-			final float[] slicePixels = (float[]) stack.getPixels(s);
-			for (int p = 0; p < wh; p++) {
-				final double pixVal = slicePixels[p];
-				if (pixVal > 0) {
-					sumThick += pixVal;
-					maxThick = Math.max(maxThick, pixVal);
-					pixCount++;
-				}
-			}
-		}
-		final double meanThick = sumThick / pixCount;
-
-		double sumSquares = 0;
-		for (int s = 1; s <= d; s++) {
-			final float[] slicePixels = (float[]) stack.getPixels(s);
-			for (int p = 0; p < wh; p++) {
-				final double pixVal = slicePixels[p];
-				if (pixVal > 0) {
-					final double residual = meanThick - pixVal;
-					sumSquares += residual * residual;
-				}
-			}
-		}
-		final double stDev = Math.sqrt(sumSquares / pixCount);
-		double[] stats = { meanThick, stDev, maxThick };
-		return stats;
-	}
-
+	
 	private void insertResults(ImagePlus imp, double[] stats, boolean inverse) {
 		final double meanThick = stats[0];
 		final double stDev = stats[1];
