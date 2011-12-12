@@ -94,7 +94,27 @@ public class VolumeFractionTest {
 
 	@Test
 	public void testGetSurfaceVolumeImagePlusDoubleDoubleIntBooleanBoolean() {
-		fail("Not yet implemented"); // TODO
+		RoiManager roiMan = new RoiManager();
+		int w = rod.getWidth();
+		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
+		double[] vols = vf.getSurfaceVolume(rod, 1, 255, 1, true, false);
+		assertArrayEquals(quarterRod, vols, 500);
+		roiMan.close();
+		
+		roiMan = new RoiManager();
+		w = sphere.getWidth();
+		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
+		vols = vf.getSurfaceVolume(sphere, 1, 255, 1, true, false);
+		assertArrayEquals(quarterSphere, vols, 300);
+		roiMan.close();
+		
+		roiMan = new RoiManager();
+		w = brick.getWidth();
+		int h = brick.getHeight();
+		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, h / 2)));
+		vols = vf.getSurfaceVolume(brick, 1, 255, 1, true, false);
+		assertArrayEquals(quarterBrick, vols, 200);
+		roiMan.close();
 	}
 
 }
