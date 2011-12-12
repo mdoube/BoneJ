@@ -151,25 +151,26 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
 		dialog.addCheckbox("No_filtering",false);
-		dialog.addNumericField("Air_threshold", -155.3, 4, 8, null);	//Anything above this is fat or more dense
-		dialog.addNumericField("Fat threshold", -23.295, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addNumericField("Air_threshold", -176.5910994, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", -26.488664916, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 54.35493, 4, 8, null);		//Anything above this is muscle or more dense		
-		dialog.addNumericField("Soft_tissue_threshold", 155.2998, 4, 8, null);		//Anything  between this and muscle threshold is muscle
+		dialog.addNumericField("Marrow_threshold", 61.8068848040001, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Soft_tissue_threshold", 176.59109944, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
 		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
-		
+		//Debugging
+		/*
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
-		/*
-		dialog.addNumericField("Scaling_coefficient (slope)", 0.743, 4, 8, null);
-		dialog.addNumericField("Scaling_constant (intercept)",-751.873, 4, 8, null);
 		*/
+		dialog.addNumericField("Scaling_coefficient (slope)", 0.848, 4, 8, null);
+		dialog.addNumericField("Scaling_constant (intercept)",-882.955, 4, 8, null);
+		
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
-		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[9]); 
+		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[9]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);

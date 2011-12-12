@@ -296,8 +296,8 @@ public class SelectROI{
 		if (roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
 		if (roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
 		if (roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,area,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,area,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,area,length,iit,jiit,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,area,length,iit,jiit,tempScaledImage,details.fatThreshold);}
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(area);}
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,area);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,area);}	
@@ -581,8 +581,8 @@ public class SelectROI{
 		return counter;
 	}
 	
-	int selectRoiCentralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
-		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,length,iit,jiit,tempScaledImage,fatThreshold);
+	int selectRoiCentralBone(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,area,length,iit,jiit,tempScaledImage,fatThreshold);
 		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
@@ -592,8 +592,8 @@ public class SelectROI{
 		return counter;
 	}
 
-	int selectRoiPeripheralBone(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
-		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,length,iit,jiit,tempScaledImage,fatThreshold);
+	int selectRoiPeripheralBone(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,area,length,iit,jiit,tempScaledImage,fatThreshold);
 		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
@@ -603,7 +603,7 @@ public class SelectROI{
 		return counter;
 	}
 	
-	public double[] calcDistancesFromCentreOfLimb(Vector<Integer> beginnings,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+	public double[] calcDistancesFromCentreOfLimb(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
 		double[] softPoints = new double[3];
 		for (int j=0;j<3;++j){
 				softPoints[j]=0;
@@ -616,7 +616,7 @@ public class SelectROI{
 			}
 		}
 		/*Find the centre of area of the limb*/
-				int maxIndice = selectRoiBiggestBone(length);
+				int maxIndice = selectRoiBiggestBone(area);
 				byte[] limbSieve = new byte[tempScaledImage.length];
 				limbSieve[iit.get(beginnings.get(maxIndice))+jiit.get(beginnings.get(maxIndice))*width] = 1;
 				/*Dilate muscleSieve, into neighbouring fat pixels*/
@@ -764,34 +764,28 @@ public class SelectROI{
 		initJ = j;
 		
 		/*Debugging*/
+		
+		//IJ.error("initI "+i+" initJ "+j);
 		/*
-		IJ.error("initI "+i+" initJ "+j);
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
 		tempImage.setProcessor(new ByteProcessor(width,height));
 		tempImage.getProcessor().setBackgroundValue(0.0);
 		tempImage.getProcessor().setValue(255.0);
 		tempImage.show();
 		*/
-		/*
-				for (int y = 0; y < height;++y) {
-					for (int x = 0; x < width;++x) {
-						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-						if (result[x+y*width] > 0){   //Tint roi area color with violet
-							tempImage.getProcessor().drawPixel(x,y);
-						}
-					}
-				}
-				tempImage.show();
-				*/
 		while(true){
 			int counter = 0;
 			previousDirection = direction;
-			if (scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold){//Rotate counter clockwise
+			/*Handle going out of bounds by considering out of bounds to be  less than threshold*/
+			if (i+((int) Math.round(Math.cos(direction)))  >=0 && i+((int) Math.round(Math.cos(direction)))  < width
+				&& j+((int) Math.round(Math.sin(direction)))  >=0 && j+((int) Math.round(Math.sin(direction)))  < height
+				&& scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold
+				 ){//Rotate counter clockwise
 				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
 				)
 				&& counter < 8
-				&& i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  >0 && i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  < width-1
-				&& j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  >0 && i+j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  < height-1
+				&& i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  >=0 && i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  < width
+				&& j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  >=0 && j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  < height
 				){
 					direction-=Math.PI/4.0;
 					++counter;
@@ -801,23 +795,16 @@ public class SelectROI{
 					
 				}
 			}else{//Rotate clockwise
-				while((scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold 
-				)
-				&& counter < 8){
+				while((
+				i+((int) Math.round(Math.cos(direction)))  <0 || i+((int) Math.round(Math.cos(direction)))  >= width || 
+				j+((int) Math.round(Math.sin(direction)))  <0 || j+((int) Math.round(Math.sin(direction)))  >= height || 				
+				scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold				
+				) && counter < 8){
 					direction+=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
 						break;
 					}
-					/*Handle going out of bounds*/
-					/*
-					while ((i+((int) Math.round(Math.cos(direction)))  <=0 || i+((int) Math.round(Math.cos(direction)))  >= width-1
-					|| j+((int) Math.round(Math.sin(direction)))  <=0 || i+j+((int) Math.round(Math.sin(direction)))  >= height-1 )
-					&& counter < 8){
-						direction+=Math.PI/4.0;
-						++counter;
-					}
-					*/
 				}
 
 			}
@@ -831,6 +818,7 @@ public class SelectROI{
 				returnVector.add(result);
 				returnVector.add(iit);
 				returnVector.add(jiit);
+				/*tempImage.close();*/
 				return returnVector;
 			}else{
 				if (result[i+j*width] == 0){
@@ -854,7 +842,7 @@ public class SelectROI{
 				*/
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
-		}	
+		}		
 	}
 	
 	Vector<Object> resultFill(int i, int j, byte[] tempResult){	
