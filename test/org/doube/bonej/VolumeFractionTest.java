@@ -60,7 +60,24 @@ public class VolumeFractionTest {
 		RoiManager roiMan = new RoiManager();
 		int w = rod.getWidth();
 		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
-
+		double[] vols = vf.getVolumes(rod, 1, 255, true);
+		assertArrayEquals(quarterRod, vols, 0);
+		roiMan.close();
+		
+		roiMan = new RoiManager();
+		w = sphere.getWidth();
+		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
+		vols = vf.getVolumes(sphere, 1, 255, true);
+		assertArrayEquals(quarterSphere, vols, 0);
+		roiMan.close();
+		
+		roiMan = new RoiManager();
+		w = brick.getWidth();
+		int h = brick.getHeight();
+		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, h / 2)));
+		vols = vf.getVolumes(brick, 1, 255, true);
+		assertArrayEquals(quarterBrick, vols, 0);
+		roiMan.close();
 	}
 
 	@Test
