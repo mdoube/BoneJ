@@ -38,15 +38,15 @@ public class SoftTissueAnalysis{
 		for (int i =0;i<roi.width*roi.height;i++){
 			if (roi.softSieve[i] >0 && roi.softSieve[i] <4){
 				LimbA +=1;
-				LimbD +=roi.scaledImage[i];
+				LimbD +=roi.softScaledImage[i];
 			}
 			if (roi.softSieve[i] ==2){
 				FatA +=1;
-				FatD +=roi.scaledImage[i];
+				FatD +=roi.softScaledImage[i];
 			}
 			if (roi.softSieve[i] ==3){
 				MuA +=1;
-				MuD +=roi.scaledImage[i];
+				MuD +=roi.softScaledImage[i];
 			}
 		}
 		LimbD/=LimbA;

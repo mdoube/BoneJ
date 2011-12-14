@@ -47,17 +47,19 @@ public class ScaledImageData{
 		Arrays.sort(tempSort);
 		minimum = tempSort[0];
 		maximum = tempSort[tempSort.length-1];
-		softScaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
+		softScaledImage = medianFilter(unFiltered,width,height,7); //Median filter data
 		if (noFiltering){
 			scaledImage = (double[]) unFiltered.clone();
 		}else{		
 			scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
 		}
 		double[] temp = (double[]) scaledImage.clone();
+		double[] temp2 = (double[]) softScaledImage.clone();
 		if (flipHorizontal){//Flip the image around the horizontal axis...
 			for (int j = 0;j<height;++j){
 				for (int i = 0;i<width;++i){
 					scaledImage[i+(height-1-j)*width] = temp[i+j*width];
+					softScaledImage[i+(height-1-j)*width] = temp2[i+j*width];
 				}
 			}
 		}

@@ -87,6 +87,7 @@ public class DistributionAnalysis{
 		sectorWidth = details.sectorWidth;
 		divisions = details.divisions;
 		preventPeeling = details.preventPeeling;
+		threshold = details.BMDthreshold;
 		minimum = roi.minimum;
 		maximum = roi.maximum;
 		marrowI = roi.boneMarrowRoiI;
@@ -117,9 +118,9 @@ public class DistributionAnalysis{
 				if (peeledROI[i+j*width] >= threshold){
 					if (Math.sqrt((i-marrowCenter[0])*(i-marrowCenter[0])+(j-marrowCenter[1])*(j-marrowCenter[1])) > maxRadius){
 						maxRadius = Math.sqrt((i-marrowCenter[0])*(i-marrowCenter[0])+(j-marrowCenter[1])*(j-marrowCenter[1]));
-						++tempCounter;
-						peeledBMD+=peeledROI[i+j*width];
 					}
+					++tempCounter;
+					peeledBMD+=peeledROI[i+j*width];
 				}
 				if (originalROI[i+j*width] >= threshold){
 					cortexI.add(i);
@@ -127,7 +128,7 @@ public class DistributionAnalysis{
 				}
 			}
 		}
-		peeledBMD/=tempCounter;	
+		peeledBMD/=((double) tempCounter);	
 		
 		cortexCenter = new double[2];
 		for (int i = 0; i< cortexI.size();i++){
