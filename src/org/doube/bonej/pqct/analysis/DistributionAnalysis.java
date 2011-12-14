@@ -79,6 +79,8 @@ public class DistributionAnalysis{
 	public double[] polarDistribution;
 	public boolean preventPeeling;
 	
+	public double peeledBMD;
+	
 	public DistributionAnalysis(SelectROI roi,ImageAndAnalysisDetails details,DetermineAlfa determineAlfa){
 		this.pind = determineAlfa.pind;
 		this.pindColor = determineAlfa.pindColor;
@@ -108,11 +110,15 @@ public class DistributionAnalysis{
 		maxRadius = 0;
 		cortexI = new Vector<Integer>();
 		cortexJ = new Vector<Integer>();
+		peeledBMD = 0;
+		int tempCounter = 0;
 		for (int j = 0; j< height;j++){
 			for (int i = 0; i<width;i++){
 				if (peeledROI[i+j*width] >= threshold){
 					if (Math.sqrt((i-marrowCenter[0])*(i-marrowCenter[0])+(j-marrowCenter[1])*(j-marrowCenter[1])) > maxRadius){
 						maxRadius = Math.sqrt((i-marrowCenter[0])*(i-marrowCenter[0])+(j-marrowCenter[1])*(j-marrowCenter[1]));
+						++tempCounter;
+						peeledBMD+=peeledROI[i+j*width];
 					}
 				}
 				if (originalROI[i+j*width] >= threshold){
@@ -121,6 +127,7 @@ public class DistributionAnalysis{
 				}
 			}
 		}
+		peeledBMD/=tempCounter;	
 		
 		cortexCenter = new double[2];
 		for (int i = 0; i< cortexI.size();i++){

@@ -151,22 +151,24 @@ public class Distribution_Analysis implements PlugIn {
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
 		dialog.addCheckbox("No_filtering",true);
-		dialog.addNumericField("Air_threshold", -171.2, 4, 8, null);	//Anything above this is fat or more dense
-		dialog.addNumericField("Fat threshold", -25.7, 4, 8, null);		//Anything between this and air threshold is fat
-		dialog.addNumericField("Muscle_threshold", 0.0, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 59.9, 4, 8, null);		//Anything above this is muscle or more dense		
-		dialog.addNumericField("Soft_tissue_threshold", 171.2, 4, 8, null);		//Anything  between this and muscle threshold is muscle
+		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
+		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
+		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
+		dialog.addNumericField("Marrow_threshold", 70, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
-		dialog.addNumericField("Area threshold", 600.0, 4, 8, null); 	//550.0
-		dialog.addNumericField("BMD threshold", 600.0, 4, 8, null);		//690.0
-		//Debugging
-		/*
+		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
+		dialog.addNumericField("BMD threshold", 690.0, 4, 8, null);		//690.0
+		
+		
 		dialog.addNumericField("Scaling_coefficient (slope)", calibrationCoefficients[1], 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",calibrationCoefficients[0], 4, 8, null);
-		*/
+		
+		/*
+		//Debugging
 		dialog.addNumericField("Scaling_coefficient (slope)", 0.821, 4, 8, null);
 		dialog.addNumericField("Scaling_constant (intercept)",-856.036, 4, 8, null);
-		
+		*/
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[9]); 
@@ -544,6 +546,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(dOn){
+			headings+="Peeled mean vBMD [mg/cm³]\t";
 			//Radial distribution
 			for (int i =0; i < (int) divisions; ++i){
 				headings+= "Radial division "+i+" vBMD [mg/cm³]\t";
@@ -684,6 +687,7 @@ public class Distribution_Analysis implements PlugIn {
 
 	
 	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis){
+		results+= DistributionAnalysis.peeledBMD+"\t";
 		//Radial distribution
 		for (int i =0; i < (int) divisions; ++i){
 			results+= DistributionAnalysis.radialDistribution[i]+"\t";
