@@ -32,6 +32,7 @@ import ij.process.*;	//Debugging
 public class SelectROI{
 	public ImageAndAnalysisDetails details;
 	public double[] scaledImage;
+	public double[] softScaledImage;
 	public double[] cortexROI;
 	public double minimum;
 	public double maximum;
@@ -82,6 +83,7 @@ public class SelectROI{
 		this.imp = imp;
 		details =detailsIn;
 		scaledImage = (double[])dataIn.scaledImage.clone();
+		softScaledImage = (double[])dataIn.softScaledImage.clone();
 		pixelSpacing = dataIn.pixelSpacing;
 		imageSavePath = details.imageSavePath;
 		width =dataIn.width;
@@ -190,7 +192,7 @@ public class SelectROI{
 			Vector<Integer> stRoiJ			= new Vector<Integer>();
 			Vector<Integer> stArea		= new Vector<Integer> ();
 			softResult = new byte[width*height];
-			Vector<Object> masks = getSieve(scaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			Vector<Object> masks = getSieve(softScaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
 			softSieve		= (byte[]) masks.get(0);
 			softResult	 	= (byte[]) masks.get(1);
 			stIit 		 	= (Vector<Integer>) masks.get(2);
@@ -201,13 +203,13 @@ public class SelectROI{
 			
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
-			Vector<Object> masks2 = getSieve(scaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			Vector<Object> masks2 = getSieve(softScaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
 			boneResult	= (byte[]) masks2.get(1);
 			for (int i = 0;i<softSieve.length;++i){
-				if (softSieve[i] ==1 && scaledImage[i] >= airThreshold && scaledImage[i] < fatThreshold){
+				if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
 					softSieve[i] =2;	//Fat
 				}
-				if (softSieve[i] ==1 && scaledImage[i] >= muscleThreshold && scaledImage[i] < softThreshold){
+				if (softSieve[i] ==1 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
 					softSieve[i] = 3;	//Muscle
 				}
 				if (boneResult[i] ==1 ){

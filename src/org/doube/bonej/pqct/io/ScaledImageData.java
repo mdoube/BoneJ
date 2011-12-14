@@ -23,6 +23,7 @@ import java.util.*;	//Vector, Collections
 
 public class ScaledImageData{
 	public double[] scaledImage;
+	public double[] softScaledImage;
 	public double[] justROI;
 	public double minimum;
 	public double maximum;
@@ -46,6 +47,7 @@ public class ScaledImageData{
 		Arrays.sort(tempSort);
 		minimum = tempSort[0];
 		maximum = tempSort[tempSort.length-1];
+		softScaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
 		if (noFiltering){
 			scaledImage = (double[]) unFiltered.clone();
 		}else{		
