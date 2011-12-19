@@ -22,6 +22,7 @@ package org.doube.bonej.pqct.io;
 public class ImageAndAnalysisDetails{
 	public boolean flipHorizontal;
 	public boolean noFiltering;
+	public boolean sleeveOn;
 	public double scalingFactor;
 	public double constant;
 	
@@ -60,15 +61,17 @@ public class ImageAndAnalysisDetails{
 	public boolean stOn;
 	
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,double scalingFactor, double constant,
+	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean noFiltering,boolean sleeveOn
+									,double scalingFactor, double constant,
 									double airThreshold,double fatThreshold, double muscleThreshold, double marrowThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
 									String roiChoice,String roiChoiceSt,String rotationChoice,String[] choiceLabels,
 									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
 									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
 									int sectorWidth,int divisions,int concentricSector,int concentricDivisions, boolean stOn){
-		this.flipHorizontal			=flipHorizontal;
-		this.noFiltering			=noFiltering;
+		this.flipHorizontal			= flipHorizontal;
+		this.noFiltering			= noFiltering;
+		this.sleeveOn				= sleeveOn;
 		this.scalingFactor			= scalingFactor;
 		this.constant 				= constant;
 		this.airThreshold			= airThreshold;

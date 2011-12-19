@@ -192,6 +192,21 @@ public class SelectROI{
 			Vector<Integer> stRoiJ			= new Vector<Integer>();
 			Vector<Integer> stArea		= new Vector<Integer> ();
 			softResult = new byte[width*height];
+			
+			
+			/*Get rid of measurement tube used at the UKK institute*/
+			byte[] sleeve = null;
+			if (details.sleeveOn){
+				sleeve = removeSleeve(softScaledImage,sleeve,20.0);
+				int removed=0;
+				for (int ii =0;ii<width*height;ii++){
+					if(sleeve[ii]==1){
+						softScaledImage[ii]=minimum;
+						++removed;
+					}
+				}
+			}
+			
 			Vector<Object> masks = getSieve(softScaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
 			softSieve		= (byte[]) masks.get(0);
 			softResult	 	= (byte[]) masks.get(1);
@@ -201,6 +216,23 @@ public class SelectROI{
 			stLength		= (Vector<Integer>) masks.get(5);
 			stArea			= (Vector<Integer>) masks.get(6);
 			
+			/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin) 
+			on top of fat to enable finding muscle border
+			*/
+			byte[] muscleSieve = (byte[]) softSieve.clone();
+			double[] muscleImage = (double[]) softScaledImage.clone();
+			for (int i = 0;i< 3;++i){
+				muscleSieve = erode(muscleSieve);
+			}
+			/*Remove everything other than the selected limb from the image*/
+			for (int i = 0; i<muscleSieve.length;++i){
+				if (muscleSieve[i] < 1){
+					muscleImage[i] = minimum;
+				}
+			}
+			/*Look for muscle outline*/
+			Vector<Object> muscleMasks = getSieve(muscleImage,new byte[width*height],new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
+			muscleSieve		= (byte[]) muscleMasks.get(0);
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
 			Vector<Object> masks2 = getSieve(softScaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
@@ -209,11 +241,14 @@ public class SelectROI{
 				if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
 					softSieve[i] =2;	//Fat
 				}
-				if (softSieve[i] ==1 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
+				if (muscleSieve[i] ==1 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
 					softSieve[i] = 3;	//Muscle
 				}
+				if (muscleSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < muscleThreshold){
+					softSieve[i] = 4;	//Intra/Intermuscular fat
+				}
 				if (boneResult[i] ==1 ){
-					softSieve[i] = 4;	//Bone & marrow
+					softSieve[i] = 5;	//Bone & marrow
 				}
 			}
 			
@@ -279,6 +314,104 @@ public class SelectROI{
 			//System.exit(0);			
 			
 		}
+	}
+	
+	/*A function to get rid of the measurement tube used at UKK-institute
+	with Stratex XCT3000 device. Needed for soft tissue analysis*/
+	public byte[] removeSleeve(double[] scaledImage,byte[] sleeve,double sleeveThreshold){
+		int i,j;
+		i=10;
+		j=10;
+		while ((j < height-12 && i < width-11 && scaledImage[i+j*width] <sleeveThreshold) || scaledImage[i+j*width] ==0){
+			i++;
+			if (i == width-11){
+				j++;
+				if (j >= height-12) break;
+				i = 10;
+			}
+		}
+		//Sleeve found
+		sleeve = new byte[width*height];
+		Vector<Integer> initialI = new Vector<Integer>();
+		Vector<Integer> initialJ= new Vector<Integer>();
+		initialI.add(i);
+		initialJ.add(j);
+		while (initialI.size() >0 && initialI.lastElement() > 0 &&  initialI.lastElement() < width-1 && initialJ.lastElement() > 0 && initialJ.lastElement() < height-1){
+			i =initialI.lastElement();
+			j = initialJ.lastElement();
+			initialI.remove( initialI.size()-1);
+			initialJ.remove( initialJ.size()-1);
+			if (scaledImage[i+j*width] > sleeveThreshold && sleeve[i+j*width] ==0){
+				sleeve[i+j*width] = 1;
+			}
+
+			if (scaledImage[i-1+j*width] > sleeveThreshold && sleeve[i-1+j*width] ==0) {
+				initialI.add(new Integer(i-1));
+				initialJ.add(new Integer(j));
+			}
+
+			if (scaledImage[i+1+j*width] > sleeveThreshold && sleeve[i+1+j*width] ==0) {
+				initialI.add(new Integer(i+1));
+				initialJ.add(new Integer(j));
+			}
+
+			if (scaledImage[i+(j-1)*width] > sleeveThreshold && sleeve[i+(j-1)*width] ==0) {
+				initialI.add(new Integer(i));
+				initialJ.add(new Integer(j-1));
+			}
+
+			if (scaledImage[i+(j+1)*width] > sleeveThreshold && sleeve[i+(j+1)*width] ==0) {
+				initialI.add(new Integer(i));
+				initialJ.add(new Integer(j+1));
+			}
+
+		}
+		sleeve = dilate(sleeve,(byte)1,(byte)0,(byte)2);
+		sleeve = dilate(sleeve,(byte)1,(byte)0,(byte)2);
+		return sleeve;
+	}
+	
+	private byte[] erode(byte[] data){
+		//Erode algorithm
+		//Modified from the best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
+		for (int i=0; i<height; i++){
+			for (int j=0; j<width; j++){
+				if (data[i*width+j] > 0){
+					if (i>0 && data[(i-1)*width+j]==0 ||
+						j>0 && data[(i)*width+j-1]==0 ||
+						i+1<height && data[(i+1)*width+j]==0 ||
+						j+1<width && data[(i)*width+j+1]==0)
+						{data[i*width+j] = 0-1;}	//Erode the pixel if any of the neighborhood pixels is background
+				}
+			}
+		}
+		for (int i=0; i<width*height; i++){
+			if (data[i] < 0){
+				data[i] = 0;
+			}
+		}
+		return data;
+	}
+	
+	private byte[] dilate(byte[] data,byte dilateVal,byte min, byte temp){
+		//Dilate algorithm
+		// Best dilate by one solution taken from http://ostermiller.org/dilate_and_erode.html
+		for (int i=0; i<height; i++){
+			for (int j=0; j<width; j++){
+				if (data[i*width+j] ==dilateVal){
+					if (i>0 && data[(i-1)*width+j]==min) {data[(i-1)*width+j] = temp;}
+					if (j>0 && data[(i)*width+j-1]==min) {data[(i)*width+j-1] = temp;}
+					if (i+1<height && data[(i+1)*width+j]==min) {data[(i+1)*width+j] = temp;}
+					if (j+1<width && data[(i)*width+j+1]==min) {data[(i)*width+j+1] = temp;}
+				}
+			}
+		}
+		for (int i=0; i<width*height; i++){
+			if (data[i] == temp){
+				data[i] = dilateVal;	//Set to proper value here...
+			}
+		}
+		return data;
 	}
 	
 	private Vector<Object> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> area,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){

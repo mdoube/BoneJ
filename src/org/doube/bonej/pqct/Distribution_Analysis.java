@@ -73,6 +73,7 @@ public class Distribution_Analysis implements PlugIn {
 	boolean manualRotation;
 	boolean allowCleaving;
 	boolean preventPeeling;
+	boolean sleeveOn;
 	String roiChoice;
 	String roiChoiceSt;
 	String rotationChoice;
@@ -150,7 +151,8 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("No_filtering",true);
+		dialog.addCheckbox("No_filtering",false);
+		dialog.addCheckbox("Measurement_tube",true);
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
@@ -171,25 +173,25 @@ public class Distribution_Analysis implements PlugIn {
 		*/
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
-		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[9]); 
-		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[9]); 
+		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
+		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",true);
 		dialog.addCheckbox("Analyse_mass_distribution",true);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",true);
-		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
+		dialog.addCheckbox("Analyse_density_distribution",true);	//true
 		dialog.addCheckbox("Analyse_soft_tissues",true);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
-		dialog.addCheckbox("Set_distribution_results_rotation_manually",true);
+		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",false);
+		dialog.addCheckbox("Guess_right",true);
 		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",false);
+		dialog.addCheckbox("Stacked_bones",true);
 		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
@@ -200,6 +202,7 @@ public class Distribution_Analysis implements PlugIn {
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
 			boolean noFiltering			= dialog.getNextBoolean();
+			sleeveOn					= dialog.getNextBoolean();
 			airThreshold				= dialog.getNextNumber();
 			fatThreshold				= dialog.getNextNumber();
 			muscleThreshold				= dialog.getNextNumber();
@@ -256,7 +259,8 @@ public class Distribution_Analysis implements PlugIn {
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
 			
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,scalingFactor, constant,
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,sleeveOn
+															,scalingFactor, constant,
 															airThreshold, fatThreshold, muscleThreshold,marrowThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
@@ -402,6 +406,15 @@ public class Distribution_Analysis implements PlugIn {
 					tempImage.getProcessor().setColor(new Color(rgb[2],0,0));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
+				if (sieve[x+y*tempImage.getWidth()] == 4){   //Tint intra fat area with green
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					tempImage.getProcessor().setColor(new Color(0,rgb[1],0));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
 			}
 		}
 		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
@@ -516,7 +529,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [mm²]","FatD [mg/cm³]","FatA [mm²]","LimbD [mg/cm³]","LimbA [mm²]"};
+			String[] coHeadings = {"MuD [mg/cm³]","MuA [mm²]","LeanMuD [mg/cm³]","LeanMuA [mm²]","IntraFatD [mg/cm³]","IntraFatA [mm²]","FatD [mg/cm³]","FatA [mm²]","LimbD [mg/cm³]","LimbA [mm²]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -641,8 +654,12 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	String printSoftTissueResults(String results,SoftTissueAnalysis softTissueAnalysis){
+		results+=softTissueAnalysis.TotalMuD+"\t";
+		results+=softTissueAnalysis.TotalMuA+"\t";
 		results+=softTissueAnalysis.MuD+"\t";
 		results+=softTissueAnalysis.MuA+"\t";
+		results+=softTissueAnalysis.IntraMuFatD+"\t";
+		results+=softTissueAnalysis.IntraMuFatA+"\t";
 		results+=softTissueAnalysis.FatD+"\t";
 		results+=softTissueAnalysis.FatA+"\t";
 		results+=softTissueAnalysis.LimbD+"\t";

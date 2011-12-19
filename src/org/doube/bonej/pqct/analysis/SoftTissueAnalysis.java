@@ -23,30 +23,46 @@ import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 
 public class SoftTissueAnalysis{
 	public double MuA;
+	public double IntraMuFatA;
+	public double TotalMuA;
 	public double FatA;
 	public double LimbA;
 	public double MuD;
+	public double IntraMuFatD;
+	public double TotalMuD;
 	public double FatD;
 	public double LimbD;
 	public SoftTissueAnalysis(SelectROI roi){
-		MuA		=0;
-		FatA	=0;
-		LimbA	=0;
-		MuD		=0;
-		FatD	=0;
-		LimbD	=0;
+		MuA			=0;
+		FatA		=0;
+		LimbA		=0;
+		IntraMuFatA	=0;
+		TotalMuA	=0;
+		MuD			=0;
+		FatD		=0;
+		LimbD		=0;
+		IntraMuFatD	=0;
+		TotalMuD	=0;
 		for (int i =0;i<roi.width*roi.height;i++){
-			if (roi.softSieve[i] >0 && roi.softSieve[i] <4){
+			if (roi.softSieve[i] >0 && roi.softSieve[i] <5){ //Bone & Marrow excluded!!
 				LimbA +=1;
 				LimbD +=roi.softScaledImage[i];
 			}
-			if (roi.softSieve[i] ==2){
+			if (roi.softSieve[i] ==2){ //Fat
 				FatA +=1;
 				FatD +=roi.softScaledImage[i];
 			}
-			if (roi.softSieve[i] ==3){
+			if (roi.softSieve[i] ==3){ //Muscle no IntraFat
 				MuA +=1;
 				MuD +=roi.softScaledImage[i];
+				TotalMuA	+=1;
+				TotalMuD	+=roi.softScaledImage[i];
+			}
+			if (roi.softSieve[i] ==4){ //IntraFat
+				IntraMuFatA	+=1;
+				IntraMuFatD	+=roi.softScaledImage[i];
+				TotalMuA	+=1;
+				TotalMuD	+=roi.softScaledImage[i];
 			}
 		}
 		LimbD/=LimbA;
@@ -55,5 +71,9 @@ public class SoftTissueAnalysis{
 		FatA*=roi.pixelSpacing*roi.pixelSpacing;
 		MuD/=MuA;
 		MuA*=roi.pixelSpacing*roi.pixelSpacing;
+		TotalMuD/=TotalMuA;
+		TotalMuA*=roi.pixelSpacing*roi.pixelSpacing;
+		IntraMuFatD/=IntraMuFatA;
+		IntraMuFatA*=roi.pixelSpacing*roi.pixelSpacing;
 	}
 }
