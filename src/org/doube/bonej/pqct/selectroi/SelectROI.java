@@ -197,7 +197,7 @@ public class SelectROI{
 			/*Get rid of measurement tube used at the UKK institute*/
 			byte[] sleeve = null;
 			if (details.sleeveOn){
-				sleeve = removeSleeve(softScaledImage,sleeve,20.0);
+				sleeve = removeSleeve(softScaledImage,sleeve,25.0);
 				int removed=0;
 				for (int ii =0;ii<width*height;ii++){
 					if(sleeve[ii]==1){

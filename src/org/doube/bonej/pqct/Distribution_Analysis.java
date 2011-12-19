@@ -151,7 +151,7 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("No_filtering",false);
+		dialog.addCheckbox("No_filtering",true);
 		dialog.addCheckbox("Measurement_tube",true);
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
@@ -529,7 +529,7 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [mm²]","LeanMuD [mg/cm³]","LeanMuA [mm²]","IntraFatD [mg/cm³]","IntraFatA [mm²]","FatD [mg/cm³]","FatA [mm²]","LimbD [mg/cm³]","LimbA [mm²]"};
+			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -664,6 +664,7 @@ public class Distribution_Analysis implements PlugIn {
 		results+=softTissueAnalysis.FatA+"\t";
 		results+=softTissueAnalysis.LimbD+"\t";
 		results+=softTissueAnalysis.LimbA+"\t";
+		results+=softTissueAnalysis.FatPercentage+"\t";
 		return results;
 	}
 	
