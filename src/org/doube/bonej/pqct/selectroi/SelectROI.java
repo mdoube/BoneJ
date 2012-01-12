@@ -221,9 +221,15 @@ public class SelectROI{
 			*/
 			byte[] muscleSieve = (byte[]) softSieve.clone();
 			double[] muscleImage = (double[]) softScaledImage.clone();
+			byte[] subCutaneousFat = null;
 			for (int i = 0;i< 3;++i){
 				muscleSieve = erode(muscleSieve);
+				if (i == 0){
+					/*Add subcut fat sieve... Skin has already been removed by eroding one layer of pixels-> remove muscle later on*/
+					subCutaneousFat = (byte[]) muscleSieve.clone();
+				}
 			}
+			
 			/*Remove everything other than the selected limb from the image*/
 			for (int i = 0; i<muscleSieve.length;++i){
 				if (muscleSieve[i] < 1){
@@ -233,6 +239,13 @@ public class SelectROI{
 			/*Look for muscle outline*/
 			Vector<Object> muscleMasks = getSieve(muscleImage,new byte[width*height],new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
 			muscleSieve		= (byte[]) muscleMasks.get(0);
+			
+			/*Wipe muscle area +1 layer of pixels away from subcut.*/
+			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
+			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+			for (int i = 0;i<tempMuscleSieve.length;++i){
+				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
+			}
 			/*create temp boneResult to wipe out bone and marrow*/
 			byte[] boneResult = new byte[width*height];
 			Vector<Object> masks2 = getSieve(softScaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
@@ -247,8 +260,11 @@ public class SelectROI{
 				if (muscleSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < muscleThreshold){
 					softSieve[i] = 4;	//Intra/Intermuscular fat
 				}
+				if (subCutaneousFat[i] ==1 ){
+					softSieve[i] = 5;	//Subcut fat
+				}
 				if (boneResult[i] ==1 ){
-					softSieve[i] = 5;	//Bone & marrow
+					softSieve[i] = 6;	//Bone & marrow
 				}
 			}
 			

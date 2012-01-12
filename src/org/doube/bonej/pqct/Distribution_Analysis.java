@@ -415,6 +415,15 @@ public class Distribution_Analysis implements PlugIn {
 					tempImage.getProcessor().setColor(new Color(0,rgb[1],0));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
+				if (sieve[x+y*tempImage.getWidth()] == 5){   //Tint subcut fat area with purple
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[0]));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
 			}
 		}
 		//tempImage.setProcessor(tempImage.getProcessor().resize(1000));
@@ -529,14 +538,14 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		
 		if(stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
+			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","SubCutFatD [mg/cm³]","SubCutFatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
 		}
 		
 		if(cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
+			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -662,6 +671,8 @@ public class Distribution_Analysis implements PlugIn {
 		results+=softTissueAnalysis.IntraMuFatA+"\t";
 		results+=softTissueAnalysis.FatD+"\t";
 		results+=softTissueAnalysis.FatA+"\t";
+		results+=softTissueAnalysis.SubCutFatD+"\t";
+		results+=softTissueAnalysis.SubCutFatA+"\t";
 		results+=softTissueAnalysis.LimbD+"\t";
 		results+=softTissueAnalysis.LimbA+"\t";
 		results+=softTissueAnalysis.FatPercentage+"\t";
@@ -670,6 +681,7 @@ public class Distribution_Analysis implements PlugIn {
 	
 	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
 		results+=cortAnalysis.MaMassD+"\t";
+		results+=cortAnalysis.StratecMaMassD+"\t";
 		results+=cortAnalysis.MaD+"\t";
 		results+=cortAnalysis.MaA+"\t";
 		results+=cortAnalysis.BMD+"\t";
