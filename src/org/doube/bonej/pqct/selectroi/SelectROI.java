@@ -101,8 +101,14 @@ public class SelectROI{
 		this.boneThreshold = boneThreshold;
 		minimum = dataIn.minimum;
 		maximum = dataIn.maximum;
+		/*A special function to check whether forearm has been measured palm up*/
+		/*
+		if (details.allowVerticalFlip){
+			checkVerticalFlip();
+		}
+		*/
 		//Select ROI
-
+		
 		/*Select ROI and set everything else than the roi to minimum*/
 		cortexROI = new double[width*height];	//Make a new copy of the image with only the ROI remaining
 		roiI = new Vector<Integer>();

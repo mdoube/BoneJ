@@ -51,6 +51,7 @@ public class Distribution_Analysis implements PlugIn {
 	String resultString;
 	String imageInfo;
 	boolean flipHorizontal;
+	boolean allowVerticalFlip;
 	double resolution;
 	//Thresholds
 	double airThreshold;
@@ -151,8 +152,9 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("No_filtering",true);
-		dialog.addCheckbox("Measurement_tube",true);
+		dialog.addCheckbox("Allow_vertical_flip",false);
+		dialog.addCheckbox("No_filtering",false);
+		dialog.addCheckbox("Measurement_tube",false);
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
@@ -177,11 +179,11 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
-		dialog.addCheckbox("Analyse_cortical_results",true);
-		dialog.addCheckbox("Analyse_mass_distribution",true);
+		dialog.addCheckbox("Analyse_cortical_results",false);
+		dialog.addCheckbox("Analyse_mass_distribution",false);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",true);	//true
-		dialog.addCheckbox("Analyse_soft_tissues",true);	//true
+		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
@@ -189,9 +191,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",true);
+		dialog.addCheckbox("Guess_right",false);
 		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Stacked_bones",false);
 		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
@@ -201,6 +203,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
+			allowVerticalFlip			= dialog.getNextBoolean();
 			boolean noFiltering			= dialog.getNextBoolean();
 			sleeveOn					= dialog.getNextBoolean();
 			airThreshold				= dialog.getNextNumber();
@@ -249,7 +252,12 @@ public class Distribution_Analysis implements PlugIn {
 					imageInfo+="File Name:"+imageName+"\n";
 				}
 			}
-
+			
+			/*Look study special, images acquired prior to 2007 need to be flipped horizontally*/
+			String checkDate = getInfoProperty(imageInfo,"Acquisition Date");
+			if (checkDate.indexOf("2005") >-1 || checkDate.indexOf("2006") >-1){
+				flipHorizontal = true;
+			}
 			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
 			int[] unsignedShort = new int[tempPointer.length];			
 			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
@@ -259,7 +267,7 @@ public class Distribution_Analysis implements PlugIn {
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
 			
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,sleeveOn
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,allowVerticalFlip,noFiltering,sleeveOn
 															,scalingFactor, constant,
 															airThreshold, fatThreshold, muscleThreshold,marrowThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
@@ -524,7 +532,7 @@ public class Distribution_Analysis implements PlugIn {
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice"};
+		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal"};
 			
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
@@ -659,6 +667,7 @@ public class Distribution_Analysis implements PlugIn {
 		results += Boolean.toString(preventPeeling)+"\t";
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";
+		results += Boolean.toString(flipHorizontal)+"\t";
 		return results;
 	}
 	

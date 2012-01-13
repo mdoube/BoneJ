@@ -53,18 +53,32 @@ public class ScaledImageData{
 		}else{		
 			scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
 		}
-		double[] temp = (double[]) scaledImage.clone();
-		double[] temp2 = (double[]) softScaledImage.clone();
+		
 		if (flipHorizontal){//Flip the image around the horizontal axis...
-			for (int j = 0;j<height;++j){
-				for (int i = 0;i<width;++i){
-					scaledImage[i+(height-1-j)*width] = temp[i+j*width];
-					softScaledImage[i+(height-1-j)*width] = temp2[i+j*width];
-				}
-			}
+			flipHorizontally();
 		}
 	}
 	
+	public void flipHorizontally(){
+		double[] temp = (double[]) scaledImage.clone();
+		double[] temp2 = (double[]) softScaledImage.clone();
+		for (int j = 0;j<height;++j){
+			for (int i = 0;i<width;++i){
+				scaledImage[i+(height-1-j)*width] = temp[i+j*width];
+				softScaledImage[i+(height-1-j)*width] = temp2[i+j*width];
+			}
+		}
+	}
+	public void flipVertically(){
+		double[] temp = (double[]) scaledImage.clone();
+		double[] temp2 = (double[]) softScaledImage.clone();
+		for (int j = 0;j<height;++j){
+			for (int i = 0;i<width;++i){
+				scaledImage[(width-1-i)+j*width] = temp[i+j*width];
+				softScaledImage[(width-1-i)+j*width] = temp2[i+j*width];
+			}
+		}
+	}
 
 	//Meadian filter
 	public double[] medianFilter(double[] data, int width, int height,int filterSize){
