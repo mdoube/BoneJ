@@ -32,7 +32,7 @@ public class ScaledImageData{
 	public double pixelSpacing;
 	int filterSize;
 	//Constructor
-	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize,boolean flipHorizontal,boolean noFiltering){
+	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize,boolean flipHorizontal, boolean flipVertical,boolean noFiltering){
 		height = heightIn;
 		width = widthIn;
 		pixelSpacing = VoxelSize;
@@ -56,6 +56,9 @@ public class ScaledImageData{
 		
 		if (flipHorizontal){//Flip the image around the horizontal axis...
 			flipHorizontally();
+		}
+		if (flipVertical){//Flip the image around the horizontal axis...
+			flipVertically();
 		}
 	}
 	
