@@ -35,7 +35,7 @@ public class SoftTissueAnalysis{
 	public double SubCutFatD;
 	public double LimbD;
 	public double FatPercentage;
-	public SoftTissueAnalysis(SelectROI roi){
+	public SoftTissueAnalysis(SelectSoftROI roi){
 		MuA			=0;
 		FatA		=0;
 		LimbA		=0;

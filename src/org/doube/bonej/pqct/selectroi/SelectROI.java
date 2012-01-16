@@ -32,34 +32,7 @@ import ij.process.*;	//Debugging
 public class SelectROI extends RoiSelector{
 	//ImageJ constructor
 	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi){
-		this.scaledImageData = dataIn;
-		this.imp = imp;
-		details =detailsIn;
-		scaledImage = (double[])dataIn.scaledImage.clone();
-		softScaledImage = (double[])dataIn.softScaledImage.clone();
-		pixelSpacing = dataIn.pixelSpacing;
-		imageSavePath = details.imageSavePath;
-		width =dataIn.width;
-		height =dataIn.height;
-		
-
-		airThreshold = details.airThreshold;
-		fatThreshold = details.fatThreshold;
-		rotationThreshold = details.rotationThreshold;
-		muscleThreshold = details.muscleThreshold;
-		marrowThreshold = details.marrowThreshold;
-		areaThreshold = details.areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		BMDthreshold = details.BMDthreshold;		//For cortical BMD analyses
-		softThreshold = details.softThreshold;	//Thresholding soft tissues + marrow from bone
-		this.boneThreshold = boneThreshold;
-		minimum = dataIn.minimum;
-		maximum = dataIn.maximum;
-		/*A special function to check whether forearm has been measured palm up*/
-		/*
-		if (details.allowVerticalFlip){
-			checkVerticalFlip();
-		}
-		*/
+		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
 		//Select ROI
 		
 		/*Select ROI and set everything else than the roi to minimum*/
@@ -138,94 +111,5 @@ public class SelectROI extends RoiSelector{
 				}
 			}
 		}
-		
-		//Soft tissue analysis
-		softSieve = null;
-		byte[] softResult = null;
-		if (details.stOn){
-			Vector<Integer> stLength		= new Vector<Integer>();
-			Vector<Integer> stBeginnings	= new Vector<Integer>();
-			Vector<Integer> stIit			= new Vector<Integer>();
-			Vector<Integer> stJiit			= new Vector<Integer>();
-			Vector<Integer> stRoiI			= new Vector<Integer>();
-			Vector<Integer> stRoiJ			= new Vector<Integer>();
-			Vector<Integer> stArea		= new Vector<Integer> ();
-			softResult = new byte[width*height];
-			
-			
-			/*Get rid of measurement tube used at the UKK institute*/
-			byte[] sleeve = null;
-			if (details.sleeveOn){
-				sleeve = removeSleeve(softScaledImage,sleeve,25.0);
-				int removed=0;
-				for (int ii =0;ii<width*height;ii++){
-					if(sleeve[ii]==1){
-						softScaledImage[ii]=minimum;
-						++removed;
-					}
-				}
-			}
-			
-			Vector<Object> masks = getSieve(softScaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
-			softSieve		= (byte[]) masks.get(0);
-			softResult	 	= (byte[]) masks.get(1);
-			stIit 		 	= (Vector<Integer>) masks.get(2);
-			stJiit 			= (Vector<Integer>) masks.get(3);
-			stBeginnings	= (Vector<Integer>) masks.get(4);
-			stLength		= (Vector<Integer>) masks.get(5);
-			stArea			= (Vector<Integer>) masks.get(6);
-			
-			/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin) 
-			on top of fat to enable finding muscle border
-			*/
-			byte[] muscleSieve = (byte[]) softSieve.clone();
-			double[] muscleImage = (double[]) softScaledImage.clone();
-			byte[] subCutaneousFat = null;
-			for (int i = 0;i< 3;++i){
-				muscleSieve = erode(muscleSieve);
-				if (i == 0){
-					/*Add subcut fat sieve... Skin has already been removed by eroding one layer of pixels-> remove muscle later on*/
-					subCutaneousFat = (byte[]) muscleSieve.clone();
-				}
-			}
-			
-			/*Remove everything other than the selected limb from the image*/
-			for (int i = 0; i<muscleSieve.length;++i){
-				if (muscleSieve[i] < 1){
-					muscleImage[i] = minimum;
-				}
-			}
-			/*Look for muscle outline*/
-			Vector<Object> muscleMasks = getSieve(muscleImage,new byte[width*height],new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
-			muscleSieve		= (byte[]) muscleMasks.get(0);
-			
-			/*Wipe muscle area +1 layer of pixels away from subcut.*/
-			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
-			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
-			for (int i = 0;i<tempMuscleSieve.length;++i){
-				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
-			}
-			/*create temp boneResult to wipe out bone and marrow*/
-			byte[] boneResult = new byte[width*height];
-			Vector<Object> masks2 = getSieve(softScaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
-			boneResult	= (byte[]) masks2.get(1);
-			for (int i = 0;i<softSieve.length;++i){
-				if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
-					softSieve[i] =2;	//Fat
-				}
-				if (muscleSieve[i] ==1 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
-					softSieve[i] = 3;	//Muscle
-				}
-				if (muscleSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < muscleThreshold){
-					softSieve[i] = 4;	//Intra/Intermuscular fat
-				}
-				if (subCutaneousFat[i] ==1 ){
-					softSieve[i] = 5;	//Subcut fat
-				}
-				if (boneResult[i] ==1 ){
-					softSieve[i] = 6;	//Bone & marrow
-				}
-			}
-		}
-	}
+	}	
 }

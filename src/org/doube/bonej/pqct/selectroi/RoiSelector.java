@@ -78,6 +78,31 @@ public abstract class RoiSelector{
 	public ImagePlus imp;
 	public int bmcAlfaIndex = 0;
 	
+	public RoiSelector(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi){
+				this.scaledImageData = dataIn;
+		this.imp = imp;
+		details =detailsIn;
+		scaledImage = (double[])dataIn.scaledImage.clone();
+		softScaledImage = (double[])dataIn.softScaledImage.clone();
+		pixelSpacing = dataIn.pixelSpacing;
+		imageSavePath = details.imageSavePath;
+		width =dataIn.width;
+		height =dataIn.height;
+		
+
+		airThreshold = details.airThreshold;
+		fatThreshold = details.fatThreshold;
+		rotationThreshold = details.rotationThreshold;
+		muscleThreshold = details.muscleThreshold;
+		marrowThreshold = details.marrowThreshold;
+		areaThreshold = details.areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+		BMDthreshold = details.BMDthreshold;		//For cortical BMD analyses
+		softThreshold = details.softThreshold;	//Thresholding soft tissues + marrow from bone
+		this.boneThreshold = boneThreshold;
+		minimum = dataIn.minimum;
+		maximum = dataIn.maximum;
+	}
+	
 	/*A function to get rid of the measurement tube used at UKK-institute
 	with Stratex XCT3000 device. Needed for soft tissue analysis*/
 	public byte[] removeSleeve(double[] scaledImage,byte[] sleeve,double sleeveThreshold){
