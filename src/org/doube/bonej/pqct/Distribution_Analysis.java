@@ -286,44 +286,12 @@ public class Distribution_Analysis implements PlugIn {
 					roi = softRoi;
 				}
 			}
-			/*testing*/
-			/*
-			ImagePlus tempImage = new ImagePlus("Sieve");
-			tempImage.setProcessor(new ByteProcessor(roi.width,roi.height));
-			tempImage.getProcessor().setBackgroundValue(0.0);
-			tempImage.getProcessor().setValue(255.0);
-
-			for (int y = 0; y < roi.height;++y) {
-				for (int x = 0; x < roi.width;++x) {
-					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
-						tempImage.getProcessor().drawPixel(x,y);
-					}
-				}
-			}
-			tempImage.show();
-			*/
 			alphaOn = false;
 			DetermineAlfa determineAlfa = null;
 			if (cOn || mOn || conOn || dOn){
 				determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
 				alphaOn = true;
 			}
-			
-			/*
-			ImagePlus tempImage2 = new ImagePlus("Determine");
-			tempImage2.setProcessor(new ByteProcessor(roi.width,roi.height));
-			tempImage2.getProcessor().setBackgroundValue(0.0);
-			tempImage2.getProcessor().setValue(255.0);
-
-			for (int y = 0; y < roi.height;++y) {
-				for (int x = 0; x < roi.width;++x) {
-					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
-						tempImage2.getProcessor().drawPixel(x,y);
-					}
-				}
-			}
-			tempImage2.show();
-			*/
 			
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
@@ -340,7 +308,7 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			ImagePlus resultImage = null;
 			boolean makeImage = true;
-			if(suppressImages && !saveImageOnDisk){
+			if(suppressImages && !saveImageOnDisk && roi != null){
 				makeImage = false;
 			}else{
 				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
@@ -349,7 +317,7 @@ public class Distribution_Analysis implements PlugIn {
 			if(stOn){
 				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
 				results = printSoftTissueResults(results,softTissueAnalysis);
-				if(makeImage){
+				if(makeImage && resultImage != null){
 					resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
 				}
 			}
@@ -357,7 +325,7 @@ public class Distribution_Analysis implements PlugIn {
 			if (cOn){
 				CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(makeImage){
+				if(makeImage && resultImage != null){
 					resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
 				}
 				
@@ -369,7 +337,7 @@ public class Distribution_Analysis implements PlugIn {
 			if (conOn){
 				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 				results = printConcentricRingResults(results,concentricRingAnalysis);
-				if(!dOn && makeImage){
+				if(!dOn && makeImage && resultImage != null){
 					resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
 				}
@@ -379,13 +347,13 @@ public class Distribution_Analysis implements PlugIn {
 			if (dOn){
 				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
-				if (makeImage){
+				if (makeImage && resultImage != null){
 					resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
 					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
 				}
 			}
 			
-			if ((dOn || conOn) && makeImage){
+			if ((dOn || conOn) && makeImage && resultImage != null){
 				resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 			}
 			
