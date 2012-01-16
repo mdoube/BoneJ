@@ -275,7 +275,10 @@ public class Distribution_Analysis implements PlugIn {
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
 			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
 			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
-			SelectSoftROI softRoi = new SelectSoftROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
+			SelectSoftROI softRoi = null;
+			if(stOn){
+				softRoi = new SelectSoftROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
+			}
 			/*testing*/
 			/*
 			ImagePlus tempImage = new ImagePlus("Sieve");
