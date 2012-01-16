@@ -204,7 +204,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
-			flipVertical			= dialog.getNextBoolean();
+			flipVertical				= dialog.getNextBoolean();
 			boolean noFiltering			= dialog.getNextBoolean();
 			sleeveOn					= dialog.getNextBoolean();
 			airThreshold				= dialog.getNextNumber();
