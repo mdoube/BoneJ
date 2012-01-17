@@ -6,14 +6,39 @@ import ij.*;		//ImagePlus
 public class SoftTissueSide{
 	public SelectROI roi;
 	public byte[] softTissueSideSieve;
+	public byte softTissueSide;	/*2 = left, 1 = right*/
 	public ImageAndAnalysisDetails details;
 	public boolean changeSign;
 	public SoftTissueSide(SelectROI roi,ImageAndAnalysisDetails details, boolean changeSign){
 		this.roi = roi;
 		this.details = details;
 		this.changeSign = changeSign;
-		softTissueSideSieve = fillSides(roi);
+		softTissueSideSieve = fillSides(roi);	/*Sieve filled in with soft tissues split to left and right*/
+		softTissueSide = checkSide(softTissueSideSieve, roi.width,roi.height);
+		softTissueSideSieve = removeUnselected(softTissueSideSieve,softTissueSide);
 		
+	}
+	
+	byte[] removeUnselected(byte[] softTissueSideSieve,byte softTissueSide){
+		for (int i = 0; i<softTissueSideSieve.length;++i){
+			if (softTissueSideSieve[i] != softTissueSide && softTissueSideSieve[i] != 0 && softTissueSideSieve[i] < 3){
+				softTissueSideSieve[i] = 0;
+			}
+		}
+		return softTissueSideSieve;
+	}
+	
+	byte checkSide(byte[] softTissueSideSieve, int width,int height){
+		byte side;
+		int[] whichSide = new int[2];
+		for (int h = 0;h<height;++h){
+			for (int w = 0;w<width;++w){
+				if (softTissueSideSieve[w+h*width] == 1) whichSide[1]++;
+				if (softTissueSideSieve[w+h*width] == 2) whichSide[0]++;
+			}
+		}
+		side = (whichSide[0] > whichSide[1]) ? (byte) 2 : (byte) 1;
+		return side;
 	}
 	
 	/*
@@ -85,12 +110,19 @@ public class SoftTissueSide{
 	double getRotation(double[][] boneCoordinates){
 		double x = 0;
 		double y = 0;
-		/*Rotation needs to be figured out from larger to smaller -> boneCoorinate[0] is larger bone*/
+		double[] alfa = new double[2];
+		/*Search for minimal rotation, check both from larger to smaller and from smaller to larger!!*/
+		/*From larger to smaller -> boneCoorinate[0] is larger bone*/
 		x = boneCoordinates[1][0]-boneCoordinates[0][0];	//Use the selected bone as origin for rotation
 		y = boneCoordinates[1][1]-boneCoordinates[0][1];	//Use the selected bone as origin for rotation
-		double alfa = Math.PI/2.0-Math.atan2(y,x);
-		System.out.println("R angle "+alfa);
-		return alfa;	
+		alfa[0]= Math.PI/2.0-Math.atan2(y,x);
+		/*From smaller to larger*/
+		x = boneCoordinates[0][0]-boneCoordinates[1][0];	//Use the selected bone as origin for rotation
+		y = boneCoordinates[0][1]-boneCoordinates[1][1];	//Use the selected bone as origin for rotation
+		alfa[1]= Math.PI/2.0-Math.atan2(y,x);
+		double rotation = (Math.abs(alfa[0]) < Math.abs(alfa[1])) ? alfa[0] : alfa[1];
+		System.out.println("R angle "+rotation);
+		return rotation;	
 	}
 	/*Fill a sieve with the two bones*/
 	double[][] getCoordinates(SelectROI tempRoi, int[] consideredBones){

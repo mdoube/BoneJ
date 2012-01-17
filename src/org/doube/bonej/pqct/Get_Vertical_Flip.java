@@ -169,6 +169,7 @@ public class Get_Vertical_Flip implements PlugIn {
 		//Get ROI selection
 		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
+		dialog.addCheckbox("Suppress_result_image",false);
 		dialog.addCheckbox("Manual_rotation",false);
 		dialog.addNumericField("Manual_alfa", 0.0, 4, 8, null);		//690.0
 		dialog.addCheckbox("Change_sign",false);
@@ -190,6 +191,7 @@ public class Get_Vertical_Flip implements PlugIn {
 			scalingFactor				= dialog.getNextNumber();
 			constant					= dialog.getNextNumber();
 			roiChoice					= dialog.getNextChoice();
+			boolean suppressImages		= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber();
 			boolean changeSign			= dialog.getNextBoolean();
@@ -198,7 +200,7 @@ public class Get_Vertical_Flip implements PlugIn {
 			ScaledImageData scaledImageData;
 			
 			
-			boolean suppressImages = false;
+			
 			boolean manualRoi = false;
 			boolean noFiltering = false;
 			String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
@@ -262,6 +264,7 @@ public class Get_Vertical_Flip implements PlugIn {
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
+			results = printResults(results,imp, softTissueSide.softTissueSide);
 			textPanel.appendLine(results);
 			textPanel.updateDisplay();			
 		}
@@ -458,86 +461,11 @@ public class Get_Vertical_Flip implements PlugIn {
 	}
 	
 	void writeHeader(TextPanel textPanel){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
-		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
-		String[] dHeadings = {"Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal"};
+		String[] propertyNames = {"File Name","Soft tissue side [2 = left, 1 = right]"};
 		
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
-		}
-		for (int i = 0;i<parameterNames.length;++i){
-			headings+=parameterNames[i]+"\t";
-		}
-		for (int i = 0;i<dHeadings.length;++i){
-				headings+=dHeadings[i]+"\t";
-		}
-		if(alphaOn){
-			String[] rHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]"};	
-			for (int i = 0;i<rHeadings.length;++i){
-				headings+=rHeadings[i]+"\t";
-			}
-		}
-		
-		if(stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","SubCutFatD [mg/cm³]","SubCutFatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
-			for (int i = 0;i<coHeadings.length;++i){
-				headings+=coHeadings[i]+"\t";
-			}
-		}
-		
-		if(cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
-			for (int i = 0;i<coHeadings.length;++i){
-				headings+=coHeadings[i]+"\t";
-			}
-		}
-		if(mOn){
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° mineral mass [mg]\t";
-			}
-		}
-		
-		if(conOn){
-			for (int i = 0;i<((int) 360/concentricSector);++i){
-				headings+=i*concentricSector+"° - "+((i+1)*concentricSector)+"° concentric analysis pericortical radius [mm]\t";
-			}
-			for (int j = 0;j<concentricDivisions;++j){
-				for (int i = 0;i<((int) 360/concentricSector);++i){
-					headings+="Division "+(j+1)+" sector "+i*concentricSector+"° - "+((i+1)*concentricSector)+"° vBMD [mg/cm³]\t";
-				}
-			}
-		}
-		
-		if(dOn){
-			headings+="Peeled mean vBMD [mg/cm³]\t";
-			//Radial distribution
-			for (int i =0; i < (int) divisions; ++i){
-				headings+= "Radial division "+i+" vBMD [mg/cm³]\t";
-			}
-			//Polar distribution
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+= "Polar sector "+i+" vBMD [mg/cm³]\t";
-			}
-			
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical radius [mm]\t";
-			}
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical radius [mm]\t";
-			}
-			//Cortex BMD values			
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° endocortical vBMD [mg/cm³]\t";
-			}
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° midcortical vBMD [mg/cm³]\t";
-			}
-			for (int i = 0;i<((int) 360/sectorWidth);++i){
-				headings+=i*sectorWidth+"° - "+((i+1)*sectorWidth)+"° pericortical vBMD [mg/cm³]\t";
-			}
-
 		}
 		textPanel.setColumnHeadings(headings);
 	}
@@ -561,15 +489,7 @@ public class Get_Vertical_Flip implements PlugIn {
 		return null;
 	}
 
-	String printResults(String results, ImagePlus imp){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
-		String[] parameters = {Double.toString(airThreshold)
-								,Double.toString(fatThreshold),Double.toString(muscleThreshold)
-								,Double.toString(marrowThreshold)
-								,Double.toString(softThreshold),Double.toString(rotationThreshold)
-								,Double.toString(areaThreshold),Double.toString(BMDThreshold)
-								,Double.toString(scalingFactor),Double.toString(constant)};
-
+	String printResults(String results, ImagePlus imp, byte side){
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
 				results+=getInfoProperty(imageInfo,"File Name")+"\t";
@@ -580,118 +500,10 @@ public class Get_Vertical_Flip implements PlugIn {
 					results+=imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
 				}
 			}
-			for (int i = 1;i<propertyNames.length;++i){
-				results+=getInfoProperty(imageInfo,propertyNames[i])+"\t";
-			}
 		}
 		
-		for (int i = 0;i<parameters.length;++i){
-			results+=parameters[i]+"\t";
-		}
-		
+		results += Byte.toString(side)+"\t";
+		return results;
+	}
 
-		results += Boolean.toString(manualRotation)+"\t";
-		results += Boolean.toString(flipDistribution)+"\t";
-		results += Boolean.toString(guessFlip)+"\t";
-		results += Boolean.toString(guessLarger)+"\t";
-		results += Boolean.toString(stacked)+"\t";
-		results += Boolean.toString(invertGuess)+"\t";
-		results += Boolean.toString(allowCleaving)+"\t";
-		results += Boolean.toString(preventPeeling)+"\t";
-		results += roiChoice+"\t";
-		results += rotationChoice+"\t";
-		results += Boolean.toString(flipHorizontal)+"\t";
-		return results;
-	}
-	
-	String printAlfa(String results,DetermineAlfa determineAlfa){
-		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
-		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
-		results += Double.toString(determineAlfa.distanceBetweenBones)+"\t";
-		return results;
-	}
-	String printSoftTissueResults(String results,SoftTissueAnalysis softTissueAnalysis){
-		results+=softTissueAnalysis.TotalMuD+"\t";
-		results+=softTissueAnalysis.TotalMuA+"\t";
-		results+=softTissueAnalysis.MuD+"\t";
-		results+=softTissueAnalysis.MuA+"\t";
-		results+=softTissueAnalysis.IntraMuFatD+"\t";
-		results+=softTissueAnalysis.IntraMuFatA+"\t";
-		results+=softTissueAnalysis.FatD+"\t";
-		results+=softTissueAnalysis.FatA+"\t";
-		results+=softTissueAnalysis.SubCutFatD+"\t";
-		results+=softTissueAnalysis.SubCutFatA+"\t";
-		results+=softTissueAnalysis.LimbD+"\t";
-		results+=softTissueAnalysis.LimbA+"\t";
-		results+=softTissueAnalysis.FatPercentage+"\t";
-		return results;
-	}
-	
-	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
-		results+=cortAnalysis.MaMassD+"\t";
-		results+=cortAnalysis.StratecMaMassD+"\t";
-		results+=cortAnalysis.MaD+"\t";
-		results+=cortAnalysis.MaA+"\t";
-		results+=cortAnalysis.BMD+"\t";
-		results+=cortAnalysis.AREA+"\t";
-		results+=cortAnalysis.SSI+"\t";
-		results+=cortAnalysis.ToD+"\t";
-		results+=cortAnalysis.ToA+"\t";
-		results+=cortAnalysis.MeA+"\t";
-		results+=cortAnalysis.BSId+"\t";
-		return results;
-	}
-		
-	String printMassDistributionResults(String results,MassDistribution massDistribution){
-		for (int pp = 0;pp<((int) 360/sectorWidth);pp++){
-			results += massDistribution.BMCs[pp]+"\t";
-		}
-		return results;
-	}		
-	
-	
-	String printConcentricRingResults(String results,ConcentricRingAnalysis concentricRingAnalysis){
-		for (int i = 0;i<((int) 360/concentricSector);++i){
-			results += concentricRingAnalysis.pericorticalRadii[i]+"\t";
-		}
-		for (int j = 0;j<concentricDivisions;++j){
-			for (int i = 0;i<((int) 360/concentricSector);++i){
-				results += concentricRingAnalysis.BMDs.get(j)[i]+"\t";
-			}
-		}
-		return results;
-	}
-	
-
-	
-	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis){
-		results+= DistributionAnalysis.peeledBMD+"\t";
-		//Radial distribution
-		for (int i =0; i < (int) divisions; ++i){
-			results+= DistributionAnalysis.radialDistribution[i]+"\t";
-		}
-		//Polar distribution
-		for (int i = 0;i<((int) 360/sectorWidth);++i){
-			results+= DistributionAnalysis.polarDistribution[i]+"\t";
-		}
-		
-		
-		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
-			results += DistributionAnalysis.endocorticalRadii[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
-			results += DistributionAnalysis.pericorticalRadii[pp]+"\t";
-		}
-		//Cortex BMD values			
-		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
-			results += DistributionAnalysis.endoCorticalBMDs[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
-			results += DistributionAnalysis.midCorticalBMDs[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/sectorWidth);++pp){
-			results += DistributionAnalysis.periCorticalBMDs[pp]+"\t";
-		}
-		return results;
-	}
 }
