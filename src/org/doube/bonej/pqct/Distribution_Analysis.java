@@ -304,7 +304,7 @@ public class Distribution_Analysis implements PlugIn {
 			String results = "";
 			results = printResults(results, imp);
 			if (determineAlfa != null){
-				printAlfa(results,determineAlfa);
+				results = printAlfa(results,determineAlfa);
 			}
 			ImagePlus resultImage = null;
 			boolean makeImage = true;
@@ -517,7 +517,7 @@ public class Distribution_Analysis implements PlugIn {
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
 		String[] dHeadings = {"Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal"};
+		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal","Flip Vertical"};
 		
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
@@ -657,6 +657,7 @@ public class Distribution_Analysis implements PlugIn {
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";
 		results += Boolean.toString(flipHorizontal)+"\t";
+		results += Boolean.toString(flipVertical)+"\t";
 		return results;
 	}
 	

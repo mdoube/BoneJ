@@ -71,7 +71,7 @@ public class ImageAndAnalysisDetails{
 									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
 									int sectorWidth,int divisions,int concentricSector,int concentricDivisions, boolean stOn){
 		this.flipHorizontal			= flipHorizontal;
-		this.flipVertical		= flipVertical;
+		this.flipVertical			= flipVertical;
 		this.noFiltering			= noFiltering;
 		this.sleeveOn				= sleeveOn;
 		this.scalingFactor			= scalingFactor;
