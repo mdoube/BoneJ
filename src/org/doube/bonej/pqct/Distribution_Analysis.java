@@ -254,11 +254,12 @@ public class Distribution_Analysis implements PlugIn {
 				}
 			}
 			
-			/*Look study special, images acquired prior to 2007 need to be flipped horizontally*/
+			/*Look study special, images acquired prior to 2007 need to be flipped horizontally
 			String checkDate = getInfoProperty(imageInfo,"Acquisition Date");
 			if (checkDate.indexOf("2005") >-1 || checkDate.indexOf("2006") >-1){
 				flipHorizontal = true;
 			}
+			*/
 			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
 			int[] unsignedShort = new int[tempPointer.length];			
 			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
