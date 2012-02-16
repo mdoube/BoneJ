@@ -30,6 +30,7 @@ public class CorticalAnalysis{
 	public double MaA;	//Marrow area
 	public double MaD;	//Marrow density
 	public double MaMassD;
+	public double StratecMaMassD;
 	public double ToA;
 	public double ToD;
 	public double maxRadiusY;
@@ -74,7 +75,12 @@ public class CorticalAnalysis{
 		mu = (MaD-roi.details.constant)/roi.details.scalingFactor;
 		H = mu/muH2O-1.0;	//Equation 6 in Schneider et al. 2000 *1000 omitted
 		MaMassD = 1.018+0.893*H;					//Equation 21 in Schneider et al. 2000 *10^-3 omitted
-
+		
+		/*Stratec pQCT is calibrated so that fat is 0 vBMD and water is 50 vBMD, Sievanen J Bone Miner Res. 1998 May;13(5):871-82.*/
+		muH2O = (50.0-roi.details.constant)/roi.details.scalingFactor;
+		mu = (MaD-roi.details.constant)/roi.details.scalingFactor;
+		H = mu/muH2O-1.0;	//Equation 6 in Schneider et al. 2000 *1000 omitted
+		StratecMaMassD = 1.018+0.893*H;					//Equation 21 in Schneider et al. 2000 *10^-3 omitted
 		BSId = ToD*ToD*ToA/100000000.0; //To make it look nicer, we'll use a unit of g^2/cm^4
 		BMD = 0;
 		AREA = 0;

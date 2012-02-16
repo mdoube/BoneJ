@@ -48,9 +48,11 @@ public class Distribution_Analysis implements PlugIn {
 	boolean	conOn;		//Concentric rings analysis
 	boolean dOn;		//Distribution analysis
 	boolean stOn;		//Soft tissue analysis
+	boolean alphaOn;	//Rotation angle
 	String resultString;
 	String imageInfo;
 	boolean flipHorizontal;
+	boolean flipVertical;
 	double resolution;
 	//Thresholds
 	double airThreshold;
@@ -151,8 +153,9 @@ public class Distribution_Analysis implements PlugIn {
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
 		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("No_filtering",true);
-		dialog.addCheckbox("Measurement_tube",true);
+		dialog.addCheckbox("Flip_vertical",false);
+		dialog.addCheckbox("No_filtering",false);
+		dialog.addCheckbox("Measurement_tube",false);
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
@@ -177,11 +180,11 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
-		dialog.addCheckbox("Analyse_cortical_results",true);
-		dialog.addCheckbox("Analyse_mass_distribution",true);
+		dialog.addCheckbox("Analyse_cortical_results",false);
+		dialog.addCheckbox("Analyse_mass_distribution",false);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",true);	//true
-		dialog.addCheckbox("Analyse_soft_tissues",true);	//true
+		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
 		dialog.addCheckbox("Suppress_result_image",false);
@@ -189,9 +192,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",true);
+		dialog.addCheckbox("Guess_right",false);
 		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",true);
+		dialog.addCheckbox("Stacked_bones",false);
 		dialog.addCheckbox("Guess_stacked",false);
 		dialog.addCheckbox("Invert_flip_guess",false);
 		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
@@ -201,6 +204,7 @@ public class Distribution_Analysis implements PlugIn {
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
 			flipHorizontal				= dialog.getNextBoolean();
+			flipVertical				= dialog.getNextBoolean();
 			boolean noFiltering			= dialog.getNextBoolean();
 			sleeveOn					= dialog.getNextBoolean();
 			airThreshold				= dialog.getNextNumber();
@@ -249,7 +253,12 @@ public class Distribution_Analysis implements PlugIn {
 					imageInfo+="File Name:"+imageName+"\n";
 				}
 			}
-
+			
+			/*Look study special, images acquired prior to 2007 need to be flipped horizontally*/
+			String checkDate = getInfoProperty(imageInfo,"Acquisition Date");
+			if (checkDate.indexOf("2005") >-1 || checkDate.indexOf("2006") >-1){
+				flipHorizontal = true;
+			}
 			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
 			int[] unsignedShort = new int[tempPointer.length];			
 			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
@@ -259,49 +268,30 @@ public class Distribution_Analysis implements PlugIn {
 				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
 			}
 			
-			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,noFiltering,sleeveOn
+			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,flipVertical,noFiltering,sleeveOn
 															,scalingFactor, constant,
 															airThreshold, fatThreshold, muscleThreshold,marrowThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
-			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,noFiltering);	//Scale and 3x3 median filter the data
-			SelectROI roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
-			/*testing*/
-			/*
-			ImagePlus tempImage = new ImagePlus("Sieve");
-			tempImage.setProcessor(new ByteProcessor(roi.width,roi.height));
-			tempImage.getProcessor().setBackgroundValue(0.0);
-			tempImage.getProcessor().setValue(255.0);
-
-			for (int y = 0; y < roi.height;++y) {
-				for (int x = 0; x < roi.width;++x) {
-					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
-						tempImage.getProcessor().drawPixel(x,y);
-					}
+			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
+			RoiSelector roi = null;
+			if(cOn || mOn || conOn || dOn){
+				roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
+			}
+			RoiSelector softRoi = null;
+			if(stOn){
+				softRoi = new SelectSoftROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
+				if (roi == null){
+					roi = softRoi;
 				}
 			}
-			tempImage.show();
-			*/
-			
-			
-			DetermineAlfa determineAlfa = new DetermineAlfa(roi,imageAndAnalysisDetails);
-			
-			/*
-			ImagePlus tempImage2 = new ImagePlus("Determine");
-			tempImage2.setProcessor(new ByteProcessor(roi.width,roi.height));
-			tempImage2.getProcessor().setBackgroundValue(0.0);
-			tempImage2.getProcessor().setValue(255.0);
-
-			for (int y = 0; y < roi.height;++y) {
-				for (int x = 0; x < roi.width;++x) {
-					if (roi.sieve[x+y*roi.width] == 1){   //Tint roi area color with violet
-						tempImage2.getProcessor().drawPixel(x,y);
-					}
-				}
+			alphaOn = false;
+			DetermineAlfa determineAlfa = null;
+			if (cOn || mOn || conOn || dOn){
+				determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
+				alphaOn = true;
 			}
-			tempImage2.show();
-			*/
 			
 			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
 			flipDistribution = imageAndAnalysisDetails.flipDistribution;
@@ -312,39 +302,42 @@ public class Distribution_Analysis implements PlugIn {
 			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
 			
 			String results = "";
-			results = printResults(results,determineAlfa, imp);
+			results = printResults(results, imp);
+			if (determineAlfa != null){
+				results = printAlfa(results,determineAlfa);
+			}
 			ImagePlus resultImage = null;
 			boolean makeImage = true;
-			if(suppressImages && !saveImageOnDisk){
+			if(suppressImages && !saveImageOnDisk && roi != null){
 				makeImage = false;
 			}else{
 				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
 			}
 
 			if(stOn){
-				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis(roi);
+				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
 				results = printSoftTissueResults(results,softTissueAnalysis);
-				if(makeImage){
-					resultImage = addSoftTissueSieve(resultImage,roi.softSieve);
+				if(makeImage && resultImage != null){
+					resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
 				}
 			}
 			
-			if (cOn ){
-				CorticalAnalysis cortAnalysis =new CorticalAnalysis(roi);
+			if (cOn){
+				CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 				results = printCorticalResults(results,cortAnalysis);
-				if(makeImage){
+				if(makeImage && resultImage != null){
 					resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
 				}
 				
 			}
 			if (mOn){
-				MassDistribution massDistribution =new MassDistribution(roi,imageAndAnalysisDetails,determineAlfa);
+				MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 				results = printMassDistributionResults(results,massDistribution);
 			}
 			if (conOn){
-				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
+				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 				results = printConcentricRingResults(results,concentricRingAnalysis);
-				if(!dOn && makeImage){
+				if(!dOn && makeImage && resultImage != null){
 					resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
 				}
@@ -352,15 +345,15 @@ public class Distribution_Analysis implements PlugIn {
 			
 			
 			if (dOn){
-				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis(roi,imageAndAnalysisDetails,determineAlfa);
+				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 				results = printDistributionResults(results,DistributionAnalysis);
-				if (makeImage){
+				if (makeImage && resultImage != null){
 					resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
 					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
 				}
 			}
 			
-			if ((dOn || conOn) && makeImage){
+			if ((dOn || conOn) && makeImage && resultImage != null){
 				resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 			}
 			
@@ -413,6 +406,15 @@ public class Distribution_Analysis implements PlugIn {
 						rgb[i] = (value >>(i*8))& 0XFF;
 					}
 					tempImage.getProcessor().setColor(new Color(0,rgb[1],0));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+				if (sieve[x+y*tempImage.getWidth()] == 5){   //Tint subcut fat area with purple
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[0]));
 					tempImage.getProcessor().drawPixel(x,y);
 				}
 			}
@@ -514,9 +516,9 @@ public class Distribution_Analysis implements PlugIn {
 	void writeHeader(TextPanel textPanel){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
-		String[] dHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]","Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice"};
-			
+		String[] dHeadings = {"Manual Rotation","Flip Distribution","Guess right","Guess larger"
+		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal","Flip Vertical"};
+		
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
@@ -527,16 +529,22 @@ public class Distribution_Analysis implements PlugIn {
 		for (int i = 0;i<dHeadings.length;++i){
 				headings+=dHeadings[i]+"\t";
 		}
+		if(alphaOn){
+			String[] rHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]"};	
+			for (int i = 0;i<rHeadings.length;++i){
+				headings+=rHeadings[i]+"\t";
+			}
+		}
 		
 		if(stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
+			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","SubCutFatD [mg/cm³]","SubCutFatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
 		}
 		
 		if(cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
+			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -609,7 +617,7 @@ public class Distribution_Analysis implements PlugIn {
 		return null;
 	}
 
-	String printResults(String results,DetermineAlfa determineAlfa, ImagePlus imp){
+	String printResults(String results, ImagePlus imp){
 		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
 		String[] parameters = {Double.toString(airThreshold)
 								,Double.toString(fatThreshold),Double.toString(muscleThreshold)
@@ -637,9 +645,7 @@ public class Distribution_Analysis implements PlugIn {
 			results+=parameters[i]+"\t";
 		}
 		
-		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
-		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
-		results += Double.toString(determineAlfa.distanceBetweenBones)+"\t";
+
 		results += Boolean.toString(manualRotation)+"\t";
 		results += Boolean.toString(flipDistribution)+"\t";
 		results += Boolean.toString(guessFlip)+"\t";
@@ -650,9 +656,17 @@ public class Distribution_Analysis implements PlugIn {
 		results += Boolean.toString(preventPeeling)+"\t";
 		results += roiChoice+"\t";
 		results += rotationChoice+"\t";
+		results += Boolean.toString(flipHorizontal)+"\t";
+		results += Boolean.toString(flipVertical)+"\t";
 		return results;
 	}
 	
+	String printAlfa(String results,DetermineAlfa determineAlfa){
+		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
+		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
+		results += Double.toString(determineAlfa.distanceBetweenBones)+"\t";
+		return results;
+	}
 	String printSoftTissueResults(String results,SoftTissueAnalysis softTissueAnalysis){
 		results+=softTissueAnalysis.TotalMuD+"\t";
 		results+=softTissueAnalysis.TotalMuA+"\t";
@@ -662,6 +676,8 @@ public class Distribution_Analysis implements PlugIn {
 		results+=softTissueAnalysis.IntraMuFatA+"\t";
 		results+=softTissueAnalysis.FatD+"\t";
 		results+=softTissueAnalysis.FatA+"\t";
+		results+=softTissueAnalysis.SubCutFatD+"\t";
+		results+=softTissueAnalysis.SubCutFatA+"\t";
 		results+=softTissueAnalysis.LimbD+"\t";
 		results+=softTissueAnalysis.LimbA+"\t";
 		results+=softTissueAnalysis.FatPercentage+"\t";
@@ -670,6 +686,7 @@ public class Distribution_Analysis implements PlugIn {
 	
 	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
 		results+=cortAnalysis.MaMassD+"\t";
+		results+=cortAnalysis.StratecMaMassD+"\t";
 		results+=cortAnalysis.MaD+"\t";
 		results+=cortAnalysis.MaA+"\t";
 		results+=cortAnalysis.BMD+"\t";
