@@ -286,86 +286,92 @@ public class Distribution_Analysis implements PlugIn {
 					roi = softRoi;
 				}
 			}
-			alphaOn = false;
-			DetermineAlfa determineAlfa = null;
-			if (cOn || mOn || conOn || dOn){
-				determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
-				alphaOn = true;
-			}
 			
-			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
-			flipDistribution = imageAndAnalysisDetails.flipDistribution;
-			imageAndAnalysisDetails.stacked = roi.details.stacked;
-			stacked = imageAndAnalysisDetails.stacked;
-			TextPanel textPanel = IJ.getTextPanel();
-			if (textPanel == null) {textPanel = new TextPanel();}
-			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
-			
-			String results = "";
-			results = printResults(results, imp);
-			if (determineAlfa != null){
-				results = printAlfa(results,determineAlfa);
-			}
-			ImagePlus resultImage = null;
-			boolean makeImage = true;
-			if(suppressImages && !saveImageOnDisk && roi != null){
-				makeImage = false;
-			}else{
-				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
-			}
-
-			if(stOn){
-				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
-				results = printSoftTissueResults(results,softTissueAnalysis);
-				if(makeImage && resultImage != null){
-					resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
-				}
-			}
-			
-			if (cOn){
-				CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
-				results = printCorticalResults(results,cortAnalysis);
-				if(makeImage && resultImage != null){
-					resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+			if (roi != null){	/*An analysis was conducted*/
+				alphaOn = false;
+				DetermineAlfa determineAlfa = null;
+				if (cOn || mOn || conOn || dOn){
+					determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
+					alphaOn = true;
 				}
 				
-			}
-			if (mOn){
-				MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printMassDistributionResults(results,massDistribution);
-			}
-			if (conOn){
-				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printConcentricRingResults(results,concentricRingAnalysis);
-				if(!dOn && makeImage && resultImage != null){
-					resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
-					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
+				imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
+				flipDistribution = imageAndAnalysisDetails.flipDistribution;
+				imageAndAnalysisDetails.stacked = roi.details.stacked;
+				stacked = imageAndAnalysisDetails.stacked;
+				TextPanel textPanel = IJ.getTextPanel();
+				if (textPanel == null) {textPanel = new TextPanel();}
+				if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
+				
+				String results = "";
+				results = printResults(results, imp);
+				if (determineAlfa != null){
+					results = printAlfa(results,determineAlfa);
 				}
-			}
-			
-			
-			if (dOn){
-				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printDistributionResults(results,DistributionAnalysis);
-				if (makeImage && resultImage != null){
-					resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
-					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
+				
+				ImagePlus resultImage = null;
+				boolean makeImage = true;
+				if(suppressImages && !saveImageOnDisk && roi != null){
+					makeImage = false;
+				}else{
+					resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
 				}
+
+				if(stOn){
+					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
+					results = printSoftTissueResults(results,softTissueAnalysis);
+					if(makeImage && resultImage != null){
+						resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
+					}
+				}
+				
+				if (cOn){
+					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
+					results = printCorticalResults(results,cortAnalysis);
+					if(makeImage && resultImage != null){
+						resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+					}
+					
+				}
+				if (mOn){
+					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printMassDistributionResults(results,massDistribution);
+				}
+				if (conOn){
+					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printConcentricRingResults(results,concentricRingAnalysis);
+					if(!dOn && makeImage && resultImage != null){
+						resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
+						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
+					}
+				}
+				
+				
+				if (dOn){
+					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printDistributionResults(results,DistributionAnalysis);
+					if (makeImage && resultImage != null){
+						resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
+					}
+				}
+				
+				if ((dOn || conOn) && makeImage && resultImage != null){
+					resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
+				}
+				
+				if (!suppressImages && resultImage!= null){
+					resultImage.show();
+				}
+				if (saveImageOnDisk && resultImage!= null){
+					FileSaver fSaver = new FileSaver(resultImage);
+					fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
+				}
+				textPanel.appendLine(results);
+				textPanel.updateDisplay();
+			}else{
+				IJ.log("No analysis was selected.");
 			}
-			
-			if ((dOn || conOn) && makeImage && resultImage != null){
-				resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
-			}
-			
-			if (!suppressImages && resultImage!= null){
-				resultImage.show();
-			}
-			if (saveImageOnDisk && resultImage!= null){
-				FileSaver fSaver = new FileSaver(resultImage);
-				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
-			}
-			textPanel.appendLine(results);
-			textPanel.updateDisplay();			
 		}
 	}
 
