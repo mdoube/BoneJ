@@ -159,7 +159,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 70, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Marrow_threshold", 80, 4, 8, null);		//Anything above this is muscle or more dense		
 		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
@@ -179,11 +179,11 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
-		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
+		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[0]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",false);
 		dialog.addCheckbox("Analyse_mass_distribution",false);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_density_distribution",true);	//true
 		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
