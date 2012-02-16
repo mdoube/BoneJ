@@ -18,23 +18,16 @@ public class Vectors {
 	 */
 	public static Point3f crossProduct(Point3f point0, Point3f point1,
 			Point3f point2) {
-		double[] p0 = new double[3];
-		double[] p1 = new double[3];
-		double[] p2 = new double[3];
-		p0[0] = point0.x;
-		p0[1] = point0.y;
-		p0[2] = point0.z;
-		p1[0] = point1.x;
-		p1[1] = point1.y;
-		p1[2] = point1.z;
-		p2[0] = point2.x;
-		p2[1] = point2.y;
-		p2[2] = point2.z;
-		double[] cV = crossProduct(p0, p1, p2);
+		final double x1 = point1.x - point0.x;
+		final double y1 = point1.y - point0.y;
+		final double z1 = point1.z - point0.z;
+		final double x2 = point2.x - point0.x;
+		final double y2 = point2.y - point0.y;
+		final double z2 = point2.z - point0.z;
 		Point3f crossVector = new Point3f();
-		crossVector.x = (float) cV[0];
-		crossVector.y = (float) cV[1];
-		crossVector.z = (float) cV[2];
+		crossVector.x = (float) (y1 * z2 - z1 * y2);
+		crossVector.y = (float) (z1 * x2 - x1 * z2);
+		crossVector.z = (float) (x1 * y2 - y1 * x2);
 		return crossVector;
 	}
 
@@ -62,14 +55,29 @@ public class Vectors {
 		final double y2 = point2[1] - point0[1];
 		final double z2 = point2[2] - point0[2];
 
-		double[] crossVector = new double[3];
-		crossVector[0] = y1 * z2 - z1 * y2;
-		crossVector[1] = z1 * x2 - x1 * z2;
-		crossVector[2] = x1 * y2 - y1 * x2;
+		return crossProduct(x1, y1, z1, x2, y2, z2);
+	}
 
+	/**
+	 * Calculate the cross product of two vectors (x1, y1, z1) and (x2, y2, z2)
+	 * 
+	 * @param x1
+	 * @param y1
+	 * @param z1
+	 * @param x2
+	 * @param y2
+	 * @param z2
+	 * @return cross product in {x, y, z} format
+	 */
+	public static double[] crossProduct(double x1, double y1, double z1,
+			double x2, double y2, double z2) {
+		final double x = y1 * z2 - z1 * y2;
+		final double y = z1 * x2 - x1 * z2;
+		final double z = x1 * y2 - y1 * x2;
+		double[] crossVector = { x, y, z };
 		return crossVector;
 	}
-	
+
 	/**
 	 * Calculate the cross product of 2 column vectors, both in double[3][1]
 	 * format
@@ -98,11 +106,7 @@ public class Vectors {
 	 * @return resulting vector in double[3] format
 	 */
 	public static double[] crossProduct(double[] a, double[] b) {
-		double[] c = new double[3];
-		c[0] = a[1] * b[2] - a[2] * b[1];
-		c[1] = a[2] * b[0] - a[0] * b[2];
-		c[2] = a[0] * b[1] - a[1] * b[0];
-		return c;
+		return crossProduct(a[0], a[1], a[2], b[0], b[1], b[2]);
 	}
 
 	/**

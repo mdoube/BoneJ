@@ -40,13 +40,13 @@ import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 
 /**
- *<p>
+ * <p>
  * Takes point selections from ROI manager and returns the centroid and radius
  * of a best fit sphere Ported from Angelo Tardugno's C++
  * </p>
  * 
  * 
- *@author Michael Doube and Angelo Tardugno
+ * @author Michael Doube and Angelo Tardugno
  */
 public class SphereFitter implements PlugIn, DialogListener {
 
@@ -174,8 +174,9 @@ public class SphereFitter implements PlugIn, DialogListener {
 			final int tZ = z - startZ + 1;
 			final double dZ = z * vD - zC;
 			final double dZ2 = dZ * dZ;
-			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
-					imp.getBitDepth()), tZ);
+			targetStack.setPixels(
+					Moments.getEmptyPixels(roiWidth, roiHeight,
+							imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -195,8 +196,8 @@ public class SphereFitter implements PlugIn, DialogListener {
 		}
 		ImagePlus target = new ImagePlus("Sphere", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(), imp
-				.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(),
+				imp.getDisplayRangeMax());
 		return target;
 	}
 
@@ -246,8 +247,9 @@ public class SphereFitter implements PlugIn, DialogListener {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying largest enclosed cube");
 			final int tZ = z - startZ + 1;
-			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
-					imp.getBitDepth()), tZ);
+			targetStack.setPixels(
+					Moments.getEmptyPixels(roiWidth, roiHeight,
+							imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -260,8 +262,8 @@ public class SphereFitter implements PlugIn, DialogListener {
 		}
 		ImagePlus target = new ImagePlus("Inner Cube", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(), imp
-				.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(),
+				imp.getDisplayRangeMax());
 		return target;
 	}
 
@@ -311,8 +313,9 @@ public class SphereFitter implements PlugIn, DialogListener {
 			final int tZ = z - startZ + 1;
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying smallest enclosing cube");
-			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight,
-					imp.getBitDepth()), tZ);
+			targetStack.setPixels(
+					Moments.getEmptyPixels(roiWidth, roiHeight,
+							imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
 			ImageProcessor targetIP = targetStack.getProcessor(tZ);
@@ -325,29 +328,32 @@ public class SphereFitter implements PlugIn, DialogListener {
 		}
 		ImagePlus target = new ImagePlus("Outer Cube", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(), imp
-				.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(),
+				imp.getDisplayRangeMax());
 		return target;
 	}
 
 	/**
+	 * Add series of circular ROIs to the ROI Manager based on the centre and
+	 * radius of a sphere
 	 * 
 	 * @param imp
 	 *            Needed for decalibration of calibrated (x,y,z) r values
 	 * @param roiMan
 	 *            Instance of the ROI Manager i.e. RoiManager.getInstance().
-	 *            Throws IllegalArgumentException if roiMan is null, rather than
-	 *            instantiating RoiManager.
 	 * @param sphereDim
 	 *            calibrated centroid (x, y, z) and radius
-	 * @param clearRois 
+	 * @param clearRois
+	 * @throws IllegalArgumentException
+	 *             if roiMan is null, rather than instantiating RoiManager.
 	 */
 	public static void addToRoiManager(ImagePlus imp, RoiManager roiMan,
-			double[] sphereDim, boolean clearRois) {
+			double[] sphereDim, boolean clearRois)
+			throws IllegalArgumentException {
 		if (roiMan == null)
 			throw new IllegalArgumentException(
 					"ROI Manager has not been instantiated");
-		if (clearRois){
+		if (clearRois) {
 			RoiMan.deleteAll(roiMan);
 		}
 		Calibration cal = imp.getCalibration();
