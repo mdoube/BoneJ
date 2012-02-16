@@ -23,6 +23,7 @@ import java.util.*;	//Vector, Collections
 
 public class ScaledImageData{
 	public double[] scaledImage;
+	public double[] softScaledImage;
 	public double[] justROI;
 	public double minimum;
 	public double maximum;
@@ -31,27 +32,64 @@ public class ScaledImageData{
 	public double pixelSpacing;
 	int filterSize;
 	//Constructor
-	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize){
+	public ScaledImageData(int[] data, int widthIn, int heightIn, double VoxelSize, double scalingFactor, double constant, int filterSize,boolean flipHorizontal, boolean flipVertical,boolean noFiltering){
 		height = heightIn;
 		width = widthIn;
 		pixelSpacing = VoxelSize;
 		filterSize = 3;		//filterSize x filterSize median filter will be used
 		double[] unFiltered = new double[width*height];
-		minimum = 0;	//Save minimum value
-		maximum = 0;	//Save maximum value
+
 		for (int t = 0;t<width*height;t++){	//Scale the image
 			unFiltered[t] = ((double) data[t])*scalingFactor+constant;
-			if (unFiltered[t] < minimum) {minimum = unFiltered[t];}
-			if (unFiltered[t] > maximum) {maximum = unFiltered[t];}
 		}
-		scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
+		/*Get the min and max values*/
+		double[] tempSort = (double[]) unFiltered.clone();
+		Arrays.sort(tempSort);
+		minimum = tempSort[0];
+		maximum = tempSort[tempSort.length-1];
+		softScaledImage = medianFilter(unFiltered,width,height,7); //Median filter data
+		if (noFiltering){
+			scaledImage = (double[]) unFiltered.clone();
+		}else{		
+			scaledImage = medianFilter(unFiltered,width,height,filterSize); //Median filter data
+		}
+		
+		if (flipHorizontal){//Flip the image around the horizontal axis...
+			flipHorizontally();
+		}
+		if (flipVertical){//Flip the image around the horizontal axis...
+			flipVertically();
+		}
 	}
 	
+	public void flipHorizontally(){
+		double[] temp = (double[]) scaledImage.clone();
+		double[] temp2 = (double[]) softScaledImage.clone();
+		for (int j = 0;j<height;++j){
+			for (int i = 0;i<width;++i){
+				scaledImage[i+(height-1-j)*width] = temp[i+j*width];
+				softScaledImage[i+(height-1-j)*width] = temp2[i+j*width];
+			}
+		}
+	}
+	public void flipVertically(){
+		double[] temp = (double[]) scaledImage.clone();
+		double[] temp2 = (double[]) softScaledImage.clone();
+		for (int j = 0;j<height;++j){
+			for (int i = 0;i<width;++i){
+				scaledImage[(width-1-i)+j*width] = temp[i+j*width];
+				softScaledImage[(width-1-i)+j*width] = temp2[i+j*width];
+			}
+		}
+	}
 
 	//Meadian filter
 	public double[] medianFilter(double[] data, int width, int height,int filterSize){
 		double[] filtered = new double[width*height];
 		double[] toMedian = new double[filterSize*filterSize];
+		for (int i = 0; i< filtered.length; ++i) {filtered[i] = minimum;}
+		/*Fill filtered with min value to get the frame from messing up with edge detection*/
+		
 		int noGo = (int)Math.floor(((double)filterSize)/2.0);
 		int median = (int)Math.floor(((double)(filterSize*filterSize))/2.0);	//would be ceil, but indexing begins from 0!
 		int rowTotal,colTotal;
@@ -70,6 +108,8 @@ public class ScaledImageData{
 				filtered[row*width+col] = toMedian[median];
 			}
 		}
+		
+		
 		return filtered;
 	}
 	
