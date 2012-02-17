@@ -261,12 +261,19 @@ public class Distribution_Analysis implements PlugIn {
 			}
 			*/
 			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
-			int[] unsignedShort = new int[tempPointer.length];			
-			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
-				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = 0x0000FFFF & (int) (tempPointer[i]);}
-			}else{
+			int[] signedShort = new int[tempPointer.length];			
+		
+			if (imp.getOriginalFileInfo().fileType == ij.io.FileInfo.GRAY16_SIGNED || cal.isSigned16Bit()){
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
-				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
+				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
+			} else {
+				/*
+				Apply the original calibration of the image prior to applying the calibration got from the user
+				-> enables using ImageJ for figuring out the calibration without too much fuss.
+				*/
+				double[] origCalCoeffs = cal.getCoefficients();
+				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
+				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i]*origCalCoeffs[1]+origCalCoeffs[0]);}
 			}
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,flipVertical,noFiltering,sleeveOn
@@ -275,7 +282,7 @@ public class Distribution_Analysis implements PlugIn {
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
-			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
+			scaledImageData = new ScaledImageData(signedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
 			RoiSelector roi = null;
 			if(cOn || mOn || conOn || dOn){
 				roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
