@@ -91,7 +91,8 @@ public class SelectSoftROI extends RoiSelector{
 			}
 			/*Look for muscle outline*/
 			Vector<Object> muscleMasks = getSieve(muscleImage,new byte[width*height],new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
-			muscleSieve		= (byte[]) muscleMasks.get(0);
+			//muscleSieve		= (byte[]) muscleMasks.get(0);
+			muscleSieve		= (byte[]) muscleMasks.get(1);	/*Use all areas encircled as muscle (needed if there's fat between muscles)!!*/
 			
 			/*Wipe muscle area +1 layer of pixels away from subcut.*/
 			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();

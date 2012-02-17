@@ -159,7 +159,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 70, 4, 8, null);		//Anything above this is muscle or more dense		
+		dialog.addNumericField("Marrow_threshold", 80, 4, 8, null);		//Anything above this is muscle or more dense		
 		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
@@ -179,11 +179,11 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
-		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[3]); //"According_to_Imax/Imin"
+		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[0]); //"According_to_Imax/Imin"
 		dialog.addCheckbox("Analyse_cortical_results",false);
 		dialog.addCheckbox("Analyse_mass_distribution",false);
 		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",false);	//true
+		dialog.addCheckbox("Analyse_density_distribution",true);	//true
 		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
 		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
 		dialog.addCheckbox("Allow_cleaving",false);					//false
@@ -254,18 +254,26 @@ public class Distribution_Analysis implements PlugIn {
 				}
 			}
 			
-			/*Look study special, images acquired prior to 2007 need to be flipped horizontally*/
+			/*Look study special, images acquired prior to 2007 need to be flipped horizontally
 			String checkDate = getInfoProperty(imageInfo,"Acquisition Date");
 			if (checkDate.indexOf("2005") >-1 || checkDate.indexOf("2006") >-1){
 				flipHorizontal = true;
 			}
+			*/
 			short[] tempPointer = (short[]) imp.getProcessor().getPixels();			
-			int[] unsignedShort = new int[tempPointer.length];			
-			if (getInfoProperty(imageInfo,"Stratec File") == null){ //For unsigned short Dicom, which appears to be the default ImageJ DICOM...
-				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = 0x0000FFFF & (int) (tempPointer[i]);}
-			}else{
+			int[] signedShort = new int[tempPointer.length];			
+		
+			if (imp.getOriginalFileInfo().fileType == ij.io.FileInfo.GRAY16_SIGNED || cal.isSigned16Bit()){
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
-				for (int i=0;i<tempPointer.length;++i){unsignedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
+				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i] - Math.pow(2.0,15.0));}
+			} else {
+				/*
+				Apply the original calibration of the image prior to applying the calibration got from the user
+				-> enables using ImageJ for figuring out the calibration without too much fuss.
+				*/
+				double[] origCalCoeffs = cal.getCoefficients();
+				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
+				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i]*origCalCoeffs[1]+origCalCoeffs[0]);}
 			}
 			
 			ImageAndAnalysisDetails imageAndAnalysisDetails = new ImageAndAnalysisDetails(flipHorizontal,flipVertical,noFiltering,sleeveOn
@@ -274,7 +282,7 @@ public class Distribution_Analysis implements PlugIn {
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
 															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
-			scaledImageData = new ScaledImageData(unsignedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
+			scaledImageData = new ScaledImageData(signedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
 			RoiSelector roi = null;
 			if(cOn || mOn || conOn || dOn){
 				roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
@@ -286,86 +294,92 @@ public class Distribution_Analysis implements PlugIn {
 					roi = softRoi;
 				}
 			}
-			alphaOn = false;
-			DetermineAlfa determineAlfa = null;
-			if (cOn || mOn || conOn || dOn){
-				determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
-				alphaOn = true;
-			}
 			
-			imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
-			flipDistribution = imageAndAnalysisDetails.flipDistribution;
-			imageAndAnalysisDetails.stacked = roi.details.stacked;
-			stacked = imageAndAnalysisDetails.stacked;
-			TextPanel textPanel = IJ.getTextPanel();
-			if (textPanel == null) {textPanel = new TextPanel();}
-			if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
-			
-			String results = "";
-			results = printResults(results, imp);
-			if (determineAlfa != null){
-				results = printAlfa(results,determineAlfa);
-			}
-			ImagePlus resultImage = null;
-			boolean makeImage = true;
-			if(suppressImages && !saveImageOnDisk && roi != null){
-				makeImage = false;
-			}else{
-				resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
-			}
-
-			if(stOn){
-				SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
-				results = printSoftTissueResults(results,softTissueAnalysis);
-				if(makeImage && resultImage != null){
-					resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
-				}
-			}
-			
-			if (cOn){
-				CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
-				results = printCorticalResults(results,cortAnalysis);
-				if(makeImage && resultImage != null){
-					resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+			if (roi != null){	/*An analysis was conducted*/
+				alphaOn = false;
+				DetermineAlfa determineAlfa = null;
+				if (cOn || mOn || conOn || dOn){
+					determineAlfa = new DetermineAlfa((SelectROI) roi,imageAndAnalysisDetails);
+					alphaOn = true;
 				}
 				
-			}
-			if (mOn){
-				MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printMassDistributionResults(results,massDistribution);
-			}
-			if (conOn){
-				ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printConcentricRingResults(results,concentricRingAnalysis);
-				if(!dOn && makeImage && resultImage != null){
-					resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
-					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
+				imageAndAnalysisDetails.flipDistribution = roi.details.flipDistribution;
+				flipDistribution = imageAndAnalysisDetails.flipDistribution;
+				imageAndAnalysisDetails.stacked = roi.details.stacked;
+				stacked = imageAndAnalysisDetails.stacked;
+				TextPanel textPanel = IJ.getTextPanel();
+				if (textPanel == null) {textPanel = new TextPanel();}
+				if (textPanel.getLineCount() == 0){writeHeader(textPanel);}
+				
+				String results = "";
+				results = printResults(results, imp);
+				if (determineAlfa != null){
+					results = printAlfa(results,determineAlfa);
 				}
-			}
-			
-			
-			if (dOn){
-				DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-				results = printDistributionResults(results,DistributionAnalysis);
-				if (makeImage && resultImage != null){
-					resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
-					resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
+				
+				ImagePlus resultImage = null;
+				boolean makeImage = true;
+				if(suppressImages && !saveImageOnDisk && roi != null){
+					makeImage = false;
+				}else{
+					resultImage = getRGBResultImage(roi.scaledImage,roi.width,roi.height);
 				}
+
+				if(stOn){
+					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
+					results = printSoftTissueResults(results,softTissueAnalysis);
+					if(makeImage && resultImage != null){
+						resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
+					}
+				}
+				
+				if (cOn){
+					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
+					results = printCorticalResults(results,cortAnalysis);
+					if(makeImage && resultImage != null){
+						resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+					}
+					
+				}
+				if (mOn){
+					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printMassDistributionResults(results,massDistribution);
+				}
+				if (conOn){
+					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printConcentricRingResults(results,concentricRingAnalysis);
+					if(!dOn && makeImage && resultImage != null){
+						resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
+						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
+					}
+				}
+				
+				
+				if (dOn){
+					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
+					results = printDistributionResults(results,DistributionAnalysis);
+					if (makeImage && resultImage != null){
+						resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
+						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
+					}
+				}
+				
+				if ((dOn || conOn) && makeImage && resultImage != null){
+					resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
+				}
+				
+				if (!suppressImages && resultImage!= null){
+					resultImage.show();
+				}
+				if (saveImageOnDisk && resultImage!= null){
+					FileSaver fSaver = new FileSaver(resultImage);
+					fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
+				}
+				textPanel.appendLine(results);
+				textPanel.updateDisplay();
+			}else{
+				IJ.log("No analysis was selected.");
 			}
-			
-			if ((dOn || conOn) && makeImage && resultImage != null){
-				resultImage = addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
-			}
-			
-			if (!suppressImages && resultImage!= null){
-				resultImage.show();
-			}
-			if (saveImageOnDisk && resultImage!= null){
-				FileSaver fSaver = new FileSaver(resultImage);
-				fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
-			}
-			textPanel.appendLine(results);
-			textPanel.updateDisplay();			
 		}
 	}
 
