@@ -27,6 +27,7 @@ import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
 import ij.process.*;	//Debugging
+
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectROI extends RoiSelector{
@@ -88,6 +89,12 @@ public class SelectROI extends RoiSelector{
 				xcoordinates[i] = roiI.get(i);
 				ycoordinates[i] = roiJ.get(i);
 			}
+			/*Flip the original image prior to adding the ROI, if scaled image is flipped*/
+			if ((details.flipHorizontal || details.flipVertical) && imp.getRoi() != null){
+				IJ.run(imp,"Select None","");	//Remove existing ROIs in order to flip the whole image...
+			}
+			if (details.flipHorizontal){imp.getProcessor().flipVertical(); imp.updateAndDraw();}
+			if (details.flipVertical){imp.getProcessor().flipHorizontal(); imp.updateAndDraw();}
 			ijROI = new PolygonRoi(xcoordinates,ycoordinates,roiI.size(),Roi.POLYGON);
 			imp.setRoi(ijROI);
 		}
