@@ -100,8 +100,9 @@ public class Distribution_Analysis implements PlugIn {
 		Calibration cal = imp.getCalibration();
 		double[] calibrationCoefficients = {0,1};
 		if (getInfoProperty(imageInfo,"Stratec File") == null){ 
-				if (cal.getCoefficients() != null)
-			calibrationCoefficients = cal.getCoefficients();
+			if (cal.getCoefficients() != null){
+				calibrationCoefficients = cal.getCoefficients();
+			}
 		} else {
 			calibrationCoefficients = new double[2];
 			/*Read calibration from TYP file database*/
@@ -271,7 +272,8 @@ public class Distribution_Analysis implements PlugIn {
 				Apply the original calibration of the image prior to applying the calibration got from the user
 				-> enables using ImageJ for figuring out the calibration without too much fuss.
 				*/
-				double[] origCalCoeffs = cal.getCoefficients();
+				double[] origCalCoeffs = imp.getOriginalFileInfo().coefficients;
+				if (origCalCoeffs == null){origCalCoeffs = cal.getCoefficients();}
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
 				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i]*origCalCoeffs[1]+origCalCoeffs[0]);}
 			}
