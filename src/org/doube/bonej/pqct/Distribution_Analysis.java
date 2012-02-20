@@ -371,6 +371,7 @@ public class Distribution_Analysis implements PlugIn {
 				}
 				
 				if (!suppressImages && resultImage!= null){
+					resultImage = addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
 					resultImage.show();
 				}
 				if (saveImageOnDisk && resultImage!= null){
