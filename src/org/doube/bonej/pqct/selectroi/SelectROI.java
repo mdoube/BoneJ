@@ -31,7 +31,7 @@ import ij.process.*;	//Debugging
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectROI extends RoiSelector{
-	Vector<DetectedEdge> edges;
+	public Vector<DetectedEdge> edges;
 	//ImageJ constructor
 	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi){
 		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
