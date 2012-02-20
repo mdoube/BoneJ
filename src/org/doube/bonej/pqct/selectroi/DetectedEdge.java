@@ -46,7 +46,7 @@ public class DetectedEdge implements Comparable<DetectedEdge>{
 		int returnValue = 0;
 		if (o == null || this == null) {throw new NullPointerException();}
 		if (this.area == o.area) {return 0;}
-		return this.area > o.area ? 1 : -1;		
+		return this.area < o.area ? -1 : 1;		
 	}
 
 	

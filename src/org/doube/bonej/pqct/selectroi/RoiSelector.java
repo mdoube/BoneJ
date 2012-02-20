@@ -209,6 +209,7 @@ public abstract class RoiSelector{
 		
 		/*Select correct bone outline*/
 		int selection = 0;
+		
 		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBoneDetectedEdges(edges);}
 		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBoneDetectedEdges(edges);}
 		if (roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(edges);}
@@ -220,6 +221,13 @@ public abstract class RoiSelector{
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBoneDetectedEdges(edges);}
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(edges);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(edges);}	
+		
+		for (int i = 0; i<edges.size();++i){
+			System.out.println("RoiArea "+edges.get(i).area);
+		}
+		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
+		
+		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
 		//IJ.error(roiChoice + " selection "+selection);
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
@@ -387,7 +395,7 @@ public abstract class RoiSelector{
 		}
 		Collections.sort(temp);
 		int counter=0;
-		while (edges.get(counter).area !=edges.get(temp.size()-1).area){
+		while (edges.get(counter).area !=temp.get(temp.size()-1).area){
 			++counter;
 		}
 		return counter;
@@ -396,7 +404,7 @@ public abstract class RoiSelector{
 	/*DetectedEdge*/
 	int selectRoiSecondLargestBoneDetectedEdges(Vector<DetectedEdge> edges){
 		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
-		for (int iii =0;iii<length.size();++iii){
+		for (int iii =0;iii<edges.size();++iii){
 			temp.add(edges.get(iii));
 		}
 		Collections.sort(temp);
@@ -410,12 +418,12 @@ public abstract class RoiSelector{
 		/*DetectedEdge*/
 	int selectRoiSmallestBoneDetectedEdges(Vector<DetectedEdge> edges){
 		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
-		for (int iii =0;iii<length.size();++iii){
+		for (int iii =0;iii<edges.size();++iii){
 			temp.add(edges.get(iii));
 		}
 		Collections.sort(temp);
 		int counter=0;
-		while (edges.get(counter).area !=edges.get(0).area){	//Select smallest
+		while (edges.get(counter).area !=temp.get(0).area){	//Select smallest
 			++counter;
 		}
 		return counter;
