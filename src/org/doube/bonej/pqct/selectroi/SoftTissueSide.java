@@ -49,7 +49,7 @@ public class SoftTissueSide{
 	*/
 	byte[] fillSides(SelectROI roi){
 		
-		int[] consideredBones = roi.twoLargestBones(roi.length);	/*Get the two bones*/
+		int[] consideredBones = roi.twoLargestBonesDetectedEdges(roi.edges);	/*Get the two bones*/
 		double[][] boneCoordinates = getCoordinates(roi,consideredBones);	/*Fill a sieve with the two bones*/
 		double rotationAngle = getRotation(boneCoordinates);	/*Find the rotation angle to vertical*/
 		/*	The rotation rotates the line connecting the bones to vertical */
@@ -128,12 +128,8 @@ public class SoftTissueSide{
 	double[][] getCoordinates(SelectROI tempRoi, int[] consideredBones){
 		double[][] coordinates = new double[consideredBones.length][2];
 		for (int j = 0; j<consideredBones.length;++j){
-			Vector<Integer> sRoiI = new Vector<Integer>();
-			Vector<Integer> sRoiJ = new Vector<Integer>();
-			for (int i = tempRoi.beginnings.get(consideredBones[j]);i < tempRoi.beginnings.get(consideredBones[j])+tempRoi.length.get(consideredBones[j]);++i){
-				sRoiI.add(tempRoi.iit.get(i));
-				sRoiJ.add(tempRoi.jiit.get(i));
-			}
+			Vector<Integer> sRoiI = tempRoi.edges.get(consideredBones[j]).iit;
+			Vector<Integer> sRoiJ =  tempRoi.edges.get(consideredBones[j]).jiit;
 			byte[] returnedSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,tempRoi.scaledImage,tempRoi.details.rotationThreshold);
 			int counter  = 0;
 			coordinates[j][0] = 0;

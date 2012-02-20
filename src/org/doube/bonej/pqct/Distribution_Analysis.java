@@ -100,8 +100,9 @@ public class Distribution_Analysis implements PlugIn {
 		Calibration cal = imp.getCalibration();
 		double[] calibrationCoefficients = {0,1};
 		if (getInfoProperty(imageInfo,"Stratec File") == null){ 
-				if (cal.getCoefficients() != null)
-			calibrationCoefficients = cal.getCoefficients();
+			if (cal.getCoefficients() != null){
+				calibrationCoefficients = cal.getCoefficients();
+			}
 		} else {
 			calibrationCoefficients = new double[2];
 			/*Read calibration from TYP file database*/
@@ -271,7 +272,8 @@ public class Distribution_Analysis implements PlugIn {
 				Apply the original calibration of the image prior to applying the calibration got from the user
 				-> enables using ImageJ for figuring out the calibration without too much fuss.
 				*/
-				double[] origCalCoeffs = cal.getCoefficients();
+				double[] origCalCoeffs = imp.getOriginalFileInfo().coefficients;
+				if (origCalCoeffs == null){origCalCoeffs = cal.getCoefficients();}
 				float[] floatPointer = (float[]) imp.getProcessor().toFloat(1,null).getPixels();
 				for (int i=0;i<tempPointer.length;++i){signedShort[i] = (int) (floatPointer[i]*origCalCoeffs[1]+origCalCoeffs[0]);}
 			}
@@ -369,9 +371,11 @@ public class Distribution_Analysis implements PlugIn {
 				}
 				
 				if (!suppressImages && resultImage!= null){
+					resultImage = addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
 					resultImage.show();
 				}
 				if (saveImageOnDisk && resultImage!= null){
+					resultImage = addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
 					FileSaver fSaver = new FileSaver(resultImage);
 					fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
 				}
@@ -391,6 +395,12 @@ public class Distribution_Analysis implements PlugIn {
 		return tempImage;
 	}
 	
+	ImagePlus addScale(ImagePlus tempImage, double pixelSpacing){
+		tempImage.getProcessor().setColor(new Color(255,0,0));
+		tempImage.getProcessor().drawLine(5, 5, (int)(5.0+10.0/pixelSpacing), 5);
+		tempImage.getProcessor().drawString("1 cm", 5, 20);
+		return tempImage;
+	}
 	/*Add soft sieve*/
 	ImagePlus addSoftTissueSieve(ImagePlus tempImage, byte[] sieve){
 		for (int y = 0; y < tempImage.getHeight();++y) {
@@ -509,8 +519,8 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	ImagePlus addRotate(ImagePlus tempImage,double alfa){
-		tempImage.getProcessor().setInterpolate(true);
-		tempImage.getProcessor().rotate(alfa);
+		tempImage.getProcessor().setBackgroundValue(0.0);
+		IJ.run(tempImage, "Arbitrarily...", "angle=" + alfa + " grid=1 interpolation=Bilinear enlarge");  
 		return tempImage;
 	}
 	
