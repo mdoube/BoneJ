@@ -47,7 +47,7 @@ public class DetermineAlfa{
 				byte[] tempCsmiSieve = new byte[roi.width*roi.height];
 				for (int j = 0; j< roi.height;j++){
 					for (int i = 0; i<roi.width;i++){
-						if (roi.cortexROI[i+j*roi.width] >= details.rotationThreshold){
+						if (roi.scaledImage[i+j*roi.width] >= details.rotationThreshold){
 							tempCsmiSieve[i+j*roi.width] = 1;
 						} else {
 							tempCsmiSieve[i+j*roi.width] = 0;
@@ -94,9 +94,9 @@ public class DetermineAlfa{
 			}
 			marrowCenter[0] /=(double)roi.boneMarrowRoiI.size();
 			marrowCenter[1] /=(double)roi.boneMarrowRoiJ.size();
-			double[] radii = new double[roi.roiI.size()];
-			for (int i = 0; i<roi.roiI.size();++i){
-				radii[i] = Math.sqrt(Math.pow(roi.roiI.get(i)-marrowCenter[0],2)+Math.pow(roi.roiJ.get(i)-marrowCenter[1],2));
+			double[] radii = new double[roi.edges.get(roi.selection).length];
+			for (int i = 0; i<roi.edges.get(roi.selection).length;++i){
+				radii[i] = Math.sqrt(Math.pow(roi.edges.get(roi.selection).iit.get(i)-marrowCenter[0],2)+Math.pow(roi.edges.get(roi.selection).jiit.get(i)-marrowCenter[1],2));
 			}
 			double[] sumRadii = new double[radii.length];
 			for (int i = 5;i<radii.length-6;++i){
@@ -111,8 +111,8 @@ public class DetermineAlfa{
 				++largest;
 			}
 			double x,y;
-			x = roi.roiI.get(largest)-marrowCenter[0];
-			y = roi.roiJ.get(largest)-marrowCenter[1];
+			x = roi.edges.get(roi.selection).iit.get(largest)-marrowCenter[0];
+			y = roi.edges.get(roi.selection).jiit.get(largest)-marrowCenter[1];
 			alfa = Math.PI-Math.atan2(y,x);
 		}
 
@@ -121,7 +121,7 @@ public class DetermineAlfa{
 			/*Create temp roi for rotating using rotationThreshold..*/
 			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold,false);
 			/*Find the second biggest bone (could be bigger than the selected roi...*/
-			int[] twoBones = tempRoi.twoLargestBones(tempRoi.area);
+			int[] twoBones = tempRoi.twoLargestBonesDetectedEdges(tempRoi.edges);
 			int otherBoneSelection = 0;
 			if (tempRoi.selection == twoBones[0]){
 				otherBoneSelection = twoBones[1];
@@ -129,12 +129,9 @@ public class DetermineAlfa{
 				otherBoneSelection = twoBones[0];
 			}
 			/*Fill a sieve with a second bone and acquire coordinates...*/
-			Vector<Integer> sRoiI = new Vector<Integer>();
-			Vector<Integer> sRoiJ = new Vector<Integer>();
-			for (int i = tempRoi.beginnings.get(otherBoneSelection);i < tempRoi.beginnings.get(otherBoneSelection)+tempRoi.length.get(otherBoneSelection);++i){
-				sRoiI.add(tempRoi.iit.get(i));
-				sRoiJ.add(tempRoi.jiit.get(i));
-			}
+			Vector<Integer> sRoiI = tempRoi.edges.get(otherBoneSelection).iit;
+			Vector<Integer> sRoiJ = tempRoi.edges.get(otherBoneSelection).jiit;
+
 			byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,tempRoi.scaledImage,details.rotationThreshold);
 			
 			double[] selectedBoneCenter = calculateCenter(tempRoi.sieve, tempRoi.width, tempRoi.height);			/*Calculate selected bone centre*/

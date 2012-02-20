@@ -37,15 +37,6 @@ public class SelectSoftROI extends RoiSelector{
 		softSieve = null;
 		byte[] softResult = null;
 		if (details.stOn){
-			Vector<Integer> stLength		= new Vector<Integer>();
-			Vector<Integer> stBeginnings	= new Vector<Integer>();
-			Vector<Integer> stIit			= new Vector<Integer>();
-			Vector<Integer> stJiit			= new Vector<Integer>();
-			Vector<Integer> stRoiI			= new Vector<Integer>();
-			Vector<Integer> stRoiJ			= new Vector<Integer>();
-			Vector<Integer> stArea		= new Vector<Integer> ();
-			softResult = new byte[width*height];
-			
 			
 			/*Get rid of measurement tube used at the UKK institute*/
 			byte[] sleeve = null;
@@ -60,14 +51,10 @@ public class SelectSoftROI extends RoiSelector{
 				}
 			}
 			
-			Vector<Object> masks = getSieve(softScaledImage,softResult,stArea,stLength,stBeginnings, stIit, stJiit,stRoiI,stRoiJ,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
-			softSieve		= (byte[]) masks.get(0);
-			softResult	 	= (byte[]) masks.get(1);
-			stIit 		 	= (Vector<Integer>) masks.get(2);
-			stJiit 			= (Vector<Integer>) masks.get(3);
-			stBeginnings	= (Vector<Integer>) masks.get(4);
-			stLength		= (Vector<Integer>) masks.get(5);
-			stArea			= (Vector<Integer>) masks.get(6);
+			Vector<Object> masks = getSieve(softScaledImage,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
+			softSieve						= (byte[]) masks.get(0);
+			softResult					 	= (byte[]) masks.get(1);
+			Vector<DetectedEdge> stEdges	= (Vector<DetectedEdge>) masks.get(2);
 			
 			/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin) 
 			on top of fat to enable finding muscle border
@@ -90,9 +77,24 @@ public class SelectSoftROI extends RoiSelector{
 				}
 			}
 			/*Look for muscle outline*/
-			Vector<Object> muscleMasks = getSieve(muscleImage,new byte[width*height],new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
+			Vector<Object> muscleMasks = getSieve(muscleImage,details.muscleThreshold,"Bigger",details.guessStacked,details.stacked,false,false);
 			//muscleSieve		= (byte[]) muscleMasks.get(0);
-			muscleSieve		= (byte[]) muscleMasks.get(1);	/*Use all areas encircled as muscle (needed if there's fat between muscles)!!*/
+			Vector<DetectedEdge> muscleEdges = (Vector<DetectedEdge>) muscleMasks.get(2);
+			Collections.sort(muscleEdges,Collections.reverseOrder());
+			int tempMuscleArea=0;
+			muscleSieve = new byte[softSieve.length];
+			int areaToAdd=0;
+			/*Include areas that contribute more than 1% on top of what is already included*/
+			while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.01 < muscleEdges.get(areaToAdd).area){ 
+				byte[] tempMuscleSieve = fillSieve(muscleEdges.get(areaToAdd).iit, muscleEdges.get(areaToAdd).jiit,width,height,muscleImage,details.muscleThreshold);
+				for (int i = 0; i<tempMuscleSieve.length;++i){
+					if (tempMuscleSieve[i] > 0){muscleSieve[i] = tempMuscleSieve[i];}
+				}
+				tempMuscleArea+=muscleEdges.get(areaToAdd).area;
+				areaToAdd++;
+			}
+			
+			//muscleSieve		= (byte[]) muscleMasks.get(1);	/*Use all areas encircled as muscle (needed if there's fat between muscles)!!*/
 			
 			/*Wipe muscle area +1 layer of pixels away from subcut.*/
 			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
@@ -101,9 +103,8 @@ public class SelectSoftROI extends RoiSelector{
 				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
 			}
 			/*create temp boneResult to wipe out bone and marrow*/
-			byte[] boneResult = new byte[width*height];
-			Vector<Object> masks2 = getSieve(softScaledImage,boneResult,new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(), new Vector<Integer>(), new Vector<Integer>(),new Vector<Integer>(),new Vector<Integer>(),softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
-			boneResult	= (byte[]) masks2.get(1);
+			Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+			byte[] boneResult	= (byte[]) masks2.get(1);
 			for (int i = 0;i<softSieve.length;++i){
 				if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
 					softSieve[i] =2;	//Fat

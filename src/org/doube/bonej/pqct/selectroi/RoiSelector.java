@@ -200,34 +200,40 @@ public abstract class RoiSelector{
 		}
 		return data;
 	}
-	
-	public Vector<Object> getSieve(double[] tempScaledImage,byte[] result,Vector<Integer> area,Vector<Integer> length,Vector<Integer> beginnings,Vector<Integer> iit,Vector<Integer> jiit,Vector<Integer> roiI,Vector<Integer> roiJ,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
-		Vector<Object> results = findEdge(tempScaledImage,result,area,length,beginnings, iit, jiit,boneThreshold,allowCleaving);	//Trace bone edges	
+
+	/*DetectedEdges*/
+	public Vector<Object> getSieve(double[] tempScaledImage,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+		Vector<Object> results = findEdge(tempScaledImage,boneThreshold,allowCleaving);	//Trace bone edges	
 		result = (byte[]) results.get(0);
-		iit = (Vector<Integer>) results.get(1);
-		jiit = (Vector<Integer>) results.get(2);
-		beginnings = (Vector<Integer>) results.get(3);
-		length = (Vector<Integer>) results.get(4);
-		area = (Vector<Integer>) results.get(5);
+		Vector<DetectedEdge> edges	= (Vector<DetectedEdge>) results.get(1);
 		
 		/*Select correct bone outline*/
 		int selection = 0;
-		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBone(area);}
-		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBone(area);}
-		if (roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(beginnings,iit);}
-		if (roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(beginnings,iit);}
-		if (roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(beginnings,jiit);}
-		if (roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(beginnings,jiit);}
-		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(beginnings,area,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(beginnings,area,length,iit,jiit,tempScaledImage,details.fatThreshold);}
-		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBone(area);}
-		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(beginnings,iit,area);}
-		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(beginnings,iit,area);}	
+		
+		if (roiChoice.equals(details.choiceLabels[0])){selection = selectRoiBiggestBoneDetectedEdges(edges);}
+		if (roiChoice.equals(details.choiceLabels[1])){selection = selectRoiSmallestBoneDetectedEdges(edges);}
+		if (roiChoice.equals(details.choiceLabels[2])){selection = selectRoiLeftMostBone(edges);}
+		if (roiChoice.equals(details.choiceLabels[3])){selection = selectRoiRightMostBone(edges);}
+		if (roiChoice.equals(details.choiceLabels[4])){selection = selectRoiTopMostBone(edges);}
+		if (roiChoice.equals(details.choiceLabels[5])){selection = selectRoiBottomMostBone(edges);}
+		if (roiChoice.equals(details.choiceLabels[6])){selection = selectRoiCentralBone(edges,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[7])){selection = selectRoiPeripheralBone(edges,tempScaledImage,details.fatThreshold);}
+		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBoneDetectedEdges(edges);}
+		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(edges);}
+		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(edges);}	
+		
+		for (int i = 0; i<edges.size();++i){
+			System.out.println("RoiArea "+edges.get(i).area);
+		}
+		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
+		
+		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
 		//IJ.error(roiChoice + " selection "+selection);
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
-			int[] guessingStack = twoLargestBones(area);
-			if (Math.abs((double)jiit.get(beginnings.get(guessingStack[0]))- (double)jiit.get(beginnings.get(guessingStack[1])))>1.1*Math.abs((double)iit.get(beginnings.get(guessingStack[0]))- (double)iit.get(beginnings.get(guessingStack[1])))){
+			int[] guessingStack = twoLargestBonesDetectedEdges(edges);
+			if (Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[0]).jiit.get(1))>
+			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[0]).iit.get(1))){
 				details.stacked = true;
 			} else{
 				details.stacked = false;
@@ -236,21 +242,11 @@ public abstract class RoiSelector{
 		
 		
 		/*Try to guess whether to flip the distribution*/
-		if (guessFlip && stacked){
+		if (guessFlip){
 			if (details.guessLarger){
-				details.flipDistribution = guessFlipLarger(length,beginnings,jiit);
+				details.flipDistribution = guessFlipLarger(edges,stacked);
 			}else{
-				details.flipDistribution = guessFlipSelection(length,beginnings,jiit,selection);
-			}
-			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
-				details.flipDistribution = !details.flipDistribution;			
-			}
-		}
-		if (guessFlip && !stacked){
-			if (details.guessLarger){
-				details.flipDistribution = guessFlipLarger(length,beginnings,iit);
-			}else{	
-				details.flipDistribution = guessFlipSelection(length,beginnings,iit,selection);
+				details.flipDistribution = guessFlipSelection(edges,selection,stacked);
 			}
 			if (details.invertGuess){	//Flip flip, if roiChoice is smaller or second Largest
 				details.flipDistribution = !details.flipDistribution;			
@@ -258,40 +254,33 @@ public abstract class RoiSelector{
 		}
 		
 		/*fill roiI & roiJ*/
-		for (int i = beginnings.get(selection);i < beginnings.get(selection)+length.get(selection);++i){
-			roiI.add(iit.get(i));
-			roiJ.add(jiit.get(i));
-		}
-		byte[] tempSieve=fillSieve(roiI, roiJ,width,height,tempScaledImage,boneThreshold);
+
+		byte[] tempSieve=fillSieve(edges.get(selection).iit, edges.get(selection).jiit,width,height,tempScaledImage,boneThreshold);
 		Vector<Object> returnVector = new Vector<Object>();
 		returnVector.add(tempSieve);
 		returnVector.add(result);
-		returnVector.add(iit);
-		returnVector.add(jiit);
-		returnVector.add(beginnings);
-		returnVector.add(length);
-		returnVector.add(area);
+		returnVector.add(edges);
 		returnVector.add(new Integer(selection));
 		return returnVector;
 	}
 	
-
-	public int[] twoLargestBonesRetainOrder(Vector<Integer> length){
+	/*DetectedEdge*/
+	public int[] twoLargestBonesRetainOrderDetectedEdges(Vector<DetectedEdge> edges){
 		//Identify the two longest circumferences
-		Vector<Integer> temp3 = new Vector<Integer>();
-		for (int iii =0;iii<length.size();++iii){
-			temp3.add(length.get(iii));
+		Vector<DetectedEdge> temp3 = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp3.add(edges.get(iii));
 		}
 		Collections.sort(temp3);
 		int counter=0;
 		int[] twoLongest = new int[2];
-		while (length.get(counter) !=temp3.get(temp3.size()-1)){
+		while (edges.get(counter).area !=temp3.get(temp3.size()-1).area){
 			++counter;
 		}
 		twoLongest[0] = counter;
 		counter=0;
 		if (temp3.size() > 1){
-			while (length.get(counter) !=temp3.get(temp3.size()-2) || counter == twoLongest[0]){
+			while (edges.get(counter).area !=temp3.get(temp3.size()-2).area || counter == twoLongest[0]){
 				++counter;
 			}
 			twoLongest[1] = counter;
@@ -302,23 +291,23 @@ public abstract class RoiSelector{
 		return twoLongest;
 	}
 	
-	
-	public int[] twoLargestBones(Vector<Integer> length){
+	/*DetectedEdge*/
+	public int[] twoLargestBonesDetectedEdges(Vector<DetectedEdge> edges){
 		//Identify the two longest circumferences
-		Vector<Integer> temp3 = new Vector<Integer>();
-		for (int iii =0;iii<length.size();++iii){
-			temp3.add(length.get(iii));
+		Vector<DetectedEdge> temp3 = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp3.add(edges.get(iii));
 		}
 		Collections.sort(temp3);
 		int counter=0;
 		int[] twoLongest = new int[2];
-		while (length.get(counter) !=temp3.get(temp3.size()-1)){
+		while (edges.get(counter).area !=temp3.get(temp3.size()-1).area){
 			++counter;
 		}
 		twoLongest[0] = counter;
 		counter=0;
 		if (temp3.size() > 1){
-			while (length.get(counter) !=temp3.get(temp3.size()-2) || counter == twoLongest[0]){
+			while (edges.get(counter).area !=temp3.get(temp3.size()-2).area || counter == twoLongest[0]){
 				++counter;
 			}
 			twoLongest[1] = counter;
@@ -329,20 +318,61 @@ public abstract class RoiSelector{
 	}
 	
 	
-	/*Only two biggest bone will be considered..*/
-	boolean guessFlipSelection(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit, int selection){
+	/*DetectedEdge*/
+	boolean guessFlipLarger(Vector<DetectedEdge> edges,boolean stacked){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<edges.size();iii++){
+				temp.add(edges.get(iii).area);
+				temp2.add(edges.get(iii).area);
+		}
+		Collections.sort(temp);
+		int[] counter= new int[2];
+		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
+			++counter[0];
+		}
+		boolean returnValue = false;
+		if (temp.size() > 1){
+			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
+				++counter[1];
+			}
+			if (stacked){
+				if (edges.get(counter[0]).jiit.get(0)<edges.get(counter[1]).jiit.get(0)){
+					returnValue = false;
+				}else{returnValue = true;}
+			}else{
+				if (edges.get(counter[0]).iit.get(0)<edges.get(counter[1]).iit.get(0)){
+					returnValue = false;
+				}else{returnValue = true;}
+			}
+		}		
+		//IJ.error("RV "+returnValue+" c0 "+iit.get(beginning.get(counter[0]))+" c1 "+iit.get(beginning.get(counter[1])));
+		return returnValue;
+	}
+	
+	/*DetectedEdge Only two biggest bone will be considered..*/
+	boolean guessFlipSelection(Vector<DetectedEdge> edges, int selection,boolean stacked){
 		
 
-		int[] considered = twoLargestBones(length);
+		int[] considered = twoLargestBonesDetectedEdges(edges);
 		if (selection != considered[0] && selection != considered[1]){	//selection is not the biggest or the second biggest bone -> can't make a guess, return false
 			//IJ.error("Aborted guess..."+" select "+selection+" con0 "+considered[0]+" con1 "+considered[1]);
 			return false;
 		}
 		
 		int[] possibleCoords = new int[2];
-		int selectionCoord = iit.get(beginning.get(selection));
+		int selectionCoord =0;
+		if (stacked){
+			selectionCoord =edges.get(selection).jiit.get(0);
+		}else{
+			selectionCoord =edges.get(selection).iit.get(0);
+		}
 		for (int i = 0; i< 2; ++i){
-			possibleCoords[i] = iit.get(beginning.get(considered[i]));
+			if (stacked){
+				possibleCoords[i] = edges.get(considered[i]).jiit.get(0);
+			}else{
+				possibleCoords[i] = edges.get(considered[i]).iit.get(0);
+			}
 		}
 		
 		boolean returnValue = false;
@@ -356,99 +386,82 @@ public abstract class RoiSelector{
 		return returnValue;
 	}	
 	
-	boolean guessFlipLarger(Vector<Integer> length,Vector<Integer> beginning,Vector<Integer> iit){
+
+	/*DetectedEdge*/
+	int selectRoiBiggestBoneDetectedEdges(Vector<DetectedEdge> edges){
+		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp.add(edges.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (edges.get(counter).area !=temp.get(temp.size()-1).area){
+			++counter;
+		}
+		return counter;
+	}
+	
+	/*DetectedEdge*/
+	int selectRoiSecondLargestBoneDetectedEdges(Vector<DetectedEdge> edges){
+		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp.add(edges.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (edges.get(counter).area !=edges.get(temp.size()-2).area){	//Select second largest...
+			++counter;
+		}
+		return counter;
+	}
+	
+		/*DetectedEdge*/
+	int selectRoiSmallestBoneDetectedEdges(Vector<DetectedEdge> edges){
+		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp.add(edges.get(iii));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (edges.get(counter).area !=temp.get(0).area){	//Select smallest
+			++counter;
+		}
+		return counter;
+	}
+	
+	/*DetectedEdge*/
+	int selectRoiTwoLargestLeft(Vector<DetectedEdge> edges){
+		if (edges.size() < 2){return 0;}	//In case only one ROI has been found..
+		int[] twoBones = twoLargestBonesRetainOrderDetectedEdges(edges);
+		Vector<DetectedEdge> tempEdges = new Vector<DetectedEdge>();
+		for (int i =0;i<twoBones.length;++i){
+			tempEdges.add(edges.get(twoBones[i]));
+		}
+		
+		int tempSelection =  selectRoiLeftMostBone(tempEdges);
+		return twoBones[tempSelection];
+	}
+	
+		/*DetectedEdge*/
+	int selectRoiTwoLargestRight(Vector<DetectedEdge> edges){
+		if (edges.size() < 2){return 0;}	//In case only one ROI has been found..
+		int[] twoBones = twoLargestBonesRetainOrderDetectedEdges(edges);
+		Vector<DetectedEdge> tempEdges = new Vector<DetectedEdge>();
+		for (int i =0;i<twoBones.length;++i){
+			tempEdges.add(edges.get(twoBones[i]));
+		}
+		
+		int tempSelection =  selectRoiRightMostBone(tempEdges);
+		return twoBones[tempSelection];
+	}
+	
+	/*DetectedEdge*/
+	int selectRoiLeftMostBone(Vector<DetectedEdge> edges){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<length.size();iii++){
-			temp.add(iit.get(length.get(iii)));
-			temp2.add(iit.get(length.get(iii)));
-		}
-		Collections.sort(temp);
-		int[] counter= new int[2];
-		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
-			++counter[0];
-		}
-		boolean returnValue = false;
-		if (temp.size() > 1){
-			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
-				++counter[1];
-			}
-			if (iit.get(beginning.get(counter[0]))<iit.get(beginning.get(counter[1]))){
-				returnValue = false;
-			}else{returnValue = true;}
-		}		
-		//IJ.error("RV "+returnValue+" c0 "+iit.get(beginning.get(counter[0]))+" c1 "+iit.get(beginning.get(counter[1])));
-		return returnValue;
-	}
-	
-	int selectRoiBiggestBone(Vector<Integer> length){
-		Vector<Integer> temp = new Vector<Integer>();
-		for (int iii =0;iii<length.size();++iii){
-			temp.add(length.get(iii));
-		}
-		Collections.sort(temp);
-		int counter=0;
-		while (length.get(counter) !=temp.get(temp.size()-1)){
-			++counter;
-		}
-		return counter;
-	}
-	
-	int selectRoiSecondLargestBone(Vector<Integer> length){
-		Vector<Integer> temp = new Vector<Integer>();
-		for (int iii =0;iii<length.size();++iii){
-			temp.add(length.get(iii));
-		}
-		Collections.sort(temp);
-		int counter=0;
-		while (length.get(counter) !=temp.get(temp.size()-2)){ //Select second largest...
-			++counter;
-		}
-		return counter;
-	}
-	
-	int selectRoiSmallestBone(Vector<Integer> length){
-		Vector<Integer> temp = new Vector<Integer>();
-		for (int iii =0;iii<length.size();iii++){
-			temp.add(length.get(iii));
-		}
-		Collections.sort(temp);
-		int counter=0;
-		while (length.get(counter) !=temp.get(0)){
-			++counter;
-		}
-		return counter;
-	}
-	
-	int selectRoiTwoLargestLeft(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
-		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
-		int[] twoBones = twoLargestBonesRetainOrder(length);
-		Vector<Integer> tempBeginning = new Vector<Integer>();
-		for (int i =0;i<twoBones.length;++i){
-			tempBeginning.add(beginning.get(twoBones[i]));
-		}
-		int returnValue =  selectRoiLeftMostBone(tempBeginning,iit);
-		return returnValue;
-	}
-	
-	int selectRoiTwoLargestRight(Vector<Integer> beginning,Vector<Integer> iit,Vector<Integer> length){
-		if (beginning.size() < 1){return 0;}	//In case only one ROI has been found..
-		int[] twoBones = twoLargestBonesRetainOrder(length);
-		Vector<Integer> tempBeginning = new Vector<Integer>();
-		for (int i =0;i<twoBones.length;++i){
-			tempBeginning.add(beginning.get(twoBones[i]));
-		}
-		int returnValue =  selectRoiRightMostBone(tempBeginning,iit);
-		return returnValue;
-	}
-	
-	
-	int selectRoiLeftMostBone(Vector<Integer> beginning,Vector<Integer> iit){
-		Vector<Integer> temp = new Vector<Integer>();
-		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).iit.get(0));
+			temp2.add(edges.get(iii).iit.get(0));
 		}
 		Collections.sort(temp);
 		int counter=0;
@@ -458,12 +471,13 @@ public abstract class RoiSelector{
 		return counter;
 	}
 	
-	int selectRoiRightMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+	/*DetectedEdge*/
+	int selectRoiRightMostBone(Vector<DetectedEdge> edges){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).iit.get(0));
+			temp2.add(edges.get(iii).iit.get(0));
 		}
 		Collections.sort(temp);
 		int counter=0;
@@ -473,12 +487,13 @@ public abstract class RoiSelector{
 		return counter;
 	}
 	
-	int selectRoiTopMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+		/*DetectedEdge*/
+	int selectRoiTopMostBone(Vector<DetectedEdge> edges){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).jiit.get(0));
+			temp2.add(edges.get(iii).jiit.get(0));
 		}
 		Collections.sort(temp);
 		int counter=0;
@@ -488,12 +503,13 @@ public abstract class RoiSelector{
 		return counter;
 	}
 	
-	int selectRoiBottomMostBone(Vector<Integer> beginning,Vector<Integer> iit){
+	/*DetectedEdge*/
+	int selectRoiBottomMostBone(Vector<DetectedEdge> edges){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
-		for (int iii =0;iii<beginning.size();iii++){
-			temp.add(iit.get(beginning.get(iii)));
-			temp2.add(iit.get(beginning.get(iii)));
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).jiit.get(0));
+			temp2.add(edges.get(iii).jiit.get(0));
 		}
 		Collections.sort(temp);
 		int counter=0;
@@ -503,8 +519,9 @@ public abstract class RoiSelector{
 		return counter;
 	}
 	
-	int selectRoiCentralBone(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
-		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,area,length,iit,jiit,tempScaledImage,fatThreshold);
+	/*DetectedEdge*/
+	int selectRoiCentralBone(Vector<DetectedEdge> edges,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(edges,tempScaledImage,fatThreshold);
 		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
@@ -513,9 +530,10 @@ public abstract class RoiSelector{
 		}
 		return counter;
 	}
-
-	int selectRoiPeripheralBone(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
-		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(beginnings,area,length,iit,jiit,tempScaledImage,fatThreshold);
+	
+	/*DetectedEdge*/
+	int selectRoiPeripheralBone(Vector<DetectedEdge> edges,double[] tempScaledImage,double fatThreshold){
+		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(edges,tempScaledImage,fatThreshold);
 		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
@@ -524,23 +542,24 @@ public abstract class RoiSelector{
 		}
 		return counter;
 	}
-	
-	public double[] calcDistancesFromCentreOfLimb(Vector<Integer> beginnings,Vector<Integer> area,Vector<Integer> length,Vector<Integer> iit,Vector<Integer> jiit,double[] tempScaledImage,double fatThreshold){
+
+	/*DetectedEdge*/
+	public double[] calcDistancesFromCentreOfLimb(Vector<DetectedEdge> edges,double[] tempScaledImage,double fatThreshold){
 		double[] softPoints = new double[3];
 		for (int j=0;j<3;++j){
 				softPoints[j]=0;
 			}
 		Vector<double[]> bones = new Vector<double[]>();		
-		for (int i=0;i<beginnings.size();++i){
+		for (int i=0;i<edges.size();++i){
 			bones.add(new double[3]);
 			for (int j=0;j<3;++j){
 				bones.get(i)[j]=0;
 			}
 		}
 		/*Find the centre of area of the limb*/
-				int maxIndice = selectRoiBiggestBone(area);
+				int maxIndice = selectRoiBiggestBoneDetectedEdges(edges);
 				byte[] limbSieve = new byte[tempScaledImage.length];
-				limbSieve[iit.get(beginnings.get(maxIndice))+jiit.get(beginnings.get(maxIndice))*width] = 1;
+				limbSieve[edges.get(maxIndice).iit.get(0)+edges.get(maxIndice).jiit.get(0)*width] = 1;
 				/*Dilate muscleSieve, into neighbouring fat pixels*/
 				int tempDil = 1;
 				while (tempDil>0){
@@ -560,11 +579,11 @@ public abstract class RoiSelector{
 		softPoints[0]/=softPoints[2];	/*X coordinate of the centre of area of the limb... (assuming just one limb)*/
 		softPoints[1]/=softPoints[2];	/*Y coordinate of the centre of area of the limb... (assuming just one limb)*/
 		/*Find the centres of circumference of the bones*/
-		double[] distanceFromCentreOfLimb = new double[beginnings.size()];
-		for (int i=0;i<beginnings.size();++i){
-			for (int j = beginnings.get(i);j < beginnings.get(i)+length.get(i);j++){
-				bones.get(i)[0]+=iit.get(j);
-				bones.get(i)[1]+=jiit.get(j);
+		double[] distanceFromCentreOfLimb = new double[edges.size()];
+		for (int i=0;i<edges.size();++i){
+			for (int j = 0;j < edges.get(i).iit.size();j++){
+				bones.get(i)[0]+=edges.get(i).iit.get(j);
+				bones.get(i)[1]+=edges.get(i).jiit.get(j);
 				bones.get(i)[2]+=1;
 			}
 			bones.get(i)[0]/=bones.get(i)[2];
@@ -615,7 +634,7 @@ public abstract class RoiSelector{
 		int tempC = 0;
 		while (true){
 			
-			tempCoordinates = findFillInit(sieveTemp, 0, roiI, roiJ,scaledImage,threshold,roiI.size());
+			tempCoordinates = findFillInit(sieveTemp, roiI, roiJ,scaledImage,threshold);
 			if (tempCoordinates == null){return sieveTemp;}
 			//tw.append(tempCoordinates[0]+"\t"+tempCoordinates[1]+"\t"+"round"+(++tempC));
 			i = tempCoordinates[0];
@@ -670,14 +689,20 @@ public abstract class RoiSelector{
 		//return sieveTemp;
 	}
 	
-	/*	Edge Tracing 
+
+	
+		/*	Edge Tracing DetectedEdge 
 		trace edge by advancing according to the previous direction
 		if above threshold, turn to negative direction
 		if below threshold, turn to positive direction
 		Idea taken from http://www.math.ucla.edu/~bertozzi/RTG/zhong07/report_zhong.pdf
 		The paper traced continent edges on map/satellite image
 	*/
-	Vector<Object> traceEdge(double[] scaledImage,byte[] result,double threshold,Vector<Integer> iit,Vector<Integer> jiit,int i,int j){
+	Vector<Object> traceEdge(double[] scaledImage,byte[] result,double threshold,int i,int j){
+		Vector<Integer> iit 	= new Vector<Integer>();
+		Vector<Integer> jiit	= new Vector<Integer>();
+		iit.add(i);
+		jiit.add(j);
 		double direction = 0; //begin by advancing right. Positive angles rotate the direction clockwise.
 		double previousDirection;
 		boolean done = false;
@@ -685,16 +710,6 @@ public abstract class RoiSelector{
 		initI = i;
 		initJ = j;
 		
-		/*Debugging*/
-		
-		//IJ.error("initI "+i+" initJ "+j);
-		/*
-		ImagePlus tempImage = new ImagePlus("Edge Trace");
-		tempImage.setProcessor(new ByteProcessor(width,height));
-		tempImage.getProcessor().setBackgroundValue(0.0);
-		tempImage.getProcessor().setValue(255.0);
-		tempImage.show();
-		*/
 		while(true){
 			int counter = 0;
 			previousDirection = direction;
@@ -750,18 +765,7 @@ public abstract class RoiSelector{
 				}
 				iit.add(i);
 				jiit.add(j);
-				/*
-				for (int y = 0; y < height;++y) {
-					for (int x = 0; x < width;++x) {
-						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-						if (result[x+y*width] > 0){   //Tint roi area color with violet
-							tempImage.getProcessor().drawPixel(x,y);
-						}
-					}
-				}
-				tempImage.updateAndDraw();
-				try {Thread.sleep(10);}catch (Exception err){System.out.println("Couldn't sleep");}
-				*/
+
 			}
 			direction -=Math.PI/2.0; //Keep steering counter clockwise not to miss single pixel structs...
 		}		
@@ -815,13 +819,16 @@ public abstract class RoiSelector{
 		return returnValue;
 	}
 	
-	Vector<Object> findEdge(double[] scaledImage,byte[] result,Vector<Integer> area,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,double threshold, boolean allowCleaving)
+	
+	/*DetectEdge*/
+	Vector<Object> findEdge(double[] scaledImage,double threshold, boolean allowCleaving)
 	{
 		int i,j,tempI,tempJ;
 		int len;
 		i = 0;
 		j = 0;
-			
+		byte[] result = new byte[scaledImage.length];
+		Vector<DetectedEdge> edges = new Vector<DetectedEdge>();
 		/*Debugging*/
 		/*
 		ImagePlus tempImage = new ImagePlus("Edge Trace");
@@ -857,16 +864,12 @@ public abstract class RoiSelector{
 				break;	/*Go to end...*/
 			}
 			result[i+j*width] = 1;
-			Vector<Integer> newIit = new Vector<Integer>();
-			Vector<Integer> newJiit = new Vector<Integer>();
-			newIit.add(i);
-			newJiit.add(j);
 
-			/*Tracing algorithm*/
-			Vector<Object> returned = traceEdge(scaledImage,result,threshold,newIit,newJiit,i,j);
+			/*Tracing algorithm DetectedEdge*/
+			Vector<Object> returned = traceEdge(scaledImage,result,threshold,i,j);
 			result = (byte[]) returned.get(0);
-			newIit = (Vector<Integer>) returned.get(1);
-			newJiit = (Vector<Integer>) returned.get(2);
+			Vector<Integer> newIit = (Vector<Integer>) returned.get(1);
+			Vector<Integer> newJiit = (Vector<Integer>) returned.get(2);
 			len = newIit.size();
 			/*Tracing algorithm done...*/
 
@@ -876,20 +879,18 @@ public abstract class RoiSelector{
 				byte[] tempRes = new byte[width*height];
 				for (int iii = 0;iii<returnedVectors.size();++iii){	/*Go through all returned edges*/
 					/*Fill edge within result..*/
+					Vector<Integer> iit = new Vector<Integer>();
+					Vector<Integer> jiit = new Vector<Integer>();
 					for (int ii = 0; ii<returnedVectors.get(iii).get(0).size();++ii){
 						iit.add(returnedVectors.get(iii).get(0).get(ii));
 						jiit.add(returnedVectors.get(iii).get(1).get(ii));
 						tempRes[iit.lastElement()+jiit.lastElement()*width] = 1;
 					}
-					len = returnedVectors.get(iii).get(0).size();
-					Vector<Object> results = fillResultEdge(result,area,length,beginnings,iit,jiit,len,scaledImage,threshold);
-					result = (byte[]) results.get(0);
-					iit = (Vector<Integer>) results.get(1);
-					jiit = (Vector<Integer>) results.get(2);
-					beginnings = (Vector<Integer>) results.get(3);
-					length = (Vector<Integer>) results.get(4);
-					area = (Vector<Integer>) results.get(5);
-					
+					Vector<Object> results = fillResultEdge(result,iit,jiit,scaledImage,threshold);
+					if (results != null){
+						result = (byte[]) results.get(0);
+						edges.add(new DetectedEdge((Vector<Integer>) results.get(1),(Vector<Integer>) results.get(2),(Integer) results.get(3)));
+					}
 					//IJ.error("begs "+beginnings.size()+" lengths "+length.size()+"retVects"+returnedVectors.size());
 					/*
 					for (int y = 0; y < height;++y) {
@@ -908,38 +909,18 @@ public abstract class RoiSelector{
 				
 			}else{
 				/*Fill edge within result..*/
+				Vector<Integer> iit = new Vector<Integer>();
+				Vector<Integer> jiit = new Vector<Integer>();
 				for (int ii = 0; ii<newIit.size();++ii){
 					iit.add(newIit.get(ii));
 					jiit.add(newJiit.get(ii));
 				}
-				Vector<Object> results = fillResultEdge(result,area,length,beginnings,iit,jiit,len,scaledImage,threshold);
-				result = (byte[]) results.get(0);
-				iit = (Vector<Integer>) results.get(1);
-				jiit = (Vector<Integer>) results.get(2);
-				beginnings = (Vector<Integer>) results.get(3);
-				length = (Vector<Integer>) results.get(4);
-				area = (Vector<Integer>) results.get(5);
-			}
-							/*Debugging*/
-				/*
-				ImagePlus tempImage = new ImagePlus("Edge Trace");
-				tempImage.setProcessor(new ByteProcessor(width,height));
-				tempImage.getProcessor().setBackgroundValue(0.0);
-				tempImage.getProcessor().setValue(255.0);
-				*/
-				/*
-				for (int y = 0; y < height;++y) {
-					for (int x = 0; x < width;++x) {
-						//if (sieve[x+y*width] == 1){   //Tint roi area color with violet
-						if (result[x+y*width] > 0){   //Tint roi area color with violet
-							tempImage.getProcessor().drawPixel(x,y);
-						}
-					}
+				Vector<Object> results = fillResultEdge(result,iit,jiit,scaledImage,threshold);
+				if (results != null){
+					result = (byte[]) results.get(0);
+					edges.add(new DetectedEdge((Vector<Integer>) results.get(1),(Vector<Integer>) results.get(2),(Integer) results.get(3)));
 				}
-				tempImage.updateAndDraw(); 
-				IJ.error(" ");
-				*/
-				//System.exit(0);
+			}
 			//Find next empty spot
 			i = tempI;
 			j = tempJ;
@@ -954,25 +935,19 @@ public abstract class RoiSelector{
 		
 		Vector<Object> returnVector = new Vector<Object>();
 		returnVector.add(result);
-		returnVector.add(iit);
-		returnVector.add(jiit);
-		returnVector.add(beginnings);
-		returnVector.add(length);
-		returnVector.add(area);
-		//IJ.error("begs "+begi
-		
+		returnVector.add(edges);
 		return returnVector;
 	}
-	
-	/*Find fill init by steering clockwise from next to previous*/
-	int [] findFillInit(byte[] result, int initIndex, Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold,int len){
+
+	/*DetectedEdge. Find fill init by steering clockwise from next to previous*/
+	int [] findFillInit(byte[] result, Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold){
 		int[] returnCoordinates = new int[2];
 		int[][] pixelNeigbourhood = {{0,-1,-1,-1,-1,0,1,1,1},{1,1,0,-1,-1,-1,0,1}};
 		int[] steer = new int[2];
-		for (int j = 0; j< len-1; ++j){
-			returnCoordinates[0] = iit.get(initIndex+j);
-			returnCoordinates[1] = jiit.get(initIndex+j);
-			double direction = Math.atan2(jiit.get(initIndex+j+1)-returnCoordinates[1],iit.get(initIndex+j+1)-returnCoordinates[0]);
+		for (int j = 0; j< iit.size()-1; ++j){
+			returnCoordinates[0] = iit.get(j);
+			returnCoordinates[1] = jiit.get(j);
+			double direction = Math.atan2(jiit.get(j+1)-returnCoordinates[1],iit.get(j+1)-returnCoordinates[0]);
 			for (int i = 0; i< 8; ++i){
 				direction+=Math.PI/4.0;
 				steer[0] = (int) Math.round(Math.cos(direction));
@@ -999,18 +974,17 @@ public abstract class RoiSelector{
 		return null;
 	}
 	
-	Vector<Object> fillResultEdge(byte[] result,Vector<Integer> area,Vector<Integer> length, Vector<Integer> beginnings,Vector<Integer> iit, Vector<Integer> jiit,int len,double[] scaledImage,double threshold){
+	/*DetectedEdge version*/
+	Vector<Object> fillResultEdge(byte[] result,Vector<Integer> iit, Vector<Integer> jiit,double[] scaledImage,double threshold){
 		int pixelsFilled = 0;
-		if (len > 0){
-			length.add(len);
-			beginnings.add(iit.size()-len);
+		if (iit.size() > 0){
 			int kai,kaj;
 			/*Set initial fill pixel to the first pixel above threshold not on the border*/
 			/*Select the first pixel found*/
 			boolean possible = true;
 			byte[] tempResult = (byte[]) result.clone();
 
-			int[] tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
+			int[] tempCoordinates = findFillInit(tempResult, iit, jiit,scaledImage,threshold);
 			if (tempCoordinates == null){
 				possible = false;
 			}
@@ -1022,34 +996,22 @@ public abstract class RoiSelector{
 					possible = (Boolean) returned.get(0);
 					pixelsFilled+= (Integer) returned.get(1);
 				}
-				tempCoordinates = findFillInit(tempResult, beginnings.lastElement(), iit, jiit,scaledImage,threshold,length.lastElement());
+				tempCoordinates = findFillInit(tempResult, iit, jiit,scaledImage,threshold);
 			}
 
 			if (possible){
 				result = (byte[]) tempResult.clone();
-				area.add(pixelsFilled);
-			}else{
-				//IJ.error("removing");
-				for (int po = 0;po <length.lastElement() ;po++){
-					iit.remove(iit.size()-1);
-					jiit.remove(jiit.size()-1);
-				}
-				length.remove(length.size()-1);
-				beginnings.remove(beginnings.size()-1);
+				Vector<Object> results = new Vector<Object>();
+				results.add(result);
+				results.add(iit);
+				results.add(jiit);
+				results.add(new Integer(pixelsFilled));
+				return results;
+
 			}
 		}
-		
-		Vector<Object> results = new Vector<Object>();
-		results.add(result);
-		results.add(iit);
-		results.add(jiit);
-		results.add(beginnings);
-		results.add(length);
-		results.add(area);
-		//IJ.error("begs "+beginnings.size()+" lengths "+length.size());
-		return results;
+		return null;
 	}
-	
 	
 	/*Cleaving is made by looking at the ratios of
 	distances between two points along the edge and the shortest distance 
