@@ -431,6 +431,10 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	ImagePlus addScale(ImagePlus tempImage, double pixelSpacing){
+		Calibration cal = new Calibration();
+		cal.setUnit("mm");
+		cal.pixelWidth = cal.pixelHeight = pixelSpacing;
+		tempImage.setCalibration(cal);
 		tempImage.getProcessor().setColor(new Color(255,0,0));
 		tempImage.getProcessor().drawLine(5, 5, (int)(5.0+10.0/pixelSpacing), 5);
 		tempImage.getProcessor().drawString("1 cm", 5, 20);
