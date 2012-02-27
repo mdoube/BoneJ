@@ -153,10 +153,18 @@ public class Distribution_Analysis implements PlugIn {
 		}
 		//Get parameters for scaling the image and for thresholding
 		GenericDialog dialog = new GenericDialog("Analysis parameters");
-		dialog.addCheckbox("Flip_horizontal",false);
-		dialog.addCheckbox("Flip_vertical",false);
-		dialog.addCheckbox("No_filtering",false);
-		dialog.addCheckbox("Measurement_tube",false);
+		String[] topLabels = new String[4];
+		boolean[] defaultTopValues = new boolean[4];
+		topLabels[0] = "Flip_horizontal";
+		defaultTopValues[0] = false;
+		topLabels[1] = "Flip_vertical";
+		defaultTopValues[1] = false;
+		topLabels[2] = "No_filtering";
+		defaultTopValues[2] = false;
+		topLabels[3] = "Measurement_tube";
+		defaultTopValues[3] = false;
+		dialog.addCheckboxGroup(1, 4, topLabels, defaultTopValues);
+		
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
@@ -181,24 +189,51 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
 		dialog.addChoice("Rotation_selection", rotationLabels, rotationLabels[0]); //"According_to_Imax/Imin"
-		dialog.addCheckbox("Analyse_cortical_results",false);
-		dialog.addCheckbox("Analyse_mass_distribution",false);
-		dialog.addCheckbox("Analyse_concentric_density_distribution",false);
-		dialog.addCheckbox("Analyse_density_distribution",true);	//true
-		dialog.addCheckbox("Analyse_soft_tissues",false);	//true
-		dialog.addCheckbox("Prevent_peeling_PVE_pixels",false);	//true
-		dialog.addCheckbox("Allow_cleaving",false);					//false
-		dialog.addCheckbox("Suppress_result_image",false);
-		dialog.addCheckbox("Limit_ROI_search_to_manually_selected",false);
-		dialog.addCheckbox("Set_distribution_results_rotation_manually",false);
+		
+		String[] middleLabels = new String[10];
+		boolean[] middleDefaults = new boolean[10];
+		middleLabels[0] = "Analyse_cortical_results";
+		middleDefaults[0] = false;
+		middleLabels[1] = "Analyse_mass_distribution";
+		middleDefaults[1] = false;
+		middleLabels[2] = "Analyse_concentric_density_distribution";
+		middleDefaults[2] = false;
+		middleLabels[3] = "Analyse_density_distribution";
+		middleDefaults[3] = false;
+		middleLabels[4] = "Analyse_soft_tissues";
+		middleDefaults[4] = false;
+		middleLabels[5] = "Prevent_peeling_PVE_pixels";
+		middleDefaults[5] = false;
+		middleLabels[6] = "Allow_cleaving";
+		middleDefaults[6] = false;
+		middleLabels[7] = "Suppress_result_image";
+		middleDefaults[7] = false;
+		middleLabels[8] = "Limit_ROI_search_to_manually_selected";
+		middleDefaults[8] = false;
+		middleLabels[9] = "Set_distribution_results_rotation_manually";
+		middleDefaults[9] = false;
+		dialog.addCheckboxGroup(4, 3, middleLabels, middleDefaults);
+		
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
-		dialog.addCheckbox("Flip_distribution_results",false);
-		dialog.addCheckbox("Guess_right",false);
-		dialog.addCheckbox("Guess_larger",false);
-		dialog.addCheckbox("Stacked_bones",false);
-		dialog.addCheckbox("Guess_stacked",false);
-		dialog.addCheckbox("Invert_flip_guess",false);
-		dialog.addCheckbox("Save_visual_result_image_on_disk",false);
+		
+		String[] bottomLabels = new String[7];
+		boolean[] bottomDefaults = new boolean[7];
+		bottomLabels[0] = "Guess_right";
+		bottomDefaults[0] = false;
+		bottomLabels[1] = "Guess_larger";
+		bottomDefaults[1] = false;
+		bottomLabels[2] = "Stacked_bones";
+		bottomDefaults[2] = false;
+		bottomLabels[3] = "Guess_stacked";
+		bottomDefaults[3] = false;
+		bottomLabels[4] = "Invert_flip_guess";
+		bottomDefaults[4] = false;
+		bottomLabels[5] = "Flip_distribution_results";
+		bottomDefaults[5] = false;
+		bottomLabels[6] = "Save_visual_result_image_on_disk";
+		bottomDefaults[6] = false;
+		dialog.addCheckboxGroup(2, 5, bottomLabels, bottomDefaults);
+		
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
 		dialog.addHelp("http://bonej.org/densitydistribution");
 		dialog.showDialog();
@@ -396,6 +431,10 @@ public class Distribution_Analysis implements PlugIn {
 	}
 	
 	ImagePlus addScale(ImagePlus tempImage, double pixelSpacing){
+		Calibration cal = new Calibration();
+		cal.setUnit("mm");
+		cal.pixelWidth = cal.pixelHeight = pixelSpacing;
+		tempImage.setCalibration(cal);
 		tempImage.getProcessor().setColor(new Color(255,0,0));
 		tempImage.getProcessor().drawLine(5, 5, (int)(5.0+10.0/pixelSpacing), 5);
 		tempImage.getProcessor().drawString("1 cm", 5, 20);

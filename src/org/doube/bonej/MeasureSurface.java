@@ -141,16 +141,13 @@ public class MeasureSurface implements PlugIn {
 		Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
 		for (int n = 0; n < nPoints; n += 3) {
 			IJ.showStatus("Calculating surface area...");
-			final Point3f point0 = points.get(n);
-			final Point3f point1 = points.get(n + 1);
-			final Point3f point2 = points.get(n + 2);
-
 			// TODO reject triangle and continue if it is flush
 			// with a cut face / image side
 
 			// area of triangle is half magnitude
 			// of cross product of 2 edge vectors
-			Point3f cp = Vectors.crossProduct(point0, point1, point2);
+			Point3f cp = Vectors.crossProduct(points.get(n), points.get(n + 1),
+					points.get(n + 2));
 
 			final double deltaArea = 0.5 * cp.distance(origin);
 
