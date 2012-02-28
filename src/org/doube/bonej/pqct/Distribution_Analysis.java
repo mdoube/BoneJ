@@ -32,6 +32,7 @@ import ij.plugin.PlugIn;
 import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;			//image data 
+import org.doube.bonej.pqct.utils.*;			//Writing results and creating visual result image
 import java.awt.*;							//Image, component for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
@@ -292,12 +293,14 @@ public class Distribution_Analysis implements PlugIn {
 
 				TextPanel textPanel = IJ.getTextPanel();
 				if (textPanel == null) {textPanel = new TextPanel();}
-				if (textPanel.getLineCount() == 0){writeHeader(textPanel,imageAndAnalysisDetails);}
+				ResultsWriter resultsWriter = new ResultsWriter(imageInfo,alphaOn);
+				
+				if (textPanel.getLineCount() == 0){resultsWriter.writeHeader(textPanel,imageAndAnalysisDetails);}
 				
 				String results = "";
-				results = printResults(results,imageAndAnalysisDetails, imp);
+				results = resultsWriter.printResults(results,imageAndAnalysisDetails, imp);
 				if (determineAlfa != null){
-					results = printAlfa(results,determineAlfa);
+					results = resultsWriter.printAlfa(results,determineAlfa);
 				}
 				
 				ImagePlus resultImage = null;
@@ -310,7 +313,7 @@ public class Distribution_Analysis implements PlugIn {
 
 				if(imageAndAnalysisDetails.stOn){
 					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
-					results = printSoftTissueResults(results,softTissueAnalysis);
+					results = resultsWriter.printSoftTissueResults(results,softTissueAnalysis);
 					if(makeImage && resultImage != null){
 						resultImage = addSoftTissueSieve(resultImage,softRoi.softSieve);
 					}
@@ -318,7 +321,7 @@ public class Distribution_Analysis implements PlugIn {
 				
 				if (imageAndAnalysisDetails.cOn){
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
-					results = printCorticalResults(results,cortAnalysis);
+					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
 						resultImage = addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
 					}
@@ -326,11 +329,11 @@ public class Distribution_Analysis implements PlugIn {
 				}
 				if (imageAndAnalysisDetails.mOn){
 					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-					results = printMassDistributionResults(results,massDistribution,imageAndAnalysisDetails);
+					results = resultsWriter.printMassDistributionResults(results,massDistribution,imageAndAnalysisDetails);
 				}
 				if (imageAndAnalysisDetails.conOn){
 					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-					results = printConcentricRingResults(results,concentricRingAnalysis,imageAndAnalysisDetails);
+					results = resultsWriter.printConcentricRingResults(results,concentricRingAnalysis,imageAndAnalysisDetails);
 					if(!imageAndAnalysisDetails.dOn && makeImage && resultImage != null){
 						resultImage = addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
@@ -340,7 +343,7 @@ public class Distribution_Analysis implements PlugIn {
 				
 				if (imageAndAnalysisDetails.dOn){
 					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
-					results = printDistributionResults(results,DistributionAnalysis,imageAndAnalysisDetails);
+					results = resultsWriter.printDistributionResults(results,DistributionAnalysis,imageAndAnalysisDetails);
 					if (makeImage && resultImage != null){
 						resultImage = addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
 						resultImage = addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
@@ -522,92 +525,7 @@ public class Distribution_Analysis implements PlugIn {
 		return tempImage;
 	}
 	
-	void writeHeader(TextPanel textPanel,ImageAndAnalysisDetails imageAndAnalysisDetails){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
-		String[] parameterNames = {"Air Threshold","Fat Threshold","Muscle Threshold","Marrow Threshold","Soft Threshold","Rotation Threshold","Area Threshold","BMD Threshold","Scaling Coefficient","Scaling Constant"};
-		String[] dHeadings = {"Manual Rotation","Flip Distribution","Guess right","Guess larger"
-		,"Stacked bones","Invert guess","Allow Cleaving","Prevent PVE peeling","Roi choice","Rotation choice","Flip Horizontal","Flip Vertical"};
-		
-		String headings = "";
-		for (int i = 0;i<propertyNames.length;++i){
-			headings+=propertyNames[i]+"\t";
-		}
-		for (int i = 0;i<parameterNames.length;++i){
-			headings+=parameterNames[i]+"\t";
-		}
-		for (int i = 0;i<dHeadings.length;++i){
-				headings+=dHeadings[i]+"\t";
-		}
-		if(alphaOn){
-			String[] rHeadings = {"Alpha [deg]","Rotation correction [deg]","Distance between bones[mm]"};	
-			for (int i = 0;i<rHeadings.length;++i){
-				headings+=rHeadings[i]+"\t";
-			}
-		}
-		
-		if(imageAndAnalysisDetails.stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","SubCutFatD [mg/cm³]","SubCutFatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
-			for (int i = 0;i<coHeadings.length;++i){
-				headings+=coHeadings[i]+"\t";
-			}
-		}
-		
-		if(imageAndAnalysisDetails.cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
-			for (int i = 0;i<coHeadings.length;++i){
-				headings+=coHeadings[i]+"\t";
-			}
-		}
-		if(imageAndAnalysisDetails.mOn){
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° mineral mass [mg]\t";
-			}
-		}
-		
-		if(imageAndAnalysisDetails.conOn){
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-				headings+=i*imageAndAnalysisDetails.concentricSector+"° - "+((i+1)*imageAndAnalysisDetails.concentricSector)+"° concentric analysis pericortical radius [mm]\t";
-			}
-			for (int j = 0;j<imageAndAnalysisDetails.concentricDivisions;++j){
-				for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-					headings+="Division "+(j+1)+" sector "+i*imageAndAnalysisDetails.concentricSector+"° - "+((i+1)*imageAndAnalysisDetails.concentricSector)+"° vBMD [mg/cm³]\t";
-				}
-			}
-		}
-		
-		if(imageAndAnalysisDetails.dOn){
-			headings+="Peeled mean vBMD [mg/cm³]\t";
-			//Radial distribution
-			for (int i =0; i < (int) imageAndAnalysisDetails.divisions; ++i){
-				headings+= "Radial division "+i+" vBMD [mg/cm³]\t";
-			}
-			//Polar distribution
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+= "Polar sector "+i+" vBMD [mg/cm³]\t";
-			}
-			
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° endocortical radius [mm]\t";
-			}
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° pericortical radius [mm]\t";
-			}
-			//Cortex BMD values			
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° endocortical vBMD [mg/cm³]\t";
-			}
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° midcortical vBMD [mg/cm³]\t";
-			}
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° pericortical vBMD [mg/cm³]\t";
-			}
-
-		}
-		textPanel.setColumnHeadings(headings);
-	}
-	
-	String getInfoProperty(String properties,String propertyToGet){
+	public static String getInfoProperty(String properties,String propertyToGet){
 		String toTokenize = properties;
 		StringTokenizer st = new StringTokenizer(toTokenize,"\n");
 		String currentToken = null;
@@ -626,138 +544,4 @@ public class Distribution_Analysis implements PlugIn {
 		return null;
 	}
 
-	String printResults(String results,ImageAndAnalysisDetails imageAndAnalysisDetails, ImagePlus imp){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
-		String[] parameters = {Double.toString(imageAndAnalysisDetails.airThreshold)
-								,Double.toString(imageAndAnalysisDetails.fatThreshold),Double.toString(imageAndAnalysisDetails.muscleThreshold)
-								,Double.toString(imageAndAnalysisDetails.marrowThreshold)
-								,Double.toString(imageAndAnalysisDetails.softThreshold),Double.toString(imageAndAnalysisDetails.rotationThreshold)
-								,Double.toString(imageAndAnalysisDetails.areaThreshold),Double.toString(imageAndAnalysisDetails.BMDthreshold)
-								,Double.toString(imageAndAnalysisDetails.scalingFactor),Double.toString(imageAndAnalysisDetails.constant)};
-
-		if (imp != null){
-			if (getInfoProperty(imageInfo,"File Name")!= null){
-				results+=getInfoProperty(imageInfo,"File Name")+"\t";
-			}else{
-				if(imp.getImageStackSize() == 1){
-					results+=getInfoProperty(imageInfo,"Title")+"\t";
-				}else{
-					results+=imageInfo.substring(0,imageInfo.indexOf("\n"))+"\t";
-				}
-			}
-			for (int i = 1;i<propertyNames.length;++i){
-				results+=getInfoProperty(imageInfo,propertyNames[i])+"\t";
-			}
-		}
-		
-		for (int i = 0;i<parameters.length;++i){
-			results+=parameters[i]+"\t";
-		}
-		
-
-		results += Boolean.toString(imageAndAnalysisDetails.manualRotation)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.flipDistribution)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.guessFlip)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.guessLarger)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.stacked)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.invertGuess)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.allowCleaving)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.preventPeeling)+"\t";
-		results += imageAndAnalysisDetails.roiChoice+"\t";
-		results += imageAndAnalysisDetails.rotationChoice+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.flipHorizontal)+"\t";
-		results += Boolean.toString(imageAndAnalysisDetails.flipVertical)+"\t";
-		return results;
-	}
-	
-	String printAlfa(String results,DetermineAlfa determineAlfa){
-		results += Double.toString(determineAlfa.alfa*180/Math.PI)+"\t";
-		results += Double.toString(determineAlfa.rotationCorrection)+"\t";
-		results += Double.toString(determineAlfa.distanceBetweenBones)+"\t";
-		return results;
-	}
-	String printSoftTissueResults(String results,SoftTissueAnalysis softTissueAnalysis){
-		results+=softTissueAnalysis.TotalMuD+"\t";
-		results+=softTissueAnalysis.TotalMuA+"\t";
-		results+=softTissueAnalysis.MuD+"\t";
-		results+=softTissueAnalysis.MuA+"\t";
-		results+=softTissueAnalysis.IntraMuFatD+"\t";
-		results+=softTissueAnalysis.IntraMuFatA+"\t";
-		results+=softTissueAnalysis.FatD+"\t";
-		results+=softTissueAnalysis.FatA+"\t";
-		results+=softTissueAnalysis.SubCutFatD+"\t";
-		results+=softTissueAnalysis.SubCutFatA+"\t";
-		results+=softTissueAnalysis.LimbD+"\t";
-		results+=softTissueAnalysis.LimbA+"\t";
-		results+=softTissueAnalysis.FatPercentage+"\t";
-		return results;
-	}
-	
-	String printCorticalResults(String results,CorticalAnalysis cortAnalysis){
-		results+=cortAnalysis.MaMassD+"\t";
-		results+=cortAnalysis.StratecMaMassD+"\t";
-		results+=cortAnalysis.MaD+"\t";
-		results+=cortAnalysis.MaA+"\t";
-		results+=cortAnalysis.BMD+"\t";
-		results+=cortAnalysis.AREA+"\t";
-		results+=cortAnalysis.SSI+"\t";
-		results+=cortAnalysis.ToD+"\t";
-		results+=cortAnalysis.ToA+"\t";
-		results+=cortAnalysis.MeA+"\t";
-		results+=cortAnalysis.BSId+"\t";
-		return results;
-	}
-		
-	String printMassDistributionResults(String results,MassDistribution massDistribution,ImageAndAnalysisDetails imageAndAnalysisDetails){
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);pp++){
-			results += massDistribution.BMCs[pp]+"\t";
-		}
-		return results;
-	}		
-	
-	
-	String printConcentricRingResults(String results,ConcentricRingAnalysis concentricRingAnalysis,ImageAndAnalysisDetails imageAndAnalysisDetails){
-		for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-			results += concentricRingAnalysis.pericorticalRadii[i]+"\t";
-		}
-		for (int j = 0;j<imageAndAnalysisDetails.concentricDivisions;++j){
-			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-				results += concentricRingAnalysis.BMDs.get(j)[i]+"\t";
-			}
-		}
-		return results;
-	}
-	
-
-	
-	String printDistributionResults(String results,DistributionAnalysis DistributionAnalysis,ImageAndAnalysisDetails imageAndAnalysisDetails){
-		results+= DistributionAnalysis.peeledBMD+"\t";
-		//Radial distribution
-		for (int i =0; i < (int) imageAndAnalysisDetails.divisions; ++i){
-			results+= DistributionAnalysis.radialDistribution[i]+"\t";
-		}
-		//Polar distribution
-		for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-			results+= DistributionAnalysis.polarDistribution[i]+"\t";
-		}
-		
-		
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);++pp){
-			results += DistributionAnalysis.endocorticalRadii[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);++pp){
-			results += DistributionAnalysis.pericorticalRadii[pp]+"\t";
-		}
-		//Cortex BMD values			
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);++pp){
-			results += DistributionAnalysis.endoCorticalBMDs[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);++pp){
-			results += DistributionAnalysis.midCorticalBMDs[pp]+"\t";
-		}
-		for (int pp = 0;pp<((int) 360/imageAndAnalysisDetails.sectorWidth);++pp){
-			results += DistributionAnalysis.periCorticalBMDs[pp]+"\t";
-		}
-		return results;
-	}
 }

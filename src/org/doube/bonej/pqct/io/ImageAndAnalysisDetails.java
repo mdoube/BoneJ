@@ -19,6 +19,7 @@
 */
 
 package org.doube.bonej.pqct.io;
+
 public class ImageAndAnalysisDetails{
 	public boolean flipHorizontal;
 	public boolean flipVertical;
