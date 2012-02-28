@@ -222,12 +222,15 @@ public abstract class RoiSelector{
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(edges);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(edges);}	
 		
+		/*Debugging*/
+		/*
 		for (int i = 0; i<edges.size();++i){
 			System.out.println("RoiArea "+edges.get(i).area);
 		}
 		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
 		
 		System.out.println("RoiChoice "+roiChoice+" selection "+selection+" lengthEdges "+edges.size());
+		*/
 		//IJ.error(roiChoice + " selection "+selection);
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
