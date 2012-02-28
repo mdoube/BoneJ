@@ -19,6 +19,7 @@
 */
 
 package org.doube.bonej.pqct.io;
+
 public class ImageAndAnalysisDetails{
 	public boolean flipHorizontal;
 	public boolean flipVertical;
@@ -36,6 +37,14 @@ public class ImageAndAnalysisDetails{
 	public double rotationThreshold;
 	public double BMDthreshold;		//For cortical BMD analyses	
 	public double boneThreshold;	//Thresholding bone from the rest and cortical AREA analyses (CoA, SSI, I)
+	
+	public boolean cOn;		//Basic analyses
+	public boolean	mOn;		//Mass distribution
+	public boolean	conOn;		//Concentric rings analysis
+	public boolean dOn;		//Distribution analysis
+	public boolean stOn;		//Soft tissue analysis
+	public boolean alphaOn;	//Rotation angle
+	
 	public int filterSize;
 	public int softFilterSize;
 	public int sectorWidth;
@@ -50,68 +59,97 @@ public class ImageAndAnalysisDetails{
 	public String[] rotationLabels;
 	public boolean preventPeeling;
 	public boolean allowCleaving;
+	public boolean suppressImages;
 	public boolean manualRoi;
 	public boolean manualRotation;
 	public double manualAlfa;
 	public boolean flipDistribution;
 	public boolean guessFlip;
+	public boolean guessRight;
 	public boolean guessLarger;
 	public boolean stacked;
 	public boolean guessStacked;
 	public boolean invertGuess;
-	public boolean stOn;
+	public boolean saveImageOnDisk;
 	
 	//ImageJ plugin constructor
-	public ImageAndAnalysisDetails(boolean flipHorizontal,boolean flipVertical,boolean noFiltering,boolean sleeveOn
-									,double scalingFactor, double constant,
-									double airThreshold,double fatThreshold, double muscleThreshold, double marrowThreshold, double softThreshold,double rotationThreshold,double areaThreshold, double BMDthreshold, 
-									String roiChoice,String roiChoiceSt,String rotationChoice,String[] choiceLabels,
-									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
-									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
-									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
-									int sectorWidth,int divisions,int concentricSector,int concentricDivisions, boolean stOn){
-		this.flipHorizontal			= flipHorizontal;
-		this.flipVertical			= flipVertical;
-		this.noFiltering			= noFiltering;
-		this.sleeveOn				= sleeveOn;
-		this.scalingFactor			= scalingFactor;
-		this.constant 				= constant;
-		this.airThreshold			= airThreshold;
-		this.rotationThreshold		= rotationThreshold;
-		this.fatThreshold	 		= fatThreshold;
-		this.muscleThreshold 		= muscleThreshold;
-		this.marrowThreshold 		= marrowThreshold;
-		this.areaThreshold 			= areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
-		this.BMDthreshold 			= BMDthreshold;		//For cortical BMD analyses
-		this.softThreshold 			= softThreshold;	//Thresholding soft tissues + marrow from bone
+	public ImageAndAnalysisDetails(boolean[] defaultTopValues,
+									double[] thresholdsAndScaling,
+									String[] alignmentStrings,String[] choiceLabels,String[] rotationLabels,
+									boolean[] middleDefaults,
+									double manualAlfa,
+									boolean[] bottomDefaults,
+									int[] sectorsAndDivisions,
+									int[] filterSizes){
+		/*Top booleans*/
+		int i = 0;
+		this.flipHorizontal			= defaultTopValues[i];++i;
+		this.flipVertical			= defaultTopValues[i];++i;
+		this.noFiltering			= defaultTopValues[i];++i;
+		this.sleeveOn				= defaultTopValues[i];++i;
+		
+		/*Thresholds and scaling*/
+		i = 0;
+		this.airThreshold			= thresholdsAndScaling[i];++i;
+		this.fatThreshold	 		= thresholdsAndScaling[i];++i;
+		this.muscleThreshold 		= thresholdsAndScaling[i];++i;
+		this.marrowThreshold 		= thresholdsAndScaling[i];++i;
+		this.softThreshold 			= thresholdsAndScaling[i];++i;	//Thresholding soft tissues + marrow from bone
+		this.rotationThreshold		= thresholdsAndScaling[i];++i;
+		this.areaThreshold 			= thresholdsAndScaling[i];++i;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
+		this.BMDthreshold 			= thresholdsAndScaling[i];++i;		//For cortical BMD analyses
+		this.scalingFactor			= thresholdsAndScaling[i];++i;
+		this.constant 				= thresholdsAndScaling[i];++i;
 		this.boneThreshold 			= areaThreshold;
-		this.filterSize				= 3;
-		this.softFilterSize			= 7;
-		this.sectorWidth			= sectorWidth;
-		this.divisions				= divisions;
-		this.concentricSector		= concentricSector;
-		this.concentricDivisions	= concentricDivisions;
-		this.roiChoice				= roiChoice;
-		this.roiChoiceSt			= roiChoiceSt;
-		this.rotationChoice			= rotationChoice;
+		
+		/*Alignment*/
+		i = 0;		
+		this.roiChoice				= alignmentStrings[i];++i;
+		this.roiChoiceSt			= alignmentStrings[i];++i;
+		this.rotationChoice			= alignmentStrings[i];++i;
 		this.choiceLabels			= choiceLabels;
 		this.rotationLabels			= rotationLabels;
-		this.imageSavePath 			= new String("");
-		this.preventPeeling			= preventPeeling;
-		this.allowCleaving			= allowCleaving;
-		this.manualRoi				= manualRoi;
-		this.manualRotation			= manualRotation;
+		
+		/*Middle defaults*/
+		i = 0;
+		this.cOn					= middleDefaults[i];++i;		//Basic analyses
+		this.mOn					= middleDefaults[i];++i;		//Mass distribution
+		this.conOn					= middleDefaults[i];++i;		//Concentric rings analysis
+		this.dOn					= middleDefaults[i];++i;		//Distribution analysis
+		this.stOn					= middleDefaults[i];++i;		//Soft tissue analysis
+		this.preventPeeling			= middleDefaults[i];++i;
+		this.allowCleaving			= middleDefaults[i];++i;
+		this.suppressImages			= middleDefaults[i];++i;
+		this.manualRoi				= middleDefaults[i];++i;
+		this.manualRotation			= middleDefaults[i];++i;
+		
+		/*Manual alpha*/
 		this.manualAlfa				= manualAlfa;
-		this.flipDistribution		= flipDistribution;
-		this.guessFlip				= guessFlip;
-		this.guessLarger			= guessLarger;
-		this.stacked				= stacked;
-		this.guessStacked			= guessStacked;
-		this.invertGuess			= invertGuess;
-		this.sectorWidth			=sectorWidth;
-		this.divisions				= divisions;
-		this.concentricSector		= concentricSector;
-		this.concentricDivisions	= concentricDivisions;
-		this.stOn					= stOn;
+		
+		/*Bottom defaults*/
+		i = 0;
+		this.guessFlip				= bottomDefaults[i];++i;
+		this.guessRight				= bottomDefaults[i];++i;
+		this.guessLarger			= bottomDefaults[i];++i;
+		this.stacked				= bottomDefaults[i];++i;
+		this.guessStacked			= bottomDefaults[i];++i;
+		this.invertGuess			= bottomDefaults[i];++i;
+		this.flipDistribution		= bottomDefaults[i];++i;
+		this.saveImageOnDisk		= bottomDefaults[i];++i;
+		
+		/*Sectors and divisions*/
+		i = 0;		
+		this.sectorWidth			= sectorsAndDivisions[i];++i;
+		this.divisions				= sectorsAndDivisions[i];++i;
+		this.concentricSector		= sectorsAndDivisions[i];++i;
+		this.concentricDivisions	= sectorsAndDivisions[i];++i;
+	
+		/*Median filter sizes*/
+		i = 0;	
+		this.filterSize				= filterSizes[i];++i;
+		this.softFilterSize			= filterSizes[i];++i;
+		
+		/*Can't remember whether this is needed...*/
+		this.imageSavePath 			= new String("");	
 	}
 }

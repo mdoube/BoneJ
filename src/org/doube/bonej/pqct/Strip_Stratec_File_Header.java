@@ -34,11 +34,21 @@ public class Strip_Stratec_File_Header implements PlugIn {
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
 	public void run(String arg) {
 		GenericDialog dialog = new GenericDialog("Strip Stratec Header");
+		/*MeasInfo,PatBirth,PatMenoAge,PatName,PatTitle&Comment*/
+		dialog.addCheckbox("Strip_MeasInfo",false);
+		dialog.addCheckbox("Strip_PatBirth",false);
+		dialog.addCheckbox("Strip_PatMenoAge",false);
+		dialog.addCheckbox("Strip_PatName",true);
+		dialog.addCheckbox("Strip_PatTitleAndComment",false);
 		dialog.addStringField("Stratec_file_to_strip",Prefs.getDefaultDirectory()+"I0020001.M01",60);
 		dialog.addStringField("File_save_name",Prefs.getDefaultDirectory()+"I0020001.M01",60);
 		dialog.showDialog();
 		
 		if (dialog.wasOKed()){ //Stop in case of cancel..
+			boolean[] toStrip = new boolean[5];
+			for (int i = 0; i<toStrip.length; ++i){
+				toStrip[i]			= dialog.getNextBoolean();
+			}
 			String fileIn 		= dialog.getNextString();
 			String fileOut 		= dialog.getNextString();
 			if (fileIn==null || fileOut==null) {
@@ -52,14 +62,14 @@ public class Strip_Stratec_File_Header implements PlugIn {
 			}
 			
 			try{
-				stripFile(fileIn,fileOut);
+				stripFile(fileIn,fileOut,toStrip);
 			}catch (Exception err){
 				IJ.error("Stratec file header stripping failed", err.getMessage());
 			}
 		}
 	}
 
-	private void stripFile(String fileNameIn,String fileNameOut) throws Exception {
+	private void stripFile(String fileNameIn,String fileNameOut,boolean[] toStrip) throws Exception {
 		File fileIn = new File(fileNameIn);
 		long fileLength = fileIn.length();
 		byte[] fileData;
@@ -72,7 +82,7 @@ public class Strip_Stratec_File_Header implements PlugIn {
 		}catch (Exception e) {
 			throw new UnsupportedDataTypeException("Could not read input file.");
 		}
-		fileData = stripHeader(fileData); //Strip header
+		fileData = stripHeader(fileData,toStrip); //Strip header
 		writeFile(fileNameOut,fileData);
 	}
 	
@@ -86,11 +96,13 @@ public class Strip_Stratec_File_Header implements PlugIn {
 	}
 	
 	//Writing dummy header containing sufficient details for Distribution_Analysis imageJ plugin, might not suffice for Geanie or Stractec software
-	byte[] stripHeader(byte[] data){
+	byte[] stripHeader(byte[] data,boolean[] toStrip){
 		int[] offsetsToStrip = {662,1091,1095,1099,1141};	/*MeasInfo,PatBirth,PatMenoAge,PatName,PatTitle&Comment*/
 		int[] stripLengths = {324,4,4,41,124};
 		for (int s= 0;s<offsetsToStrip.length;++s){
-			data = fillWithZero(data,offsetsToStrip[s],stripLengths[s]);
+			if (toStrip[s]){
+				data = fillWithZero(data,offsetsToStrip[s],stripLengths[s]);
+			}
 		}
 		return data;
 	}
