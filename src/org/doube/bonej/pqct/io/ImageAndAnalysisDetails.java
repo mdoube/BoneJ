@@ -55,6 +55,7 @@ public class ImageAndAnalysisDetails{
 	public double manualAlfa;
 	public boolean flipDistribution;
 	public boolean guessFlip;
+	public boolean guessRight;
 	public boolean guessLarger;
 	public boolean stacked;
 	public boolean guessStacked;
@@ -68,7 +69,7 @@ public class ImageAndAnalysisDetails{
 									String roiChoice,String roiChoiceSt,String rotationChoice,String[] choiceLabels,
 									String[] rotationLabels,boolean preventPeeling, boolean allowCleaving, boolean manualRoi,
 									boolean manualRotation, double manualAlfa, boolean flipDistribution, 
-									boolean guessFlip,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
+									boolean guessFlip,boolean guessRight,boolean guessLarger,boolean stacked,boolean guessStacked, boolean invertGuess,
 									int sectorWidth,int divisions,int concentricSector,int concentricDivisions, boolean stOn){
 		this.flipHorizontal			= flipHorizontal;
 		this.flipVertical			= flipVertical;
@@ -104,6 +105,7 @@ public class ImageAndAnalysisDetails{
 		this.manualAlfa				= manualAlfa;
 		this.flipDistribution		= flipDistribution;
 		this.guessFlip				= guessFlip;
+		this.guessRight				= guessRight;
 		this.guessLarger			= guessLarger;
 		this.stacked				= stacked;
 		this.guessStacked			= guessStacked;

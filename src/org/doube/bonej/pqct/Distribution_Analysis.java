@@ -68,6 +68,7 @@ public class Distribution_Analysis implements PlugIn {
 	double constant;	
 	boolean flipDistribution;
 	boolean guessFlip;
+	boolean guessRight;
 	boolean guessLarger;
 	boolean stacked;
 	boolean guessStacked;
@@ -216,22 +217,24 @@ public class Distribution_Analysis implements PlugIn {
 		
 		dialog.addNumericField("Manual_rotation_[+-_180_deg]", 0.0, 4, 8, null);
 		
-		String[] bottomLabels = new String[7];
-		boolean[] bottomDefaults = new boolean[7];
-		bottomLabels[0] = "Guess_right";
+		String[] bottomLabels = new String[8];
+		boolean[] bottomDefaults = new boolean[8];
+		bottomLabels[0] = "Guess_flip";
 		bottomDefaults[0] = false;
-		bottomLabels[1] = "Guess_larger";
+		bottomLabels[1] = "Guess_right";
 		bottomDefaults[1] = false;
-		bottomLabels[2] = "Stacked_bones";
+		bottomLabels[2] = "Guess_larger";
 		bottomDefaults[2] = false;
-		bottomLabels[3] = "Guess_stacked";
+		bottomLabels[3] = "Stacked_bones";
 		bottomDefaults[3] = false;
-		bottomLabels[4] = "Invert_flip_guess";
+		bottomLabels[4] = "Guess_stacked";
 		bottomDefaults[4] = false;
-		bottomLabels[5] = "Flip_distribution_results";
+		bottomLabels[5] = "Invert_flip_guess";
 		bottomDefaults[5] = false;
-		bottomLabels[6] = "Save_visual_result_image_on_disk";
+		bottomLabels[6] = "Flip_distribution_results";
 		bottomDefaults[6] = false;
+		bottomLabels[7] = "Save_visual_result_image_on_disk";
+		bottomDefaults[7] = false;
 		dialog.addCheckboxGroup(2, 5, bottomLabels, bottomDefaults);
 		
 		dialog.addStringField("Image_save_path",Prefs.getDefaultDirectory(),40);
@@ -267,12 +270,13 @@ public class Distribution_Analysis implements PlugIn {
 			boolean manualRoi			= dialog.getNextBoolean();
 			manualRotation				= dialog.getNextBoolean();
 			double manualAlfa			= dialog.getNextNumber()*Math.PI/180.0;
-			flipDistribution			= dialog.getNextBoolean();
 			guessFlip					= dialog.getNextBoolean();
+			guessRight					= dialog.getNextBoolean();
 			guessLarger					= dialog.getNextBoolean();
 			stacked						= dialog.getNextBoolean();
 			guessStacked				= dialog.getNextBoolean();
 			invertGuess					= dialog.getNextBoolean();
+			flipDistribution			= dialog.getNextBoolean();
 			boolean saveImageOnDisk		= dialog.getNextBoolean();
 			String imageSavePath 		= dialog.getNextString();
 			ScaledImageData scaledImageData;
@@ -318,7 +322,7 @@ public class Distribution_Analysis implements PlugIn {
 															airThreshold, fatThreshold, muscleThreshold,marrowThreshold, softThreshold,	rotationThreshold, areaThreshold, BMDThreshold,
 															roiChoice,roiChoiceSt,rotationChoice,choiceLabels,rotationLabels,
 															preventPeeling,allowCleaving,manualRoi,manualRotation,manualAlfa,flipDistribution,
-															guessFlip,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
+															guessFlip,guessRight,guessLarger, stacked,guessStacked,invertGuess,sectorWidth,divisions,concentricSector,concentricDivisions,stOn);
 			scaledImageData = new ScaledImageData(signedShort, imp.getWidth(), imp.getHeight(),resolution, scalingFactor, constant,3,flipHorizontal,flipVertical,noFiltering);	//Scale and 3x3 median filter the data
 			RoiSelector roi = null;
 			if(cOn || mOn || conOn || dOn){
