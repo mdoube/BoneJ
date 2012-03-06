@@ -398,8 +398,11 @@ public abstract class RoiSelector{
 		
 		Iterator<DetectedEdge> it = edges.iterator();
 		while (it.hasNext()){
-			if (it.next().area > maxArea)
+			int a = it.next().area;
+			if (a > maxArea){
+				maxArea = a;
 				maxPos = counter;
+			}
 			counter++;
 		}
 		
