@@ -391,17 +391,19 @@ public abstract class RoiSelector{
 	
 
 	/*DetectedEdge*/
-	int selectRoiBiggestBoneDetectedEdges(Vector<DetectedEdge> edges){
-		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
-		for (int iii =0;iii<edges.size();++iii){
-			temp.add(edges.get(iii));
+	private int selectRoiBiggestBoneDetectedEdges(Vector<DetectedEdge> edges){
+		int counter = 0;
+		int maxArea = 0;
+		int maxPos = 0;
+		
+		Iterator<DetectedEdge> it = edges.iterator();
+		while (it.hasNext()){
+			if (it.next().area > maxArea)
+				maxPos = counter;
+			counter++;
 		}
-		Collections.sort(temp);
-		int counter=0;
-		while (edges.get(counter).area !=temp.get(temp.size()-1).area){
-			++counter;
-		}
-		return counter;
+		
+		return maxPos;
 	}
 	
 	/*DetectedEdge*/
