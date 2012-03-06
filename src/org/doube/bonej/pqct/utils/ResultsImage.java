@@ -31,8 +31,8 @@ import java.util.Vector;				//Vector
 public class ResultsImage{
 	
 	/*Get image into which we'll start adding stuff*/
-	public static ImagePlus getRGBResultImage(double[] values,int width,int height){
-		ImagePlus tempImage = new ImagePlus("Visual results");
+	public static ImagePlus getRGBResultImage(double[] values,int width,int height, String path){
+		ImagePlus tempImage = new ImagePlus(path+"Visual results");
 		tempImage.setProcessor(new FloatProcessor(width,height,values));
 		new ImageConverter(tempImage).convertToRGB();
 		return tempImage;
