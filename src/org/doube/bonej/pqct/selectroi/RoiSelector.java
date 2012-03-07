@@ -391,31 +391,42 @@ public abstract class RoiSelector{
 	
 
 	/*DetectedEdge*/
-	int selectRoiBiggestBoneDetectedEdges(Vector<DetectedEdge> edges){
-		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
-		for (int iii =0;iii<edges.size();++iii){
-			temp.add(edges.get(iii));
+	private int selectRoiBiggestBoneDetectedEdges(Vector<DetectedEdge> edges){
+		int counter = 0;
+		int maxArea = 0;
+		int maxPos = 0;
+		
+		Iterator<DetectedEdge> it = edges.iterator();
+		while (it.hasNext()){
+			int a = it.next().area;
+			if (a > maxArea){
+				maxArea = a;
+				maxPos = counter;
+			}
+			counter++;
 		}
-		Collections.sort(temp);
-		int counter=0;
-		while (edges.get(counter).area !=temp.get(temp.size()-1).area){
-			++counter;
-		}
-		return counter;
+		
+		return maxPos;
 	}
 	
 	/*DetectedEdge*/
 	int selectRoiSecondLargestBoneDetectedEdges(Vector<DetectedEdge> edges){
-		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
-		for (int iii =0;iii<edges.size();++iii){
-			temp.add(edges.get(iii));
+		int counter = 0;
+		int maxArea = 0;
+		int maxPos = 0;
+		int secondPos = 0;
+		
+		Iterator<DetectedEdge> it = edges.iterator();
+		while (it.hasNext()){
+			int a = it.next().area;
+			if (a > maxArea){
+				maxArea = a;
+				secondPos = maxPos;
+				maxPos = counter;
+			}
+			counter++;
 		}
-		Collections.sort(temp);
-		int counter=0;
-		while (edges.get(counter).area !=edges.get(temp.size()-2).area){	//Select second largest...
-			++counter;
-		}
-		return counter;
+		return secondPos;
 	}
 	
 		/*DetectedEdge*/
