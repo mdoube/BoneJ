@@ -309,6 +309,7 @@ public class Distribution_Analysis implements PlugIn {
 					makeImage = false;
 				}else{
 					resultImage = ResultsImage.getRGBResultImage(roi.scaledImage,roi.width,roi.height, imageSavePath);
+					resultImage.setTitle(imp.getTitle()+"-result");
 				}
 
 				if(imageAndAnalysisDetails.stOn){
