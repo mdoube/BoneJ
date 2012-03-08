@@ -65,7 +65,7 @@ public class ResultsWriter{
 		}
 		
 		if(imageAndAnalysisDetails.cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
+			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","Stratec CoD [mg/cm³]","Stratec CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -193,6 +193,8 @@ public class ResultsWriter{
 		results+=cortAnalysis.MaA+"\t";
 		results+=cortAnalysis.BMD+"\t";
 		results+=cortAnalysis.AREA+"\t";
+		results+=cortAnalysis.CoD+"\t";
+		results+=cortAnalysis.CoA+"\t";
 		results+=cortAnalysis.SSI+"\t";
 		results+=cortAnalysis.ToD+"\t";
 		results+=cortAnalysis.ToA+"\t";

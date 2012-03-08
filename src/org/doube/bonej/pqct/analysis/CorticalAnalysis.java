@@ -26,6 +26,7 @@ import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 public class CorticalAnalysis{
 	public double BMD;
 	public double AREA;
+
 	public double MeA;	//Medullary area = ToA-CoA
 	public double MaA;	//Marrow area
 	public double MaD;	//Marrow density
@@ -44,6 +45,10 @@ public class CorticalAnalysis{
 	public double dwIMax; 
 	public double dwIMin;
 	public double alfa;
+	//Stratec/Geanie compatible CoD and CoA
+	public byte[] cortexSieve;
+	public double CoD;
+	public double CoA;
 	
 	public CorticalAnalysis(SelectROI roi)
 	{
@@ -152,8 +157,27 @@ public class CorticalAnalysis{
 		} else {
 			dwIMax = vali4;
 			dwIMin = vali3;
-		}			
+		}
 		
+		//Calculate Stratec/Geanie compatible CoA and CoD, i.e. define a ROI larger than the bone and calculate
+		//CoD and CoA from the ROI independent of whether the cortex is continuous.
+		SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,roi.details.rotationThreshold,false);
+		CoD = 0;
+		CoA = 0;
+		int CoDcounter = 0;
+		cortexSieve = new byte[roi.scaledImage.length];
+		for (int j = 0;j< roi.scaledImage.length;++j){
+			if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.BMDthreshold){
+				CoD+=roi.scaledImage[j];
+				++CoDcounter;
+				cortexSieve[j] = 1;
+			}
+			if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.areaThreshold){
+				CoA+=1.0;
+			}
+		}
+		CoD/=CoDcounter;
+		CoA*=roi.pixelSpacing*roi.pixelSpacing;
 	}
 
 }

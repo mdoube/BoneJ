@@ -123,7 +123,46 @@ public class ResultsImage{
 		}
 		return tempImage;
 	}
-		
+	
+	/*Add bone sieve Stratec*/
+	public static ImagePlus addBoneSieve(ImagePlus tempImage, byte[] sieve,double[] scaledImage, double marrowThreshold, byte[] stratecSieve){
+		for (int y = 0; y < tempImage.getHeight();++y) {
+			for (int x = 0; x < tempImage.getWidth();++x) {
+				if (sieve[x+y*tempImage.getWidth()] == 1){   //Tint bone area with purple
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					tempImage.getProcessor().setColor(new Color(rgb[2],0,rgb[0]));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+				if (stratecSieve[x+y*tempImage.getWidth()] == 1){   //Tint stratec bone area with cyan
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					tempImage.getProcessor().setColor(new Color(0,rgb[0],rgb[0]));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+				if (sieve[x+y*tempImage.getWidth()] == 1 && scaledImage[x+y*tempImage.getWidth()] <=marrowThreshold){   //Tint marrow area with green
+					int value = tempImage.getProcessor().getPixel(x,y);
+					int[] rgb = new int[3];
+					for (int i = 0; i<3;++i){
+						rgb[i] = (value >>(i*8))& 0XFF;
+					}
+					if (rgb[0] < 255-50){
+						rgb[0]+=50;
+					}
+					tempImage.getProcessor().setColor(new Color(0,0,rgb[0]));
+					tempImage.getProcessor().drawPixel(x,y);
+				}
+			}
+		}
+		return tempImage;
+	}
+	
 	/*addDenstiyDistribution*/
 	public static ImagePlus addRadii(ImagePlus tempImage,double alfa,double[] marrowCenter,Vector<Integer> pindColor,
 										double[] R, double[] R2, double[] Theta){

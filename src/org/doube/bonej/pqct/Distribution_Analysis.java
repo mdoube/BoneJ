@@ -324,7 +324,7 @@ public class Distribution_Analysis implements PlugIn {
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
-						resultImage = ResultsImage.addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+						resultImage = ResultsImage.addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold,cortAnalysis.cortexSieve);
 					}
 					
 				}
