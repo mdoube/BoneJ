@@ -12,6 +12,8 @@ import javax.swing.JPanel;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
+import org.doube.util.UsageReporter;
+
 public class Help_ implements PlugIn {
 
 	/**
@@ -22,6 +24,8 @@ public class Help_ implements PlugIn {
 	public void run(String arg) {
 		if (arg.equals("about")) {
 			showAbout();
+			//testing
+			UsageReporter.getInstance(this);
 			return;
 		}
 	}
