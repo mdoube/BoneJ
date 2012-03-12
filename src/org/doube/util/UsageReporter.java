@@ -28,13 +28,13 @@ public class UsageReporter {
 	private static final String utmul = "utmul=" + getLocaleString() + "&";
 	private static final String utmje = "utmje=0&";
 	private static final String utmfl = "utmfl=11.1%20r102&";
-	// private static final String utmhid = "utmhid=1811992293&"; random adsense
-	private static final String utmr = "utmr=0&";
+	private static final String utmr = "utmr=-&";
+	private static final String utmp = "utmp=%2Fstats&";
 
 	private static String utme = null;
 	private static String utmn = null;
-	private static String utmp = null;
-	private static int utms = -1;
+	private static String utms = null;
+	private static int session = 0;
 	private static String utmcc = null;
 	private static long firstTime = 0;
 	private static long lastTime = 0;
@@ -43,22 +43,19 @@ public class UsageReporter {
 	private static Random random;
 	private static Date date;
 
+	private static String utmhid;
+
 	private UsageReporter() {
 		random = new Random();
 		date = new Date();
 	}
 
-	public static UsageReporter getInstance(Object o) {
-		utms++;
-		utme = "utme=5(Usage*Plugins*"+o.getClass().getName()+")&";
-		
-		// set a new utmn per request to avoid caching of the gif
-		utmn = "utmn="
-				+ Integer
-						.toString((int) (Math.floor(Math.random() * 999999999)))
-				+ "&";
-
-		utmp = "utmp=%2Fstats&";
+	public static UsageReporter log(Object o) {
+		utms = "utms=" + session + "&";
+		session++;
+		utme = "utme=5(Usage*Plugins*" + o.getClass().getName() + ")&";
+		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
+		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmcc = getCookieString();
 		send();
 		return INSTANCE;
@@ -66,13 +63,10 @@ public class UsageReporter {
 
 	private static String getCookieString() {
 		int cookie = random.nextInt(Integer.MAX_VALUE);
-		int randomValue = random.nextInt(2147483647);
-		lastTime = thisTime;
-		thisTime = date.getTime();
-		if (firstTime == 0) {
-			firstTime = thisTime;
-			lastTime = thisTime;
-		}
+		int randomValue = random.nextInt(Integer.MAX_VALUE);
+		firstTime = date.getTime() / 1000;
+		lastTime = date.getTime() / 1000;
+		thisTime = date.getTime() / 1000;		
 		String cc = "utmcc=__utma%3D"
 				+ cookie
 				+ "."
@@ -85,27 +79,19 @@ public class UsageReporter {
 				+ "."
 				+ thisTime
 				+ ".3"
-				+ "%3B%2B__utmb%3D"
-				+ cookie
-				+
-
-				"%3B%2B__utmc%3D"
-				+ cookie
-				+
-
-				"%3B%2b__utmz%3D"
+				+ "%3B%2B__utmz%3D"
 				+ cookie
 				+ "."
 				+ thisTime
-				+ ".3.2.utmccn%3D(organic)%7Cutmcsr%3Dgoogle%7Cutmctr%3Dbonej%2Busage%2Blogging%7Cutmcmd%3Dorganic%3B%2B";
+				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7Cutmcmd%3Dorganic%7Cutmctr%3Dbonej%3B";
 		return cc;
 	}
 
 	private static void send() {
 		try {
-			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme + utmcs + utmsr
-					+ utmvp + utmsc + utmul + utmje + utmfl + utmr + utmp
-					+ utmac + utmdt + utmcc);
+			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
+					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
+					+ utmdt + utmhid + utmr + utmp + utmac + utmcc);
 			IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
 			BufferedReader in = new BufferedReader(new InputStreamReader(
