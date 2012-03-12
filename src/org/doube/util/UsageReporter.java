@@ -24,14 +24,14 @@ public class UsageReporter {
 	private static final String utmsc = "utmsc=24-bit&";
 	private static final String utmac = "utmac=UA-366405-8&";
 	private static final String utmdt = "utmdt=bonej.org%20Usage%20Statistics&";
-	private static final String utmt = "utmt=page&"; // better, event
+	private static final String utmt = "utmt=event&";
 	private static final String utmul = "utmul=" + getLocaleString() + "&";
 	private static final String utmje = "utmje=0&";
 	private static final String utmfl = "utmfl=11.1%20r102&";
 	// private static final String utmhid = "utmhid=1811992293&"; random adsense
 	private static final String utmr = "utmr=0&";
 
-	private static String utmc = null;
+	private static String utme = null;
 	private static String utmn = null;
 	private static String utmp = null;
 	private static int utms = -1;
@@ -50,19 +50,15 @@ public class UsageReporter {
 
 	public static UsageReporter getInstance(Object o) {
 		utms++;
-		// handle repeated calls from the same user session
-		if (utmc == null) {
-			utmc = "utmcn=1&";
-		} else {
-			utmc = "utmcr=1&";
-		}
+		utme = "utme=5(Usage*Plugins*"+o.getClass().getName()+")&";
+		
 		// set a new utmn per request to avoid caching of the gif
 		utmn = "utmn="
 				+ Integer
 						.toString((int) (Math.floor(Math.random() * 999999999)))
 				+ "&";
 
-		utmp = "utmp=%2Fstats?caller=" + o.getClass().getName() + "&";
+		utmp = "utmp=%2Fstats&";
 		utmcc = getCookieString();
 		send();
 		return INSTANCE;
@@ -107,9 +103,9 @@ public class UsageReporter {
 
 	private static void send() {
 		try {
-			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmcs + utmsr
+			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme + utmcs + utmsr
 					+ utmvp + utmsc + utmul + utmje + utmfl + utmr + utmp
-					+ utmac + utmdt + utmc + utmt + utmcc);
+					+ utmac + utmdt + utmcc);
 			IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
 			BufferedReader in = new BufferedReader(new InputStreamReader(
