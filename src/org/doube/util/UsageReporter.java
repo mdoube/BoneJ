@@ -47,10 +47,10 @@ public class UsageReporter {
 		random = new Random();
 	}
 
-	public static UsageReporter reportOn(Object o) {
+	public static UsageReporter reportEvent(String category, String action, String label) {
 		utms = "utms=" + session + "&";
 		session++;
-		utme = "utme=5(Usage*Plugins*" + o.getClass().getName() + ")&";
+		utme = "utme=5("+category+"*"+action+"*" + label + ")&";
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		final long time = System.currentTimeMillis() / 1000;
@@ -64,6 +64,10 @@ public class UsageReporter {
 		return INSTANCE;
 	}
 
+	public static UsageReporter reportEvent(Object o){
+		return reportEvent("Usage", "Plugins", o.getClass().getName());
+	}
+	
 	private static String getCookieString() {
 		int cookie = random.nextInt(Integer.MAX_VALUE);
 		int randomValue = random.nextInt(Integer.MAX_VALUE);

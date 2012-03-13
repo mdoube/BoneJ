@@ -25,7 +25,7 @@ public class Help_ implements PlugIn {
 		if (arg.equals("about")) {
 			showAbout();
 			//testing
-			UsageReporter.reportOn(this).send();
+			UsageReporter.reportEvent(this).send();
 			return;
 		}
 	}
