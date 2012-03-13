@@ -1,6 +1,5 @@
 package org.doube.util;
 
-import ij.IJ;//only for debug logging
 import ij.Prefs;
 
 import java.io.BufferedReader;
@@ -94,13 +93,14 @@ public class UsageReporter {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
 					+ utmdt + utmhid + utmr + utmp + utmac + utmcc);
-			IJ.log(url.toString());
+//			IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;
 			while ((inputLine = in.readLine()) != null)
-				IJ.log(inputLine);
+//				IJ.log(inputLine);
+				inputLine.length();
 			in.close();
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
