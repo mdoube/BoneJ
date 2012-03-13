@@ -2,8 +2,6 @@ package org.doube.util;
 
 import ij.IJ;//only for debug logging
 import ij.Prefs;
-import ij.gui.GenericDialog;
-import ij.plugin.PlugIn;
 
 import java.io.BufferedReader;
 import java.io.IOException;
