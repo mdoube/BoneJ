@@ -80,7 +80,7 @@ public class UsageReporter {
 				+ lastTime
 				+ "."
 				+ thisTime
-				+ ".3"
+				+ ".103"
 				+ "%3B%2B__utmz%3D"
 				+ cookie
 				+ "."
