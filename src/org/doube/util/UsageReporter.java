@@ -1,6 +1,9 @@
 package org.doube.util;
 
 import ij.IJ;//only for debug logging
+import ij.Prefs;
+import ij.gui.GenericDialog;
+import ij.plugin.PlugIn;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -87,6 +90,8 @@ public class UsageReporter {
 	}
 
 	public void send() {
+		if (!isAllowed())
+			return;
 		try {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
@@ -111,5 +116,11 @@ public class UsageReporter {
 		locale = locale.replace("_", "-");
 		locale = locale.toLowerCase();
 		return locale;
+	}
+
+	private boolean isAllowed() {
+		if (!Prefs.get(ReporterOptions.OPTOUTSET, false))
+			new ReporterOptions().run("");
+		return Prefs.get(ReporterOptions.OPTOUTKEY, true);
 	}
 }
