@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
-import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
 
@@ -41,38 +40,38 @@ public class UsageReporter {
 	private static long thisTime = 0;
 
 	private static Random random;
-	private static Date date;
 
 	private static String utmhid;
 
 	private UsageReporter() {
 		random = new Random();
-		date = new Date();
 	}
 
-	public static UsageReporter log(Object o) {
+	public static UsageReporter reportOn(Object o) {
 		utms = "utms=" + session + "&";
 		session++;
 		utme = "utme=5(Usage*Plugins*" + o.getClass().getName() + ")&";
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
+		final long time = System.currentTimeMillis() / 1000;
+		if (firstTime == 0) {
+			firstTime = time;
+			thisTime = time;
+		}
+		lastTime = thisTime;
+		thisTime = time;
 		utmcc = getCookieString();
-		send();
 		return INSTANCE;
 	}
 
 	private static String getCookieString() {
 		int cookie = random.nextInt(Integer.MAX_VALUE);
 		int randomValue = random.nextInt(Integer.MAX_VALUE);
-		firstTime = date.getTime() / 1000;
-		lastTime = date.getTime() / 1000;
-		thisTime = date.getTime() / 1000;		
 		String cc = "utmcc=__utma%3D"
 				+ cookie
 				+ "."
 				+ randomValue
 				+ "."
-
 				+ firstTime
 				+ "."
 				+ lastTime
@@ -87,7 +86,7 @@ public class UsageReporter {
 		return cc;
 	}
 
-	private static void send() {
+	public void send() {
 		try {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
