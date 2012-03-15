@@ -1,14 +1,17 @@
 package org.doube.util;
 
+import java.util.Random;
+
 import ij.Prefs;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 
 public class ReporterOptions implements PlugIn {
-	
+
 	public static final String OPTOUTSET = "bonej.report.option.set";
 	public static final String OPTOUTKEY = "bonej.allow.reporter";
-	
+	public static final String COOKIE = "bonej.report.cookie";
+
 	public void run(String arg) {
 
 		GenericDialog dialog = new GenericDialog("BoneJ");
@@ -22,10 +25,13 @@ public class ReporterOptions implements PlugIn {
 		dialog.showDialog();
 		if (dialog.wasCanceled())
 			Prefs.set(OPTOUTKEY, false);
-		else
+		else {
 			Prefs.set(OPTOUTKEY, true);
+			Prefs.set(ReporterOptions.COOKIE,
+					new Random().nextInt(Integer.MAX_VALUE));
+		}
 
-		Prefs.set(OPTOUTSET , true);
+		Prefs.set(OPTOUTSET, true);
 		Prefs.savePreferences();
 		return;
 	}

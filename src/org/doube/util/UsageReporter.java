@@ -1,5 +1,6 @@
 package org.doube.util;
 
+import ij.IJ;
 import ij.Prefs;
 
 import java.io.BufferedReader;
@@ -35,6 +36,7 @@ public class UsageReporter {
 	private static String utms = null;
 	private static int session = 0;
 	private static String utmcc = null;
+	private static String cookie = "0";
 	private static long firstTime = 0;
 	private static long lastTime = 0;
 	private static long thisTime = 0;
@@ -47,10 +49,11 @@ public class UsageReporter {
 		random = new Random();
 	}
 
-	public static UsageReporter reportEvent(String category, String action, String label) {
+	public static UsageReporter reportEvent(String category, String action,
+			String label) {
 		utms = "utms=" + session + "&";
 		session++;
-		utme = "utme=5("+category+"*"+action+"*" + label + ")&";
+		utme = "utme=5(" + category + "*" + action + "*" + label + ")&";
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		final long time = System.currentTimeMillis() / 1000;
@@ -64,12 +67,13 @@ public class UsageReporter {
 		return INSTANCE;
 	}
 
-	public static UsageReporter reportEvent(Object o){
+	public static UsageReporter reportEvent(Object o) {
 		return reportEvent("Usage", "Plugins", o.getClass().getName());
 	}
-	
+
 	private static String getCookieString() {
-		int cookie = random.nextInt(Integer.MAX_VALUE);
+		cookie = Prefs.get(ReporterOptions.COOKIE,
+				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
 		int randomValue = random.nextInt(Integer.MAX_VALUE);
 		String cc = "utmcc=__utma%3D"
 				+ cookie
@@ -97,13 +101,13 @@ public class UsageReporter {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
 					+ utmdt + utmhid + utmr + utmp + utmac + utmcc);
-//			IJ.log(url.toString());
+			IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;
 			while ((inputLine = in.readLine()) != null)
-//				IJ.log(inputLine);
+				// IJ.log(inputLine);
 				inputLine.length();
 			in.close();
 		} catch (MalformedURLException e) {
