@@ -3,6 +3,11 @@ package org.doube.util;
 import ij.IJ;
 import ij.Prefs;
 
+import java.awt.Dimension;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Toolkit;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,9 +24,6 @@ public class UsageReporter {
 	private static final String utmhn = "utmhn=bonej.org&";
 	private static final String utmcs = "utmcs=" + Charset.defaultCharset()
 			+ "&";
-	private static final String utmsr = "utmsr=1280x800&";
-	private static final String utmvp = "utmvp=1280x690&";
-	private static final String utmsc = "utmsc=24-bit&";
 	private static final String utmac = "utmac=UA-366405-8&";
 	private static final String utmdt = "utmdt=bonej.org%20Usage%20Statistics&";
 	private static final String utmt = "utmt=event&";
@@ -35,6 +37,9 @@ public class UsageReporter {
 	private static String utme;
 	private static String utmn;
 	private static String utms;
+	private static String utmsr = "utmsr=1280x800&";
+	private static String utmvp = "utmvp=1280x800&";
+	private static String utmsc = "utmsc=24-bit&";
 	private static int session;
 	private static String utmcc;
 	private static String cookie;
@@ -64,6 +69,28 @@ public class UsageReporter {
 		utme = "utme=5(" + category + "*" + action + "*" + label + ")&";
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
+
+		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		GraphicsEnvironment ge;
+		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		int width = 0;
+		int height = 0;
+		if (!ge.isHeadlessInstance()) {
+			GraphicsDevice[] screens = ge.getScreenDevices();
+			for (int i = 0; i < screens.length; i++) {
+				GraphicsConfiguration[] gc = screens[i].getConfigurations();
+				for (GraphicsConfiguration g : gc) {
+					width = Math.max(g.getBounds().x + g.getBounds().width,
+							width);
+					height = Math.max(g.getBounds().y + g.getBounds().height,
+							height);
+				}
+			}
+		}
+
+		utmsr = "utmsr=" + screenSize.width + "x" + screenSize.height + "&";
+		utmvp = "utmvp=" + width + "x" + height + "&";
+		utmsc = "utmsc=24-bit&";
 		final long time = System.currentTimeMillis() / 1000;
 		lastTime = thisTime;
 		if (lastTime == 0)
