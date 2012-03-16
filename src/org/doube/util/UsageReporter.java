@@ -16,6 +16,8 @@ import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Random;
 
+import org.bonej.Help;
+
 public class UsageReporter {
 	public static final UsageReporter INSTANCE = new UsageReporter();
 
@@ -60,7 +62,7 @@ public class UsageReporter {
 		inc++;
 		bonejSession = Integer.toString(inc);
 		Prefs.set(ReporterOptions.SESSIONKEY, inc);
-		
+
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		GraphicsEnvironment ge;
 		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -85,10 +87,12 @@ public class UsageReporter {
 	}
 
 	public static UsageReporter reportEvent(String category, String action,
-			String label) {
+			String label, Integer value) {
 		utms = "utms=" + session + "&";
 		session++;
-		utme = "utme=5(" + category + "*" + action + "*" + label + ")&";
+		String val = (value == null) ? "" : "(" + value.toString() + ")";
+		utme = "utme=5(" + category + "*" + action + "*" + label + ")" + val
+				+ "&";
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 
@@ -102,7 +106,8 @@ public class UsageReporter {
 	}
 
 	public static UsageReporter reportEvent(Object o) {
-		return reportEvent("Usage", "Plugins", o.getClass().getName());
+		return reportEvent("Plugin Usage", o.getClass().getName(),
+				Help.bonejVersion, null);
 	}
 
 	private static String getCookieString() {
