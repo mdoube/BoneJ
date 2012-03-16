@@ -1,5 +1,23 @@
 package org.doube.util;
 
+/**
+ * UsageReporter class
+ * Copyright 2012 Michael Doube 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import ij.IJ;
 import ij.Prefs;
 
@@ -18,6 +36,15 @@ import java.util.Random;
 
 import org.bonej.Help;
 
+/**
+ * Prepare and send a report to be logged by Google Analytics event tracking
+ * 
+ * Should be called in a PlugIn's run() method as
+ * UsageReporter.reportEvent(this).send()
+ * 
+ * @author Michael Doube
+ * 
+ */
 public class UsageReporter {
 	public static final UsageReporter INSTANCE = new UsageReporter();
 
@@ -54,6 +81,10 @@ public class UsageReporter {
 
 	private static String utmhid;
 
+	/**
+	 * Constructor used by singleton pattern. Report variables that relate to
+	 * single sessions are set here
+	 */
 	private UsageReporter() {
 		random = new Random();
 		bonejSession = Prefs.get(ReporterOptions.SESSIONKEY,
@@ -86,6 +117,21 @@ public class UsageReporter {
 		utmsc = "utmsc=24-bit&";
 	}
 
+	/**
+	 * Sets the instance variables to appropriate values based on the system
+	 * parameters and method arguments.
+	 * 
+	 * @param category
+	 *            Google Analytics event category classification
+	 * @param action
+	 *            Google Analytics event action classification
+	 * @param label
+	 *            Google Analytics event label classification
+	 * @param value
+	 *            Google Analytics event value - an integer used for sum and
+	 *            average statistics
+	 * @return The instance of UsageReporter ready to send() a report
+	 */
 	public static UsageReporter reportEvent(String category, String action,
 			String label, Integer value) {
 		utms = "utms=" + session + "&";
@@ -105,11 +151,25 @@ public class UsageReporter {
 		return INSTANCE;
 	}
 
+	/**
+	 * Prepare the instance for sending a report on a specific class; its name
+	 * (.getClass().getName()) is added to the 'action' field of the report,
+	 * category is "Plugin Usage" and label is the BoneJ version string
+	 * 
+	 * @param o
+	 *            Class to report on
+	 * @return The instance of UsageReporter ready to send() a report
+	 */
 	public static UsageReporter reportEvent(Object o) {
 		return reportEvent("Plugin Usage", o.getClass().getName(),
 				Help.bonejVersion, null);
 	}
 
+	/**
+	 * Create a string of cookie data for the gif URL
+	 * 
+	 * @return cookie string
+	 */
 	private static String getCookieString() {
 		// seems to be a bug in Prefs.getInt, so are Strings wrapped in
 		// Integer.toString()
@@ -134,11 +194,15 @@ public class UsageReporter {
 				+ "%3B%2B__utmz%3D"
 				+ cookie
 				+ "."
-				+ thisTime
+				+ thisTime // not correct, but a best guess
 				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7Cutmcmd%3Dorganic%7Cutmctr%3Dbonej%3B";
 		return cc;
 	}
 
+	/**
+	 * Send the report to Google Analytics in the form of an HTTP request for a
+	 * 1-pixel GIF with lots of parameters set
+	 */
 	public void send() {
 		if (!isAllowed())
 			return;
