@@ -31,14 +31,15 @@ public class UsageReporter {
 	private static final String utmr = "utmr=-&";
 	private static final String utmp = "utmp=%2Fstats&";
 
-	private static String utme = null;
-	private static String utmn = null;
-	private static String utms = null;
-	private static int session = 0;
-	private static String utmcc = null;
-	private static String cookie = "0";
-	private static String cookie2 = "0";
-	private static String firstTime = "0";
+	private static String bonejSession;
+	private static String utme;
+	private static String utmn;
+	private static String utms;
+	private static int session;
+	private static String utmcc;
+	private static String cookie;
+	private static String cookie2;
+	private static String firstTime;
 	private static long lastTime = 0;
 	private static long thisTime = 0;
 
@@ -48,6 +49,12 @@ public class UsageReporter {
 
 	private UsageReporter() {
 		random = new Random();
+		bonejSession = Prefs.get(ReporterOptions.SESSIONKEY,
+				Integer.toString(new Random().nextInt(1000)));
+		int inc = Integer.parseInt(bonejSession);
+		inc++;
+		bonejSession = Integer.toString(inc);
+		Prefs.set(ReporterOptions.SESSIONKEY, inc);
 	}
 
 	public static UsageReporter reportEvent(String category, String action,
@@ -59,6 +66,8 @@ public class UsageReporter {
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		final long time = System.currentTimeMillis() / 1000;
 		lastTime = thisTime;
+		if (lastTime == 0)
+			lastTime = time;
 		thisTime = time;
 		utmcc = getCookieString();
 		return INSTANCE;
@@ -69,6 +78,8 @@ public class UsageReporter {
 	}
 
 	private static String getCookieString() {
+		// seems to be a bug in Prefs.getInt, so are Strings wrapped in
+		// Integer.toString()
 		cookie = Prefs.get(ReporterOptions.COOKIE,
 				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
 		cookie2 = Prefs.get(ReporterOptions.COOKIE2,
@@ -85,7 +96,8 @@ public class UsageReporter {
 				+ lastTime
 				+ "."
 				+ thisTime
-				+ ".103"
+				+ "."
+				+ bonejSession
 				+ "%3B%2B__utmz%3D"
 				+ cookie
 				+ "."

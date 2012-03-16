@@ -13,6 +13,7 @@ public class ReporterOptions implements PlugIn {
 	public static final String COOKIE = "bonej.report.cookie";
 	public static final String COOKIE2 = "bonej.report.cookie2";
 	public static final String FIRSTTIMEKEY = "bonej.report.firstvisit";
+	public static final String SESSIONKEY = "bonej.report.bonejsession";
 
 	public void run(String arg) {
 
@@ -35,6 +36,7 @@ public class ReporterOptions implements PlugIn {
 					new Random().nextInt(Integer.MAX_VALUE));
 			long time = System.currentTimeMillis() / 1000;
 			Prefs.set(ReporterOptions.FIRSTTIMEKEY, Long.toString(time));
+			Prefs.set(SESSIONKEY, 1);
 		}
 
 		Prefs.set(OPTOUTSET, true);
