@@ -37,9 +37,9 @@ public class UsageReporter {
 	private static String utme;
 	private static String utmn;
 	private static String utms;
-	private static String utmsr = "utmsr=1280x800&";
-	private static String utmvp = "utmvp=1280x800&";
-	private static String utmsc = "utmsc=24-bit&";
+	private static String utmsr;
+	private static String utmvp;
+	private static String utmsc;
 	private static int session;
 	private static String utmcc;
 	private static String cookie;
@@ -60,16 +60,7 @@ public class UsageReporter {
 		inc++;
 		bonejSession = Integer.toString(inc);
 		Prefs.set(ReporterOptions.SESSIONKEY, inc);
-	}
-
-	public static UsageReporter reportEvent(String category, String action,
-			String label) {
-		utms = "utms=" + session + "&";
-		session++;
-		utme = "utme=5(" + category + "*" + action + "*" + label + ")&";
-		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
-		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
-
+		
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		GraphicsEnvironment ge;
 		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -91,6 +82,16 @@ public class UsageReporter {
 		utmsr = "utmsr=" + screenSize.width + "x" + screenSize.height + "&";
 		utmvp = "utmvp=" + width + "x" + height + "&";
 		utmsc = "utmsc=24-bit&";
+	}
+
+	public static UsageReporter reportEvent(String category, String action,
+			String label) {
+		utms = "utms=" + session + "&";
+		session++;
+		utme = "utme=5(" + category + "*" + action + "*" + label + ")&";
+		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
+		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
+
 		final long time = System.currentTimeMillis() / 1000;
 		lastTime = thisTime;
 		if (lastTime == 0)
