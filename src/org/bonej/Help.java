@@ -1,3 +1,4 @@
+package org.bonej;
 import ij.plugin.PlugIn;
 import ij.plugin.BrowserLauncher;
 
@@ -14,7 +15,8 @@ import javax.swing.event.HyperlinkListener;
 
 import org.doube.util.UsageReporter;
 
-public class Help_ implements PlugIn {
+
+public class Help implements PlugIn {
 
 	/**
 	 * BoneJ version
