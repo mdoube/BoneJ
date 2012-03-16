@@ -11,6 +11,8 @@ public class ReporterOptions implements PlugIn {
 	public static final String OPTOUTSET = "bonej.report.option.set";
 	public static final String OPTOUTKEY = "bonej.allow.reporter";
 	public static final String COOKIE = "bonej.report.cookie";
+	public static final String COOKIE2 = "bonej.report.cookie2";
+	public static final String FIRSTTIMEKEY = "bonej.report.firstvisit";
 
 	public void run(String arg) {
 
@@ -29,11 +31,14 @@ public class ReporterOptions implements PlugIn {
 			Prefs.set(OPTOUTKEY, true);
 			Prefs.set(ReporterOptions.COOKIE,
 					new Random().nextInt(Integer.MAX_VALUE));
+			Prefs.set(ReporterOptions.COOKIE2,
+					new Random().nextInt(Integer.MAX_VALUE));
+			long time = System.currentTimeMillis() / 1000;
+			Prefs.set(ReporterOptions.FIRSTTIMEKEY, Long.toString(time));
 		}
 
 		Prefs.set(OPTOUTSET, true);
 		Prefs.savePreferences();
 		return;
 	}
-
 }

@@ -37,7 +37,8 @@ public class UsageReporter {
 	private static int session = 0;
 	private static String utmcc = null;
 	private static String cookie = "0";
-	private static long firstTime = 0;
+	private static String cookie2 = "0";
+	private static String firstTime = "0";
 	private static long lastTime = 0;
 	private static long thisTime = 0;
 
@@ -57,10 +58,6 @@ public class UsageReporter {
 		utmn = "utmn=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		utmhid = "utmhid=" + random.nextInt(Integer.MAX_VALUE) + "&";
 		final long time = System.currentTimeMillis() / 1000;
-		if (firstTime == 0) {
-			firstTime = time;
-			thisTime = time;
-		}
 		lastTime = thisTime;
 		thisTime = time;
 		utmcc = getCookieString();
@@ -74,11 +71,14 @@ public class UsageReporter {
 	private static String getCookieString() {
 		cookie = Prefs.get(ReporterOptions.COOKIE,
 				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
-		int randomValue = random.nextInt(Integer.MAX_VALUE);
+		cookie2 = Prefs.get(ReporterOptions.COOKIE2,
+				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
+		firstTime = Prefs.get(ReporterOptions.FIRSTTIMEKEY,
+				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
 		String cc = "utmcc=__utma%3D"
 				+ cookie
 				+ "."
-				+ randomValue
+				+ cookie2
 				+ "."
 				+ firstTime
 				+ "."
