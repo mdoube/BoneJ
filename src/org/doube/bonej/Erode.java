@@ -3,6 +3,7 @@ package org.doube.bonej;
 import java.awt.image.ColorModel;
 
 import org.doube.util.ImageCheck;
+import org.doube.util.UsageReporter;
 
 import ij.plugin.PlugIn;
 
@@ -49,6 +50,7 @@ public class Erode implements PlugIn {
 			return;
 		ImagePlus imp2 = erode(imp, (int) gd.getNextNumber());
 		imp.setStack(null, imp2.getImageStack());
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

@@ -11,6 +11,7 @@ import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 import org.doube.util.StackStats;
+import org.doube.util.UsageReporter;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -161,6 +162,7 @@ public class Thickness implements PlugIn {
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
 				/ (double) 1000;
 		IJ.log("Duration = " + IJ.d2s(duration, 3) + " s");
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

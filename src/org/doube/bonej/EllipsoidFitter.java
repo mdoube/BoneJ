@@ -9,6 +9,7 @@ import org.doube.geometry.FitEllipsoid;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+import org.doube.util.UsageReporter;
 
 /**
  * EllipsoidFitter plugin for ImageJ
@@ -99,6 +100,7 @@ public class EllipsoidFitter implements PlugIn {
 			ri.setResultInRow(imp, "Radius 2 (" + units + ")", radii[1]);
 			ri.setResultInRow(imp, "Radius 3 (" + units + ")", radii[2]);
 			ri.updateTable();
+			UsageReporter.reportEvent(this).send();
 			return;
 		}
 }

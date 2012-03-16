@@ -98,5 +98,6 @@ public class RoiInterpolator implements PlugIn {
 			roi.setLocation(bounds.x + xmin, bounds.y + ymin);
 		}
 		IJ.showStatus("ROIs interpolated");
+		UsageReporter.reportEvent(this).send();
 	}
 }

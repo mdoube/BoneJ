@@ -43,5 +43,6 @@ public class StackCropper implements PlugIn {
 			out.setStack(stack);
 			out.show();
 		}
+		UsageReporter.reportEvent(this).send();
 	}
 }

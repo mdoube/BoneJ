@@ -38,6 +38,7 @@ import org.doube.jama.Matrix;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
+import org.doube.util.UsageReporter;
 
 import customnode.CustomPointMesh;
 import customnode.CustomTriangleMesh;
@@ -385,6 +386,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 		IJ.showProgress(1.0);
 		IJ.showStatus("Particle Analysis Complete");
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

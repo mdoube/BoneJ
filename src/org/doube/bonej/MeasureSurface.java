@@ -26,6 +26,7 @@ import javax.vecmath.Point3f;
 import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -102,6 +103,7 @@ public class MeasureSurface implements PlugIn {
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
 		}
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

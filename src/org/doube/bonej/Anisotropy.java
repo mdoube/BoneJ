@@ -49,6 +49,7 @@ import org.doube.jama.EigenvalueDecomposition;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -150,7 +151,7 @@ public class Anisotropy implements PlugIn {
 					128, 255, 0, 1);
 			alignedImp.show();
 		}
-
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

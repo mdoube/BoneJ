@@ -38,6 +38,7 @@ import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -122,6 +123,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		if (doRoiMan) {
 			addToRoiManager(imp, roiMan, sphereDim, clearRois);
 		}
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

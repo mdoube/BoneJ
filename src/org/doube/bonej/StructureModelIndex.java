@@ -37,6 +37,7 @@ import org.doube.bonej.Dilate;
 import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 import customnode.CustomTriangleMesh;
 
@@ -95,7 +96,7 @@ public class StructureModelIndex implements PlugIn {
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
-
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 
