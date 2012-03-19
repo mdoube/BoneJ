@@ -161,7 +161,7 @@ public class UsageReporter {
 	 * @return The instance of UsageReporter ready to send() a report
 	 */
 	public static UsageReporter reportEvent(Object o) {
-		return reportEvent("Plugin Usage", o.getClass().getName(),
+		return reportEvent("Plugin%20Usage", o.getClass().getName(),
 				Help.bonejVersion, null);
 	}
 
@@ -216,8 +216,8 @@ public class UsageReporter {
 					uc.getInputStream()));
 			String inputLine;
 			while ((inputLine = in.readLine()) != null)
-				// IJ.log(inputLine);
-				inputLine.length();
+				IJ.log(inputLine);
+//				inputLine.length();
 			in.close();
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
