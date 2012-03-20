@@ -195,7 +195,8 @@ public class UsageReporter {
 				+ cookie
 				+ "."
 				+ thisTime // not correct, but a best guess
-				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7Cutmcmd%3Dorganic%7Cutmctr%3Dbonej%3B";
+				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7C" +
+				"utmcmd%3Dorganic%7Cutmctr%3DBoneJ%20Usage%20Reporter%3B";
 		return cc;
 	}
 
