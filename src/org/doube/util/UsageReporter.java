@@ -87,6 +87,8 @@ public class UsageReporter {
 	 */
 	private UsageReporter() {
 		random = new Random();
+		if (!Prefs.get(ReporterOptions.OPTOUTKEY, false))
+			return;
 		bonejSession = Prefs.get(ReporterOptions.SESSIONKEY,
 				Integer.toString(new Random().nextInt(1000)));
 		int inc = Integer.parseInt(bonejSession);
@@ -134,6 +136,8 @@ public class UsageReporter {
 	 */
 	public static UsageReporter reportEvent(String category, String action,
 			String label, Integer value) {
+		if (!Prefs.get(ReporterOptions.OPTOUTKEY, false))
+			return INSTANCE;
 		utms = "utms=" + session + "&";
 		session++;
 		String val = (value == null) ? "" : "(" + value.toString() + ")";
@@ -179,24 +183,12 @@ public class UsageReporter {
 				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
 		firstTime = Prefs.get(ReporterOptions.FIRSTTIMEKEY,
 				Integer.toString(random.nextInt(Integer.MAX_VALUE)));
-		String cc = "utmcc=__utma%3D"
-				+ cookie
-				+ "."
-				+ cookie2
-				+ "."
-				+ firstTime
-				+ "."
-				+ lastTime
-				+ "."
-				+ thisTime
-				+ "."
-				+ bonejSession
-				+ "%3B%2B__utmz%3D"
-				+ cookie
-				+ "."
+		String cc = "utmcc=__utma%3D" + cookie + "." + cookie2 + "."
+				+ firstTime + "." + lastTime + "." + thisTime + "."
+				+ bonejSession + "%3B%2B__utmz%3D" + cookie + "."
 				+ thisTime // not correct, but a best guess
-				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7C" +
-				"utmcmd%3Dorganic%7Cutmctr%3DBoneJ%20Usage%20Reporter%3B";
+				+ ".79.42.utmcsr%3Dgoogle%7Cutmccn%3D(organic)%7C"
+				+ "utmcmd%3Dorganic%7Cutmctr%3DBoneJ%20Usage%20Reporter%3B";
 		return cc;
 	}
 
@@ -218,7 +210,7 @@ public class UsageReporter {
 			String inputLine;
 			while ((inputLine = in.readLine()) != null)
 				IJ.log(inputLine);
-//				inputLine.length();
+			// inputLine.length();
 			in.close();
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
