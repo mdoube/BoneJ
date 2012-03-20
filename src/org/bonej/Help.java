@@ -1,3 +1,4 @@
+package org.bonej;
 import ij.plugin.PlugIn;
 import ij.plugin.BrowserLauncher;
 
@@ -12,7 +13,10 @@ import javax.swing.JPanel;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-public class Help_ implements PlugIn {
+import org.doube.util.UsageReporter;
+
+
+public class Help implements PlugIn {
 
 	/**
 	 * BoneJ version
@@ -22,6 +26,8 @@ public class Help_ implements PlugIn {
 	public void run(String arg) {
 		if (arg.equals("about")) {
 			showAbout();
+			//testing
+			UsageReporter.reportEvent(this).send();
 			return;
 		}
 	}

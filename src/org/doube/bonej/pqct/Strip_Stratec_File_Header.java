@@ -29,6 +29,8 @@ import ij.gui.*;
 import ij.IJ;
 import javax.activation.*;					//UnsupportedDataTypeException
 
+import org.doube.util.UsageReporter;
+
 public class Strip_Stratec_File_Header implements PlugIn {
 
 	//Overriding the abstract runnable run method. Apparently plugins run in threads
@@ -67,6 +69,7 @@ public class Strip_Stratec_File_Header implements PlugIn {
 				IJ.error("Stratec file header stripping failed", err.getMessage());
 			}
 		}
+		UsageReporter.reportEvent(this).send();
 	}
 
 	private void stripFile(String fileNameIn,String fileNameOut,boolean[] toStrip) throws Exception {

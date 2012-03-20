@@ -22,6 +22,7 @@ package org.doube.skeleton;
 import java.util.ArrayList;
 
 import org.doube.util.ImageCheck;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -81,6 +82,7 @@ public class Skeletonize3D implements PlugIn {
 		skeleton.show();
 		if (imp.isInvertedLut() && !skeleton.isInvertedLut())
 			IJ.run("Invert LUT");
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

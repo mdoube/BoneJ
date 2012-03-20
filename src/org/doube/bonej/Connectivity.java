@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -129,6 +130,7 @@ public class Connectivity implements PlugIn {
 		ri.setResultInRow(imp, "Conn.D (" + imp.getCalibration().getUnit()
 				+ "^-3)", connDensity);
 		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

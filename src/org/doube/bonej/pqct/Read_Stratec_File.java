@@ -30,6 +30,8 @@ import ij.plugin.*;
 import ij.measure.*;						//Calibration
 import javax.activation.*;					//UnsupportedDataTypeException
 
+import org.doube.util.UsageReporter;
+
 public class Read_Stratec_File extends ImagePlus implements PlugIn {
 	//Global variables
 	//Stratec header stuff
@@ -108,6 +110,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		}catch (Exception err){
 			IJ.error("Stratec file read failed ", err.getMessage());
 		}
+		UsageReporter.reportEvent(this).send();
 	}
 	
 	private void fileInfo() {

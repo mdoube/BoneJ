@@ -33,6 +33,7 @@ import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -118,6 +119,7 @@ public class PlateRod implements PlugIn {
 		ri.setResultInRow(imp, "ΣeV2/ΣeV1", sumEv2 / sumEv1);
 		ri.setResultInRow(imp, "ΣeV3/ΣeV1", sumEv3 / sumEv1);
 		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
 	}
 
 	/* ----------------------------------------------------------------------- */

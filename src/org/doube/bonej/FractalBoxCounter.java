@@ -14,6 +14,7 @@ import java.util.ArrayList;
 
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -247,6 +248,7 @@ public class FractalBoxCounter implements PlugIn {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		UsageReporter.reportEvent(this).send();
 	}
 
 	private ImagePlus findSurfaceVoxels(ImagePlus imp) {
