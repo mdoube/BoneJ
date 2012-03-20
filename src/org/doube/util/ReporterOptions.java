@@ -9,6 +9,7 @@ import ij.plugin.PlugIn;
 public class ReporterOptions implements PlugIn {
 
 	public static final String OPTOUTSET = "bonej.report.option.set";
+	/** Set to false if reporting is not allowed */
 	public static final String OPTOUTKEY = "bonej.allow.reporter";
 	public static final String COOKIE = "bonej.report.cookie";
 	public static final String COOKIE2 = "bonej.report.cookie2";
@@ -26,9 +27,13 @@ public class ReporterOptions implements PlugIn {
 				+ "otherwise, cancel. For more information click Help.");
 		dialog.addHelp("http://bonej.org/stats");
 		dialog.showDialog();
-		if (dialog.wasCanceled())
+		if (dialog.wasCanceled()){
 			Prefs.set(OPTOUTKEY, false);
-		else {
+			Prefs.set(ReporterOptions.COOKIE, "");
+			Prefs.set(ReporterOptions.COOKIE2, "");
+			Prefs.set(ReporterOptions.FIRSTTIMEKEY, "");
+			Prefs.set(ReporterOptions.SESSIONKEY, "");
+		} else {
 			Prefs.set(OPTOUTKEY, true);
 			Prefs.set(ReporterOptions.COOKIE,
 					new Random().nextInt(Integer.MAX_VALUE));
