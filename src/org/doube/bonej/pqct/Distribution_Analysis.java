@@ -326,7 +326,7 @@ public class Distribution_Analysis implements PlugIn {
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
-						resultImage = ResultsImage.addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold);
+						resultImage = ResultsImage.addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold,cortAnalysis.cortexSieve);
 					}
 					
 				}
@@ -364,7 +364,7 @@ public class Distribution_Analysis implements PlugIn {
 				if (imageAndAnalysisDetails.saveImageOnDisk && resultImage!= null){
 					resultImage = ResultsImage.addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
 					FileSaver fSaver = new FileSaver(resultImage);
-					fSaver.saveAsPng(imageSavePath+"/"+imageName+".png"); 
+					fSaver.saveAsPng(imageSavePath+imageName+".png"); 
 				}
 				textPanel.appendLine(results);
 				textPanel.updateDisplay();
