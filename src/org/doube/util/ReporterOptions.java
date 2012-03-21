@@ -46,6 +46,7 @@ public class ReporterOptions implements PlugIn {
 
 		Prefs.set(OPTOUTSET, true);
 		Prefs.savePreferences();
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 }

@@ -13,6 +13,7 @@ public class VoxelDepthChecker implements PlugIn {
 			
 		ImageCheck ic = new ImageCheck();
 		ic.dicomVoxelDepth(imp);
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 
