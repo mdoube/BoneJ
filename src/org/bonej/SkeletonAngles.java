@@ -9,6 +9,7 @@ import org.doube.skeleton.Graph;
 import org.doube.skeleton.Point;
 import org.doube.skeleton.Vertex;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -66,6 +67,7 @@ public class SkeletonAngles implements PlugIn {
 			g++;
 		}
 		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
 	}
 
 	private double vertexAngle(Vertex vertex, Edge edge0, Edge edge1) {
