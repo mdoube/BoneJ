@@ -2,6 +2,7 @@ package org.bonej;
 
 import java.util.ArrayList;
 
+import org.doube.geometry.Centroid;
 import org.doube.geometry.Trig;
 import org.doube.skeleton.AnalyzeSkeleton;
 import org.doube.skeleton.Edge;
@@ -97,9 +98,9 @@ public class SkeletonAngles implements PlugIn {
 		ArrayList<Point> pointsv = vertex.getPoints();
 		ArrayList<Point> points0 = v0.getPoints();
 		ArrayList<Point> points1 = v1.getPoints();
-		double[] cv = calculateCentroid(pointsv);
-		double[] c0 = calculateCentroid(points0);
-		double[] c1 = calculateCentroid(points1);
+		double[] cv = Centroid.getCentroid(pointsv);
+		double[] c0 = Centroid.getCentroid(points0);
+		double[] c1 = Centroid.getCentroid(points1);
 
 		return Trig.angle3D(c0[0], c0[1], c0[2], c1[0], c1[1], c1[2], cv[0],
 				cv[1], cv[2]);
@@ -126,7 +127,7 @@ public class SkeletonAngles implements PlugIn {
 			return vertexAngle(vertex, edge0, edge1);
 		Point p0 = getNthPoint(vertex, edge0, nthPoint);
 		Point p1 = getNthPoint(vertex, edge1, nthPoint);
-		double[] cv = calculateCentroid(vertex.getPoints());
+		double[] cv = Centroid.getCentroid(vertex.getPoints());
 
 		return Trig.angle3D(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, cv[0], cv[1],
 				cv[2]);
@@ -163,20 +164,5 @@ public class SkeletonAngles implements PlugIn {
 			else
 				return edgePoints.get(0);
 		}
-	}
-
-	private double[] calculateCentroid(ArrayList<Point> points) {
-		double xsum = 0;
-		double ysum = 0;
-		double zsum = 0;
-		double n = points.size();
-
-		for (Point p : points) {
-			xsum += p.x;
-			ysum += p.y;
-			zsum += p.z;
-		}
-		double[] centroid = { xsum / n, ysum / n, zsum / n };
-		return centroid;
 	}
 }
