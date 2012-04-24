@@ -70,4 +70,39 @@ public class Trig {
 	public static double distance3D(double[] v) {
 		return distance3D(v[0], v[1], v[2], 0, 0, 0);
 	}
+
+	/**
+	 * Caculate the angle between two vectors joined at their tails at the point
+	 * (xv, yv, zv)
+	 * 
+	 * @param x0
+	 * @param y0
+	 * @param z0
+	 * @param x1
+	 * @param y1
+	 * @param z1
+	 * @param xv
+	 * @param yv
+	 * @param zv
+	 * @return
+	 */
+	public static double angle3D(double x0, double y0, double z0, double x1,
+			double y1, double z1, double xv, double yv, double zv) {
+
+		x0 -= xv;
+		y0 -= yv;
+		z0 -= zv;
+		x1 -= xv;
+		y1 -= yv;
+		z1 -= zv;
+
+		double dot = x0 * x1 + y0 * y1 + z0 * z1;
+		double d0 = distance3D(xv, yv, zv, x0, y0, z0);
+		double d1 = distance3D(xv, yv, zv, x0, y0, z0);
+
+		double cosTheta = dot / (d0 * d1);
+
+		return Math.acos(cosTheta);
+	}
+
 }
