@@ -101,24 +101,11 @@ public class SkeletonAngles implements PlugIn {
 		double[] cv = Centroid.getCentroid(pointsv);
 		double[] c0 = Centroid.getCentroid(points0);
 		double[] c1 = Centroid.getCentroid(points1);
-
+		IJ.log("c0: (" + c0[0] + ", " + c0[1] + ", " + c0[2] + ") c1: ("
+				+ c1[0] + ", " + c1[1] + ", " + c1[2] + ") cv: (" + cv[0]
+						+", "+cv[1] + ", " + cv[2] + ")");
 		return Trig.angle3D(c0[0], c0[1], c0[2], c1[0], c1[1], c1[2], cv[0],
 				cv[1], cv[2]);
-
-		// double x0 = centroid0[0] - centroidv[0];
-		// double y0 = centroid0[1] - centroidv[1];
-		// double z0 = centroid0[2] - centroidv[2];
-		// double x1 = centroid1[0] - centroidv[0];
-		// double y1 = centroid1[1] - centroidv[1];
-		// double z1 = centroid1[2] - centroidv[2];
-		//
-		// double dot = x0 * x1 + y0 * y1 + z0 * z1;
-		// double d0 = Trig.distance3D(centroidv, centroid0);
-		// double d1 = Trig.distance3D(centroidv, centroid1);
-		//
-		// double cosTheta = dot / (d0 * d1);
-		//
-		// return Math.acos(cosTheta);
 	}
 
 	private double vertexAngle(Vertex vertex, Edge edge0, Edge edge1,
@@ -128,7 +115,9 @@ public class SkeletonAngles implements PlugIn {
 		Point p0 = getNthPoint(vertex, edge0, nthPoint);
 		Point p1 = getNthPoint(vertex, edge1, nthPoint);
 		double[] cv = Centroid.getCentroid(vertex.getPoints());
-
+		IJ.log("p0: (" + p0.x + ", " + p0.y + ", " + p0.z + ") p1: (" + p1.x
+				+ ", " + p1.y + ", " + p1.z + ") v: (" + cv[0] + ", " + cv[1]
+				+ ", " + cv[2] + ")");
 		return Trig.angle3D(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, cv[0], cv[1],
 				cv[2]);
 	}
