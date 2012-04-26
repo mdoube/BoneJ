@@ -3,7 +3,6 @@ package org.doube.geometry;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 import org.doube.skeleton.Point;
 import org.junit.Test;
