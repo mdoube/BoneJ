@@ -76,15 +76,25 @@ public class Trig {
 	 * (xv, yv, zv)
 	 * 
 	 * @param x0
+	 *            x-coordinate of the head of vector 0
 	 * @param y0
+	 *            y-coordinate of the head of vector 0
 	 * @param z0
+	 *            z-coordinate of the head of vector 0
 	 * @param x1
+	 *            x-coordinate of the head of vector 1
 	 * @param y1
+	 *            y-coordinate of the head of vector 1
 	 * @param z1
+	 *            z-coordinate of the head of vector 1
 	 * @param xv
+	 *            x-coordinate of the mutual tail point
 	 * @param yv
+	 *            y-coordinate of the mutual tail point
 	 * @param zv
+	 *            z-coordinate of the mutual tail point
 	 * @return
+	 * 		angle formed by 0-V-1
 	 */
 	public static double angle3D(double x0, double y0, double z0, double x1,
 			double y1, double z1, double xv, double yv, double zv) {
