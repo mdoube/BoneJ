@@ -97,8 +97,8 @@ public class Trig {
 		z1 -= zv;
 
 		double dot = x0 * x1 + y0 * y1 + z0 * z1;
-		double d0 = distance3D(xv, yv, zv, x0, y0, z0);
-		double d1 = distance3D(xv, yv, zv, x0, y0, z0);
+		double d0 = distance3D(x0, y0, z0);
+		double d1 = distance3D(x1, y1, z1);
 
 		double cosTheta = dot / (d0 * d1);
 
