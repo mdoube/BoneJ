@@ -18,9 +18,20 @@ public class SkeletonAnglesTest {
 			{pi4, pi2, pi4},
 			{pi4, pi4, pi2}
 		}};
+	
+	private final double[][][] boxFrameResult = {{ 
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2},
+		{pi2, pi2, pi2}
+	}};
 
 	@Test
-	public void testCalculateTriplePointAngles() {
+	public void testCalculateTriplePointAnglesCrossedCircle() {
 		ImagePlus imp = TestDataMaker.crossedCircle(256);
 		double[][][] result = (new SkeletonAngles())
 				.calculateTriplePointAngles(imp,
@@ -30,4 +41,16 @@ public class SkeletonAnglesTest {
 				assertArrayEquals(circleCrossResult[g][v], result[g][v], 1e-12);
 	}
 
+	@Test
+	public void testCalculateTriplePointAnglesBoxFrame() {
+		ImagePlus imp = TestDataMaker.boxFrame(128, 128, 128);
+		double[][][] result = (new SkeletonAngles())
+				.calculateTriplePointAngles(imp,
+						SkeletonAngles.VERTEX_TO_VERTEX);
+		for (int g = 0; g < boxFrameResult.length; g++)
+			for (int v = 0; v < boxFrameResult[g].length; v++)
+				assertArrayEquals(boxFrameResult[g][v], result[g][v], 1e-12);
+	}
+	
+	
 }
