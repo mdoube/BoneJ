@@ -2,6 +2,7 @@ package org.doube.geometry;
 
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.plugin.filter.Skeletonize3D;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
@@ -123,6 +124,28 @@ public class TestDataMaker {
 		ImageProcessor ip3 = new ByteProcessor(width + 2, height + 2);
 		stack.addSlice("", ip3);
 		ImagePlus imp = new ImagePlus("brick", stack);
+		return imp;
+	}
+
+	/**
+	 * Draw a circle with vertical and horizontal crossing, then skeletonize it
+	 * 
+	 * @param size
+	 *            width and height of the image, circle diameter is size/2
+	 * @return image containing a white (255) circle on black (0) background
+	 */
+	public static ImagePlus crossedCircle(int size) {
+		ImageProcessor ip = new ByteProcessor(size, size);
+		ip.setColor(0);
+		ip.fill();
+		ip.setColor(255);
+		ip.drawOval(size / 4, size / 4, size / 2, size / 2);
+		ip.drawLine(size / 2, size / 4, size / 2, 3 * size / 4);
+		ip.drawLine(size / 4, size / 2, 3 * size / 4, size / 2);
+		ImagePlus imp = new ImagePlus("crossed-circle", ip);
+		Skeletonize3D skel = new Skeletonize3D();
+		skel.setup("", imp);
+		skel.run(ip);
 		return imp;
 	}
 
