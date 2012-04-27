@@ -438,7 +438,6 @@ public class AnalyzeSkeleton implements PlugInFilter
 		
 		}
 		
-		UsageReporter.reportEvent(this).send();
 		// Return the analysis results
 		return assembleResults();
 	}
