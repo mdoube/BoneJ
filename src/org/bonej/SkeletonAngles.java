@@ -139,9 +139,7 @@ public class SkeletonAngles implements PlugIn {
 		double[] cv = Centroid.getCentroid(pointsv);
 		double[] c0 = Centroid.getCentroid(points0);
 		double[] c1 = Centroid.getCentroid(points1);
-		IJ.log("c0: (" + c0[0] + ", " + c0[1] + ", " + c0[2] + ") c1: ("
-				+ c1[0] + ", " + c1[1] + ", " + c1[2] + ") cv: (" + cv[0]
-				+ ", " + cv[1] + ", " + cv[2] + ")");
+		
 		return Trig.angle3D(c0[0], c0[1], c0[2], c1[0], c1[1], c1[2], cv[0],
 				cv[1], cv[2]);
 	}
