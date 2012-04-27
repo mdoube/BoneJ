@@ -148,5 +148,31 @@ public class TestDataMaker {
 		skel.run(ip);
 		return imp;
 	}
+	
+	public static ImagePlus boxFrame(int width, int height, int depth){
+		ImageStack stack = new ImageStack(width + 64, height + 64);
+		for (int s = 1; s <= depth + 64; s++){
+			ImageProcessor ip = new ByteProcessor(width + 64, height + 64);
+			ip.setColor(0);
+			ip.fill();
+			stack.addSlice(ip);
+		}
+		ImageProcessor ip = stack.getProcessor(32);
+		ip.setColor(255);
+		ip.drawRect(32, 32, width, height);
+		ip = stack.getProcessor(32 + depth);
+		ip.setColor(255);
+		ip.drawRect(32, 32, width, height);
+		for (int s = 33; s < 32+depth; s++){
+			ip = stack.getProcessor(s);
+			ip.setColor(255);
+			ip.drawPixel(32, 32);
+			ip.drawPixel(32, 31 + height);
+			ip.drawPixel(31 + width, 32);
+			ip.drawPixel(31 + width, 31 + height);
+		}
+		ImagePlus imp = new ImagePlus("box-frame", stack);
+		return imp;
+	}
 
 }
