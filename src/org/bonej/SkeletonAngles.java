@@ -20,7 +20,8 @@ import ij.plugin.PlugIn;
 
 public class SkeletonAngles implements PlugIn {
 
-	private static final int VERTEX_TO_VERTEX = -1;
+	/** Measure angles between vertices */
+	public static final int VERTEX_TO_VERTEX = -1;
 
 	public void run(String arg) {
 		ImagePlus imp = WindowManager.getCurrentImage();
@@ -30,8 +31,8 @@ public class SkeletonAngles implements PlugIn {
 		}
 
 		GenericDialog gd = new GenericDialog("Options");
-		String[] options = { "Opposite edges", "Vertex and nth edge pixel" };
-		gd.addChoice("Measure angle between...", options, options[0]);
+		String[] options = { "Opposite_vertex", "nth_edge_pixel" };
+		gd.addChoice("Use:", options, options[0]);
 		gd.addNumericField("nth pixel", 0, 0);
 
 		gd.showDialog();
@@ -47,17 +48,36 @@ public class SkeletonAngles implements PlugIn {
 			nthPixel = VERTEX_TO_VERTEX;
 		}
 
+		ResultInserter ri = ResultInserter.getInstance();
+
+		double[][][] result = calculateTriplePointAngles(imp, nthPixel);
+
+		for (int g = 0; g < result.length; g++) {
+			for (int v = 0; v < result[g].length; v++) {
+				if (result[g][v] == null)
+					continue;
+				ri.setResultInRow(imp, "Skeleton", g);
+				ri.setResultInRow(imp, "Vertex", v);
+				ri.setResultInRow(imp, "Theta 0", result[g][v][0]);
+				ri.setResultInRow(imp, "Theta 1", result[g][v][1]);
+				ri.setResultInRow(imp, "Theta 2", result[g][v][2]);
+			}
+		}
+		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
+	}
+
+	public double[][][] calculateTriplePointAngles(ImagePlus imp, int nthPixel) {
 		AnalyzeSkeleton skeletonAnalyzer = new AnalyzeSkeleton();
 		skeletonAnalyzer.setup("", imp);
 		skeletonAnalyzer.run();
-
-		ResultInserter ri = ResultInserter.getInstance();
-
 		Graph[] graphs = skeletonAnalyzer.getGraphs();
+		double[][][] angleList = new double[graphs.length][][];
 		int g = 0;
-		int v = 0;
 		for (Graph graph : graphs) {
 			ArrayList<Vertex> vertices = graph.getVertices();
+			double[][] verts = new double[vertices.size()][3];
+			int v = 0;
 			for (Vertex vertex : vertices) {
 				// triple point
 				if (vertex.getBranches().size() == 3) {
@@ -74,22 +94,22 @@ public class SkeletonAngles implements PlugIn {
 					Edge edge1 = edges.get(1);
 					Edge edge2 = edges.get(2);
 
-					double theta01 = vertexAngle(vertex, edge0, edge1, nthPixel);
-					double theta02 = vertexAngle(vertex, edge0, edge2, nthPixel);
-					double theta12 = vertexAngle(vertex, edge1, edge2, nthPixel);
-
-					ri.setResultInRow(imp, "Skeleton", g);
-					ri.setResultInRow(imp, "Vertex", v);
-					ri.setResultInRow(imp, "Theta 0", theta01);
-					ri.setResultInRow(imp, "Theta 1", theta02);
-					ri.setResultInRow(imp, "Theta 2", theta12);
+					double theta0 = vertexAngle(vertex, edge0, edge1, nthPixel);
+					double theta1 = vertexAngle(vertex, edge0, edge2, nthPixel);
+					double theta2 = vertexAngle(vertex, edge1, edge2, nthPixel);
+					
+					double[] thetas = {theta0, theta1, theta2};
+					
+					verts[v] = thetas;
+				} else {
+					verts[v] = null;
 				}
 				v++;
 			}
+			angleList[g] = verts;
 			g++;
 		}
-		ri.updateTable();
-		UsageReporter.reportEvent(this).send();
+		return angleList;
 	}
 
 	private double vertexAngle(Vertex vertex, Edge edge0, Edge edge1) {
@@ -103,7 +123,7 @@ public class SkeletonAngles implements PlugIn {
 		double[] c1 = Centroid.getCentroid(points1);
 		IJ.log("c0: (" + c0[0] + ", " + c0[1] + ", " + c0[2] + ") c1: ("
 				+ c1[0] + ", " + c1[1] + ", " + c1[2] + ") cv: (" + cv[0]
-						+", "+cv[1] + ", " + cv[2] + ")");
+				+ ", " + cv[1] + ", " + cv[2] + ")");
 		return Trig.angle3D(c0[0], c0[1], c0[2], c1[0], c1[1], c1[2], cv[0],
 				cv[1], cv[2]);
 	}
@@ -115,9 +135,6 @@ public class SkeletonAngles implements PlugIn {
 		Point p0 = getNthPoint(vertex, edge0, nthPoint);
 		Point p1 = getNthPoint(vertex, edge1, nthPoint);
 		double[] cv = Centroid.getCentroid(vertex.getPoints());
-		IJ.log("p0: (" + p0.x + ", " + p0.y + ", " + p0.z + ") p1: (" + p1.x
-				+ ", " + p1.y + ", " + p1.z + ") v: (" + cv[0] + ", " + cv[1]
-				+ ", " + cv[2] + ")");
 		return Trig.angle3D(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, cv[0], cv[1],
 				cv[2]);
 	}
