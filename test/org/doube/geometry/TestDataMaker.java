@@ -148,10 +148,21 @@ public class TestDataMaker {
 		skel.run(ip);
 		return imp;
 	}
-	
-	public static ImagePlus boxFrame(int width, int height, int depth){
+
+	/**
+	 * Draw the edges of a brick with 32 pixels of padding on all faces
+	 * 
+	 * @param width
+	 *            Width of the box frame in pixels
+	 * @param height
+	 *            Height of the box frame in pixels
+	 * @param depth
+	 *            Depth of the box frame in pixels
+	 * @return Image containing a 1-pixel wide outline of a 3D box
+	 */
+	public static ImagePlus boxFrame(int width, int height, int depth) {
 		ImageStack stack = new ImageStack(width + 64, height + 64);
-		for (int s = 1; s <= depth + 64; s++){
+		for (int s = 1; s <= depth + 64; s++) {
 			ImageProcessor ip = new ByteProcessor(width + 64, height + 64);
 			ip.setColor(0);
 			ip.fill();
@@ -163,7 +174,7 @@ public class TestDataMaker {
 		ip = stack.getProcessor(32 + depth);
 		ip.setColor(255);
 		ip.drawRect(32, 32, width, height);
-		for (int s = 33; s < 32+depth; s++){
+		for (int s = 33; s < 32 + depth; s++) {
 			ip = stack.getProcessor(s);
 			ip.setColor(255);
 			ip.drawPixel(32, 32);
