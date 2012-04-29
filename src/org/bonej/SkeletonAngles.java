@@ -85,6 +85,21 @@ public class SkeletonAngles implements PlugIn {
 		UsageReporter.reportEvent(this).send();
 	}
 
+	/**
+	 * Calculate the three angles formed by the branches at every triple point
+	 * in the skeleton. Assumes the image has been skeletonized. Angles can be
+	 * calculated between opposite vertices or an arbitrary number of points
+	 * from the triple point.
+	 * 
+	 * @param imp
+	 *            Skeletonized image with the skeleton in the foreground
+	 * @param nthPixel
+	 *            Number of points along the edge away from the triple point to
+	 *            use for angle calculation. Set to
+	 *            SkeletonAngles.VERTEX_TO_VERTEX to use opposite vertices
+	 * @return 3D array containing 3 angles (in radians) for each triple point
+	 *         in each skeleton in the image
+	 */
 	public double[][][] calculateTriplePointAngles(ImagePlus imp, int nthPixel) {
 		AnalyzeSkeleton skeletonAnalyzer = new AnalyzeSkeleton();
 		skeletonAnalyzer.setup("", imp);
@@ -115,9 +130,9 @@ public class SkeletonAngles implements PlugIn {
 					double theta0 = vertexAngle(vertex, edge0, edge1, nthPixel);
 					double theta1 = vertexAngle(vertex, edge0, edge2, nthPixel);
 					double theta2 = vertexAngle(vertex, edge1, edge2, nthPixel);
-					
-					double[] thetas = {theta0, theta1, theta2};
-					
+
+					double[] thetas = { theta0, theta1, theta2 };
+
 					verts[v] = thetas;
 				} else {
 					verts[v] = null;
@@ -139,7 +154,7 @@ public class SkeletonAngles implements PlugIn {
 		double[] cv = Centroid.getCentroid(pointsv);
 		double[] c0 = Centroid.getCentroid(points0);
 		double[] c1 = Centroid.getCentroid(points1);
-		
+
 		return Trig.angle3D(c0[0], c0[1], c0[2], c1[0], c1[1], c1[2], cv[0],
 				cv[1], cv[2]);
 	}
