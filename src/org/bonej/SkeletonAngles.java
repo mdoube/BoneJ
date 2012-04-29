@@ -49,7 +49,7 @@ public class SkeletonAngles implements PlugIn {
 		}
 
 		GenericDialog gd = new GenericDialog("Options");
-		String[] options = { "Opposite_vertex", "nth_edge_pixel" };
+		String[] options = { "Opposite vertex", "nth edge pixel" };
 		gd.addChoice("Use:", options, options[0]);
 		gd.addNumericField("nth pixel", 0, 0);
 
