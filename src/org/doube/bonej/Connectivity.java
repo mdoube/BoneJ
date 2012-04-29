@@ -413,6 +413,8 @@ public class Connectivity implements PlugIn {
 						nStackVertices++;
 				}
 			}
+			if (stack.getSize() == 1)
+				break;
 		}
 		return nStackVertices;
 	}/* end getStackVertices */
@@ -439,6 +441,8 @@ public class Connectivity implements PlugIn {
 						nStackEdges++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// back to front stack edges
@@ -449,6 +453,8 @@ public class Connectivity implements PlugIn {
 						nStackEdges++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// top to bottom stack edges
@@ -457,6 +463,8 @@ public class Connectivity implements PlugIn {
 				for (int z = 1; z < depth - 1; z++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackEdges++;
+					if (depth == 1)
+						break;
 				}
 			}
 		}
@@ -490,6 +498,8 @@ public class Connectivity implements PlugIn {
 						nStackFaces++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// back and front faces
@@ -499,6 +509,8 @@ public class Connectivity implements PlugIn {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackFaces++;
 				}
+				if (depth == 1)
+					break;
 			}
 		}
 
@@ -508,6 +520,8 @@ public class Connectivity implements PlugIn {
 				for (int z = 1; z < depth - 1; z++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackFaces++;
+					if (depth == 1)
+						break;
 				}
 			}
 		}
@@ -540,6 +554,8 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// left and right faces (2 vertical edges)
@@ -556,6 +572,8 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceVertices++;
+					if (depth == 1)
+						break;
 				}
 			}
 		}
@@ -574,6 +592,8 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 					else if (getPixel(stack, x - 1, y, z) == -1)
 						nFaceVertices++;
+					if (depth == 1)
+						break;
 				}
 			}
 		}
@@ -609,6 +629,8 @@ public class Connectivity implements PlugIn {
 					}
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// back and front faces, horizontal edges
@@ -620,6 +642,8 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceEdges++;
 				}
+				if (depth == 1)
+					break;
 			}
 		}
 
@@ -632,6 +656,8 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x - 1, y, z) == -1)
 						nFaceEdges++;
 				}
+				if (depth == 1)
+					break;
 			}
 		}
 
@@ -644,6 +670,8 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceEdges++;
 				}
+				if (depth == 1)
+					break;
 			}
 		}
 
@@ -656,6 +684,8 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y - 1, z) == -1)
 						nFaceEdges++;
 				}
+				if (depth == 1)
+					break;
 			}
 		}
 		return nFaceEdges;
@@ -686,6 +716,8 @@ public class Connectivity implements PlugIn {
 						nEdgeVertices++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// back->front edges
@@ -698,6 +730,8 @@ public class Connectivity implements PlugIn {
 						nEdgeVertices++;
 				}
 			}
+			if (depth == 1)
+				break;
 		}
 
 		// top->bottom edges
@@ -708,6 +742,8 @@ public class Connectivity implements PlugIn {
 						nEdgeVertices++;
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nEdgeVertices++;
+					if (depth == 1)
+						break;
 				}
 			}
 		}
