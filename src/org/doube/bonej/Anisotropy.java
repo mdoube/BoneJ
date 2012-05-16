@@ -243,12 +243,7 @@ public class Anisotropy implements PlugIn {
 			}
 
 			// work out coordinates of vector cloud
-			for (int v = 0; v < nVectors; v++) {
-				final double milV = meanInterceptLengths[v];
-				coOrdinates[v][0] = milV * vectorList[v][0];
-				coOrdinates[v][1] = milV * vectorList[v][1];
-				coOrdinates[v][2] = milV * vectorList[v][2];
-			}
+			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
 			Object[] result = harriganMann(coOrdinates);
 			anisotropy = ((double[]) result[0])[0];
 			anisotropyHistory.add(anisotropy);
@@ -270,6 +265,51 @@ public class Anisotropy implements PlugIn {
 		return result;
 	}
 
+	/**
+	 * 
+	 * @param imp
+	 * @param centroid
+	 * @param radius
+	 * @param vectorSampling
+	 * @param nVectors
+	 * @param randomVectors
+	 * @return
+	 */
+	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
+			double radius, double vectorSampling, int nVectors,
+			boolean randomVectors) {
+		double[][] vectorList = Vectors.regularVectors(nVectors);
+		double[] interceptCounts = countIntercepts(imp, centroid, vectorList,
+				nVectors, radius, vectorSampling);
+		double[] meanInterceptLengths = new double[nVectors];
+		for (int v = 0; v < nVectors; v++){
+			double count = interceptCounts[v]; 
+			if (count == 0)
+				count = 1;
+			meanInterceptLengths[v] = radius / count;
+		}
+		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
+		return harriganMann(coOrdinates);
+	}
+
+	/**
+	 * 
+	 * @param meanInterceptLengths
+	 * @param vectorList
+	 * @return
+	 */
+	private double[][] calculateCoordinates(double[] meanInterceptLengths, double[][] vectorList){
+		final int nVectors = vectorList.length;
+		double[][] coOrdinates = new double[nVectors][3];
+		for (int v = 0; v < nVectors; v++) {
+			final double milV = meanInterceptLengths[v];
+			coOrdinates[v][0] = milV * vectorList[v][0];
+			coOrdinates[v][1] = milV * vectorList[v][1];
+			coOrdinates[v][2] = milV * vectorList[v][2];
+		}
+		return coOrdinates;
+	}
+	
 	/**
 	 * Create a graph for plotting anisotropy results
 	 * 
