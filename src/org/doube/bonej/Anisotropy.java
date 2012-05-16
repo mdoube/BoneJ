@@ -262,14 +262,24 @@ public class Anisotropy implements PlugIn {
 	}
 
 	/**
+	 * Calculate anisotropy using a single sampling sphere
 	 * 
 	 * @param imp
+	 *            binary stack
 	 * @param centroid
+	 *            3 element array containing (x,y,z) coordinates of the centroid
 	 * @param radius
+	 *            radius of the single sphere
 	 * @param vectorSampling
+	 *            sampling step within each vector
 	 * @param nVectors
+	 *            number of sampling vectors
 	 * @param randomVectors
-	 * @return
+	 *            if true, use randomly distributed vectors, otherwise use
+	 *            regularly distributed vectors
+	 * @return Object array containing the degree of anisotropy in a one-element
+	 *         array, the coordinate array of the rose plot and
+	 *         Eigendecomposition
 	 */
 	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
 			double radius, double vectorSampling, int nVectors,
@@ -280,8 +290,11 @@ public class Anisotropy implements PlugIn {
 		double[] meanInterceptLengths = new double[nVectors];
 		for (int v = 0; v < nVectors; v++)
 			meanInterceptLengths[v] = radius / interceptCounts[v];
-		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
-		return harriganMann(coOrdinates);
+		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths,
+				vectorList);
+		Object[] daResult = harriganMann(coOrdinates);
+		Object[] result = { daResult[0], coOrdinates, daResult[1] };
+		return result;
 	}
 
 	/**
@@ -290,7 +303,8 @@ public class Anisotropy implements PlugIn {
 	 * @param vectorList
 	 * @return
 	 */
-	private double[][] calculateCoordinates(double[] meanInterceptLengths, double[][] vectorList){
+	private double[][] calculateCoordinates(double[] meanInterceptLengths,
+			double[][] vectorList) {
 		final int nVectors = vectorList.length;
 		double[][] coOrdinates = new double[nVectors][3];
 		for (int v = 0; v < nVectors; v++) {
@@ -301,7 +315,7 @@ public class Anisotropy implements PlugIn {
 		}
 		return coOrdinates;
 	}
-	
+
 	/**
 	 * Create a graph for plotting anisotropy results
 	 * 
