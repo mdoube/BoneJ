@@ -283,11 +283,11 @@ public class Anisotropy implements PlugIn {
 	 */
 	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
 			double radius, double vectorSampling, int nVectors,
-			boolean randomVectors) {
-
+			boolean randomVectors) throws IllegalArgumentException {
 		double[][] vectorList = Vectors.regularVectors(nVectors);
-		double[] interceptCounts = countIntercepts(imp, centroid, vectorList,
-				nVectors, radius, vectorSampling);
+		double[] interceptCounts;
+			interceptCounts = countIntercepts(imp, centroid, vectorList,
+					nVectors, radius, vectorSampling);
 		double[] meanInterceptLengths = new double[nVectors];
 		for (int v = 0; v < nVectors; v++)
 			meanInterceptLengths[v] = radius / interceptCounts[v];
@@ -450,7 +450,8 @@ public class Anisotropy implements PlugIn {
 	 */
 	private double[] countIntercepts(ImagePlus imp, double[] centroid,
 			final double[][] vectorList, final int nVectors,
-			final double radius, final double vectorSampling) {
+			final double radius, final double vectorSampling)
+			throws IllegalArgumentException {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -464,11 +465,11 @@ public class Anisotropy implements PlugIn {
 		final int height = imp.getHeight();
 		final int depth = imp.getImageStackSize();
 
-		// if centroid is < radius from the sides of the image, return null
+		// if centroid is < radius from the sides of the image, throw exception
 		if (cX < radius || cY < radius || cZ < radius
 				|| cX > width * vW - radius || cY > height * vH - radius
 				|| cZ > depth * vD - radius)
-			return null;
+			throw new IllegalArgumentException("Centroid < radius from sides");
 
 		// create a work array containing pixels +- 1 radius from centroid
 		final int w = (int) Math.round(radius / vW);
