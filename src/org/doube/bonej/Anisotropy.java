@@ -284,6 +284,7 @@ public class Anisotropy implements PlugIn {
 	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
 			double radius, double vectorSampling, int nVectors,
 			boolean randomVectors) {
+
 		double[][] vectorList = Vectors.regularVectors(nVectors);
 		double[] interceptCounts = countIntercepts(imp, centroid, vectorList,
 				nVectors, radius, vectorSampling);
@@ -444,7 +445,8 @@ public class Anisotropy implements PlugIn {
 	 *            length of vectors
 	 * @param vectorSampling
 	 *            distance between tests along each vector
-	 * @return 1D array containing a count of intercepts for each vector
+	 * @return 1D array containing a count of intercepts for each vector, null
+	 *         if the centroid was < radius from sides of the image
 	 */
 	private double[] countIntercepts(ImagePlus imp, double[] centroid,
 			final double[][] vectorList, final int nVectors,
@@ -459,6 +461,14 @@ public class Anisotropy implements PlugIn {
 		final double cZ = centroid[2];
 
 		final int width = imp.getWidth();
+		final int height = imp.getHeight();
+		final int depth = imp.getImageStackSize();
+
+		// if centroid is < radius from the sides of the image, return null
+		if (cX < radius || cY < radius || cZ < radius
+				|| cX > width * vW - radius || cY > height * vH - radius
+				|| cZ > depth * vD - radius)
+			return null;
 
 		// create a work array containing pixels +- 1 radius from centroid
 		final int w = (int) Math.round(radius / vW);
