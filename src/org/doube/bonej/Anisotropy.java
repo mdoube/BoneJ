@@ -236,7 +236,9 @@ public class Anisotropy implements PlugIn {
 			final double probeLength = radius * (double) s;
 			for (int v = 0; v < nVectors; v++)
 				// MIL = total vector length / number of intercepts
-				meanInterceptLengths[v] = probeLength / sumInterceptCounts[v];
+				//+1 is to avoid divide-by-zero errors, other approach
+				//is to replace 0 by 1
+				meanInterceptLengths[v] = probeLength / (sumInterceptCounts[v] + 1);
 
 			// work out coordinates of vector cloud
 			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
@@ -290,7 +292,7 @@ public class Anisotropy implements PlugIn {
 					nVectors, radius, vectorSampling);
 		double[] meanInterceptLengths = new double[nVectors];
 		for (int v = 0; v < nVectors; v++)
-			meanInterceptLengths[v] = radius / interceptCounts[v];
+			meanInterceptLengths[v] = radius / (interceptCounts[v] + 1);
 		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths,
 				vectorList);
 		Object[] daResult = harriganMann(coOrdinates);
@@ -526,7 +528,7 @@ public class Anisotropy implements PlugIn {
 				public void run() {
 					for (int v = ai.getAndIncrement(); v < nVectors; v = ai
 							.getAndIncrement()) {
-						double nIntercepts = 1;
+						double nIntercepts = 0;
 						final double vX = vectorList[v][0];
 						final double vY = vectorList[v][1];
 						final double vZ = vectorList[v][2];
