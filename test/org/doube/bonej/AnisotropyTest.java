@@ -22,7 +22,6 @@ public class AnisotropyTest {
 	@Test
 	public void testRunToStableResultAnisotropy() {
 		ImagePlus imp = TestDataMaker.plates(256, 256, 256, 8);
-		imp.show();
 		Object[] result = anisotropy.runToStableResult(imp, 100, 2000, 50000,
 				256 / 4, 2.3, 0.005, true);
 		double da = ((double[])result[0])[0];
