@@ -98,10 +98,11 @@ public class Anisotropy implements PlugIn {
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
 		final double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
-		final double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
+		double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
 
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addCheckbox("Auto Mode", true);
+		gd.addCheckbox("Single Sphere", false);
 		// number of random vectors in vector field
 		gd.addNumericField("Vectors", 50000, 0, 6, "vectors");
 		// number of randomly-positioned vector fields
@@ -117,6 +118,7 @@ public class Anisotropy implements PlugIn {
 			return;
 		}
 		final boolean doAutoMode = gd.getNextBoolean();
+		final boolean doSingleSphere = gd.getNextBoolean();
 		final int nVectors = (int) gd.getNextNumber();
 		final int minSpheres = (int) gd.getNextNumber();
 		final int maxSpheres = (int) gd.getNextNumber();
@@ -126,10 +128,15 @@ public class Anisotropy implements PlugIn {
 		final boolean doAlign = gd.getNextBoolean();
 
 		Object[] result = new Object[3];
-		if (doAutoMode)
+		if (doAutoMode && !doSingleSphere)
 			result = runToStableResult(imp, minSpheres, maxSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
-		else
+		else if (doSingleSphere) {
+			double[] centroid = { w * vW / 2, h * vH / 2, d * vD / 2 };
+			radius = Math.min(centroid[0], Math.min(centroid[1], centroid[2]));
+			result = calculateSingleSphere(imp, centroid, radius
+					- vectorSampling, vectorSampling, nVectors, false);
+		} else
 			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
 
@@ -236,9 +243,10 @@ public class Anisotropy implements PlugIn {
 			final double probeLength = radius * (double) s;
 			for (int v = 0; v < nVectors; v++)
 				// MIL = total vector length / number of intercepts
-				//+1 is to avoid divide-by-zero errors, other approach
-				//is to replace 0 by 1
-				meanInterceptLengths[v] = probeLength / (sumInterceptCounts[v] + 1);
+				// +1 is to avoid divide-by-zero errors, other approach
+				// is to replace 0 by 1
+				meanInterceptLengths[v] = probeLength
+						/ (sumInterceptCounts[v] + 1);
 
 			// work out coordinates of vector cloud
 			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
@@ -288,8 +296,8 @@ public class Anisotropy implements PlugIn {
 			boolean randomVectors) throws IllegalArgumentException {
 		double[][] vectorList = Vectors.regularVectors(nVectors);
 		double[] interceptCounts;
-			interceptCounts = countIntercepts(imp, centroid, vectorList,
-					nVectors, radius, vectorSampling);
+		interceptCounts = countIntercepts(imp, centroid, vectorList, nVectors,
+				radius, vectorSampling);
 		double[] meanInterceptLengths = new double[nVectors];
 		for (int v = 0; v < nVectors; v++)
 			meanInterceptLengths[v] = radius / (interceptCounts[v] + 1);
