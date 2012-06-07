@@ -32,6 +32,9 @@ import javax.vecmath.Point3f;
 import javax.vecmath.Color3f;
 import customnode.CustomPointMesh;
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.TextField;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.ListIterator;
@@ -69,7 +72,7 @@ import org.doube.util.UsageReporter;
  * @author Michael Doube
  * 
  */
-public class Anisotropy implements PlugIn {
+public class Anisotropy implements PlugIn, DialogListener {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
@@ -103,6 +106,7 @@ public class Anisotropy implements PlugIn {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addCheckbox("Auto Mode", true);
 		gd.addCheckbox("Single Sphere", false);
+		gd.addNumericField("Radius", radius, 1, 5, cal.getUnits());
 		// number of random vectors in vector field
 		gd.addNumericField("Vectors", 50000, 0, 6, "vectors");
 		// number of randomly-positioned vector fields
@@ -113,12 +117,14 @@ public class Anisotropy implements PlugIn {
 		gd.addCheckbox("3D_Result", false);
 		gd.addCheckbox("Align to fabric tensor", false);
 		gd.addHelp("http://bonej.org/anisotropy");
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final boolean doAutoMode = gd.getNextBoolean();
 		final boolean doSingleSphere = gd.getNextBoolean();
+		radius = gd.getNextNumber();
 		final int nVectors = (int) gd.getNextNumber();
 		final int minSpheres = (int) gd.getNextNumber();
 		final int maxSpheres = (int) gd.getNextNumber();
@@ -712,6 +718,40 @@ public class Anisotropy implements PlugIn {
 		double[] anisotropy = { da };
 		Object[] result = { anisotropy, E };
 		return result;
+	}
+
+	@Override
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+		
+		Checkbox autoModeBox = (Checkbox) checkboxes.get(0);
+		Checkbox singleSphereBox = (Checkbox) checkboxes.get(1);
+		Checkbox showPlotBox = (Checkbox) checkboxes.get(2);
+		
+		TextField radiusField = (TextField) nFields.get(0);
+		TextField minSpheresField = (TextField) nFields.get(2);
+		TextField maxSpheresField = (TextField) nFields.get(3);
+		TextField toleranceField = (TextField) nFields.get(4);
+		
+		if (singleSphereBox.getState()){
+			radiusField.setEnabled(true);
+			autoModeBox.setEnabled(false);
+			showPlotBox.setEnabled(false);
+			minSpheresField.setEnabled(false);
+			maxSpheresField.setEnabled(false);
+			toleranceField.setEnabled(false);
+		}
+		else{ 
+			radiusField.setEnabled(false);
+			autoModeBox.setEnabled(true);
+			showPlotBox.setEnabled(true);
+			minSpheresField.setEnabled(true);
+			maxSpheresField.setEnabled(true);
+			toleranceField.setEnabled(true);
+		}
+		
+		return true;
 	}
 
 }
