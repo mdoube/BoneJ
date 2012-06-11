@@ -25,7 +25,7 @@ public class AnisotropyTest {
 		Object[] result = anisotropy.runToStableResult(imp, 100, 2000, 50000,
 				256 / 4, 2.3, 0.005, true);
 		double da = ((double[]) result[0])[0];
-		assertEquals(1, da, 1e-12);
+		assertEquals(1, da, 1e-3);
 	}
 
 	@Test
