@@ -100,7 +100,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
-		final double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
+		double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
 		double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
 
 		GenericDialog gd = new GenericDialog("Setup");
@@ -109,6 +109,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 		gd.addNumericField("Radius", radius, 1, 5, cal.getUnits());
 		// number of random vectors in vector field
 		gd.addNumericField("Vectors", 50000, 0, 6, "vectors");
+		gd.addNumericField("Vector_sampling", vectorSampling, 3, 6, cal.getUnits());
 		// number of randomly-positioned vector fields
 		gd.addNumericField("Min_Spheres", 100, 0, 5, "");
 		gd.addNumericField("Max_Spheres", 2000, 0, 5, "");
@@ -126,6 +127,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 		final boolean doSingleSphere = gd.getNextBoolean();
 		radius = gd.getNextNumber();
 		final int nVectors = (int) gd.getNextNumber();
+		vectorSampling = gd.getNextNumber();
 		final int minSpheres = (int) gd.getNextNumber();
 		final int maxSpheres = (int) gd.getNextNumber();
 		final double tolerance = gd.getNextNumber();
@@ -139,9 +141,9 @@ public class Anisotropy implements PlugIn, DialogListener {
 					radius, vectorSampling, tolerance, doPlot);
 		else if (doSingleSphere) {
 			double[] centroid = { w * vW / 2, h * vH / 2, d * vD / 2 };
-			radius = Math.min(centroid[0], Math.min(centroid[1], centroid[2]));
+//			radius = Math.min(centroid[0], Math.min(centroid[1], centroid[2]));
 			result = calculateSingleSphere(imp, centroid, radius
-					- vectorSampling, vectorSampling, nVectors, false);
+					- vectorSampling * 2, vectorSampling, nVectors, false);
 		} else
 			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
@@ -247,13 +249,16 @@ public class Anisotropy implements PlugIn, DialogListener {
 			// work out the current mean intercept length
 			double[] meanInterceptLengths = new double[nVectors];
 			final double probeLength = radius * (double) s;
-			for (int v = 0; v < nVectors; v++)
+			for (int v = 0; v < nVectors; v++) {
+				if (sumInterceptCounts[v] == 0)
+					meanInterceptLengths[v] = probeLength;
 				// MIL = total vector length / number of intercepts
 				// +1 is to avoid divide-by-zero errors, other approach
 				// is to replace 0 by 1
-				meanInterceptLengths[v] = probeLength
-						/ (sumInterceptCounts[v] + 1);
-
+				else
+					meanInterceptLengths[v] = probeLength
+							/ sumInterceptCounts[v];
+			}
 			// work out coordinates of vector cloud
 			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
 			Object[] result = harriganMann(coOrdinates);
@@ -300,13 +305,23 @@ public class Anisotropy implements PlugIn, DialogListener {
 	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
 			double radius, double vectorSampling, int nVectors,
 			boolean randomVectors) throws IllegalArgumentException {
+		IJ.log("Single sphere parameters:");
+		IJ.log(imp.getTitle() + " centroid: " + centroid[0] + ", "
+				+ centroid[1] + ", " + centroid[2] + ", radius: " + radius
+				+ ", vectorSampling: " + vectorSampling + ", nVectors: "
+				+ nVectors + ", randomVectors: " + randomVectors);
+
 		double[][] vectorList = Vectors.regularVectors(nVectors);
 		double[] interceptCounts;
 		interceptCounts = countIntercepts(imp, centroid, vectorList, nVectors,
 				radius, vectorSampling);
 		double[] meanInterceptLengths = new double[nVectors];
-		for (int v = 0; v < nVectors; v++)
-			meanInterceptLengths[v] = radius / (interceptCounts[v] + 1);
+		for (int v = 0; v < nVectors; v++) {
+			if (interceptCounts[v] == 0)
+				meanInterceptLengths[v] = 0;
+			else
+				meanInterceptLengths[v] = radius / interceptCounts[v];
+		}
 		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths,
 				vectorList);
 		Object[] daResult = harriganMann(coOrdinates);
@@ -322,15 +337,21 @@ public class Anisotropy implements PlugIn, DialogListener {
 	 */
 	private double[][] calculateCoordinates(double[] meanInterceptLengths,
 			double[][] vectorList) {
+		ArrayList<double[]> coordList = new ArrayList<double[]>();
 		final int nVectors = vectorList.length;
-		double[][] coOrdinates = new double[nVectors][3];
 		for (int v = 0; v < nVectors; v++) {
 			final double milV = meanInterceptLengths[v];
-			coOrdinates[v][0] = milV * vectorList[v][0];
-			coOrdinates[v][1] = milV * vectorList[v][1];
-			coOrdinates[v][2] = milV * vectorList[v][2];
+			if (milV == 0)
+				continue;
+			double[] coordinate = { milV * vectorList[v][0],
+					milV * vectorList[v][1], milV * vectorList[v][2] };
+			coordList.add(coordinate);
 		}
-		return coOrdinates;
+		double[][] coordinates = new double[coordList.size()][];
+		for (int i = 0; i < coordList.size(); i++)
+			coordinates[i] = coordList.get(i);
+
+		return coordinates;
 	}
 
 	/**
@@ -724,25 +745,24 @@ public class Anisotropy implements PlugIn, DialogListener {
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		
+
 		Checkbox autoModeBox = (Checkbox) checkboxes.get(0);
 		Checkbox singleSphereBox = (Checkbox) checkboxes.get(1);
 		Checkbox showPlotBox = (Checkbox) checkboxes.get(2);
-		
+
 		TextField radiusField = (TextField) nFields.get(0);
-		TextField minSpheresField = (TextField) nFields.get(2);
-		TextField maxSpheresField = (TextField) nFields.get(3);
-		TextField toleranceField = (TextField) nFields.get(4);
-		
-		if (singleSphereBox.getState()){
+		TextField minSpheresField = (TextField) nFields.get(3);
+		TextField maxSpheresField = (TextField) nFields.get(4);
+		TextField toleranceField = (TextField) nFields.get(5);
+
+		if (singleSphereBox.getState()) {
 			radiusField.setEnabled(true);
 			autoModeBox.setEnabled(false);
 			showPlotBox.setEnabled(false);
 			minSpheresField.setEnabled(false);
 			maxSpheresField.setEnabled(false);
 			toleranceField.setEnabled(false);
-		}
-		else{ 
+		} else {
 			radiusField.setEnabled(false);
 			autoModeBox.setEnabled(true);
 			showPlotBox.setEnabled(true);
@@ -750,7 +770,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 			maxSpheresField.setEnabled(true);
 			toleranceField.setEnabled(true);
 		}
-		
+
 		return true;
 	}
 
