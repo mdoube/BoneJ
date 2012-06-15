@@ -1,0 +1,27 @@
+Required tools to build BoneJ:
+Java SDK (obviously)
+Git (git-scm.com/)
+Subversion (http://subversion.tigris.org/, e.g. TortoiseSVN works for windows)
+Perl (http://www.perl.org)
+Ant (http://ant.apache.org/, remember to add JAVA_HOME ANT_HOME and ANT_HOME/bin to your path)
+
+download libraries BoneJ depends on to the same folder you have downloaded BoneJ source to, i.e.
+rootFolder  -|- BoneJ
+			 |- imagej
+			 |-j3d-core			(I actually had j3d-core~svn/trunk)
+			 |-j3d-core-utils	(I actually had j3d-core-utils~svn/trunk)
+			 |-vecmath			(I actually had vecmath~svn/trunk)
+			 |-junit
+			 
+Compile ImageJ with ant, i.e. cd to imagej folder and run "ant" from command line, wait ~30 s and build should finish.
+Compile vecmath with ant, i.e. cd to vecmath folder and run "ant". N.B. ant is run in a folder with build.xml -file in it.
+Compile j3d-core similarly with ant, which also builds the j3d-core-utils. N.B. j3d-core depends on vecmath, which needs to be compiled first. If you svn'd with tortoise, the default paths in j3d-core build.xml to j3d-core-utils and vecmath are incorret. Either copy the trunk folder contents to the folders as indicated above, or edit build.xml in j3d-core~svn/trunk folder to correct paths, i.e. lines that read:
+	<property name="vecmath_home" location="../vecmath"/>
+	<property name="core_utils_home" location="../j3d-core-utils"/>
+to:
+	<property name="vecmath_home" location="../../vecmath~svn/trunk"/>
+	<property name="core_utils_home" location="../../j3d-core-utils~svn/trunk"/>
+Compile junit with ant
+
+Check that the paths in BoneJ folder build.xml match the paths on your computer. N.B. junit path is almost certainly incorrect, as it uses snapshot version number in the file name as default.
+Finally, run ant in BoneJ folder and you're done.
