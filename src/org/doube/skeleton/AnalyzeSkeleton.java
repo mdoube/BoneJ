@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.ListIterator;
 
 import org.doube.util.ImageCheck;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -313,6 +314,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 
 		// Show results table
 		showResults();
+		UsageReporter.reportEvent(this).send();
 
 	} // end run method
 
@@ -435,7 +437,6 @@ public class AnalyzeSkeleton implements PlugInFilter
 			}
 		
 		}
-		
 		
 		// Return the analysis results
 		return assembleResults();

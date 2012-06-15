@@ -1,5 +1,9 @@
 package org.doube.geometry;
 
+import java.util.ArrayList;
+
+import org.doube.skeleton.Point;
+
 public class Centroid {
 
 	/**
@@ -134,5 +138,25 @@ public class Centroid {
 			sum += points[n];
 		}
 		return sum / nPoints;
+	}
+	
+	/**
+	 * Calculate the centroid of a list of 3D Points
+	 * @param points
+	 * @return
+	 */
+	public static double[] getCentroid(ArrayList<Point> points) {
+		double xsum = 0;
+		double ysum = 0;
+		double zsum = 0;
+		double n = points.size();
+
+		for (Point p : points) {
+			xsum += p.x;
+			ysum += p.y;
+			zsum += p.z;
+		}
+		double[] centroid = { xsum / n, ysum / n, zsum / n };
+		return centroid;
 	}
 }

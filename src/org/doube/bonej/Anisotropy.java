@@ -49,6 +49,7 @@ import org.doube.jama.EigenvalueDecomposition;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -132,11 +133,12 @@ public class Anisotropy implements PlugIn {
 			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
 
-		double[] anisotropy = (double[]) result[0];
+		double da = ((double[]) result[0])[0];
 		double[][] coOrdinates = (double[][]) result[1];
 
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "DA", anisotropy[0]);
+		ri.setResultInRow(imp, "DA", da);
+		ri.setResultInRow(imp, "tDA", Math.pow(1 - da, -1));
 		ri.updateTable();
 
 		if (do3DResult) {
@@ -150,7 +152,7 @@ public class Anisotropy implements PlugIn {
 					128, 255, 0, 1);
 			alignedImp.show();
 		}
-
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 
@@ -399,8 +401,8 @@ public class Anisotropy implements PlugIn {
 	 * @return 1D array containing a count of intercepts for each vector
 	 */
 	private double[] countIntercepts(ImagePlus imp, double[] centroid,
-			final double[][] vectorList, final int nVectors, final double radius,
-			final double vectorSampling) {
+			final double[][] vectorList, final int nVectors,
+			final double radius, final double vectorSampling) {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -416,7 +418,8 @@ public class Anisotropy implements PlugIn {
 		final int w = (int) Math.round(radius / vW);
 		final int h = (int) Math.round(radius / vH);
 		final int d = (int) Math.round(radius / vD);
-		final byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
+		final byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1)
+				* (2 * d + 1)];
 
 		final int startCol = (int) Math.round(cX / vW) - w;
 		final int endCol = (int) Math.round(cX / vW) + w;
@@ -457,14 +460,15 @@ public class Anisotropy implements PlugIn {
 		final double radVw = -radius * vW;
 		final double radVh = -radius * vH;
 		final double radVd = -radius * vD;
-		
-		//new multithread pattern
+
+		// new multithread pattern
 		final AtomicInteger ai = new AtomicInteger(0);
 		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int v = ai.getAndIncrement(); v < nVectors; v = ai.getAndIncrement()) {
+					for (int v = ai.getAndIncrement(); v < nVectors; v = ai
+							.getAndIncrement()) {
 						double nIntercepts = 0;
 						final double vX = vectorList[v][0];
 						final double vY = vectorList[v][1];
@@ -475,7 +479,8 @@ public class Anisotropy implements PlugIn {
 						final int yS = (int) Math.round(radVh * vY);
 						final int zS = (int) Math.round(radVd * vZ);
 
-						final int startIndex = centroidIndex + b * zS + a * yS + xS;
+						final int startIndex = centroidIndex + b * zS + a * yS
+								+ xS;
 						boolean lastPos, thisPos;
 						if (workArray[startIndex] == 0) {
 							lastPos = true;
@@ -488,24 +493,28 @@ public class Anisotropy implements PlugIn {
 						final double vZvD = vZ / vD;
 
 						for (double pos = -radius; pos <= radius; pos += vectorSampling) {
-							// find the index of the voxel that the sample falls within
+							// find the index of the voxel that the sample falls
+							// within
 							// offset from centroid
 							final int x = (int) Math.round(pos * vXvW);
 							final int y = (int) Math.round(pos * vYvH);
 							final int z = (int) Math.round(pos * vZvD);
-							final int testIndex = centroidIndex + b * z + a * y + x;
+							final int testIndex = centroidIndex + b * z + a * y
+									+ x;
 							// determine if the voxel is thresholded or not
 							if (workArray[testIndex] == 0) {
 								thisPos = true;
 							} else {
 								thisPos = false;
 							}
-							// if this pos is not equal to last pos then an interface is
+							// if this pos is not equal to last pos then an
+							// interface is
 							// counted
 							if (thisPos != lastPos) {
 								nIntercepts++;
 							}
-							// then before incrementing the for loop, set lastPos to
+							// then before incrementing the for loop, set
+							// lastPos to
 							// thisPos
 							lastPos = thisPos;
 						}

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
+import org.doube.util.UsageReporter;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -109,6 +110,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				IJ.run("Invert LUT");
 		}
 		IJ.showStatus("");
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

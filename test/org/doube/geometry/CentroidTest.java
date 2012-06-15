@@ -2,6 +2,9 @@ package org.doube.geometry;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+
+import org.doube.skeleton.Point;
 import org.junit.Test;
 
 public class CentroidTest {
@@ -52,10 +55,9 @@ public class CentroidTest {
 		// Its centroid
 		double[] centroid2d = { 8.5, 9.5 };
 		assertArrayEquals(centroid2d, Centroid.getCentroid(twoD), 1E-9);
-		
+
 		// A 1-D array
-		double[][] oneD = { { 1 }, { 4 }, { 7 }, { 10 },
-				{ 13 }, { 16 } };
+		double[][] oneD = { { 1 }, { 4 }, { 7 }, { 10 }, { 13 }, { 16 } };
 		// Its centroid
 		double[] centroid1d = { 8.5 };
 		assertArrayEquals(centroid1d, Centroid.getCentroid(oneD), 1E-9);
@@ -74,6 +76,20 @@ public class CentroidTest {
 		assertEquals(6.5, Centroid.getCentroid(oneDh), 1E-9);
 		assertEquals(6.0, Centroid.getCentroid(oneDi), 1E-9);
 		assertEquals(5.5, Centroid.getCentroid(oneDj), 1E-9);
+	}
+
+	@Test
+	public void testGetCentroidArrayListPoint() {
+		ArrayList<Point> points = new ArrayList<Point>();
+		for (int iMax = 10; iMax < 1000; iMax++) {
+			points.clear();
+			for (int i = 1; i < iMax; i++) {
+				points.add(new Point(i, i, i));
+			}
+			double expected = iMax / 2.0;
+			double[] expecteds = { expected, expected, expected };
+			assertArrayEquals(expecteds, Centroid.getCentroid(points), 1E-9);
+		}
 	}
 
 }

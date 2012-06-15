@@ -33,6 +33,8 @@ import org.doube.bonej.pqct.analysis.*;		//Analysis stuff..
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;			//image data 
 import org.doube.bonej.pqct.utils.*;		//Writing results and creating visual result image
+import org.doube.util.UsageReporter;
+
 import java.awt.*;							//Image, component for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
@@ -370,6 +372,7 @@ public class Distribution_Analysis implements PlugIn {
 				IJ.log("No analysis was selected.");
 			}
 		}
+		UsageReporter.reportEvent(this).send();
 	}
 
 	public static String getInfoProperty(String properties,String propertyToGet){

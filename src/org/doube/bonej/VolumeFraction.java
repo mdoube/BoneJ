@@ -38,6 +38,7 @@ import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
+import org.doube.util.UsageReporter;
 
 import customnode.CustomTriangleMesh;
 
@@ -116,6 +117,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "³)", volTotal);
 		ri.setResultInRow(imp, "BV/TV", p);
 		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 

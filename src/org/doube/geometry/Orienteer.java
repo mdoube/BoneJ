@@ -29,6 +29,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 import java.util.Hashtable;
 
+import org.doube.util.UsageReporter;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
@@ -278,6 +280,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		boolean[] units = { deg.getState(), rad.getState() };
 		unitHash.put(id, units);
 		updateTextbox();
+		UsageReporter.reportEvent(this).send();
 	}
 
 	private void update() {

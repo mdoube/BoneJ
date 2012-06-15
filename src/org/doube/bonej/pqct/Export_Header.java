@@ -28,6 +28,8 @@ import ij.gui.*;
 import java.util.*;							//Vector
 import ij.plugin.PlugIn;
 import org.doube.bonej.pqct.io.*;			//image data 
+import org.doube.util.UsageReporter;
+
 import java.awt.*;							//Image, component for debugging...
 import ij.plugin.filter.Info;
 import ij.io.*;
@@ -65,7 +67,7 @@ public class Export_Header implements PlugIn {
 		results = printResults(results, imp);
 		textPanel.appendLine(results);
 		textPanel.updateDisplay();			
-	
+		UsageReporter.reportEvent(this).send();
 	}
 
 	

@@ -30,9 +30,10 @@ import ij.measure.Calibration;
 import org.doube.geometry.Vectors;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
-import org.doube.skeleton.Skeletonize3D;
+import org.doube.skeleton.Skeletonise3D;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
 
 /**
  * <p>
@@ -40,7 +41,7 @@ import org.doube.util.ResultInserter;
  * </p>
  * <p>
  * ImageJ plugin to describe the local geometry of a binary image in an
- * oblate/prolate spheroid space. Uses Skeletonize3D to generate a 3D skeleton,
+ * oblate/prolate spheroid space. Uses Skeletonise3D to generate a 3D skeleton,
  * the points of which are used as centres for star volumes. Local geometry is
  * determined by the ratio between the first and second eigenvalues and first
  * and third eigenvalues of each star volume.
@@ -118,12 +119,13 @@ public class PlateRod implements PlugIn {
 		ri.setResultInRow(imp, "ΣeV2/ΣeV1", sumEv2 / sumEv1);
 		ri.setResultInRow(imp, "ΣeV3/ΣeV1", sumEv3 / sumEv1);
 		ri.updateTable();
+		UsageReporter.reportEvent(this).send();
 	}
 
 	/* ----------------------------------------------------------------------- */
 
 	private double[][] skeletonPoints(ImagePlus imp) {
-		Skeletonize3D sk = new Skeletonize3D();
+		Skeletonise3D sk = new Skeletonise3D();
 		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();

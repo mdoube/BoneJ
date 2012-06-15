@@ -11,6 +11,7 @@ import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 import org.doube.util.StackStats;
+import org.doube.util.UsageReporter;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -85,10 +86,9 @@ public class Thickness implements PlugIn {
 			if (IJ.showMessageWithCancel(
 					"Anisotropic voxels",
 					"This image contains anisotropic voxels, which will\n"
-							+ "result in incorrect thickness calculation.\n\n" +
-									"Consider rescaling your data so that voxels are isotropic\n" +
-									"(Image > Scale...).\n\n"
-							+ "Continue anyway?")) {
+							+ "result in incorrect thickness calculation.\n\n"
+							+ "Consider rescaling your data so that voxels are isotropic\n"
+							+ "(Image > Scale...).\n\n" + "Continue anyway?")) {
 			} else
 				return;
 
@@ -110,14 +110,15 @@ public class Thickness implements PlugIn {
 
 		long startTime = System.currentTimeMillis();
 		String title = stripExtension(imp.getTitle());
-		
+
 		RoiManager roiMan = RoiManager.getInstance();
 		// calculate trabecular thickness (Tb.Th)
 		if (doThickness) {
 			boolean inverse = false;
 			ImagePlus impLTC = new ImagePlus();
-			if (doRoi && roiMan != null){
-				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 0, 1);
+			if (doRoi && roiMan != null) {
+				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(),
+						true, 0, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTC = getLocalThickness(crop, inverse);
@@ -137,8 +138,9 @@ public class Thickness implements PlugIn {
 		if (doSpacing) {
 			boolean inverse = true;
 			ImagePlus impLTCi = new ImagePlus();
-			if (doRoi && roiMan != null){
-				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 255, 1);
+			if (doRoi && roiMan != null) {
+				ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(),
+						true, 255, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTCi = getLocalThickness(crop, inverse);
@@ -161,6 +163,7 @@ public class Thickness implements PlugIn {
 		double duration = ((double) System.currentTimeMillis() - (double) startTime)
 				/ (double) 1000;
 		IJ.log("Duration = " + IJ.d2s(duration, 3) + " s");
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 
@@ -1277,7 +1280,6 @@ public class Thickness implements PlugIn {
 		return sNew[k][i + w * j];
 	}
 
-	
 	private void insertResults(ImagePlus imp, double[] stats, boolean inverse) {
 		final double meanThick = stats[0];
 		final double stDev = stats[1];
@@ -1311,6 +1313,9 @@ public class Thickness implements PlugIn {
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
 	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
+		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
+			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
+		}
 		float[][] s = geometryToDistanceMap(imp, inv);
 		distanceMaptoDistanceRidge(imp, s);
 		distanceRidgetoLocalThickness(imp, s);

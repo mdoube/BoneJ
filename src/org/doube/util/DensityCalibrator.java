@@ -31,6 +31,7 @@ public class DensityCalibrator implements PlugIn {
 				IJ.error("Can't calibrate image\n" + e.getMessage());
 				return;
 			}
+		UsageReporter.reportEvent(this).send();
 	}
 
 	private void scanco(ImagePlus imp) throws IllegalArgumentException {

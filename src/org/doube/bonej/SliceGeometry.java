@@ -53,6 +53,7 @@ import org.doube.geometry.Orienteer;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.ThresholdGuesser;
+import org.doube.util.UsageReporter;
 
 import customnode.CustomPointMesh;
 
@@ -368,6 +369,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 		if (this.do3DAnnotation)
 			show3DAxes(imp);
+		UsageReporter.reportEvent(this).send();
 		return;
 	}
 
