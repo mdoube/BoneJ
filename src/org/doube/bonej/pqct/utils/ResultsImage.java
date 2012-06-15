@@ -217,7 +217,6 @@ public class ResultsImage{
 		ImageProcessor tIP;
 		int nW = (int) Math.abs(Math.ceil(Math.sin((alfa-45)/180.0*Math.PI)*hypot));
 		int nH = (int) Math.abs(Math.ceil(Math.cos((alfa-45)/180.0*Math.PI)*hypot));
-		IJ.log("nW "+nW+" nH "+nH);
 		int nSize = 0;
 		if (nW == nH){tIP = tempImage.getProcessor();}
 		if (nW > nH){nSize = nW;}
@@ -231,12 +230,14 @@ public class ResultsImage{
 			nSize = nSize+1;
 		}
 		tIP = expandImage(tempImage.getProcessor(), nSize, nSize, offs, offs);
+		//Image expaded.
 		tempImage.setProcessor(null,tIP);
 		tempImage.getProcessor().rotate(alfa);
 		//IJ.run(tempImage, "Rotate...", "angle=" + alfa + " grid=1 interpolation=Bilinear enlarge");  
 		return tempImage;
 	}
 	
+	/*Function taken from ij.plugin.CanvasResizer*/
 	private static ImageProcessor expandImage(ImageProcessor ipOld, int wNew, int hNew, int xOff, int yOff) {
 		ImageProcessor ipNew = ipOld.createProcessor(wNew, hNew);
 		float tempColor = (float) 0.0;

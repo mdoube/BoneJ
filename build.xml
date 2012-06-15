@@ -12,8 +12,8 @@
 	paths to dependencies, make sure these match....
 	<property name="ijPluginPath" location="U:/sourcet/imageJ/ImageJ/plugins" /> 
 	-->
-	<property name="ijPluginPath" location="U:/sourcet/imageJ/ImageJ/plugins" /> 
-	<property name="ijPluginPath2" location="U:/programming/imagej/plugins" /> 
+	<property name="ijPluginPath" location="U:/sourcet/imageJ/ImageJ/plugins/jars" /> 
+	<property name="ijPluginPath2" location="U:/programming/imagej/plugins/jars" /> 
 	
 	<property name="ijPath" location="../imagej" />
 	<property name="imagej" location="${ijPath}/ij.jar" />

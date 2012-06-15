@@ -235,12 +235,15 @@ public abstract class RoiSelector{
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
 			int[] guessingStack = twoLargestBonesDetectedEdges(edges);
-			if (Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[0]).jiit.get(1))>
-			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[0]).iit.get(1))){
+			
+			if (Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>
+			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1))){
 				details.stacked = true;
 			} else{
 				details.stacked = false;
 			}
+			//IJ.log("Guessing Stacked "+Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1)) +" "+(1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" onko "+(Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>
+			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" paatos "+details.stacked);
 		}
 		
 		
@@ -325,30 +328,37 @@ public abstract class RoiSelector{
 	boolean guessFlipLarger(Vector<DetectedEdge> edges,boolean stacked){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
+		//IJ.log("Checking number of edges");
 		for (int iii =0;iii<edges.size();iii++){
 				temp.add(edges.get(iii).area);
 				temp2.add(edges.get(iii).area);
 		}
 		Collections.sort(temp);
-		int[] counter= new int[2];
-		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
+		
+		int[] counter= {0,0};
+		//IJ.log("Sorting edges c "+counter[0]+" t2 "+temp2.get(counter[0])+" tMax "+temp.get(temp.size()-1)+" true "+(temp2.get(counter[0]) != temp.get(temp.size()-1)));
+		while (((int) temp2.get(counter[0])) != ((int) temp.get(temp.size()-1))){
 			++counter[0];
+			//IJ.log("Sorting edges c "+counter[0]+" t2 "+temp2.get(counter[0])+" tMax "+temp.get(temp.size()-1)+" true "+(temp2.get(counter[0]) !=temp.get(temp.size()-1)));
 		}
+		//IJ.log("Found largest");
 		boolean returnValue = false;
 		if (temp.size() > 1){
-			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
+			while (((int)temp2.get(counter[1])) != ((int)temp.get(temp.size()-2))){
 				++counter[1];
 			}
 			if (stacked){
-				if (edges.get(counter[0]).jiit.get(0)<edges.get(counter[1]).jiit.get(0)){
+				//IJ.log("Decision "+(((int)edges.get(counter[0]).jiit.get(0))<((int)edges.get(counter[1]).jiit.get(0))));
+				if (((int)edges.get(counter[0]).jiit.get(0))<((int)edges.get(counter[1]).jiit.get(0))){
 					returnValue = false;
 				}else{returnValue = true;}
 			}else{
-				if (edges.get(counter[0]).iit.get(0)<edges.get(counter[1]).iit.get(0)){
+				if (((int)edges.get(counter[0]).iit.get(0))<((int)edges.get(counter[1]).iit.get(0))){
 					returnValue = false;
 				}else{returnValue = true;}
 			}
 		}		
+		//IJ.log("Done with largest "+returnValue);
 		//IJ.error("RV "+returnValue+" c0 "+iit.get(beginning.get(counter[0]))+" c1 "+iit.get(beginning.get(counter[1])));
 		return returnValue;
 	}
