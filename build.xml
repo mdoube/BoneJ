@@ -21,6 +21,8 @@
 	<property name="j3dcore" location="../j3d-core~svn/trunk/build/default/debug/lib/ext/j3dcore.jar" />
 	<property name="j3dutils" location="../j3d-core~svn/trunk/build/default/debug/lib/ext/j3dutils.jar" />
 	<property name="junit" location="../junit/junit4.11-SNAPSHOT/junit-4.11-SNAPSHOT.jar" />
+	
+	
 	<!--
   Source paths and build path
 	-->
@@ -28,7 +30,9 @@
   <property name="build"   location="build" />
   <property name="classes" location="${build}/java" />
   <property name="dist"    location="${build}/dist" />
-
+	<!--Typ-files for calibrating Stratec images -->
+	<property name="typFiles" location="src/org/doube/bonej/pqct/typ" /> 
+	<property name="typTarget" location="${classes}/org/doube/bonej/pqct/typ" />
   <!-- Classpath 
   <path id="jmf.path">
     <pathelement path="${JMF_HOME}/lib/jmf.jar"/>
@@ -71,6 +75,13 @@
   <target name="jar" depends="javacompile" description="Create Jar file" >
 	<!--Copy the  plugins.config to classes-->
 	<copy todir="${classes}" file="${javasrc}/plugins.config"/>
+	<!--Copy the typ-files-->
+		<mkdir dir="${typTarget}" />
+		<copy todir="${typTarget}">
+			<fileset dir="${typFiles}" includes="**/*.TYP"/>
+			<fileset dir="${typFiles}" includes="**/*.typ"/>
+		</copy>
+	
     <mkdir dir="${dist}"/>
 	<jar jarfile="BoneJ_.jar" basedir="${classes}"/>
 	<!--Copy the created jar-file to your ij plugins...-->
