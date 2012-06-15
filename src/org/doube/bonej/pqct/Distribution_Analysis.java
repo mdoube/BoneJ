@@ -353,6 +353,7 @@ public class Distribution_Analysis implements PlugIn {
 					}
 				}
 				
+				//IJ.log("Ready to rotate image "+(determineAlfa.alfa/Math.PI*180.0));
 				if ((imageAndAnalysisDetails.dOn || imageAndAnalysisDetails.conOn) && makeImage && resultImage != null){
 					resultImage = ResultsImage.addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 				}

@@ -24,4 +24,4 @@ to:
 Compile junit with ant
 
 Check that the paths in BoneJ folder build.xml match the paths on your computer. N.B. junit path is almost certainly incorrect, as it uses snapshot version number in the file name as default.
-Finally, run ant in BoneJ folder and you're done.
+Finally, run ant in BoneJ folder and you're done. N.B. I had to download Skeletonize3d.java form http://code.google.com/p/objectj/source/browse/trunk/ObjectJ/src/ij/plugin/filter/Skeletonize3D.java?r=1114 to imagej/ij/plugin/filter for a successfull BoneJ compilation (obviously imagej needed to be recompiled prior to repeating bonej build).

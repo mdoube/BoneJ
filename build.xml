@@ -13,6 +13,8 @@
 	<property name="ijPluginPath" location="U:/sourcet/imageJ/ImageJ/plugins" /> 
 	-->
 	<property name="ijPluginPath" location="U:/sourcet/imageJ/ImageJ/plugins" /> 
+	<property name="ijPluginPath2" location="U:/programming/imagej/plugins" /> 
+	
 	<property name="ijPath" location="../imagej" />
 	<property name="imagej" location="${ijPath}/ij.jar" />
 	<property name="3dviewer" location="../ImageJ_3D_Viewer.jar" />
@@ -81,11 +83,16 @@
 			<fileset dir="${typFiles}" includes="**/*.TYP"/>
 			<fileset dir="${typFiles}" includes="**/*.typ"/>
 		</copy>
+	<!--Copy the source files to build dir--> 
+	<copy todir="${classes}">
+		<fileset dir="${javasrc}" includes="**/*.java"/>
+	</copy>
 	
     <mkdir dir="${dist}"/>
 	<jar jarfile="BoneJ_.jar" basedir="${classes}"/>
 	<!--Copy the created jar-file to your ij plugins...-->
 	<copy todir="${ijPluginPath}" file="BoneJ_.jar"/>
+	<copy todir="${ijPluginPath2}" file="BoneJ_.jar"/>	
   </target>
   
   <target name="clean" description="Remove output files" >
