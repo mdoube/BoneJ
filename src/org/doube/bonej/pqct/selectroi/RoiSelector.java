@@ -242,8 +242,7 @@ public abstract class RoiSelector{
 			} else{
 				details.stacked = false;
 			}
-			//IJ.log("Guessing Stacked "+Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1)) +" "+(1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" onko "+(Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>
-			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" paatos "+details.stacked);
+			//IJ.log("Guessing Stacked "+Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1)) +" "+(1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" onko "+(Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" paatos "+details.stacked);
 		}
 		
 		
