@@ -741,7 +741,6 @@ public class Anisotropy implements PlugIn, DialogListener {
 		return result;
 	}
 
-	@Override
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();

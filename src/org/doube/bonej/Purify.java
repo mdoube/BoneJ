@@ -392,7 +392,6 @@ public class Purify implements PlugIn, DialogListener {
 		return;
 	}
 
-	@Override
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
