@@ -1,3 +1,5 @@
+package org.bonej.io;
+
 /*
  * KHKs_Scanco_ISQ_HeaderReader opens a Scanco ISQ File and reads the header info
  *
@@ -21,7 +23,7 @@ import ij.io.*;
 
 
 /** This plugin implements the an header reader for Scanco ISQ files command. */
-public class KHKs_Scanco_ISQ_HeaderReader implements PlugIn {
+public class ISQHeaderReader implements PlugIn {
 
 	
         int i,offset,offset1,offset2,offset3,xdimension,ydimension, zdimension, mu_scaling;
