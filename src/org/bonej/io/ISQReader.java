@@ -1,3 +1,5 @@
+package org.bonej.io;
+
 /**
 //Original author: 					B. Koller, SCANCO Medical AG, April 2005
 //Modification to consider ROI selection: 		K.-H. Kunzelmann, Operative Dentistry, LMU-München, Ger, April 2006
@@ -76,7 +78,7 @@ import java.io.*;
 
 
 /** This plugin implements the Acquire/ISQ command. */
-public class KHKs_Scanco_ISQ_FileReader implements PlugIn {
+public class ISQReader implements PlugIn {
 
     private FileInfo fi;
     private int width, height;
@@ -432,9 +434,6 @@ public class KHKs_Scanco_ISQ_FileReader implements PlugIn {
                         
 			System.out.println("Try FileInputStream");
                         
-                        if (is==null)
-				return ;
-                      
                         for (int i=1; i<= fi.nImages; i++) {              //Obsolet comment: I reduce the no of slices by 1 to avoid a nullpointerexception error
 				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
                                 //System.out.println("fi.nImages: "+fi.nImages);
@@ -766,7 +765,7 @@ public class KHKs_Scanco_ISQ_FileReader implements PlugIn {
 		pixels = new short[nPixels];
 		int totalRead = 0;
 		int base = 0;
-		int count, value;
+		int count;
 		int bufferCount;
 
 		while (totalRead<byteCount) {
