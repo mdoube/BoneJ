@@ -1,7 +1,7 @@
 package org.doube.skeleton;
 
 /**
- * Skeletonise3D plugin for ImageJ(C).
+ * Skeletonize3D plugin for ImageJ(C).
  * Copyright (C) 2008 Ignacio Arganda-Carreras 
  * 
  * This program is free software; you can redistribute it and/or
@@ -54,14 +54,14 @@ import ij.plugin.PlugIn;
  *      <p>
  *      <a href=
  *      "http://imagejdocu.tudor.lu/doku.php?id=plugin:morphology:skeletonize3d:start"
- *      >Skeletonise3D homepage</a>
+ *      >Skeletonize3D homepage</a>
  *      </p>
  * 
  * @version 1.0 11/19/2008
  * @author Ignacio Arganda-Carreras <ignacio.arganda@uam.es>
  *
  */
-public class Skeletonise3D implements PlugIn {
+public class Skeletonize3D implements PlugIn {
 
 	public void run(String run) {
 		if (!ImageCheck.checkEnvironment())
@@ -1212,7 +1212,7 @@ public class Skeletonise3D implements PlugIn {
 	void showAbout() 
 	{
 		IJ.showMessage(
-						"About Skeletonise3D...",
+						"About Skeletonize3D...",
 						"This plug-in filter produces 3D thinning (skeletonization) of binary 3D images.\n");
 	} /* end showAbout */
 	/* -----------------------------------------------------------------------*/
