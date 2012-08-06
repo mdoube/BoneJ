@@ -2,7 +2,7 @@ package org.doube.geometry;
 
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.plugin.filter.Skeletonize3D;
+import org.doube.skeleton.Skeletonize3D;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
@@ -149,9 +149,7 @@ public class TestDataMaker {
 		ip.drawLine(size / 4, size / 2, 3 * size / 4, size / 2);
 		ImagePlus imp = new ImagePlus("crossed-circle", ip);
 		Skeletonize3D skel = new Skeletonize3D();
-		skel.setup("", imp);
-		skel.run(ip);
-		return imp;
+		return skel.getSkeleton(imp);
 	}
 
 	/**
