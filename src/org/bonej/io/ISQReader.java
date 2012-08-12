@@ -69,7 +69,7 @@ import ij.measure.*;
 import java.io.*;
 
 /**
- * This plugin implements the Acquire/ISQ command.
+ * This plugin implements the Import > Scanco ISQ command.
  * 
  * @author B. Koller, SCANCO Medical AG, April 2005
  * @author K.-H. Kunzelmann, Operative Dentistry, LMU-München, Ger, April 2006
