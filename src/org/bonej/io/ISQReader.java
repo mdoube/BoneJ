@@ -317,6 +317,7 @@ public class ISQReader implements PlugIn {
 		gd.addCheckbox("Check = distances in metric units, uncheck = pixels",
 				metricCalibrationOrPixels);
 		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
+		gd.addCheckbox("Export only", false);
 
 		gd.showDialog();
 		if (gd.wasCanceled()) {
