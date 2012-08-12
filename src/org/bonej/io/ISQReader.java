@@ -68,6 +68,8 @@ import ij.process.*;
 import ij.measure.*;
 import java.io.*;
 
+import org.doube.util.UsageReporter;
+
 /**
  * This plugin implements the Import > Scanco ISQ command.
  * 
@@ -268,7 +270,7 @@ public class ISQReader implements PlugIn {
 		if (debug)
 			System.out.println("checkpoint4");
 		openStack_kh();
-
+		UsageReporter.reportEvent(this).send();
 	}
 
 	/**
