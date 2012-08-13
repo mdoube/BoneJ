@@ -60,13 +60,19 @@ package org.bonej.io;
  TODOs: Select the ROI with the mouse
  */
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.measure.Calibration;
 import ij.plugin.PlugIn;
-import ij.*;
-import ij.io.*;
-import ij.gui.*;
-import ij.process.*;
-import ij.measure.*;
-import java.io.*;
+import ij.process.ImageProcessor;
+import ij.gui.GenericDialog;
+import ij.io.FileInfo;
+import ij.io.OpenDialog;
 
 import org.doube.util.UsageReporter;
 
