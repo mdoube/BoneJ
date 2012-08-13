@@ -67,7 +67,6 @@ import ij.gui.*;
 import ij.process.*;
 import ij.measure.*;
 import java.io.*;
-import java.util.HashMap;
 
 import org.doube.util.UsageReporter;
 
