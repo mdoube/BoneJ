@@ -90,7 +90,7 @@ public class ISQReader implements PlugIn {
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private boolean showProgressBar = true;
 	private int eofErrorCount;
-	private String path;
+//	private String path;
 	Calibration cal;
 	Calibration calOrg;
 
@@ -113,7 +113,7 @@ public class ISQReader implements PlugIn {
 
 	float el_size_mm_x, el_size_mm_y, el_size_mm_z;
 	float tmp_float;
-	String nameStringInHeader = "";
+//	String nameStringInHeader = "";
 
 	// necessary for the clip ROI
 
@@ -128,7 +128,7 @@ public class ISQReader implements PlugIn {
 		OpenDialog od = new OpenDialog("Open ISQ...", arg);
 		String directory = od.getDirectory();
 		String fileName = od.getFileName();
-		path = directory + fileName;
+		String path = directory + fileName;
 		if (fileName == null)
 			return;
 		
@@ -186,11 +186,11 @@ public class ISQReader implements PlugIn {
 
 			p.skip(36); // war 60, wegen mu_scaling jetzt 36
 
-			for (int kh = 0; kh < 40; kh++) {
-				char ch = (char) p.read();
-				nameStringInHeader = nameStringInHeader + ch;
-				// System.out.println(nameStringInHeader);
-			}
+//			for (int kh = 0; kh < 40; kh++) {
+//				char ch = (char) p.read();
+//				nameStringInHeader = nameStringInHeader + ch;
+//				// System.out.println(nameStringInHeader);
+//			}
 
 			p.skip(340);
 
@@ -276,13 +276,13 @@ public class ISQReader implements PlugIn {
 		// und auch unten bei der set.calibrate oder so ähnlich eingetragen
 
 		// Generic dialog to input the ROI-coordinates
-		getRoiCoordinates();
+		getRoiCoordinates(path);
 
 		// Open the file
 
 		if (debug)
 			System.out.println("checkpoint4");
-		openStack_kh();
+		openStack_kh(path);
 		UsageReporter.reportEvent(this).send();
 	}
 
@@ -296,7 +296,7 @@ public class ISQReader implements PlugIn {
 	 **/
 
 	// Generic dialog to input the ROI-coordinates
-	void getRoiCoordinates() {
+	void getRoiCoordinates(String path) {
 
 		GenericDialog gd = new GenericDialog(
 				"Kunzelmann: Import Scanco ISQ-Files");
@@ -308,8 +308,8 @@ public class ISQReader implements PlugIn {
 				+ "\nel_size y (in mm): " + el_size_mm_y
 				+ "\nel_size z (in mm): " + el_size_mm_z);
 		nFirstSlice = 0;
-
-		gd.addMessage(nameStringInHeader + "\n");
+		String name = getName(path);
+		gd.addMessage(name + "\n");
 		gd.addMessage(text1);
 		gd.addMessage(text2);
 
@@ -428,7 +428,7 @@ public class ISQReader implements PlugIn {
 
 	/** Opens a stack of images. */
 
-	void openStack_kh() {
+	void openStack_kh(String path) {
 		System.out.println("downsample: " + downsample);
 
 		int widthStack = 0;
