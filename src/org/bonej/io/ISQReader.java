@@ -67,6 +67,7 @@ import ij.gui.*;
 import ij.process.*;
 import ij.measure.*;
 import java.io.*;
+import java.util.HashMap;
 
 import org.doube.util.UsageReporter;
 
@@ -125,6 +126,13 @@ public class ISQReader implements PlugIn {
 		path = directory + fileName;
 		if (fileName == null)
 			return;
+		
+		getImageDimensions(path);
+		getRealSize(path);
+		getPixelSize(path);
+		getName(path);
+		getOffset(path);
+		getMuScaling(path);
 
 		// a FileInputStream is opened with the File selected above
 
@@ -925,4 +933,120 @@ public class ISQReader implements PlugIn {
 	 * }
 	 */
 
+	public int[] getImageDimensions(String path) {
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(44);
+			int width = p.read() + p.read() * 256 + p.read() * 65536;
+			IJ.log("width = "+width);
+			p.skip(1);
+			int height = p.read() + p.read() * 256 + p.read() * 65536;
+			IJ.log("height = "+height);
+			p.skip(1);
+			int depth = p.read() + p.read() * 256 + p.read() * 65536;
+			IJ.log("depth = "+depth);
+			int[] dimensions = { width, height, depth };
+			p.close();
+			return dimensions;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+
+	public double[] getRealSize(String path) {
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(56);
+			double width = (p.read() + p.read() * 256 + p.read() * 65536 + p
+					.read() * 256 * 65536);
+			double height = (p.read() + p.read() * 256 + p.read() * 65536 + p
+					.read() * 256 * 65536);
+			double depth = (p.read() + p.read() * 256 + p.read() * 65536 + p
+					.read() * 256 * 65536);
+			width /= 1000;
+			height /= 1000;
+			depth /= 1000;
+			IJ.log("width = "+width);
+			IJ.log("height = "+height);
+			IJ.log("depth = " + depth);
+			double[] dimensions = { width, height, depth };
+			p.close();
+			return dimensions;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+
+	public double[] getPixelSize(String path) {
+		int[] nPixels = getImageDimensions(path);
+		double[] realSize = getRealSize(path);
+		double[] pixelSize = { realSize[0] / nPixels[0],
+				realSize[1] / nPixels[1], realSize[2] / nPixels[2] };
+		return pixelSize;
+	}
+	
+	public int getMuScaling(String path){
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(88);
+			int muScaling = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
+			IJ.log("muScaling = "+muScaling);
+			p.close();
+			return muScaling;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return -1;
+	}
+
+	public String getName(String path){
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(128);
+			String name = "";
+			for (int kh = 0; kh < 40; kh++) {
+				char ch = (char) p.read();
+				name += ch;
+				// System.out.println(nameStringInHeader);
+			}
+			IJ.log("name = " + name);
+			p.close();
+			return name;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+	
+	public int getOffset(String path){
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(508);
+			int offset = (p.read() + p.read() * 256 + p.read() * 65536 + 1) * 512;
+			IJ.log("offset = "+offset);
+			p.close();
+			return offset;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return -1;
+	}
+	
 }
