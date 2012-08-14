@@ -191,6 +191,7 @@ public class ISQReader implements PlugIn {
 //				nameStringInHeader = nameStringInHeader + ch;
 //				// System.out.println(nameStringInHeader);
 //			}
+			p.skip(40);
 
 			p.skip(340);
 
@@ -206,13 +207,6 @@ public class ISQReader implements PlugIn {
 
 			p.close();
 
-			/**
-			 * IJ.showMessage("el_size x (in mm): "+
-			 * el_size_mm_x+"\nel_size y (in mm): "+ el_size_mm_y+
-			 * "\nel_size z (in mm): "+ el_size_mm_z);
-			 * IJ.showMessage("offset: "+offset + "\nxdimension: " +xdimension +
-			 * "\nydimension: " +ydimension + "\nzdimension: " +zdimension);
-			 **/
 
 		} catch (IOException e) {
 
@@ -904,39 +898,6 @@ public class ISQReader implements PlugIn {
 		if (showProgressBar)
 			IJ.showProgress(progress);
 	}
-
-	/*
-	 * void setCalibration(ImagePlus imp) { // A signed 16-bit image in ImageJ
-	 * is represented by an unsigned image // with 32768 added and a calibration
-	 * function (y=-32768+x) that subtracts 32768.
-	 * 
-	 * /* KH: 4.3.08 - temporarily deactivated: now I have the same values for
-	 * the downsampled and the original short images if I would subtract 32768
-	 * ... then I would have the right values even compared with the float
-	 * images (after division by 4096)
-	 * 
-	 * 
-	 * if (fi.fileType==FileInfo.GRAY16_SIGNED) { if (IJ.debugMode)
-	 * IJ.log("16-bit signed"); double[] coeff = new double[2]; coeff[0] =
-	 * -32768.0; coeff[1] = 1.0;
-	 * imp.getLocalCalibration().setFunction(Calibration.STRAIGHT_LINE, coeff,
-	 * "gray value"); }
-	 */
-	/*
-	 * // Properties props = decodeDescriptionString_kh(); Calibration cal =
-	 * imp.getCalibration();
-	 * 
-	 * cal.pixelWidth = fi.pixelWidth; cal.pixelHeight = fi.pixelHeight;
-	 * cal.pixelDepth = fi.pixelDepth; cal.setUnit(fi.unit);
-	 * 
-	 * 
-	 * 
-	 * if (fi.frameInterval!=0.0) cal.frameInterval = fi.frameInterval;
-	 * 
-	 * return;
-	 * 
-	 * }
-	 */
 
 	public int[] getImageDimensions(String path) {
 		if (path == null)
