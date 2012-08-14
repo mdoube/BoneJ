@@ -109,7 +109,7 @@ public class ISQReader implements PlugIn {
 	boolean eightBitOnly = false;
 	boolean debug = false;
 
-	float el_size_mm_x, el_size_mm_y, el_size_mm_z;
+//	float el_size_mm_x, el_size_mm_y, el_size_mm_z;
 	float tmp_float;
 
 	// necessary for the clip ROI
@@ -170,15 +170,15 @@ public class ISQReader implements PlugIn {
 //			p.skip(1);
 //			zdimension = p.read() + p.read() * 256 + p.read() * 65536;
 //			p.skip(1);
-			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
-			el_size_mm_x = tmpInt / xdimension;
-			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
-			el_size_mm_y = tmpInt / ydimension;
-			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
-			el_size_mm_z = tmpInt / zdimension;
-			el_size_mm_x = el_size_mm_x / 1000;
-			el_size_mm_y = el_size_mm_y / 1000;
-			el_size_mm_z = el_size_mm_z / 1000;
+//			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
+//			el_size_mm_x = tmpInt / xdimension;
+//			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
+//			el_size_mm_y = tmpInt / ydimension;
+//			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
+//			el_size_mm_z = tmpInt / zdimension;
+//			el_size_mm_x = el_size_mm_x / 1000;
+//			el_size_mm_y = el_size_mm_y / 1000;
+//			el_size_mm_z = el_size_mm_z / 1000;
 
 			p.skip(20);
 			// 82 int mu_scaling;
@@ -251,12 +251,12 @@ public class ISQReader implements PlugIn {
 		if (debug)
 			System.out.println("checkpoint3");
 
-		fi.pixelWidth = (double) el_size_mm_x;
+		fi.pixelWidth = pixelSize[0];
 		if (debug)
 			System.out.println("checkpoint3a");
 
-		fi.pixelHeight = (double) el_size_mm_y;
-		fi.pixelDepth = (double) el_size_mm_z;
+		fi.pixelHeight = pixelSize[1];
+		fi.pixelDepth = pixelSize[2];
 
 		if (debug)
 			System.out.println("checkpoint3a");
@@ -433,7 +433,7 @@ public class ISQReader implements PlugIn {
 
 			fi.pixelWidth = fi.pixelWidth * 2;
 			fi.pixelHeight = fi.pixelHeight * 2;
-			fi.pixelDepth = el_size_mm_z * 2;
+			fi.pixelDepth = getPixelSize(path)[2] * 2;
 			widthStack = widthROI / 2;
 			heightStack = heightROI / 2;
 		} else {
@@ -736,10 +736,12 @@ public class ISQReader implements PlugIn {
 
 		// if (metricCalibrationOrPixels==true) imp.setCalibration(cal);
 
+		double[] pixelSize = getPixelSize(path);
+		
 		if (metricCalibrationOrPixels == true) {
-			cal.pixelWidth = (double) el_size_mm_x;
-			cal.pixelHeight = (double) el_size_mm_y;
-			cal.pixelDepth = (double) el_size_mm_z;
+			cal.pixelWidth = pixelSize[0];
+			cal.pixelHeight = pixelSize[1];
+			cal.pixelDepth = pixelSize[2];
 			cal.setUnit("mm");
 			imp.setCalibration(cal);
 		} else {
