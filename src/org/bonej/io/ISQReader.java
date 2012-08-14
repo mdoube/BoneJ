@@ -191,7 +191,12 @@ public class ISQReader implements PlugIn {
 		// und auch unten bei der set.calibrate oder so ähnlich eingetragen
 
 		// Generic dialog to input the ROI-coordinates
-		getRoiCoordinates(path);
+		try {
+			getRoiCoordinates(path);
+		} catch (Exception e) {
+			IJ.error("ISQ Reader", e.getMessage());
+			return;
+		}
 
 		// Open the file
 
@@ -213,6 +218,11 @@ public class ISQReader implements PlugIn {
 	// Generic dialog to input the ROI-coordinates
 	void getRoiCoordinates(String path) {
 
+		int[] imageSize = getImageSize(path);
+		int width = imageSize[0];
+		int height = imageSize[1];
+		int depth = imageSize[2];
+
 		GenericDialog gd = new GenericDialog(
 				"Kunzelmann: Import Scanco ISQ-Files");
 
@@ -227,7 +237,7 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("Lower_right_X", width - 1, 0);
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
 		gd.addNumericField("First_slice: ", nFirstSlice, 0);
-		gd.addNumericField("Number_of_slices: ", fi.nImages, 0);
+		gd.addNumericField("Number_of_slices: ", depth, 0);
 		// gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ",
 		// scale4096);
 		gd.addCheckbox("Downsample 2x", downsample);
@@ -252,6 +262,16 @@ public class ISQReader implements PlugIn {
 		// eightBitOnly = gd.getNextBoolean();
 		// if (eightBitOnly == true)
 		// scale4096 = false;
+
+		if (upperLeftX < 0 || upperLeftX >= width || upperLeftY < 0
+				|| upperLeftY >= height || lowerRightX < 0
+				|| lowerRightX >= width || lowerRightY < 0
+				|| lowerRightY >= height || nFirstSlice < 0
+				|| nFirstSlice >= depth || fi.nImages < 1
+				|| fi.nImages > depth - nFirstSlice) {
+			throw new IllegalArgumentException(
+					"Crop parameters fall outside image bounds");
+		}
 
 		startROI = upperLeftY * width + upperLeftX;
 
