@@ -725,13 +725,10 @@ public class ISQReader implements PlugIn {
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(44);
 			int width = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("width = " + width);
 			p.skip(1);
 			int height = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("height = " + height);
 			p.skip(1);
 			int depth = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("depth = " + depth);
 			int[] dimensions = { width, height, depth };
 			p.close();
 			return dimensions;
@@ -757,9 +754,6 @@ public class ISQReader implements PlugIn {
 			width /= 1000;
 			height /= 1000;
 			depth /= 1000;
-			IJ.log("width = " + width);
-			IJ.log("height = " + height);
-			IJ.log("depth = " + depth);
 			double[] dimensions = { width, height, depth };
 			p.close();
 			return dimensions;
@@ -786,7 +780,6 @@ public class ISQReader implements PlugIn {
 			p.skip(88);
 			int muScaling = (p.read() + p.read() * 256 + p.read() * 65536 + p
 					.read() * 256 * 65536);
-			IJ.log("muScaling = " + muScaling);
 			p.close();
 			return muScaling;
 		} catch (IOException e) {
@@ -808,7 +801,6 @@ public class ISQReader implements PlugIn {
 				name += ch;
 				// System.out.println(nameStringInHeader);
 			}
-			IJ.log("name = " + name);
 			p.close();
 			return name;
 		} catch (IOException e) {
@@ -825,7 +817,6 @@ public class ISQReader implements PlugIn {
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(508);
 			int offset = (p.read() + p.read() * 256 + p.read() * 65536 + 1) * 512;
-			IJ.log("offset = " + offset);
 			p.close();
 			return offset;
 		} catch (IOException e) {
