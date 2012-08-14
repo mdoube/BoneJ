@@ -105,7 +105,7 @@ public class ISQReader implements PlugIn {
 
 	boolean scale4096 = false;
 	boolean downsample = false;
-	boolean metricCalibrationOrPixels = false;
+	boolean metricCalibrationOrPixels = true;
 	boolean eightBitOnly = false;
 	boolean debug = false;
 
