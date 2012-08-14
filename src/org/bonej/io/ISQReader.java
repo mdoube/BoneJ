@@ -90,8 +90,6 @@ public class ISQReader implements PlugIn {
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private boolean showProgressBar = true;
 	private int eofErrorCount;
-	Calibration cal;
-	Calibration calOrg;
 
 	int record = 0;
 	int recCount = 0;
@@ -641,8 +639,7 @@ public class ISQReader implements PlugIn {
 				stack.setSliceLabel(fi.sliceLabels[i], i + 1);
 		}
 		ImagePlus imp = new ImagePlus(fi.fileName, stack);
-		cal = imp.getCalibration();
-		calOrg = cal.copy();
+		Calibration cal = imp.getCalibration();
 
 		if (fi.info != null)
 			imp.setProperty("Info", fi.info);
