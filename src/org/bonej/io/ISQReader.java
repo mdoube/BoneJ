@@ -220,22 +220,17 @@ public class ISQReader implements PlugIn {
 		String name = getName(path);
 		gd.addMessage(name + "\n");
 
-		gd.addMessage("\nEnter the coordinates for the \nbounding rectangle to crop the \nmicroCT stack during import");
+		gd.addMessage("\nEnter the coordinates for the bounding rectangle\nto crop the microCT stack during import");
 
-		gd.addNumericField("x-coord_ul of the upper left corner: ", upperLeftX,
-				0);
-		gd.addNumericField("y-coord_ul of the upper left corner: ", upperLeftY,
-				0);
-		gd.addNumericField("x-coord_lr of the lower right corner: ", width - 1,
-				0);
-		gd.addNumericField("y_coord_lr of the lower right corner: ",
-				height - 1, 0);
-		gd.addNumericField("no. of  z-slices: ", fi.nImages, 0);
-		gd.addNumericField("start import at slice no.: ", nFirstSlice, 0);
+		gd.addNumericField("Upper_left_X: ", upperLeftX, 0);
+		gd.addNumericField("Upper_left_Y: ", upperLeftY, 0);
+		gd.addNumericField("Lower_right_X", width - 1, 0);
+		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
+		gd.addNumericField("First_slice: ", nFirstSlice, 0);
+		gd.addNumericField("Number_of_slices: ", fi.nImages, 0);
 		// gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ",
 		// scale4096);
-		gd.addCheckbox("Downsample by factor 2 in x,y,z (method=average): ",
-				downsample);
+		gd.addCheckbox("Downsample 2x", downsample);
 		// gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')",
 		// eightBitOnly);
 		gd.addCheckbox("Export only", false);
@@ -251,8 +246,8 @@ public class ISQReader implements PlugIn {
 		upperLeftY = (int) gd.getNextNumber();
 		lowerRightX = (int) gd.getNextNumber();
 		lowerRightY = (int) gd.getNextNumber();
-		fi.nImages = (int) gd.getNextNumber();
 		nFirstSlice = (int) gd.getNextNumber();
+		fi.nImages = (int) gd.getNextNumber();
 		downsample = gd.getNextBoolean();
 		// eightBitOnly = gd.getNextBoolean();
 		// if (eightBitOnly == true)
@@ -554,7 +549,7 @@ public class ISQReader implements PlugIn {
 
 		ImageProcessor ip = imp.getProcessor();
 		// find stack min and max if first slice is blank
-		if (ip.getMin() == ip.getMax()) 
+		if (ip.getMin() == ip.getMax())
 			setStackDisplayRange_kh(imp);
 		IJ.showProgress(1.0);
 		return;
