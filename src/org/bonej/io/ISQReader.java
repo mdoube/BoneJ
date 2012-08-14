@@ -91,27 +91,19 @@ public class ISQReader implements PlugIn {
 	private boolean showProgressBar = true;
 	private int eofErrorCount;
 
-	private int record = 0;
-	private int recCount = 0;
-
 	// Anpassung für Files > 2 GB
 	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
 	// vermutlich gereicht
-
-	private long offset;
-	private int tmpInt;
 
 	// boolean scale4096 = false;
 	private boolean downsample = false;
 	private boolean eightBitOnly = false;
 	private boolean debug = false;
 
-	private float tmp_float;
-
 	// necessary for the clip ROI
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
-	private int startROI, endROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
+	private int startROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
 	private short[] pixels;
 
 	public void run(String arg) {
@@ -126,12 +118,8 @@ public class ISQReader implements PlugIn {
 			return;
 
 		int[] imageSize = getImageSize(path);
-		double[] realSize = getRealSize(path);
 		double[] pixelSize = getPixelSize(path);
-		String name = getName(path);
 		int offset = getOffset(path);
-		int muScaling = getMuScaling(path);
-
 		int xdimension = imageSize[0];
 		int ydimension = imageSize[1];
 		int zdimension = imageSize[2];
