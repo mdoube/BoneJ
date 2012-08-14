@@ -105,11 +105,10 @@ public class ISQReader implements PlugIn {
 
 	boolean scale4096 = false;
 	boolean downsample = false;
-	boolean metricCalibrationOrPixels = true;
 	boolean eightBitOnly = false;
 	boolean debug = false;
 
-//	float el_size_mm_x, el_size_mm_y, el_size_mm_z;
+	// float el_size_mm_x, el_size_mm_y, el_size_mm_z;
 	float tmp_float;
 
 	// necessary for the clip ROI
@@ -128,7 +127,7 @@ public class ISQReader implements PlugIn {
 		String path = directory + fileName;
 		if (fileName == null)
 			return;
-		
+
 		int[] imageSize = getImageSize(path);
 		double[] realSize = getRealSize(path);
 		double[] pixelSize = getPixelSize(path);
@@ -220,19 +219,19 @@ public class ISQReader implements PlugIn {
 		GenericDialog gd = new GenericDialog(
 				"Kunzelmann: Import Scanco ISQ-Files");
 
-//		String text1 = new String("offset: " + offset + "\nxdimension: "
-//				+ xdimension + "\nydimension: " + ydimension + "\nzdimension: "
-//				+ zdimension);
-//		String text2 = new String("el_size x (in mm): " + el_size_mm_x
-//				+ "\nel_size y (in mm): " + el_size_mm_y
-//				+ "\nel_size z (in mm): " + el_size_mm_z);
+		// String text1 = new String("offset: " + offset + "\nxdimension: "
+		// + xdimension + "\nydimension: " + ydimension + "\nzdimension: "
+		// + zdimension);
+		// String text2 = new String("el_size x (in mm): " + el_size_mm_x
+		// + "\nel_size y (in mm): " + el_size_mm_y
+		// + "\nel_size z (in mm): " + el_size_mm_z);
 		nFirstSlice = 0;
 		String name = getName(path);
 		gd.addMessage(name + "\n");
-//		gd.addMessage(text1);
-//		gd.addMessage(text2);
+		// gd.addMessage(text1);
+		// gd.addMessage(text2);
 
-		gd.addMessage("\nmu_scaling: " + getMuScaling(path) + "\n");
+		// gd.addMessage("\nmu_scaling: " + getMuScaling(path) + "\n");
 		gd.addMessage("\nEnter the coordinates for the \nbounding rectangle to crop the \nmicroCT stack during import");
 
 		gd.addNumericField("x-coord_ul of the upper left corner: ", upperLeftX,
@@ -248,8 +247,7 @@ public class ISQReader implements PlugIn {
 		gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ", scale4096);
 		gd.addCheckbox("Downsample by factor 2 in x,y,z (method=average): ",
 				downsample);
-		gd.addCheckbox("Check = distances in metric units, uncheck = pixels",
-				metricCalibrationOrPixels);
+		// gd.addCheckbox("Set_pixel_calibration", true);
 		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
 		gd.addCheckbox("Export only", false);
 
@@ -268,7 +266,7 @@ public class ISQReader implements PlugIn {
 		nFirstSlice = (int) gd.getNextNumber();
 		scale4096 = gd.getNextBoolean();
 		downsample = gd.getNextBoolean();
-		metricCalibrationOrPixels = gd.getNextBoolean();
+		// metricCalibrationOrPixels = gd.getNextBoolean();
 		eightBitOnly = gd.getNextBoolean();
 		if (eightBitOnly == true)
 			scale4096 = false;
@@ -658,23 +656,15 @@ public class ISQReader implements PlugIn {
 		 * cal.pixelDepth = el_size_mm_z; cal.setUnit("mm");
 		 */
 
-		// if (metricCalibrationOrPixels==true) imp.setCalibration(cal);
-
 		double[] pixelSize = getPixelSize(path);
-		
-		if (metricCalibrationOrPixels == true) {
-			cal.pixelWidth = pixelSize[0];
-			cal.pixelHeight = pixelSize[1];
-			cal.pixelDepth = pixelSize[2];
-			cal.setUnit("mm");
-			imp.setCalibration(cal);
-		} else {
-			cal.pixelWidth = 1.0D;
-			cal.pixelHeight = 1.0D;
-			cal.pixelDepth = 1.0D;
-			cal.setUnit("pixel");
-			imp.setCalibration(cal);
-		}
+
+		cal.pixelWidth = pixelSize[0];
+		cal.pixelHeight = pixelSize[1];
+		cal.pixelDepth = pixelSize[2];
+		cal.setUnit("mm");
+		cal.setFunction(Calibration.STRAIGHT_LINE, new double[] { 0,
+				1.0 / getMuScaling(path) }, "1/cm");
+		imp.setCalibration(cal);
 
 		ImageProcessor ip = imp.getProcessor();
 		if (ip.getMin() == ip.getMax()) // find stack min and max if first slice
@@ -834,13 +824,13 @@ public class ISQReader implements PlugIn {
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(44);
 			int width = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("width = "+width);
+			IJ.log("width = " + width);
 			p.skip(1);
 			int height = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("height = "+height);
+			IJ.log("height = " + height);
 			p.skip(1);
 			int depth = p.read() + p.read() * 256 + p.read() * 65536;
-			IJ.log("depth = "+depth);
+			IJ.log("depth = " + depth);
 			int[] dimensions = { width, height, depth };
 			p.close();
 			return dimensions;
@@ -866,8 +856,8 @@ public class ISQReader implements PlugIn {
 			width /= 1000;
 			height /= 1000;
 			depth /= 1000;
-			IJ.log("width = "+width);
-			IJ.log("height = "+height);
+			IJ.log("width = " + width);
+			IJ.log("height = " + height);
 			IJ.log("depth = " + depth);
 			double[] dimensions = { width, height, depth };
 			p.close();
@@ -885,16 +875,17 @@ public class ISQReader implements PlugIn {
 				realSize[1] / nPixels[1], realSize[2] / nPixels[2] };
 		return pixelSize;
 	}
-	
-	public int getMuScaling(String path){
+
+	public int getMuScaling(String path) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(88);
-			int muScaling = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
-			IJ.log("muScaling = "+muScaling);
+			int muScaling = (p.read() + p.read() * 256 + p.read() * 65536 + p
+					.read() * 256 * 65536);
+			IJ.log("muScaling = " + muScaling);
 			p.close();
 			return muScaling;
 		} catch (IOException e) {
@@ -903,7 +894,7 @@ public class ISQReader implements PlugIn {
 		return -1;
 	}
 
-	public String getName(String path){
+	public String getName(String path) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
@@ -924,8 +915,8 @@ public class ISQReader implements PlugIn {
 		}
 		return null;
 	}
-	
-	public int getOffset(String path){
+
+	public int getOffset(String path) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
@@ -933,7 +924,7 @@ public class ISQReader implements PlugIn {
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(508);
 			int offset = (p.read() + p.read() * 256 + p.read() * 65536 + 1) * 512;
-			IJ.log("offset = "+offset);
+			IJ.log("offset = " + offset);
 			p.close();
 			return offset;
 		} catch (IOException e) {
@@ -941,5 +932,5 @@ public class ISQReader implements PlugIn {
 		}
 		return -1;
 	}
-	
+
 }
