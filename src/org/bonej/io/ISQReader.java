@@ -91,28 +91,28 @@ public class ISQReader implements PlugIn {
 	private boolean showProgressBar = true;
 	private int eofErrorCount;
 
-	int record = 0;
-	int recCount = 0;
+	private int record = 0;
+	private int recCount = 0;
 
 	// Anpassung für Files > 2 GB
 	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
 	// vermutlich gereicht
 
-	long offset;
-	int tmpInt;
+	private long offset;
+	private int tmpInt;
 
 	// boolean scale4096 = false;
-	boolean downsample = false;
-	boolean eightBitOnly = false;
-	boolean debug = false;
+	private boolean downsample = false;
+	private boolean eightBitOnly = false;
+	private boolean debug = false;
 
-	float tmp_float;
+	private float tmp_float;
 
 	// necessary for the clip ROI
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
-	int startROI, endROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
-	short[] pixels;
+	private int startROI, endROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
+	private short[] pixels;
 
 	public void run(String arg) {
 
@@ -216,7 +216,7 @@ public class ISQReader implements PlugIn {
 	 **/
 
 	// Generic dialog to input the ROI-coordinates
-	void getRoiCoordinates(String path) {
+	private void getRoiCoordinates(String path) {
 
 		int[] imageSize = getImageSize(path);
 		int width = imageSize[0];
@@ -347,7 +347,7 @@ public class ISQReader implements PlugIn {
 
 	/** Opens a stack of images. */
 
-	void openStack_kh(String path) {
+	private void openStack_kh(String path) {
 		System.out.println("downsample: " + downsample);
 
 		int widthStack = 0;
@@ -575,7 +575,7 @@ public class ISQReader implements PlugIn {
 		return;
 	}
 
-	void setStackDisplayRange_kh(ImagePlus imp) {
+	private void setStackDisplayRange_kh(ImagePlus imp) {
 		ImageStack stack = imp.getStack();
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;
@@ -638,7 +638,7 @@ public class ISQReader implements PlugIn {
 	 * Reads a 16-bit image. Signed pixels are converted to unsigned by adding
 	 * 32768.
 	 */
-	short[] read16bitImage_kh(FileInputStream in) throws IOException {
+	private short[] read16bitImage_kh(FileInputStream in) throws IOException {
 		int pixelsRead;
 		byte[] buffer = new byte[bufferSize];
 		pixels = new short[nPixels];
@@ -679,7 +679,7 @@ public class ISQReader implements PlugIn {
 		return pixels;
 	}
 
-	void skip_kh(FileInputStream in) throws IOException {
+	private void skip_kh(FileInputStream in) throws IOException {
 
 		// I count, how often this routine is used:
 		// System.out.println("skip_kh called");
@@ -708,7 +708,7 @@ public class ISQReader implements PlugIn {
 			bufferSize = (bufferSize / 8192) * 8192;
 	}
 
-	void eofError() {
+	private void eofError() {
 		eofErrorCount++;
 	}
 
