@@ -101,7 +101,7 @@ public class ISQReader implements PlugIn {
 	long offset;
 	int tmpInt;
 
-//	boolean scale4096 = false;
+	// boolean scale4096 = false;
 	boolean downsample = false;
 	boolean eightBitOnly = false;
 	boolean debug = false;
@@ -232,10 +232,12 @@ public class ISQReader implements PlugIn {
 				height - 1, 0);
 		gd.addNumericField("no. of  z-slices: ", fi.nImages, 0);
 		gd.addNumericField("start import at slice no.: ", nFirstSlice, 0);
-//		gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ", scale4096);
+		// gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ",
+		// scale4096);
 		gd.addCheckbox("Downsample by factor 2 in x,y,z (method=average): ",
 				downsample);
-//		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
+		// gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')",
+		// eightBitOnly);
 		gd.addCheckbox("Export only", false);
 
 		gd.showDialog();
@@ -252,9 +254,9 @@ public class ISQReader implements PlugIn {
 		fi.nImages = (int) gd.getNextNumber();
 		nFirstSlice = (int) gd.getNextNumber();
 		downsample = gd.getNextBoolean();
-//		eightBitOnly = gd.getNextBoolean();
-//		if (eightBitOnly == true)
-//			scale4096 = false;
+		// eightBitOnly = gd.getNextBoolean();
+		// if (eightBitOnly == true)
+		// scale4096 = false;
 
 		startROI = upperLeftY * width + upperLeftX;
 
@@ -397,124 +399,121 @@ public class ISQReader implements PlugIn {
 				if (pixels == null)
 					break;
 
-					float[] pixels32 = new float[widthROI * heightROI];
-					for (int s = 0; s < widthROI * heightROI; s++) {
-						pixels32[s] = (pixelsROI[s] & 0xffff);
+				float[] pixels32 = new float[widthROI * heightROI];
+				for (int s = 0; s < widthROI * heightROI; s++) {
+					pixels32[s] = (pixelsROI[s] & 0xffff);
 
-						pixels32[s] = pixels32[s] - 32768;
-						// hier wird nun ISQ bzgl. des lin. att. Coeff. skaliert
-						// (nächste Zeile)
-						pixels32[s] = pixels32[s] / 4096;
-						if (pixels32[s] < 0) {
-							pixels32[s] = 0;
+					pixels32[s] = pixels32[s] - 32768;
+					// hier wird nun ISQ bzgl. des lin. att. Coeff. skaliert
+					// (nächste Zeile)
+					pixels32[s] = pixels32[s] / 4096;
+					if (pixels32[s] < 0) {
+						pixels32[s] = 0;
+					}
+				}
+
+				if (downsample == true) {
+					// System.out.println("Downsample loop ... ");
+					float[] downsampledPixels32 = new float[(widthROI * heightROI)
+							/ (2 * 2)];
+					// float[] downsampledPixels32_temp = new
+					// float[(widthROI*heightROI)/(2*2)];
+					short[] downsampledPixels_av = new short[(widthROI * heightROI)
+							/ (2 * 2)];
+
+					int index = 0;
+					// here we calculate the average in the x,y plane.
+					for (int h = 0; h < heightROI - 1; h = h + 2) {
+						for (int w = 0; w < widthROI - 1; w = w + 2) {
+							downsampledPixels32[index] = ((pixels32[(h * widthROI)
+									+ w]
+									+ pixels32[(h * widthROI) + w + 1]
+									+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
+									+ w + 1]) / 4);
+							index = index + 1;
+							if (index >= widthStack * heightStack)
+								index = 0;
+							// System.out.print(".");
 						}
 					}
-
-					if (downsample == true) {
-						// System.out.println("Downsample loop ... ");
-						float[] downsampledPixels32 = new float[(widthROI * heightROI)
-								/ (2 * 2)];
-						// float[] downsampledPixels32_temp = new
-						// float[(widthROI*heightROI)/(2*2)];
-						short[] downsampledPixels_av = new short[(widthROI * heightROI)
-								/ (2 * 2)];
-
-						int index = 0;
-						// here we calculate the average in the x,y plane.
-						for (int h = 0; h < heightROI - 1; h = h + 2) {
-							for (int w = 0; w < widthROI - 1; w = w + 2) {
-								downsampledPixels32[index] = ((pixels32[(h * widthROI)
-										+ w]
-										+ pixels32[(h * widthROI) + w + 1]
-										+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
-										+ w + 1]) / 4);
-								index = index + 1;
-								if (index >= widthStack * heightStack)
-									index = 0;
-								// System.out.print(".");
-							}
-						}
-						if (i % 2 > 0) {
-							System.arraycopy(downsampledPixels32, 0,
-									downsampledPixels32_temp, 0,
-									downsampledPixels32.length);
-						} else {
-							float temp1, temp2, temp3 = 0;
-							for (int s = 0; s < heightStack * widthStack; s++) {
-								temp1 = downsampledPixels32[s];
-								temp2 = downsampledPixels32_temp[s];
-								temp3 = ((temp1 + temp2) / 2) * 4096;
-								if (temp3 < 0.0)
-									temp3 = 0.0f;
-								if (temp3 > 65535.0)
-									temp3 = 65535.0f;
-								downsampledPixels_av[s] = (short) temp3;
-							}
-
-							// *** shortTo8bit
-
-							int value;
-							byte[] pixels8 = new byte[heightStack * widthStack];
-							for (int index2 = 0; index2 < heightStack
-									* widthStack; index2++) {
-								value = downsampledPixels_av[index2] / 256;
-								if (value > 255)
-									value = 255;
-								pixels8[index2] = (byte) value;
-							}
-
-							if (eightBitOnly == true) {
-								stack.addSlice("microCT-Import_by_KH_w_"
-										+ widthStack + "_h_" + heightStack
-										+ "_slice." + i, pixels8);
-							} else {
-								stack.addSlice("microCT-Import_by_KH_w_"
-										+ widthStack + "_h_" + heightStack
-										+ "_slice." + i, downsampledPixels_av);
-							}
-
-							// *** shortTo8bit ende
-
-							// stack.addSlice("microCT-Import_by_KH_w_"+widthROI/2+"_h_"+heightROI/2+"_slice."+
-							// i, downsampledPixels_av);
-						}
+					if (i % 2 > 0) {
+						System.arraycopy(downsampledPixels32, 0,
+								downsampledPixels32_temp, 0,
+								downsampledPixels32.length);
 					} else {
-						// System.out.println("Instead of downsample loop ... ELSE loop");
-						for (int index = 0; index < widthROI * heightROI; index++) {
-							pixelsROI[index] = (short) (pixelsROI[index] - 32768);
-							if (pixelsROI[index] < 0)
-								pixelsROI[index] = 0;
+						float temp1, temp2, temp3 = 0;
+						for (int s = 0; s < heightStack * widthStack; s++) {
+							temp1 = downsampledPixels32[s];
+							temp2 = downsampledPixels32_temp[s];
+							temp3 = ((temp1 + temp2) / 2) * 4096;
+							if (temp3 < 0.0)
+								temp3 = 0.0f;
+							if (temp3 > 65535.0)
+								temp3 = 65535.0f;
+							downsampledPixels_av[s] = (short) temp3;
 						}
+
 						// *** shortTo8bit
 
 						int value;
-						byte[] pixels8 = new byte[widthROI * heightROI];
-						for (int index2 = 0; index2 < widthROI * heightROI; index2++) {
-							value = pixelsROI[index2] / 256;
+						byte[] pixels8 = new byte[heightStack * widthStack];
+						for (int index2 = 0; index2 < heightStack * widthStack; index2++) {
+							value = downsampledPixels_av[index2] / 256;
 							if (value > 255)
 								value = 255;
 							pixels8[index2] = (byte) value;
 						}
 
-						// *** shortTo8bit ende
-						// System.out.println("Instead of downsample loop ... ELSE loop - just before add stack");
-
 						if (eightBitOnly == true) {
-							stack.addSlice("microCT-Import_by_KH_w_" + widthROI
-									+ "_h_" + heightROI + "_slice." + i,
-									pixels8);
+							stack.addSlice("microCT-Import_by_KH_w_"
+									+ widthStack + "_h_" + heightStack
+									+ "_slice." + i, pixels8);
 						} else {
-							stack.addSlice("microCT-Import_by_KH_w_" + widthROI
-									+ "_h_" + heightROI + "_slice." + i,
-									pixelsROI);
+							stack.addSlice("microCT-Import_by_KH_w_"
+									+ widthStack + "_h_" + heightStack
+									+ "_slice." + i, downsampledPixels_av);
 						}
+
+						// *** shortTo8bit ende
+
+						// stack.addSlice("microCT-Import_by_KH_w_"+widthROI/2+"_h_"+heightROI/2+"_slice."+
+						// i, downsampledPixels_av);
+					}
+				} else {
+					// System.out.println("Instead of downsample loop ... ELSE loop");
+					for (int index = 0; index < widthROI * heightROI; index++) {
+						pixelsROI[index] = (short) (pixelsROI[index] - 32768);
+						if (pixelsROI[index] < 0)
+							pixelsROI[index] = 0;
+					}
+					// *** shortTo8bit
+
+					int value;
+					byte[] pixels8 = new byte[widthROI * heightROI];
+					for (int index2 = 0; index2 < widthROI * heightROI; index2++) {
+						value = pixelsROI[index2] / 256;
+						if (value > 255)
+							value = 255;
+						pixels8[index2] = (byte) value;
 					}
 
-					// *************************************************
-					// war orginal
-					// stack.addSlice("microCT-Import_by_KH_w_"+widthROI+"_h_"+heightROI+"_slice."+
-					// i, pixelsROI);
-//				}
+					// *** shortTo8bit ende
+					// System.out.println("Instead of downsample loop ... ELSE loop - just before add stack");
+
+					if (eightBitOnly == true) {
+						stack.addSlice("microCT-Import_by_KH_w_" + widthROI
+								+ "_h_" + heightROI + "_slice." + i, pixels8);
+					} else {
+						stack.addSlice("microCT-Import_by_KH_w_" + widthROI
+								+ "_h_" + heightROI + "_slice." + i, pixelsROI);
+					}
+				}
+
+				// *************************************************
+				// war orginal
+				// stack.addSlice("microCT-Import_by_KH_w_"+widthROI+"_h_"+heightROI+"_slice."+
+				// i, pixelsROI);
+				// }
 
 				skip = fi.gapBetweenImages;
 				IJ.showProgress((double) i / fi.nImages);
@@ -545,17 +544,17 @@ public class ISQReader implements PlugIn {
 
 		double[] pixelSize = getPixelSize(path);
 
-		cal.pixelWidth = pixelSize[0];
-		cal.pixelHeight = pixelSize[1];
-		cal.pixelDepth = pixelSize[2];
+		cal.pixelWidth = (downsample) ? pixelSize[0] * 2 : pixelSize[0];
+		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
+		cal.pixelDepth = (downsample) ? pixelSize[2] * 2 : pixelSize[2];
 		cal.setUnit("mm");
 		cal.setFunction(Calibration.STRAIGHT_LINE, new double[] { 0,
 				1.0 / getMuScaling(path) }, "1/cm");
 		imp.setCalibration(cal);
 
 		ImageProcessor ip = imp.getProcessor();
-		if (ip.getMin() == ip.getMax()) // find stack min and max if first slice
-										// is blank
+		// find stack min and max if first slice is blank
+		if (ip.getMin() == ip.getMax()) 
 			setStackDisplayRange_kh(imp);
 		IJ.showProgress(1.0);
 		return;
