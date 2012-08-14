@@ -90,13 +90,11 @@ public class ISQReader implements PlugIn {
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private boolean showProgressBar = true;
 	private int eofErrorCount;
-//	private String path;
 	Calibration cal;
 	Calibration calOrg;
 
 	int record = 0;
 	int recCount = 0;
-	int xdimension, ydimension, zdimension, mu_scaling;
 
 	// Anpassung für Files > 2 GB
 	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
@@ -113,7 +111,6 @@ public class ISQReader implements PlugIn {
 
 	float el_size_mm_x, el_size_mm_y, el_size_mm_z;
 	float tmp_float;
-//	String nameStringInHeader = "";
 
 	// necessary for the clip ROI
 
@@ -132,13 +129,17 @@ public class ISQReader implements PlugIn {
 		if (fileName == null)
 			return;
 		
-		getImageDimensions(path);
-		getRealSize(path);
-		getPixelSize(path);
-		getName(path);
-		getOffset(path);
-		getMuScaling(path);
+		int[] imageSize = getImageSize(path);
+		double[] realSize = getRealSize(path);
+		double[] pixelSize = getPixelSize(path);
+		String name = getName(path);
+		int offset = getOffset(path);
+		int muScaling = getMuScaling(path);
 
+		int xdimension = imageSize[0];
+		int ydimension = imageSize[1];
+		int zdimension = imageSize[2];
+		
 		// a FileInputStream is opened with the File selected above
 
 		try {
@@ -163,12 +164,12 @@ public class ISQReader implements PlugIn {
 			// '\uffff' (or 65,535 inclusive).
 
 			p.skip(44);
-			xdimension = p.read() + p.read() * 256 + p.read() * 65536;
-			p.skip(1);
-			ydimension = p.read() + p.read() * 256 + p.read() * 65536;
-			p.skip(1);
-			zdimension = p.read() + p.read() * 256 + p.read() * 65536;
-			p.skip(1);
+//			xdimension = p.read() + p.read() * 256 + p.read() * 65536;
+//			p.skip(1);
+//			ydimension = p.read() + p.read() * 256 + p.read() * 65536;
+//			p.skip(1);
+//			zdimension = p.read() + p.read() * 256 + p.read() * 65536;
+//			p.skip(1);
 			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
 			el_size_mm_x = tmpInt / xdimension;
 			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
@@ -181,8 +182,8 @@ public class ISQReader implements PlugIn {
 
 			p.skip(20);
 			// 82 int mu_scaling;
-			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
-			mu_scaling = tmpInt;
+//			tmpInt = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536);
+//			muScaling = tmpInt;
 
 			p.skip(36); // war 60, wegen mu_scaling jetzt 36
 
@@ -295,19 +296,19 @@ public class ISQReader implements PlugIn {
 		GenericDialog gd = new GenericDialog(
 				"Kunzelmann: Import Scanco ISQ-Files");
 
-		String text1 = new String("offset: " + offset + "\nxdimension: "
-				+ xdimension + "\nydimension: " + ydimension + "\nzdimension: "
-				+ zdimension);
-		String text2 = new String("el_size x (in mm): " + el_size_mm_x
-				+ "\nel_size y (in mm): " + el_size_mm_y
-				+ "\nel_size z (in mm): " + el_size_mm_z);
+//		String text1 = new String("offset: " + offset + "\nxdimension: "
+//				+ xdimension + "\nydimension: " + ydimension + "\nzdimension: "
+//				+ zdimension);
+//		String text2 = new String("el_size x (in mm): " + el_size_mm_x
+//				+ "\nel_size y (in mm): " + el_size_mm_y
+//				+ "\nel_size z (in mm): " + el_size_mm_z);
 		nFirstSlice = 0;
 		String name = getName(path);
 		gd.addMessage(name + "\n");
-		gd.addMessage(text1);
-		gd.addMessage(text2);
+//		gd.addMessage(text1);
+//		gd.addMessage(text2);
 
-		gd.addMessage("\nmu_scaling: " + mu_scaling + "\n");
+		gd.addMessage("\nmu_scaling: " + getMuScaling(path) + "\n");
 		gd.addMessage("\nEnter the coordinates for the \nbounding rectangle to crop the \nmicroCT stack during import");
 
 		gd.addNumericField("x-coord_ul of the upper left corner: ", upperLeftX,
@@ -414,8 +415,8 @@ public class ISQReader implements PlugIn {
 		}
 		System.out.println("offset: " + fi.offset);
 		System.out.println("longoffset: " + fi.longOffset);
-		if (fi.nImages > zdimension - nFirstSlice) {
-			fi.nImages = zdimension - nFirstSlice;
+		if (fi.nImages > getImageSize(path)[2] - nFirstSlice) {
+			fi.nImages = getImageSize(path)[2] - nFirstSlice;
 		}
 
 	}
@@ -899,7 +900,7 @@ public class ISQReader implements PlugIn {
 			IJ.showProgress(progress);
 	}
 
-	public int[] getImageDimensions(String path) {
+	public int[] getImageSize(String path) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
@@ -952,7 +953,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	public double[] getPixelSize(String path) {
-		int[] nPixels = getImageDimensions(path);
+		int[] nPixels = getImageSize(path);
 		double[] realSize = getRealSize(path);
 		double[] pixelSize = { realSize[0] / nPixels[0],
 				realSize[1] / nPixels[1], realSize[2] / nPixels[2] };
