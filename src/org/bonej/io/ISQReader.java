@@ -101,7 +101,7 @@ public class ISQReader implements PlugIn {
 	long offset;
 	int tmpInt;
 
-	boolean scale4096 = false;
+//	boolean scale4096 = false;
 	boolean downsample = false;
 	boolean eightBitOnly = false;
 	boolean debug = false;
@@ -232,10 +232,10 @@ public class ISQReader implements PlugIn {
 				height - 1, 0);
 		gd.addNumericField("no. of  z-slices: ", fi.nImages, 0);
 		gd.addNumericField("start import at slice no.: ", nFirstSlice, 0);
-		gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ", scale4096);
+//		gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ", scale4096);
 		gd.addCheckbox("Downsample by factor 2 in x,y,z (method=average): ",
 				downsample);
-		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
+//		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
 		gd.addCheckbox("Export only", false);
 
 		gd.showDialog();
@@ -251,11 +251,10 @@ public class ISQReader implements PlugIn {
 		lowerRightY = (int) gd.getNextNumber();
 		fi.nImages = (int) gd.getNextNumber();
 		nFirstSlice = (int) gd.getNextNumber();
-		scale4096 = gd.getNextBoolean();
 		downsample = gd.getNextBoolean();
-		eightBitOnly = gd.getNextBoolean();
-		if (eightBitOnly == true)
-			scale4096 = false;
+//		eightBitOnly = gd.getNextBoolean();
+//		if (eightBitOnly == true)
+//			scale4096 = false;
 
 		startROI = upperLeftY * width + upperLeftX;
 
@@ -398,98 +397,6 @@ public class ISQReader implements PlugIn {
 				if (pixels == null)
 					break;
 
-				if (scale4096 == true) {
-					float[] pixels32 = new float[widthROI * heightROI];
-					for (int s = 0; s < widthROI * heightROI; s++) {
-						pixels32[s] = (pixelsROI[s] & 0xffff);
-						// mein Problem ist, dass beim Einlesen mit der
-						// Original-Version von Hr. Koller
-						// die ImageJ Funktionen vollständig genutzt werden.
-						// so wie ich das im Moment umgesetzt habe, habe ich die
-						// Signed-16Bit-Werte in
-						// unsigned convertiert (durch die Addition von 32768.
-						// wenn ich nun aber genau so "skalieren" will, wie mit
-						// der "Koller-Import-Routine"
-						// habe ich das Problem, dass die Werte nur positiv sind
-						// und um die 32768 zu hoch sind
-						// ich behebe das hier, indem ich beim Umwandeln in
-						// Float das Ganze rückgängig mache
-						// langfristig, muss ich mal die ganze Routine von Grund
-						// auf selbst und neu schreiben.
-						// aber wann? .. nebenbei: im Fileopener.java wird das
-						// ganze genauso gemacht.
-
-						pixels32[s] = pixels32[s] - 32768;
-						// hier wird nun ISQ bzgl. des lin. att. Coeff. skaliert
-						// (nächste Zeile)
-						pixels32[s] = pixels32[s] / 4096;
-						if (pixels32[s] < 0) {
-							pixels32[s] = 0;
-						}
-					}
-
-					if (downsample == true) {
-						System.out.println("Downsample loop ... ");
-						float[] downsampledPixels32 = new float[(widthROI * heightROI)
-								/ (2 * 2)];
-						// float[] downsampledPixels32_temp = new
-						// float[(widthROI*heightROI)/(2*2)];
-						float[] downsampledPixels32_av = new float[(widthROI * heightROI)
-								/ (2 * 2)];
-						int index = 0;
-						// here we calculate the average in the x,y plane. a
-						for (int h = 0; h < heightROI - 1; h = h + 2) {
-							for (int w = 0; w < widthROI - 1; w = w + 2) {
-								downsampledPixels32[index] = ((pixels32[(h * widthROI)
-										+ w]
-										+ pixels32[(h * widthROI) + w + 1]
-										+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
-										+ w + 1]) / 4);
-								// System.out.println("Pixel32: "+pixels32[(h*widthROI)+w]+
-								// pixels32[(h*widthROI)+w+1] +
-								// pixels32[((h+1)*widthROI)+w] +
-								// pixels32[((h+1)*widthROI)+w+1]);
-								index = index + 1;
-								if (index >= widthStack * heightStack)
-									index = 0;
-								System.out.print(".");
-							}
-						}
-						if (i % 2 > 0) {
-							System.out.println("i%2 erreicht" + i);
-							System.arraycopy(downsampledPixels32, 0,
-									downsampledPixels32_temp, 0,
-									downsampledPixels32.length);
-
-						} else {
-							System.out
-									.println("Else Teil von i%2 erreicht" + i);
-							float temp1, temp2, temp3 = 0;
-							for (int s = 0; s < heightStack * widthStack; s++) {
-								temp1 = downsampledPixels32[s];
-								temp2 = downsampledPixels32_temp[s];
-								temp3 = (temp1 + temp2) / 2;
-								// System.out.println("temp1-temp2: "+temp1+"temp2  "
-								// +temp2+ "stack:  "+
-								// downsampledPixels32_temp[s] + "temp3  "+
-								// temp3);
-								downsampledPixels32_av[s] = temp3;
-							}
-
-							stack.addSlice(
-									"microCT-Import_by_KH_w_" + widthROI / 2
-											+ "_h_" + heightROI / 2 + "_slice."
-											+ i, downsampledPixels32_av);
-						}
-					} else {
-						// System.out.println("Instead of downsample loop ... ELSE loop");
-						stack.addSlice("microCT-Import_by_KH_w_" + widthROI
-								+ "_h_" + heightROI + "_slice." + i, pixels32);
-					}
-				} else {
-					// **********************dieser Teil ist "short"
-					// ***************************
-
 					float[] pixels32 = new float[widthROI * heightROI];
 					for (int s = 0; s < widthROI * heightROI; s++) {
 						pixels32[s] = (pixelsROI[s] & 0xffff);
@@ -607,7 +514,7 @@ public class ISQReader implements PlugIn {
 					// war orginal
 					// stack.addSlice("microCT-Import_by_KH_w_"+widthROI+"_h_"+heightROI+"_slice."+
 					// i, pixelsROI);
-				}
+//				}
 
 				skip = fi.gapBetweenImages;
 				IJ.showProgress((double) i / fi.nImages);
