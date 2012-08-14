@@ -106,7 +106,6 @@ public class ISQReader implements PlugIn {
 	boolean eightBitOnly = false;
 	boolean debug = false;
 
-	// float el_size_mm_x, el_size_mm_y, el_size_mm_z;
 	float tmp_float;
 
 	// necessary for the clip ROI
@@ -217,19 +216,10 @@ public class ISQReader implements PlugIn {
 		GenericDialog gd = new GenericDialog(
 				"Kunzelmann: Import Scanco ISQ-Files");
 
-		// String text1 = new String("offset: " + offset + "\nxdimension: "
-		// + xdimension + "\nydimension: " + ydimension + "\nzdimension: "
-		// + zdimension);
-		// String text2 = new String("el_size x (in mm): " + el_size_mm_x
-		// + "\nel_size y (in mm): " + el_size_mm_y
-		// + "\nel_size z (in mm): " + el_size_mm_z);
 		nFirstSlice = 0;
 		String name = getName(path);
 		gd.addMessage(name + "\n");
-		// gd.addMessage(text1);
-		// gd.addMessage(text2);
 
-		// gd.addMessage("\nmu_scaling: " + getMuScaling(path) + "\n");
 		gd.addMessage("\nEnter the coordinates for the \nbounding rectangle to crop the \nmicroCT stack during import");
 
 		gd.addNumericField("x-coord_ul of the upper left corner: ", upperLeftX,
@@ -245,7 +235,6 @@ public class ISQReader implements PlugIn {
 		gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ", scale4096);
 		gd.addCheckbox("Downsample by factor 2 in x,y,z (method=average): ",
 				downsample);
-		// gd.addCheckbox("Set_pixel_calibration", true);
 		gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')", eightBitOnly);
 		gd.addCheckbox("Export only", false);
 
@@ -264,7 +253,6 @@ public class ISQReader implements PlugIn {
 		nFirstSlice = (int) gd.getNextNumber();
 		scale4096 = gd.getNextBoolean();
 		downsample = gd.getNextBoolean();
-		// metricCalibrationOrPixels = gd.getNextBoolean();
 		eightBitOnly = gd.getNextBoolean();
 		if (eightBitOnly == true)
 			scale4096 = false;
@@ -647,11 +635,6 @@ public class ISQReader implements PlugIn {
 		imp.setFileInfo(fi);
 		System.out.println("after imp.show() -> x: " + fi.pixelWidth + " ; y: "
 				+ fi.pixelHeight);
-
-		/*
-		 * cal.pixelWidth = el_size_mm_x; cal.pixelHeight = el_size_mm_y;
-		 * cal.pixelDepth = el_size_mm_z; cal.setUnit("mm");
-		 */
 
 		double[] pixelSize = getPixelSize(path);
 
