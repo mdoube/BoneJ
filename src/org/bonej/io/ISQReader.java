@@ -197,7 +197,8 @@ public class ISQReader implements PlugIn {
 
 		if (debug)
 			System.out.println("checkpoint4");
-		openStack(path);
+		ImagePlus imp = openScancoISQ(path);
+		imp.show();
 		UsageReporter.reportEvent(this).send();
 	}
 
@@ -322,7 +323,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	/** Opens a stack of images. */
-	private void openStack(String path) {
+	public ImagePlus openScancoISQ(String path) {
 		System.out.println("downsample: " + downsample);
 
 		int widthStack = 0;
@@ -511,7 +512,7 @@ public class ISQReader implements PlugIn {
 		}
 		IJ.showProgress(1.0);
 		if (stack.getSize() == 0)
-			return;
+			return null;
 		if (fi.sliceLabels != null && fi.sliceLabels.length <= stack.getSize()) {
 			for (int i = 0; i < fi.sliceLabels.length; i++)
 				stack.setSliceLabel(fi.sliceLabels[i], i + 1);
@@ -521,7 +522,6 @@ public class ISQReader implements PlugIn {
 
 		if (fi.info != null)
 			imp.setProperty("Info", fi.info);
-		imp.show();
 		imp.setFileInfo(fi);
 		System.out.println("after imp.show() -> x: " + fi.pixelWidth + " ; y: "
 				+ fi.pixelHeight);
@@ -546,9 +546,8 @@ public class ISQReader implements PlugIn {
 			min = Math.min(min, ip.getMin());
 		}
 		imp.getProcessor().setMinAndMax(min, max);
-		imp.updateAndDraw();
 		IJ.showProgress(1.0);
-		return;
+		return imp;
 	}
 
 	/** *********************************************************************** **/
