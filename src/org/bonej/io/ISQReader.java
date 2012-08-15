@@ -135,7 +135,6 @@ public class ISQReader implements PlugIn {
 		// FileInfo
 		fi = new FileInfo();
 
-		// fi.fileFormat = fi.RAW;
 		fi.fileName = fileName;
 		fi.directory = directory;
 		fi.width = xdimension;
@@ -143,10 +142,10 @@ public class ISQReader implements PlugIn {
 
 		// hier Anpassung fuer Files > 2 GB
 
-		if (offset <= 2147483647 && offset > 0) {
+		if (offset <= Integer.MAX_VALUE && offset > 0) {
 			fi.offset = (int) offset;
 		}
-		if (offset > 2147483647) {
+		if (offset > Integer.MAX_VALUE) {
 			fi.longOffset = offset;
 		}
 		if (debug)
@@ -203,15 +202,11 @@ public class ISQReader implements PlugIn {
 	}
 
 	/**
-	 * *************************************end of "run"
-	 * ******************************************
-	 **/
-	/**
-	 * *************************************************************************
-	 * *******************
-	 **/
-
-	// Generic dialog to input the ROI-coordinates
+	 * Generic dialog to input the ROI-coordinates
+	 * 
+	 * @param path
+	 *            Path to ISQ file (directory + filename)
+	 */
 	private void getRoiCoordinates(String path) {
 
 		int[] imageSize = getImageSize(path);
@@ -234,11 +229,7 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
 		gd.addNumericField("First_slice: ", nFirstSlice, 0);
 		gd.addNumericField("Number_of_slices: ", depth, 0);
-		// gd.addCheckbox("Scale for lin. attenuation coeff. (LAC): ",
-		// scale4096);
 		gd.addCheckbox("Downsample 2x", downsample);
-		// gd.addCheckbox("8-bit-import (overrules 'Scale for LAC')",
-		// eightBitOnly);
 		gd.addCheckbox("Export only", false);
 
 		gd.showDialog();
@@ -255,9 +246,6 @@ public class ISQReader implements PlugIn {
 		nFirstSlice = (int) gd.getNextNumber();
 		fi.nImages = (int) gd.getNextNumber();
 		downsample = gd.getNextBoolean();
-		// eightBitOnly = gd.getNextBoolean();
-		// if (eightBitOnly == true)
-		// scale4096 = false;
 
 		if (upperLeftX < 0 || upperLeftX >= width || upperLeftY < 0
 				|| upperLeftY >= height || lowerRightX < 0
@@ -275,10 +263,6 @@ public class ISQReader implements PlugIn {
 		widthROI = lowerRightX - upperLeftX + 1;
 		heightROI = lowerRightY - upperLeftY + 1;
 
-		// System.out.println("widthROI:heightROI"+widthROI+":"+heightROI);
-		// System.out.println("GapBetweenLines: "+gapBetweenLines);
-		// System.out.println("StartROI: "+startROI);
-
 		// ***********************************************
 		// Anpassung wegen Files > 2 GB
 		// ich habe aus offset ein long statt integer gemacht
@@ -295,8 +279,8 @@ public class ISQReader implements PlugIn {
 
 			area = fi.width * fi.height;
 			sliceTimesArea = area * nFirstSlice;
-			sliceTimesAreaTimes2 = sliceTimesArea * 2; // * 2 wegen Short = 2
-														// Byte
+			// * 2 wegen Short = 2 Byte
+			sliceTimesAreaTimes2 = sliceTimesArea * 2;
 
 			dummy = (long) fi.offset + sliceTimesAreaTimes2;
 			// Ursprünglich hatte ich die folgende Zeile verwendet
