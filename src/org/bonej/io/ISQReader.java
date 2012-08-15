@@ -87,7 +87,6 @@ public class ISQReader implements PlugIn {
 	private static final String MAGIC = "CTDATA-HEADER_V1";
 
 	private FileInfo fi;
-	private int width, height;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private boolean showProgressBar = true;
@@ -157,8 +156,6 @@ public class ISQReader implements PlugIn {
 		fi.fileType = FileInfo.GRAY16_SIGNED;
 		if (debug)
 			System.out.println("checkpoint2");
-		width = fi.width;
-		height = fi.height;
 
 		// added: 30.6.06 - Measurement in metric units possible
 		// System.out.println("vor cal");
@@ -655,9 +652,9 @@ public class ISQReader implements PlugIn {
 				// IJ.log("skip: "+skipCount+" "+count+" "+bytesRead+" "+skipAttempts);
 			}
 		}
-		byteCount = width * height * bytesPerPixel;
+		byteCount = fi.width * fi.height * bytesPerPixel;
 
-		nPixels = width * height;
+		nPixels = fi.width * fi.height;
 		bufferSize = byteCount / 25;
 		if (bufferSize < 8192)
 			bufferSize = 8192;
