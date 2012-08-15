@@ -227,7 +227,6 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("First_slice: ", nFirstSlice, 0);
 		gd.addNumericField("Number_of_slices: ", depth, 0);
 		gd.addCheckbox("Downsample 2x", downsample);
-		gd.addCheckbox("Export only", false);
 
 		gd.showDialog();
 		if (gd.wasCanceled()) {
