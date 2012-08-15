@@ -324,12 +324,9 @@ public class ISQReader implements PlugIn {
 			// (nFirstSlice*fi.width*fi.height*2) <=2147483647){
 
 			if (dummy <= 2147483647 && dummy > 0) {
+				// 2 is hardcoded no. of bytesPerPixel (short)
 				fi.offset = fi.offset
-						+ (nFirstSlice * fi.width * fi.height * 2); // 2 is
-																	// hardcoded
-																	// no. of
-																	// bytesPerPixel
-																	// (short)
+						+ (nFirstSlice * fi.width * fi.height * 2);
 			} else {
 				fi.longOffset = (long) (fi.offset + sliceTimesAreaTimes2);
 			}
@@ -339,11 +336,9 @@ public class ISQReader implements PlugIn {
 		if (fi.nImages > getImageSize(path)[2] - nFirstSlice) {
 			fi.nImages = getImageSize(path)[2] - nFirstSlice;
 		}
-
 	}
 
 	/** Opens a stack of images. */
-
 	private void openStack_kh(String path) {
 		System.out.println("downsample: " + downsample);
 
@@ -380,11 +375,9 @@ public class ISQReader implements PlugIn {
 
 			System.out.println("Try FileInputStream");
 
-			for (int i = 1; i <= fi.nImages; i++) { // Obsolet comment: I reduce
-													// the no of slices by 1 to
-													// avoid a
-													// nullpointerexception
-													// error
+			// Obsolet comment: I reduce the no of slices by 1 to
+			// avoid a nullpointerexception error
+			for (int i = 1; i <= fi.nImages; i++) {
 				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
 				// System.out.println("fi.nImages: "+fi.nImages);
 				pixels = readPixels_kh(is, skip);
@@ -397,14 +390,11 @@ public class ISQReader implements PlugIn {
 				pixelsROI = new short[widthROI * heightROI];
 
 				for (int u = 0; u < heightROI; u++) {
-
 					System.arraycopy(pixels, indexCountPixels, pixelsROI,
 							indexCountROI, widthROI);
-
 					indexCountPixels = indexCountPixels + widthROI
 							+ gapBetweenLines;
 					indexCountROI = indexCountROI + widthROI;
-
 					// System.out.println(i+"::"+"indexCountPixels:"+indexCountPixels+":"+"IndexCountROI:"+indexCountROI+":"+"Size:"+widthROI+heightROI);
 				}
 
@@ -414,7 +404,6 @@ public class ISQReader implements PlugIn {
 				float[] pixels32 = new float[widthROI * heightROI];
 				for (int s = 0; s < widthROI * heightROI; s++) {
 					pixels32[s] = (pixelsROI[s] & 0xffff);
-
 					pixels32[s] = pixels32[s] - 32768;
 					// hier wird nun ISQ bzgl. des lin. att. Coeff. skaliert
 					// (nächste Zeile)
