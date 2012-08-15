@@ -106,7 +106,6 @@ public class ISQReader implements PlugIn {
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
 	private int startROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
-	private short[] pixels;
 
 	public void run(String arg) {
 
@@ -380,7 +379,7 @@ public class ISQReader implements PlugIn {
 			for (int i = 1; i <= fi.nImages; i++) {
 				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
 				// System.out.println("fi.nImages: "+fi.nImages);
-				pixels = readPixels_kh(is, skip);
+				short[] pixels = readPixels_kh(is, skip);
 
 				// get pixels for ROI only
 				int indexCountPixels = startROI;
@@ -588,7 +587,7 @@ public class ISQReader implements PlugIn {
 	public short[] readPixels_kh(FileInputStream in, long skipCount) {
 		this.skipCount = skipCount;
 		showProgressBar = false;
-		pixels = readPixels_kh(in);
+		short[] pixels = readPixels_kh(in);
 		if (eofErrorCount > 0)
 			return null;
 		else
@@ -627,7 +626,7 @@ public class ISQReader implements PlugIn {
 	private short[] read16bitImage_kh(FileInputStream in) throws IOException {
 		int pixelsRead;
 		byte[] buffer = new byte[bufferSize];
-		pixels = new short[nPixels];
+		short[] pixels = new short[nPixels];
 		int totalRead = 0;
 		int base = 0;
 		int count;
