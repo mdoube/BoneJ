@@ -106,7 +106,6 @@ public class ISQReader implements PlugIn {
 	public void run(String arg) {
 
 		// the ISQ-File is selected
-
 		OpenDialog od = new OpenDialog("Open ISQ...", arg);
 		String directory = od.getDirectory();
 		String fileName = od.getFileName();
@@ -120,31 +119,26 @@ public class ISQReader implements PlugIn {
 		}
 
 		int[] imageSize = getImageSize(path);
+		int width = imageSize[0];
+		int height = imageSize[1];
+		int depth = imageSize[2];
 		double[] pixelSize = getPixelSize(path);
 		int offset = getOffset(path);
-		int xdimension = imageSize[0];
-		int ydimension = imageSize[1];
-		int zdimension = imageSize[2];
-
-		getMagic(path);
-
+		
 		// FileInfo
 		fi = new FileInfo();
-
 		fi.fileName = fileName;
 		fi.directory = directory;
-		fi.width = xdimension;
-		fi.height = ydimension;
-
+		fi.width = width;
+		fi.height = height;
 		// hier Anpassung fuer Files > 2 GB
-
 		if (offset <= Integer.MAX_VALUE && offset > 0) {
 			fi.offset = (int) offset;
 		}
 		if (offset > Integer.MAX_VALUE) {
 			fi.longOffset = offset;
 		}
-		fi.nImages = zdimension;
+		fi.nImages = depth;
 		fi.gapBetweenImages = 0;
 		fi.intelByteOrder = true;
 		fi.whiteIsZero = false;
@@ -153,42 +147,14 @@ public class ISQReader implements PlugIn {
 		fi.pixelHeight = pixelSize[1];
 		fi.pixelDepth = pixelSize[2];
 		fi.unit = "mm";
-
-		// Generic dialog to input the ROI-coordinates
-		try {
-			getRoiCoordinates(path);
-		} catch (Exception e) {
-			IJ.error("ISQ Reader", e.getMessage());
-			return;
-		}
-
-		// Open the file
-		ImagePlus imp = openScancoISQ(path);
-		imp.show();
-		UsageReporter.reportEvent(this).send();
-	}
-
-	/**
-	 * Generic dialog to input the ROI-coordinates
-	 * 
-	 * @param path
-	 *            Path to ISQ file (directory + filename)
-	 */
-	private void getRoiCoordinates(String path) {
-
-		int[] imageSize = getImageSize(path);
-		int width = imageSize[0];
-		int height = imageSize[1];
-		int depth = imageSize[2];
-
-		GenericDialog gd = new GenericDialog(
-				"Kunzelmann: Import Scanco ISQ-Files");
+		
+		GenericDialog gd = new GenericDialog("Import Scanco ISQ file");
 
 		nFirstSlice = 0;
 		String name = getName(path);
-		gd.addMessage(name + "\n");
-
-		gd.addMessage("\nEnter the coordinates for the bounding rectangle\nto crop the microCT stack during import");
+		gd.addMessage("Patient:" + name + "\n");
+		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n" +
+				"to crop the microCT stack during import");
 
 		gd.addNumericField("Upper_left_X: ", upperLeftX, 0);
 		gd.addNumericField("Upper_left_Y: ", upperLeftY, 0);
@@ -199,11 +165,8 @@ public class ISQReader implements PlugIn {
 		gd.addCheckbox("Downsample 2x", downsample);
 
 		gd.showDialog();
-		if (gd.wasCanceled()) {
-			fi.nImages = 0;
-			nFirstSlice = 1;
+		if (gd.wasCanceled())
 			return;
-		}
 
 		upperLeftX = (int) gd.getNextNumber();
 		upperLeftY = (int) gd.getNextNumber();
@@ -219,8 +182,8 @@ public class ISQReader implements PlugIn {
 				|| lowerRightY >= height || nFirstSlice < 0
 				|| nFirstSlice >= depth || fi.nImages < 1
 				|| fi.nImages > depth - nFirstSlice) {
-			throw new IllegalArgumentException(
-					"Crop parameters fall outside image bounds");
+			IJ.error("ISQ Reader",  "Crop parameters fall outside image bounds");
+			return;
 		}
 
 		startROI = upperLeftY * width + upperLeftX;
@@ -237,32 +200,27 @@ public class ISQReader implements PlugIn {
 		// ich habe hier änderung ergänzt mit Abfrage zur Grösse
 
 		if (nFirstSlice > 0) {
-			long dummy;
-
-			long area;
-			long sliceTimesArea;
-			long sliceTimesAreaTimes2;
-
-			area = fi.width * fi.height;
-			sliceTimesArea = area * nFirstSlice;
+			long area = width * height;
+			long sliceTimesArea = area * nFirstSlice;
 			// * 2 wegen Short = 2 Byte
-			sliceTimesAreaTimes2 = sliceTimesArea * 2;
-
-			dummy = (long) fi.offset + sliceTimesAreaTimes2;
+			long sliceTimesAreaTimes2 = sliceTimesArea * 2;
+			long dummy = (long) fi.offset + sliceTimesAreaTimes2;
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
 				// 2 is hardcoded no. of bytesPerPixel (short)
-				fi.offset = fi.offset
-						+ (nFirstSlice * fi.width * fi.height * 2);
+				fi.offset += (nFirstSlice * fi.width * fi.height * 2);
 			} else {
 				fi.longOffset = (long) (fi.offset + sliceTimesAreaTimes2);
 			}
 		}
-		System.out.println("offset: " + fi.offset);
-		System.out.println("longoffset: " + fi.longOffset);
 		if (fi.nImages > getImageSize(path)[2] - nFirstSlice) {
 			fi.nImages = getImageSize(path)[2] - nFirstSlice;
 		}
+
+		// Open the file
+		ImagePlus imp = openScancoISQ(path);
+		imp.show();
+		UsageReporter.reportEvent(this).send();
 	}
 
 	/** Opens a stack of images. */
@@ -477,7 +435,7 @@ public class ISQReader implements PlugIn {
 		cal.setFunction(Calibration.STRAIGHT_LINE, new double[] { 0,
 				1.0 / getMuScaling(path) }, "1/cm");
 		imp.setCalibration(cal);
-		//set display range
+		// set display range
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;
 		final int n = stack.getSize();
