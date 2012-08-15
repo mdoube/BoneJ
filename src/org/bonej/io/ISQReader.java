@@ -89,7 +89,6 @@ public class ISQReader implements PlugIn {
 	private FileInfo fi;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
-	private boolean showProgressBar = true;
 	private int eofErrorCount;
 
 	// Anpassung für Files > 2 GB
@@ -281,28 +280,6 @@ public class ISQReader implements PlugIn {
 			sliceTimesAreaTimes2 = sliceTimesArea * 2;
 
 			dummy = (long) fi.offset + sliceTimesAreaTimes2;
-			// Ursprünglich hatte ich die folgende Zeile verwendet
-			// Damit war aber dummy immer negativ
-			// vermutlich wegen der Multipliation (wird grösser als int Wert
-			// Ich zerlege die Multiplikation jetzt und definiere alle Werte als
-			// long;
-			// dummy = (long)fi.offset +
-			// (long)(nFirstSlice*fi.width*fi.height*2);
-
-			/*
-			 * System.out.println("fi.offset "+fi.offset);
-			 * System.out.println("nFirstSlice "+nFirstSlice);
-			 * System.out.println("fi.width "+fi.width);
-			 * System.out.println("fi.height "+fi.height);
-			 * System.out.println("fi.offset "+fi.offset);
-			 * System.out.println("dummy..."+dummy);
-			 */
-
-			// bei einem "int"-Overflow - also Zahl die größer als Int ist das
-			// Ergebnis negativ.
-			// das muss ich auch abfragen.
-			// war Stand for 16.2.08: if (fi.offset +
-			// (nFirstSlice*fi.width*fi.height*2) <=2147483647){
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
 				// 2 is hardcoded no. of bytesPerPixel (short)
@@ -507,7 +484,6 @@ public class ISQReader implements PlugIn {
 			IJ.outOfMemory(fi.fileName);
 			stack.trim();
 		}
-		IJ.showProgress(1.0);
 		if (stack.getSize() == 0)
 			return null;
 		if (fi.sliceLabels != null && fi.sliceLabels.length <= stack.getSize()) {
@@ -555,7 +531,6 @@ public class ISQReader implements PlugIn {
 	 */
 	private short[] readPixels(FileInputStream in, long skipCount) {
 		this.skipCount = skipCount;
-		showProgressBar = false;
 		short[] pixels = readPixels(in);
 		if (eofErrorCount > 0)
 			return null;
@@ -618,7 +593,6 @@ public class ISQReader implements PlugIn {
 				bufferCount += count;
 			}
 			totalRead += bufferSize;
-			showProgress((double) totalRead / byteCount);
 			pixelsRead = bufferSize / bytesPerPixel;
 			if (fi.intelByteOrder) {
 				for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
@@ -664,11 +638,6 @@ public class ISQReader implements PlugIn {
 
 	private void eofError() {
 		eofErrorCount++;
-	}
-
-	private void showProgress(double progress) {
-		if (showProgressBar)
-			IJ.showProgress(progress);
 	}
 
 	// **----------------------------------------------------------------*/
