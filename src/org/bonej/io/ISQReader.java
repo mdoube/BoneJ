@@ -535,31 +535,20 @@ public class ISQReader implements PlugIn {
 		cal.setFunction(Calibration.STRAIGHT_LINE, new double[] { 0,
 				1.0 / getMuScaling(path) }, "1/cm");
 		imp.setCalibration(cal);
-
-		ImageProcessor ip = imp.getProcessor();
-		// find stack min and max if first slice is blank
-		if (ip.getMin() == ip.getMax())
-			setStackDisplayRange(imp);
-		IJ.showProgress(1.0);
-		return;
-	}
-
-	private void setStackDisplayRange(ImagePlus imp) {
-		ImageStack stack = imp.getStack();
+		//set display range
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;
-		int n = stack.getSize();
+		final int n = stack.getSize();
 		for (int i = 1; i <= n; i++) {
 			IJ.showStatus("Calculating stack min and max: " + i + "/" + n);
 			ImageProcessor ip = stack.getProcessor(i);
-			ip.resetMinAndMax();
-			if (ip.getMin() < min)
-				min = ip.getMin();
-			if (ip.getMax() > max)
-				max = ip.getMax();
+			max = Math.max(max, ip.getMax());
+			min = Math.min(min, ip.getMin());
 		}
 		imp.getProcessor().setMinAndMax(min, max);
 		imp.updateAndDraw();
+		IJ.showProgress(1.0);
+		return;
 	}
 
 	/** *********************************************************************** **/
