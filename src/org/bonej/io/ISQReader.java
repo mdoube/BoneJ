@@ -568,7 +568,7 @@ public class ISQReader implements PlugIn {
 	 * image and returns the pixel array (byte, short, int or float). Returns
 	 * null if there was an IO exception. Does not close the InputStream.
 	 */
-	public short[] readPixels_kh(FileInputStream in, long skipCount) {
+	private short[] readPixels_kh(FileInputStream in, long skipCount) {
 		this.skipCount = skipCount;
 		showProgressBar = false;
 		short[] pixels = readPixels_kh(in);
@@ -583,7 +583,7 @@ public class ISQReader implements PlugIn {
 	 * short, int or float). Returns null if there was an IO exception. Does not
 	 * close the InputStream.
 	 */
-	public short[] readPixels_kh(FileInputStream in) {
+	private short[] readPixels_kh(FileInputStream in) {
 		try {
 
 			bytesPerPixel = 2;
