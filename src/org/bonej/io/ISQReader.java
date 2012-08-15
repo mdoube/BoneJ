@@ -95,10 +95,8 @@ public class ISQReader implements PlugIn {
 	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
 	// vermutlich gereicht
 
-	// boolean scale4096 = false;
 	private boolean downsample = false;
 	private boolean eightBitOnly = false;
-	private boolean debug = false;
 
 	// necessary for the clip ROI
 
@@ -146,40 +144,15 @@ public class ISQReader implements PlugIn {
 		if (offset > Integer.MAX_VALUE) {
 			fi.longOffset = offset;
 		}
-		if (debug)
-			System.out.println("checkpoint1");
 		fi.nImages = zdimension;
 		fi.gapBetweenImages = 0;
 		fi.intelByteOrder = true;
 		fi.whiteIsZero = false;
 		fi.fileType = FileInfo.GRAY16_SIGNED;
-		if (debug)
-			System.out.println("checkpoint2");
-
-		// added: 30.6.06 - Measurement in metric units possible
-		// System.out.println("vor cal");
-
-		if (debug)
-			System.out.println("checkpoint3");
-
 		fi.pixelWidth = pixelSize[0];
-		if (debug)
-			System.out.println("checkpoint3a");
-
 		fi.pixelHeight = pixelSize[1];
 		fi.pixelDepth = pixelSize[2];
-
-		if (debug)
-			System.out.println("checkpoint3a");
-
 		fi.unit = "mm";
-
-		System.out.println("Source code line: 252 - Message: Pixel width x: "
-				+ fi.pixelWidth + " ; y: " + fi.pixelHeight);
-
-		// End added: 23.4.08 - habe her fi. durch cal. ersetzt. Diese Routine
-		// überschreibt die fi. Routine.
-		// und auch unten bei der set.calibrate oder so ähnlich eingetragen
 
 		// Generic dialog to input the ROI-coordinates
 		try {
@@ -190,9 +163,6 @@ public class ISQReader implements PlugIn {
 		}
 
 		// Open the file
-
-		if (debug)
-			System.out.println("checkpoint4");
 		ImagePlus imp = openScancoISQ(path);
 		imp.show();
 		UsageReporter.reportEvent(this).send();
