@@ -197,7 +197,7 @@ public class ISQReader implements PlugIn {
 
 		if (debug)
 			System.out.println("checkpoint4");
-		openStack_kh(path);
+		openStack(path);
 		UsageReporter.reportEvent(this).send();
 	}
 
@@ -322,7 +322,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	/** Opens a stack of images. */
-	private void openStack_kh(String path) {
+	private void openStack(String path) {
 		System.out.println("downsample: " + downsample);
 
 		int widthStack = 0;
@@ -363,7 +363,7 @@ public class ISQReader implements PlugIn {
 			for (int i = 1; i <= fi.nImages; i++) {
 				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
 				// System.out.println("fi.nImages: "+fi.nImages);
-				short[] pixels = readPixels_kh(is, skip);
+				short[] pixels = readPixels(is, skip);
 
 				// get pixels for ROI only
 				int indexCountPixels = startROI;
@@ -539,12 +539,12 @@ public class ISQReader implements PlugIn {
 		ImageProcessor ip = imp.getProcessor();
 		// find stack min and max if first slice is blank
 		if (ip.getMin() == ip.getMax())
-			setStackDisplayRange_kh(imp);
+			setStackDisplayRange(imp);
 		IJ.showProgress(1.0);
 		return;
 	}
 
-	private void setStackDisplayRange_kh(ImagePlus imp) {
+	private void setStackDisplayRange(ImagePlus imp) {
 		ImageStack stack = imp.getStack();
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;
@@ -568,10 +568,10 @@ public class ISQReader implements PlugIn {
 	 * image and returns the pixel array (byte, short, int or float). Returns
 	 * null if there was an IO exception. Does not close the InputStream.
 	 */
-	private short[] readPixels_kh(FileInputStream in, long skipCount) {
+	private short[] readPixels(FileInputStream in, long skipCount) {
 		this.skipCount = skipCount;
 		showProgressBar = false;
-		short[] pixels = readPixels_kh(in);
+		short[] pixels = readPixels(in);
 		if (eofErrorCount > 0)
 			return null;
 		else
@@ -583,12 +583,12 @@ public class ISQReader implements PlugIn {
 	 * short, int or float). Returns null if there was an IO exception. Does not
 	 * close the InputStream.
 	 */
-	private short[] readPixels_kh(FileInputStream in) {
+	private short[] readPixels(FileInputStream in) {
 		try {
 
 			bytesPerPixel = 2;
-			skip_kh(in);
-			return read16bitImage_kh(in);
+			skip(in);
+			return read16bitImage(in);
 
 		} catch (IOException e) {
 			IJ.log("" + e);
@@ -607,7 +607,7 @@ public class ISQReader implements PlugIn {
 	 * Reads a 16-bit image. Signed pixels are converted to unsigned by adding
 	 * 32768.
 	 */
-	private short[] read16bitImage_kh(FileInputStream in) throws IOException {
+	private short[] read16bitImage(FileInputStream in) throws IOException {
 		int pixelsRead;
 		byte[] buffer = new byte[bufferSize];
 		short[] pixels = new short[nPixels];
@@ -648,7 +648,7 @@ public class ISQReader implements PlugIn {
 		return pixels;
 	}
 
-	private void skip_kh(FileInputStream in) throws IOException {
+	private void skip(FileInputStream in) throws IOException {
 
 		// I count, how often this routine is used:
 		// System.out.println("skip_kh called");
