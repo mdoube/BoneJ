@@ -307,7 +307,7 @@ public class ISQReader implements PlugIn {
 			// war Stand for 16.2.08: if (fi.offset +
 			// (nFirstSlice*fi.width*fi.height*2) <=2147483647){
 
-			if (dummy <= 2147483647 && dummy > 0) {
+			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
 				// 2 is hardcoded no. of bytesPerPixel (short)
 				fi.offset = fi.offset
 						+ (nFirstSlice * fi.width * fi.height * 2);
