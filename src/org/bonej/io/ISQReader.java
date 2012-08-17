@@ -88,7 +88,7 @@ public class ISQReader implements PlugIn {
 
 	private String fileName;
 	private String directory;
-	private FileInfo fi;
+	// private FileInfo fi;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
@@ -124,12 +124,12 @@ public class ISQReader implements PlugIn {
 		int width = imageSize[0];
 		int height = imageSize[1];
 		int depth = imageSize[2];
-		
+
 		GenericDialog gd = new GenericDialog("Import Scanco ISQ file");
 		String name = getName(path);
 		gd.addMessage("Patient:" + name + "\n");
-		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n" +
-				"to crop the microCT stack during import");
+		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n"
+				+ "to crop the microCT stack during import");
 
 		gd.addNumericField("Upper_left_X: ", upperLeftX, 0);
 		gd.addNumericField("Upper_left_Y: ", upperLeftY, 0);
@@ -148,16 +148,16 @@ public class ISQReader implements PlugIn {
 		lowerRightX = (int) gd.getNextNumber();
 		lowerRightY = (int) gd.getNextNumber();
 		nFirstSlice = (int) gd.getNextNumber();
-		fi.nImages = (int) gd.getNextNumber();
+		int nSlices = (int) gd.getNextNumber();
 		downsample = gd.getNextBoolean();
 
 		if (upperLeftX < 0 || upperLeftX >= width || upperLeftY < 0
 				|| upperLeftY >= height || lowerRightX < 0
 				|| lowerRightX >= width || lowerRightY < 0
 				|| lowerRightY >= height || nFirstSlice < 0
-				|| nFirstSlice >= depth || fi.nImages < 1
-				|| fi.nImages > depth - nFirstSlice) {
-			IJ.error("ISQ Reader",  "Crop parameters fall outside image bounds");
+				|| nFirstSlice >= depth || nSlices < 1
+				|| nSlices > depth - nFirstSlice) {
+			IJ.error("ISQ Reader", "Crop parameters fall outside image bounds");
 			return;
 		}
 
@@ -172,6 +172,31 @@ public class ISQReader implements PlugIn {
 		// werden soll
 		// ich habe hier änderung ergänzt mit Abfrage zur Grösse
 
+		// Open the file
+		ImagePlus imp = openScancoISQ(path);
+		imp.show();
+		UsageReporter.reportEvent(this).send();
+	}
+
+	/** Opens a stack of images. */
+	public ImagePlus openScancoISQ(String path) {
+
+		int[] imageSize = getImageSize(path);
+		int width = imageSize[0];
+		int height = imageSize[1];
+		int depth = imageSize[2];
+		double[] pixelSize = getPixelSize(path);
+		int offset = getOffset(path);
+		// int startROI = upperLeftY * width + upperLeftX;
+
+		// FileInfo
+		FileInfo fi = new FileInfo();
+		fi.fileName = fileName;
+		fi.directory = directory;
+		fi.width = width;
+		fi.height = height;
+		// hier Anpassung fuer Files > 2 GB
+
 		if (nFirstSlice > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * nFirstSlice;
@@ -181,39 +206,15 @@ public class ISQReader implements PlugIn {
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
 				// 2 is hardcoded no. of bytesPerPixel (short)
-				fi.offset += (nFirstSlice * fi.width * fi.height * 2);
+				fi.offset += (nFirstSlice * width * height * 2);
 			} else {
 				fi.longOffset = (long) (fi.offset + sliceTimesAreaTimes2);
 			}
 		}
-		if (fi.nImages > getImageSize(path)[2] - nFirstSlice) {
-			fi.nImages = getImageSize(path)[2] - nFirstSlice;
+		if (nSlices > getImageSize(path)[2] - nFirstSlice) {
+			nSlices = getImageSize(path)[2] - nFirstSlice;
 		}
 
-		// Open the file
-		ImagePlus imp = openScancoISQ(path);
-		imp.show();
-		UsageReporter.reportEvent(this).send();
-	}
-
-	/** Opens a stack of images. */
-	public ImagePlus openScancoISQ(String path) {
-		
-		int[] imageSize = getImageSize(path);
-		int width = imageSize[0];
-		int height = imageSize[1];
-		int depth = imageSize[2];
-		double[] pixelSize = getPixelSize(path);
-		int offset = getOffset(path);
-//		int startROI = upperLeftY * width + upperLeftX;
-		
-		// FileInfo
-		FileInfo fi = new FileInfo();
-		fi.fileName = fileName;
-		fi.directory = directory;
-		fi.width = width;
-		fi.height = height;
-		// hier Anpassung fuer Files > 2 GB
 		if (offset <= Integer.MAX_VALUE && offset > 0) {
 			fi.offset = (int) offset;
 		}
@@ -268,7 +269,7 @@ public class ISQReader implements PlugIn {
 			for (int i = 1; i <= fi.nImages; i++) {
 				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
 				// System.out.println("fi.nImages: "+fi.nImages);
-				short[] pixels = readPixels(is, skip);
+				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
 				int indexCountPixels = upperLeftY * width + upperLeftX;
@@ -457,9 +458,10 @@ public class ISQReader implements PlugIn {
 	 * image and returns the pixel array (byte, short, int or float). Returns
 	 * null if there was an IO exception. Does not close the InputStream.
 	 */
-	private short[] readPixels(FileInputStream in, long skipCount) {
+	private short[] readPixels(FileInputStream in, long skipCount, int width,
+			int height) {
 		this.skipCount = skipCount;
-		short[] pixels = readPixels(in);
+		short[] pixels = readPixels(in, width, height);
 		if (eofErrorCount > 0)
 			return null;
 		else
@@ -471,11 +473,11 @@ public class ISQReader implements PlugIn {
 	 * short, int or float). Returns null if there was an IO exception. Does not
 	 * close the InputStream.
 	 */
-	private short[] readPixels(FileInputStream in) {
+	private short[] readPixels(FileInputStream in, int width, int height) {
 		try {
 
 			bytesPerPixel = 2;
-			skip(in);
+			skip(in, width, height);
 			return read16bitImage(in);
 
 		} catch (IOException e) {
@@ -513,16 +515,19 @@ public class ISQReader implements PlugIn {
 				count = in.read(buffer, bufferCount, bufferSize - bufferCount);
 				if (count == -1) {
 					eofError();
-					if (fi.fileType == FileInfo.GRAY16_SIGNED)
-						for (int i = base; i < pixels.length; i++)
-							pixels[i] = (short) 32768;
+					// fi.fileType was only ever set once, and not based on
+					// anything dynamic, so should always be true
+					// if (fi.fileType == FileInfo.GRAY16_SIGNED)
+					for (int i = base; i < pixels.length; i++)
+						pixels[i] = (short) 32768;
 					return pixels;
 				}
 				bufferCount += count;
 			}
 			totalRead += bufferSize;
 			pixelsRead = bufferSize / bytesPerPixel;
-			if (fi.intelByteOrder) {
+//			if (fi.intelByteOrder) {
+			if (true){
 				for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
 					pixels[i] = (short) ((((buffer[j + 1] & 0xff) << 8) | (buffer[j] & 0xff)) + 32768);
 
@@ -535,7 +540,8 @@ public class ISQReader implements PlugIn {
 		return pixels;
 	}
 
-	private void skip(FileInputStream in) throws IOException {
+	private void skip(FileInputStream in, int width, int height)
+			throws IOException {
 
 		// I count, how often this routine is used:
 		// System.out.println("skip_kh called");
@@ -554,9 +560,9 @@ public class ISQReader implements PlugIn {
 				// IJ.log("skip: "+skipCount+" "+count+" "+bytesRead+" "+skipAttempts);
 			}
 		}
-		byteCount = fi.width * fi.height * bytesPerPixel;
+		byteCount = width * height * bytesPerPixel;
 
-		nPixels = fi.width * fi.height;
+		nPixels = width * height;
 		bufferSize = byteCount / 25;
 		if (bufferSize < 8192)
 			bufferSize = 8192;
