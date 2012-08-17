@@ -103,7 +103,7 @@ public class ISQReader implements PlugIn {
 	// necessary for the clip ROI
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
-	private int gapBetweenLines, heightROI, widthROI, nFirstSlice, nSlices;
+	private int heightROI, widthROI, nFirstSlice, nSlices;
 
 	public void run(String arg) {
 
@@ -161,7 +161,6 @@ public class ISQReader implements PlugIn {
 			return;
 		}
 
-		gapBetweenLines = (width - lowerRightX) + upperLeftX - 1;
 		widthROI = lowerRightX - upperLeftX + 1;
 		heightROI = lowerRightY - upperLeftY + 1;
 
@@ -282,7 +281,7 @@ public class ISQReader implements PlugIn {
 					System.arraycopy(pixels, indexCountPixels, pixelsROI,
 							indexCountROI, widthROI);
 					indexCountPixels = indexCountPixels + widthROI
-							+ gapBetweenLines;
+							+ (width - lowerRightX) + upperLeftX - 1;
 					indexCountROI = indexCountROI + widthROI;
 					// System.out.println(i+"::"+"indexCountPixels:"+indexCountPixels+":"+"IndexCountROI:"+indexCountROI+":"+"Size:"+widthROI+heightROI);
 				}
