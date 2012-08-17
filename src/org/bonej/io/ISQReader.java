@@ -86,6 +86,8 @@ public class ISQReader implements PlugIn {
 
 	private static final String MAGIC = "CTDATA-HEADER_V1";
 
+	private String fileName;
+	private String directory;
 	private FileInfo fi;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
@@ -101,14 +103,14 @@ public class ISQReader implements PlugIn {
 	// necessary for the clip ROI
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
-	private int startROI, gapBetweenLines, heightROI, widthROI, nFirstSlice;
+	private int gapBetweenLines, heightROI, widthROI, nFirstSlice, nSlices;
 
 	public void run(String arg) {
 
 		// the ISQ-File is selected
 		OpenDialog od = new OpenDialog("Open ISQ...", arg);
-		String directory = od.getDirectory();
-		String fileName = od.getFileName();
+		directory = od.getDirectory();
+		fileName = od.getFileName();
 		String path = directory + fileName;
 		if (fileName == null)
 			return;
@@ -122,35 +124,8 @@ public class ISQReader implements PlugIn {
 		int width = imageSize[0];
 		int height = imageSize[1];
 		int depth = imageSize[2];
-		double[] pixelSize = getPixelSize(path);
-		int offset = getOffset(path);
-		
-		// FileInfo
-		fi = new FileInfo();
-		fi.fileName = fileName;
-		fi.directory = directory;
-		fi.width = width;
-		fi.height = height;
-		// hier Anpassung fuer Files > 2 GB
-		if (offset <= Integer.MAX_VALUE && offset > 0) {
-			fi.offset = (int) offset;
-		}
-		if (offset > Integer.MAX_VALUE) {
-			fi.longOffset = offset;
-		}
-		fi.nImages = depth;
-		fi.gapBetweenImages = 0;
-		fi.intelByteOrder = true;
-		fi.whiteIsZero = false;
-		fi.fileType = FileInfo.GRAY16_SIGNED;
-		fi.pixelWidth = pixelSize[0];
-		fi.pixelHeight = pixelSize[1];
-		fi.pixelDepth = pixelSize[2];
-		fi.unit = "mm";
 		
 		GenericDialog gd = new GenericDialog("Import Scanco ISQ file");
-
-		nFirstSlice = 0;
 		String name = getName(path);
 		gd.addMessage("Patient:" + name + "\n");
 		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n" +
@@ -160,7 +135,7 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("Upper_left_Y: ", upperLeftY, 0);
 		gd.addNumericField("Lower_right_X", width - 1, 0);
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
-		gd.addNumericField("First_slice: ", nFirstSlice, 0);
+		gd.addNumericField("First_slice: ", 0, 0);
 		gd.addNumericField("Number_of_slices: ", depth, 0);
 		gd.addCheckbox("Downsample 2x", downsample);
 
@@ -185,8 +160,6 @@ public class ISQReader implements PlugIn {
 			IJ.error("ISQ Reader",  "Crop parameters fall outside image bounds");
 			return;
 		}
-
-		startROI = upperLeftY * width + upperLeftX;
 
 		gapBetweenLines = (width - lowerRightX) + upperLeftX - 1;
 		widthROI = lowerRightX - upperLeftX + 1;
@@ -225,7 +198,37 @@ public class ISQReader implements PlugIn {
 
 	/** Opens a stack of images. */
 	public ImagePlus openScancoISQ(String path) {
-		System.out.println("downsample: " + downsample);
+		
+		int[] imageSize = getImageSize(path);
+		int width = imageSize[0];
+		int height = imageSize[1];
+		int depth = imageSize[2];
+		double[] pixelSize = getPixelSize(path);
+		int offset = getOffset(path);
+//		int startROI = upperLeftY * width + upperLeftX;
+		
+		// FileInfo
+		FileInfo fi = new FileInfo();
+		fi.fileName = fileName;
+		fi.directory = directory;
+		fi.width = width;
+		fi.height = height;
+		// hier Anpassung fuer Files > 2 GB
+		if (offset <= Integer.MAX_VALUE && offset > 0) {
+			fi.offset = (int) offset;
+		}
+		if (offset > Integer.MAX_VALUE) {
+			fi.longOffset = offset;
+		}
+		fi.nImages = depth;
+		fi.gapBetweenImages = 0;
+		fi.intelByteOrder = true;
+		fi.whiteIsZero = false;
+		fi.fileType = FileInfo.GRAY16_SIGNED;
+		fi.pixelWidth = pixelSize[0];
+		fi.pixelHeight = pixelSize[1];
+		fi.pixelDepth = pixelSize[2];
+		fi.unit = "mm";
 
 		int widthStack = 0;
 		int heightStack = 0;
@@ -268,7 +271,7 @@ public class ISQReader implements PlugIn {
 				short[] pixels = readPixels(is, skip);
 
 				// get pixels for ROI only
-				int indexCountPixels = startROI;
+				int indexCountPixels = upperLeftY * width + upperLeftX;
 				int indexCountROI = 0;
 
 				short[] pixelsROI;
@@ -425,8 +428,6 @@ public class ISQReader implements PlugIn {
 		imp.setFileInfo(fi);
 		System.out.println("after imp.show() -> x: " + fi.pixelWidth + " ; y: "
 				+ fi.pixelHeight);
-
-		double[] pixelSize = getPixelSize(path);
 
 		cal.pixelWidth = (downsample) ? pixelSize[0] * 2 : pixelSize[0];
 		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
