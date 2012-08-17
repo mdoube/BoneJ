@@ -526,15 +526,8 @@ public class ISQReader implements PlugIn {
 			}
 			totalRead += bufferSize;
 			pixelsRead = bufferSize / bytesPerPixel;
-//			if (fi.intelByteOrder) {
-			if (true){
-				for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
-					pixels[i] = (short) ((((buffer[j + 1] & 0xff) << 8) | (buffer[j] & 0xff)) + 32768);
-
-			} else {
-				for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
-					pixels[i] = (short) ((((buffer[j] & 0xff) << 8) | (buffer[j + 1] & 0xff)) + 32768);
-			}
+			for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
+				pixels[i] = (short) ((((buffer[j + 1] & 0xff) << 8) | (buffer[j] & 0xff)) + 32768);
 			base += pixelsRead;
 		}
 		return pixels;
