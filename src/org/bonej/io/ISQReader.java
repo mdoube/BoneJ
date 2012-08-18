@@ -513,7 +513,7 @@ public class ISQReader implements PlugIn {
 			while (bufferCount < bufferSize) { // fill the buffer
 				count = in.read(buffer, bufferCount, bufferSize - bufferCount);
 				if (count == -1) {
-					eofError();
+					eofErrorCount++;
 					// fi.fileType was only ever set once, and not based on
 					// anything dynamic, so should always be true
 					// if (fi.fileType == FileInfo.GRAY16_SIGNED)
@@ -560,10 +560,6 @@ public class ISQReader implements PlugIn {
 			bufferSize = 8192;
 		else
 			bufferSize = (bufferSize / 8192) * 8192;
-	}
-
-	private void eofError() {
-		eofErrorCount++;
 	}
 
 	// **----------------------------------------------------------------*/
