@@ -167,7 +167,8 @@ public class ISQReader implements PlugIn {
 		// FileInfo
 		FileInfo fi = new FileInfo();
 		fi.fileName = new File(path).getName();
-		fi.directory = new File(path).getParent();
+		fi.directory = new File(path).getParent()
+				+ ((IJ.isWindows()) ? "\\" : "/");
 		fi.width = width;
 		fi.height = height;
 		// hier Anpassung fuer Files > 2 GB
