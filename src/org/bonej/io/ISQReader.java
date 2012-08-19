@@ -86,8 +86,6 @@ public class ISQReader implements PlugIn {
 
 	private static final String MAGIC = "CTDATA-HEADER_V1";
 
-	private String fileName;
-	private String directory;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
@@ -96,8 +94,8 @@ public class ISQReader implements PlugIn {
 
 		// the ISQ-File is selected
 		OpenDialog od = new OpenDialog("Open ISQ...", arg);
-		directory = od.getDirectory();
-		fileName = od.getFileName();
+		String directory = od.getDirectory();
+		String fileName = od.getFileName();
 		String path = directory + fileName;
 		if (fileName == null)
 			return;
@@ -168,8 +166,8 @@ public class ISQReader implements PlugIn {
 
 		// FileInfo
 		FileInfo fi = new FileInfo();
-		fi.fileName = fileName;
-		fi.directory = directory;
+		fi.fileName = new File(path).getName();
+		fi.directory = new File(path).getParent();
 		fi.width = width;
 		fi.height = height;
 		// hier Anpassung fuer Files > 2 GB
