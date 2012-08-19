@@ -97,9 +97,6 @@ public class ISQReader implements PlugIn {
 	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
 	// vermutlich gereicht
 
-	private boolean downsample = false;
-	private boolean eightBitOnly = false;
-
 	// necessary for the clip ROI
 
 	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
@@ -137,7 +134,7 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
 		gd.addNumericField("First_slice: ", 0, 0);
 		gd.addNumericField("Number_of_slices: ", depth, 0);
-		gd.addCheckbox("Downsample 2x", downsample);
+		gd.addCheckbox("Downsample 2x", false);
 
 		gd.showDialog();
 		if (gd.wasCanceled())
@@ -149,7 +146,7 @@ public class ISQReader implements PlugIn {
 		lowerRightY = (int) gd.getNextNumber();
 		nFirstSlice = (int) gd.getNextNumber();
 		int nSlices = (int) gd.getNextNumber();
-		downsample = gd.getNextBoolean();
+		final boolean downsample = gd.getNextBoolean();
 
 		if (upperLeftX < 0 || upperLeftX >= width || upperLeftY < 0
 				|| upperLeftY >= height || lowerRightX < 0
@@ -172,13 +169,13 @@ public class ISQReader implements PlugIn {
 		// ich habe hier änderung ergänzt mit Abfrage zur Grösse
 
 		// Open the file
-		ImagePlus imp = openScancoISQ(path);
+		ImagePlus imp = openScancoISQ(path, downsample);
 		imp.show();
 		UsageReporter.reportEvent(this).send();
 	}
 
 	/** Opens a stack of images. */
-	public ImagePlus openScancoISQ(String path) {
+	public ImagePlus openScancoISQ(String path, boolean downsample) {
 
 		int[] imageSize = getImageSize(path);
 		int width = imageSize[0];
@@ -342,31 +339,9 @@ public class ISQReader implements PlugIn {
 							downsampledPixels_av[s] = (short) temp3;
 						}
 
-						// *** shortTo8bit
-
-						int value;
-						byte[] pixels8 = new byte[heightStack * widthStack];
-						for (int index2 = 0; index2 < heightStack * widthStack; index2++) {
-							value = downsampledPixels_av[index2] / 256;
-							if (value > 255)
-								value = 255;
-							pixels8[index2] = (byte) value;
-						}
-
-						if (eightBitOnly == true) {
-							stack.addSlice("microCT-Import_by_KH_w_"
-									+ widthStack + "_h_" + heightStack
-									+ "_slice." + i, pixels8);
-						} else {
-							stack.addSlice("microCT-Import_by_KH_w_"
-									+ widthStack + "_h_" + heightStack
-									+ "_slice." + i, downsampledPixels_av);
-						}
-
-						// *** shortTo8bit ende
-
-						// stack.addSlice("microCT-Import_by_KH_w_"+widthROI/2+"_h_"+heightROI/2+"_slice."+
-						// i, downsampledPixels_av);
+						stack.addSlice("microCT-Import_by_KH_w_" + widthStack
+								+ "_h_" + heightStack + "_slice." + i,
+								downsampledPixels_av);
 					}
 				} else {
 					// System.out.println("Instead of downsample loop ... ELSE loop");
@@ -375,27 +350,10 @@ public class ISQReader implements PlugIn {
 						if (pixelsROI[index] < 0)
 							pixelsROI[index] = 0;
 					}
-					// *** shortTo8bit
 
-					int value;
-					byte[] pixels8 = new byte[widthROI * heightROI];
-					for (int index2 = 0; index2 < widthROI * heightROI; index2++) {
-						value = pixelsROI[index2] / 256;
-						if (value > 255)
-							value = 255;
-						pixels8[index2] = (byte) value;
-					}
-
-					// *** shortTo8bit ende
 					// System.out.println("Instead of downsample loop ... ELSE loop - just before add stack");
-
-					if (eightBitOnly == true) {
-						stack.addSlice("microCT-Import_by_KH_w_" + widthROI
-								+ "_h_" + heightROI + "_slice." + i, pixels8);
-					} else {
-						stack.addSlice("microCT-Import_by_KH_w_" + widthROI
-								+ "_h_" + heightROI + "_slice." + i, pixelsROI);
-					}
+					stack.addSlice("microCT-Import_by_KH_w_" + widthROI + "_h_"
+							+ heightROI + "_slice." + i, pixelsROI);
 				}
 
 				// *************************************************
