@@ -88,19 +88,9 @@ public class ISQReader implements PlugIn {
 
 	private String fileName;
 	private String directory;
-	// private FileInfo fi;
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
-
-	// Anpassung für Files > 2 GB
-	// wäre aber vermutlich gar nicht nötig. änderung bei Zeile 276 (ca) haette
-	// vermutlich gereicht
-
-	// necessary for the clip ROI
-
-	private int upperLeftX, upperLeftY, lowerRightX, lowerRightY;
-	private int heightROI, widthROI, nFirstSlice, nSlices;
 
 	public void run(String arg) {
 
@@ -128,8 +118,8 @@ public class ISQReader implements PlugIn {
 		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n"
 				+ "to crop the microCT stack during import");
 
-		gd.addNumericField("Upper_left_X: ", upperLeftX, 0);
-		gd.addNumericField("Upper_left_Y: ", upperLeftY, 0);
+		gd.addNumericField("Upper_left_X: ", 0, 0);
+		gd.addNumericField("Upper_left_Y: ", 0, 0);
 		gd.addNumericField("Lower_right_X", width - 1, 0);
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
 		gd.addNumericField("First_slice: ", 0, 0);
@@ -140,42 +130,28 @@ public class ISQReader implements PlugIn {
 		if (gd.wasCanceled())
 			return;
 
-		upperLeftX = (int) gd.getNextNumber();
-		upperLeftY = (int) gd.getNextNumber();
-		lowerRightX = (int) gd.getNextNumber();
-		lowerRightY = (int) gd.getNextNumber();
-		nFirstSlice = (int) gd.getNextNumber();
+		int startX = (int) gd.getNextNumber();
+		int startY = (int) gd.getNextNumber();
+		int endX = (int) gd.getNextNumber();
+		int endY = (int) gd.getNextNumber();
+		int startZ = (int) gd.getNextNumber();
 		int nSlices = (int) gd.getNextNumber();
 		final boolean downsample = gd.getNextBoolean();
-
-		if (upperLeftX < 0 || upperLeftX >= width || upperLeftY < 0
-				|| upperLeftY >= height || lowerRightX < 0
-				|| lowerRightX >= width || lowerRightY < 0
-				|| lowerRightY >= height || nFirstSlice < 0
-				|| nFirstSlice >= depth || nSlices < 1
-				|| nSlices > depth - nFirstSlice) {
-			IJ.error("ISQ Reader", "Crop parameters fall outside image bounds");
+		// Open the file
+		try {
+			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
+					endX, endY, startZ, nSlices);
+			imp.show();
+			UsageReporter.reportEvent(this).send();
+		} catch (IllegalArgumentException e) {
+			IJ.error("ISQ Reader", e.getMessage());
 			return;
 		}
-
-		widthROI = lowerRightX - upperLeftX + 1;
-		heightROI = lowerRightY - upperLeftY + 1;
-
-		// ***********************************************
-		// Anpassung wegen Files > 2 GB
-		// ich habe aus offset ein long statt integer gemacht
-		// ich habe Abfrage ergänzt of fi.offset oder fi.longOffset verwendet
-		// werden soll
-		// ich habe hier änderung ergänzt mit Abfrage zur Grösse
-
-		// Open the file
-		ImagePlus imp = openScancoISQ(path, downsample);
-		imp.show();
-		UsageReporter.reportEvent(this).send();
 	}
 
 	/** Opens a stack of images. */
-	public ImagePlus openScancoISQ(String path, boolean downsample) {
+	public ImagePlus openScancoISQ(String path, boolean downsample, int startX,
+			int startY, int endX, int endY, int startZ, int nSlices) {
 
 		int[] imageSize = getImageSize(path);
 		int width = imageSize[0];
@@ -183,7 +159,12 @@ public class ISQReader implements PlugIn {
 		int depth = imageSize[2];
 		double[] pixelSize = getPixelSize(path);
 		int offset = getOffset(path);
-		// int startROI = upperLeftY * width + upperLeftX;
+		if (startX < 0 || startX >= width || startY < 0 || startY >= height
+				|| endX < 0 || endX >= width || endY < 0 || endY >= height
+				|| startZ < 0 || startZ >= depth || nSlices < 1
+				|| nSlices > depth - startZ)
+			throw new IllegalArgumentException(
+					"Crop parameters fall outside image bounds");
 
 		// FileInfo
 		FileInfo fi = new FileInfo();
@@ -193,22 +174,22 @@ public class ISQReader implements PlugIn {
 		fi.height = height;
 		// hier Anpassung fuer Files > 2 GB
 
-		if (nFirstSlice > 0) {
+		if (startZ > 0) {
 			long area = width * height;
-			long sliceTimesArea = area * nFirstSlice;
+			long sliceTimesArea = area * startZ;
 			// * 2 wegen Short = 2 Byte
 			long sliceTimesAreaTimes2 = sliceTimesArea * 2;
 			long dummy = (long) fi.offset + sliceTimesAreaTimes2;
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
 				// 2 is hardcoded no. of bytesPerPixel (short)
-				fi.offset += (nFirstSlice * width * height * 2);
+				fi.offset += (startZ * width * height * 2);
 			} else {
 				fi.longOffset = (long) (fi.offset + sliceTimesAreaTimes2);
 			}
 		}
-		if (nSlices > getImageSize(path)[2] - nFirstSlice) {
-			nSlices = getImageSize(path)[2] - nFirstSlice;
+		if (nSlices > getImageSize(path)[2] - startZ) {
+			nSlices = getImageSize(path)[2] - startZ;
 		}
 
 		if (offset <= Integer.MAX_VALUE && offset > 0) {
@@ -217,7 +198,7 @@ public class ISQReader implements PlugIn {
 		if (offset > Integer.MAX_VALUE) {
 			fi.longOffset = offset;
 		}
-		fi.nImages = depth;
+		fi.nImages = nSlices;
 		fi.gapBetweenImages = 0;
 		fi.intelByteOrder = true;
 		fi.whiteIsZero = false;
@@ -229,6 +210,9 @@ public class ISQReader implements PlugIn {
 
 		int widthStack = 0;
 		int heightStack = 0;
+
+		final int widthROI = endX - startX + 1;
+		final int heightROI = endY - startY + 1;
 
 		if (downsample == true) {
 
@@ -262,13 +246,13 @@ public class ISQReader implements PlugIn {
 
 			// Obsolet comment: I reduce the no of slices by 1 to
 			// avoid a nullpointerexception error
-			for (int i = 1; i <= fi.nImages; i++) {
-				IJ.showStatus("Reading: " + i + "/" + fi.nImages);
+			for (int i = 1; i <= nSlices; i++) {
+				IJ.showStatus("Reading: " + i + "/" + nSlices);
 				// System.out.println("fi.nImages: "+fi.nImages);
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
-				int indexCountPixels = upperLeftY * width + upperLeftX;
+				int indexCountPixels = startY * width + startX;
 				int indexCountROI = 0;
 
 				short[] pixelsROI;
@@ -278,7 +262,7 @@ public class ISQReader implements PlugIn {
 					System.arraycopy(pixels, indexCountPixels, pixelsROI,
 							indexCountROI, widthROI);
 					indexCountPixels = indexCountPixels + widthROI
-							+ (width - lowerRightX) + upperLeftX - 1;
+							+ (width - endX) + startX - 1;
 					indexCountROI = indexCountROI + widthROI;
 					// System.out.println(i+"::"+"indexCountPixels:"+indexCountPixels+":"+"IndexCountROI:"+indexCountROI+":"+"Size:"+widthROI+heightROI);
 				}
@@ -363,7 +347,7 @@ public class ISQReader implements PlugIn {
 				// }
 
 				skip = fi.gapBetweenImages;
-				IJ.showProgress((double) i / fi.nImages);
+				IJ.showProgress((double) i / nSlices);
 			}
 			is.close();
 		} catch (Exception e) {
