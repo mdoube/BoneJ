@@ -375,6 +375,9 @@ public class ISQReader implements PlugIn {
 		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
 		cal.pixelDepth = (downsample) ? pixelSize[2] * 2 : pixelSize[2];
 		cal.setUnit("mm");
+		cal.xOrigin = -startX;
+		cal.yOrigin = -startY;
+		cal.zOrigin = -startZ;
 		cal.setFunction(Calibration.STRAIGHT_LINE, new double[] { 0,
 				1.0 / getMuScaling(path) }, "1/cm");
 		imp.setCalibration(cal);
