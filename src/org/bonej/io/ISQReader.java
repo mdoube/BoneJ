@@ -506,48 +506,68 @@ public class ISQReader implements PlugIn {
 			bufferSize = (bufferSize / 8192) * 8192;
 	}
 
-	// **----------------------------------------------------------------*/
-	/*
-	 * Scanco ISQ Header Information:
-	 * 
-	 * typedef struct { /*--------------------------------------------- 00 char
-	 * check[16]; // Char is in Java 2 Byte 16 int data_type; // Int = 4 Byte 20
-	 * int nr_of_bytes; /* either one of them 24 int nr_of_blocks; /* or both,
-	 * but min. of 1 28 int patient_index; /* 1 block = 512 bytes 32 int
-	 * scanner_id; 36 int creation_date[2];
-	 * /*--------------------------------------------- 40 int dimx_p; 44 int
-	 * dimy_p; 48 int dimz_p; 52 int dimx_um; 56 int dimy_um; 60 int dimz_um; 64
-	 * int slice_thickness_um; 68 int slice_increment_um; 72 int slice_1_pos_um;
-	 * 76 int min_data_value; 78 int max_data_value; 82 int mu_scaling; /*
-	 * p(x,y,z)/mu_scaling = value [1/cm] 86 int nr_of_samples; 90 int
-	 * nr_of_projections; 94 int scandist_um; 98 int scanner_type; 102 int
-	 * sampletime_us; 106 int index_measurement; 110 int site; /* Coded value
-	 * 114 int reference_line_um; 120 int recon_alg; /* Coded value 124 char
-	 * name[40]; // KHK char evtl. nur 1 Byte... siehe unten ?????? int energy;
-	 * /*V int intensity; /* uA int fill[83];
-	 * /*--------------------------------------------- int data_offset; /* in
-	 * 512-byte-blocks } ima_data_type, *ima_data_typeP;
-	 * 
-	 * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
-	 * the type of data. The 'int' are all 4-byte integers.
-	 * 
-	 * dimx_p is the dimension in pixels, dimx_um the dimension in microns.
-	 * 
-	 * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
-	 * slices) at 48.
-	 * 
-	 * The microCT calculates so called 'x-ray linear attenuation' values. These
-	 * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
-	 * get to the signed 2-byte integers values that we save in the .isq file.
-	 * 
-	 * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
-	 * (8192/4096)
-	 * 
-	 * Following to the headers is the data part. It is in 2-byte short integers
-	 * (signed) and starts from the top-left pixel of slice 1 to the left, then
-	 * the next line follows, until the last pixel of the last sclice in the
-	 * lower right.
-	 */
+	// Scanco ISQ Header Information:
+	//
+	// typedef struct {
+	// ---------------------------------------------
+	// 00 char check[16]; // Char is in Java 2 Byte
+	// 16 int data_type; // Int is in Java 4 Byte
+	// 20 int nr_of_bytes; /* either one of them
+	// 24 int nr_of_blocks; /* or both, but min. of 1
+	// 28 int patient_index; /* 1 block = 512 bytes
+	// 32 int scanner_id;
+	// 36 int creation_date[2];
+	// ---------------------------------------------
+	// 40 int dimx_p;
+	// 44 int dimy_p;
+	// 48 int dimz_p;
+	// 52 int dimx_um;
+	// 56 int dimy_um;
+	// 60 int dimz_um;
+	// 64 int slice_thickness_um;
+	// 68 int slice_increment_um;
+	// 72 int slice_1_pos_um;
+	// 76 int min_data_value;
+	// 78 int max_data_value;
+	// 82 int mu_scaling; p(x,y,z)/mu_scaling = value [1/cm]
+	// 86 int nr_of_samples;
+	// 90 int nr_of_projections;
+	// 94 int scandist_um;
+	// 98 int scanner_type;
+	// 102 int sampletime_us;
+	// 106 int index_measurement;
+	// 110 int site; Coded value
+	// 114 int reference_line_um;
+	// 120 int recon_alg; Coded value
+	// 124 char name[40];
+	// int energy; V
+	// int intensity; uA
+	// int fill[83];
+	// --------------------------------------------
+	// int data_offset; in 512-byte-blocks
+	// } ima_data_type, *ima_data_typeP;
+	//
+	//
+	// So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
+	// the type of data. The 'int' are all 4-byte integers.
+	//
+	// dimx_p is the dimension in pixels, dimx_um the dimension in microns.
+	//
+	// So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
+	// slices) at 48.
+	//
+	// The microCT calculates so called 'x-ray linear attenuation' values.
+	// These (float) values are scaled with 'mu_scaling' (see header, e.g. 4096)
+	// to get to the signed 2-byte integers values that we save in the .isq
+	// file.
+	//
+	// e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
+	// (8192/4096)
+	//
+	// Following to the headers is the data part. It is in 2-byte short
+	// integers (signed) and starts from the top-left pixel of slice 1 to the
+	// left, then the next line follows, until the last pixel of the last slice
+	// in the lower right.
 
 	public boolean isScancoISQ(String path) {
 		if (getMagic(path).equals(MAGIC))
