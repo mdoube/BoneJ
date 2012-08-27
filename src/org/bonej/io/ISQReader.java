@@ -577,68 +577,25 @@ public class ISQReader implements PlugIn {
 	}
 
 	public String getMagic(String path) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			String magic = "";
-			for (int kh = 0; kh < 16; kh++) {
-				char ch = (char) p.read();
-				magic += ch;
-			}
-			p.close();
-			return magic;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return null;
+		return readString(path, 0, 16);
 	}
 
 	public int[] getImageSize(String path) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			p.skip(44);
-			int width = p.read() + p.read() * 256 + p.read() * 65536;
-			p.skip(1);
-			int height = p.read() + p.read() * 256 + p.read() * 65536;
-			p.skip(1);
-			int depth = p.read() + p.read() * 256 + p.read() * 65536;
-			int[] dimensions = { width, height, depth };
-			p.close();
-			return dimensions;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return null;
+		int[] sizes = {
+			readInt(path, 44),
+			readInt(path, 48),
+			readInt(path, 52)
+		};
+		return sizes;
 	}
 
 	public double[] getRealSize(String path) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			p.skip(56);
-			double width = (p.read() + p.read() * 256 + p.read() * 65536 + p
-					.read() * 256 * 65536);
-			double height = (p.read() + p.read() * 256 + p.read() * 65536 + p
-					.read() * 256 * 65536);
-			double depth = (p.read() + p.read() * 256 + p.read() * 65536 + p
-					.read() * 256 * 65536);
-			width /= 1000;
-			height /= 1000;
-			depth /= 1000;
-			double[] dimensions = { width, height, depth };
-			p.close();
-			return dimensions;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return null;
+		double[] sizes = {
+			(double) readInt(path, 56) / 1000.0,
+			(double) readInt(path, 60) / 1000.0,
+			(double) readInt(path, 64) / 1000.0
+		};
+		return sizes;
 	}
 
 	public double[] getPixelSize(String path) {
@@ -650,57 +607,51 @@ public class ISQReader implements PlugIn {
 	}
 
 	public int getMuScaling(String path) {
+		return readInt(path, 88);
+	}
+
+	public String getName(String path) {
+		return readString(path, 128, 40);
+	}
+
+	public int getOffset(String path) {
+		return readInt(path, 508) * 512;
+	}
+
+	private int readInt(String path, int firstByte) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
-			p.skip(88);
-			int muScaling = (p.read() + p.read() * 256 + p.read() * 65536 + p
+			p.skip(firstByte);
+			int value = (p.read() + p.read() * 256 + p.read() * 65536 + p
 					.read() * 256 * 65536);
 			p.close();
-			return muScaling;
+			return value;
 		} catch (IOException e) {
 			IJ.handleException(e);
 		}
 		return -1;
 	}
-
-	public String getName(String path) {
+	
+	private String readString(String path, int firstByte, int length){
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
-			p.skip(128);
-			String name = "";
-			for (int kh = 0; kh < 40; kh++) {
+			p.skip(firstByte);
+			String string = "";
+			for (int kh = 0; kh < length; kh++) {
 				char ch = (char) p.read();
-				name += ch;
-				// System.out.println(nameStringInHeader);
+				string += ch;
 			}
 			p.close();
-			return name;
+			return string;
 		} catch (IOException e) {
 			IJ.handleException(e);
 		}
 		return null;
 	}
-
-	public int getOffset(String path) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			p.skip(508);
-			int offset = (p.read() + p.read() * 256 + p.read() * 65536 + 1) * 512;
-			p.close();
-			return offset;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return -1;
-	}
-
 }
