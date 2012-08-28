@@ -615,7 +615,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	public int getOffset(String path) {
-		return readInt(path, 508) * 512;
+		return readInt(path, 508) * 512 + 512;
 	}
 
 	private int readInt(String path, int firstByte) {
