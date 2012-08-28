@@ -518,33 +518,33 @@ public class ISQReader implements PlugIn {
 	// 32 int scanner_id;
 	// 36 int creation_date[2];
 	// ---------------------------------------------
-	// 40 int dimx_p;
-	// 44 int dimy_p;
-	// 48 int dimz_p;
-	// 52 int dimx_um;
-	// 56 int dimy_um;
-	// 60 int dimz_um;
-	// 64 int slice_thickness_um;
-	// 68 int slice_increment_um;
-	// 72 int slice_1_pos_um;
-	// 76 int min_data_value;
-	// 78 int max_data_value;
-	// 82 int mu_scaling; p(x,y,z)/mu_scaling = value [1/cm]
-	// 86 int nr_of_samples;
-	// 90 int nr_of_projections;
-	// 94 int scandist_um;
-	// 98 int scanner_type;
-	// 102 int sampletime_us;
-	// 106 int index_measurement;
-	// 110 int site; Coded value
-	// 114 int reference_line_um;
-	// 120 int recon_alg; Coded value
-	// 124 char name[40];
-	// int energy; V
-	// int intensity; uA
-	// int fill[83];
+	// 44 int dimx_p;
+	// 48 int dimy_p;
+	// 52 int dimz_p;
+	// 56 int dimx_um;
+	// 60 int dimy_um;
+	// 64 int dimz_um;
+	// 68 int slice_thickness_um;
+	// 72 int slice_increment_um;
+	// 76 int slice_1_pos_um;
+	// 80 int min_data_value;
+	// 84 int max_data_value;
+	// 88 int mu_scaling; p(x,y,z)/mu_scaling = value [1/cm]
+	// 92 int nr_of_samples;
+	// 96 int nr_of_projections;
+	// 100 int scandist_um;
+	// 104 int scanner_type;
+	// 108 int sampletime_us;
+	// 112 int index_measurement;
+	// 116 int site; Coded value
+	// 120 int reference_line_um;
+	// 124 int recon_alg; Coded value
+	// 128 char name[40];
+	// 168 int energy; V
+	// 172 int intensity; uA
+	// 176 int fill[83];
 	// --------------------------------------------
-	// int data_offset; in 512-byte-blocks
+	// 508 int data_offset; in 512-byte-blocks
 	// } ima_data_type, *ima_data_typeP;
 	//
 	//
