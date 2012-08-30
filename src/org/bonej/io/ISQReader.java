@@ -2,6 +2,36 @@ package org.bonej.io;
 
 /*
  History:
+ 30.08.12	corrected errors in the Scanco header information
+ 			updated a few comments
+ 			added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
+ 			the menu command "Show Info"
+ 			Trying to format this information like the web interface from Scanco would display them (example):
+ 			
+			      Patient Name  : Syntricer_120620017_TCP06_ø16
+			      Patient Index : 2721
+			  Measurement Index : 3648
+			
+			      Creation Date : 14-AUG-2012 15:42:26.07
+			
+			          	
+			         Scanner-ID :   4258
+			       Scanner_type :     10
+			
+			    Slice Thickness :      8 [µm]
+			    Slice Increment :      8 [µm]
+			
+			
+			      Scan-Distance :  16384 [µm]
+			         Sampletime : 300000 [µs]
+			
+			          µ-Scaling :   4096
+			
+			             Energy :  70000 [V]
+			          Intensity :    114 [µA]
+
+			Hint: use monospaced fonts like Courier to display the output of "Show Info"
+
  26.08.12   removed unnecessary comments
  *          added missing {} in if-else-statements
  *          formated Scanco header information to ease readability
@@ -64,60 +94,54 @@ package org.bonej.io;
  Programming esthetics is nice, but it is beyond my capabilities.
 
 
- TODOs: Select the ROI with the mouse
-  
-  
- 	
-        
-        /* Scanco ISQ Header Information:
-         * 
-         * typedef struct {
-        /*---------------------------------------------
-           00   char    check[16];              // Char is in Java 2 Byte
-           16   int     data_type;              // Int is in Java 4 Byte
-           20   int     nr_of_bytes;            /* either one of them
-           24   int     nr_of_blocks;           /* or both, but min. of 1
-           28   int     patient_index;          /* 1 block = 512 bytes
-           32   int     scanner_id;
-           36  int     creation_date[2];
-        /*---------------------------------------------
-           40  int     dimx_p;
-           44  int     dimy_p;
-           48   int     dimz_p;
-           52   int     dimx_um;
-           56   int     dimy_um;
-           60   int     dimz_um;
-           64   int     slice_thickness_um;
-           68   int     slice_increment_um;
-           72   int     slice_1_pos_um;
-           76   int     min_data_value;
-           78   int     max_data_value;
-           82   int     mu_scaling;                 /* p(x,y,z)/mu_scaling = value [1/cm]
-           86   int     nr_of_samples;
-           90   int     nr_of_projections;
-           94   int     scandist_um;
-           98   int     scanner_type;
-           102  int     sampletime_us;
-           106  int     index_measurement;
-           110  int     site;                       /* Coded value
-           114   int     reference_line_um;
-           120   int     recon_alg;                 /* Coded value
-           124   char    name[40];              
-              int     energy;                       /* V
-              int     intensity;                    /* uA
-              int     fill[83];
-        /*---------------------------------------------
-              int     data_offset;                  /* in 512-byte-blocks
-        } ima_data_type, *ima_data_typeP;
+       
+         
+        /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
+          
+	   Little endian byte order (the least significant bit occupies the lowest memory position.
 
+           00   char    check[16];              // CTDATA-HEADER_V1
+           16   int     data_type;              
+           20   int     nr_of_bytes;     
+           24   int     nr_of_blocks;           
+           28   int     patient_index;          //p.skip(28);
+           32   int     scanner_id;				//p.skip(32);
+           36   int     creation_date[2];		//P.skip(36);
+           44   int     dimx_p;					//p.skip(44);
+           48   int     dimy_p;
+           52   int     dimz_p;
+           56   int     dimx_um;				//p.skip(56);
+           60   int     dimy_um;
+           64   int     dimz_um;
+           68   int     slice_thickness_um;		//p.skip(68);
+           72   int     slice_increment_um;		//p.skip(72);
+           76   int     slice_1_pos_um;
+           80   int     min_data_value;
+           84   int     max_data_value;
+           88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
+           92	int     nr_of_samples;
+           96	int     nr_of_projections;
+           100  int     scandist_um;
+           104  int     scanner_type;
+           108  int     sampletime_us;
+           112  int     index_measurement;
+           116  int     site;                   //coded value
+           120  int     reference_line_um;
+           124  int     recon_alg;              //coded value
+           128  char    name[40]; 		 		//p.skip(128);
+           168  int     energy;        /* V     //p.skip(168);  
+           172  int     intensity;     /* uA    //p.skip(172);
+           
+			 ...
 
+           508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
 
         /*
 	 * 
 	 * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
 	 * the type of data. The 'int' are all 4-byte integers.
 	 * 
-	 * dimx_p is the dimension in pixels, dimx_um the dimension in microns.
+	 * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
 	 * 
 	 * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
 	 * slices) at 48.
@@ -164,6 +188,8 @@ public class ISQReader implements PlugIn {
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
+	private ImagePlus imp;
+	private String scancoHeaderdata;
 
 	public void run(String arg) {
 
@@ -181,10 +207,13 @@ public class ISQReader implements PlugIn {
 			return;
 		}
 
+		
 		int[] imageSize = getImageSize(path);
+		
 		int width = imageSize[0];
 		int height = imageSize[1];
 		int depth = imageSize[2];
+		
 
 		GenericDialog gd = new GenericDialog("Import Scanco ISQ file");
 		String name = getName(path);
@@ -214,9 +243,14 @@ public class ISQReader implements PlugIn {
 		final boolean downsample = gd.getNextBoolean();
 		// Open the file
 		try {
-			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
+			imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
 			imp.show();
+			
+			scancoHeaderdata = getHeaderData(path);													// KHK new 30.8.12
+			// System.out.println("returned headerdata string: " + scancoHeaderdata);				// KHK new 30.8.12
+			imp.setProperty("Info", addsNewContentToImagePlusPropertyInfo(scancoHeaderdata));		// KHK new 30.8.12
+			
 			UsageReporter.reportEvent(this).send();
 		} catch (IllegalArgumentException e) {
 			IJ.error("ISQ Reader", e.getMessage());
@@ -250,7 +284,7 @@ public class ISQReader implements PlugIn {
 		fi.height = height;
                 
 		// during the development process I had to adjust the code for files > 2 GB 
-                // this comment just serves the purpose to find the changes easier, it can be removed
+        // this comment just serves the purpose to find the changes easier, it can be removed
 		if (startZ > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * startZ;
@@ -443,10 +477,9 @@ public class ISQReader implements PlugIn {
 		if (fi.info != null) {
                     imp.setProperty("Info", fi.info);
                 }
-		imp.setFileInfo(fi);
-		System.out.println("after imp.show() -> x: " + fi.pixelWidth + " ; y: "
-				+ fi.pixelHeight);
-
+		
+		imp.setFileInfo(fi); 	/**	Saves this image's FileInfo so it can be later retrieved using getOriginalFileInfo(). */
+		
 		cal.pixelWidth = (downsample) ? pixelSize[0] * 2 : pixelSize[0];
 		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
 		cal.pixelDepth = (downsample) ? pixelSize[2] * 2 : pixelSize[2];
@@ -734,4 +767,108 @@ public class ISQReader implements PlugIn {
 		return -1;
 	}
 
+	
+	public String getHeaderData(String path) {
+		if (path == null) {
+                    throw new IllegalArgumentException();
+                }
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			
+			String headerData = "    Scanco Header Data\n\n";
+			String patientIndex = "    Patient Index : ";
+			String scannerId    = "       Scanner-ID : ";
+			String creationDate = "    Creation Date : ";
+			String sliceThickness = "  Slice Thickness : ";
+			String sliceIncrement = "  Slice Increment : "; 
+			String muScaling = "        µ-Scaling : ";
+			String scanDistUm = "    Scan-Distance : ";  // Um = micrometers
+			String scannerType = "     Scanner_type : ";
+			String sampleTimeUs = "       Sampletime : "; // Us = microseconds
+			String indexMeasurement = "Measurement Index : ";
+			String patientName = "    Patient Name  : ";
+			String energy = "           Energy : "; 
+			String intensity = "        Intensity : ";
+			
+			p.skip(28);
+			
+			patientIndex += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "\n";
+			scannerId += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "\n";
+					
+			int tempCreationDate1 = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536); // + "\n";
+			int tempCreationDate2 = (p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536); // + "\n";
+			System.out.println("CreationDate: "+ tempCreationDate1 + " + " + tempCreationDate2);
+			
+			p.skip(24);
+			
+			sliceThickness += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "[µm]" + "\n";
+			sliceIncrement += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "[µm]" + "\n";
+			
+			p.skip(12);
+			
+			muScaling += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "\n";
+			
+			p.skip(8);
+			
+			scanDistUm += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "[µm]" + "\n";
+			scannerType += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "\n";
+			sampleTimeUs += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "µs" + "\n";
+			indexMeasurement += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536)) + "\n";
+			
+			p.skip(12);
+			
+			for (int kh = 0; kh < 40; kh++) {
+				char ch = (char) p.read();
+				patientName += ch;
+			}
+			patientName += "\n";
+			
+			energy += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536))+  "[V]"  + "\n";
+			intensity += String.valueOf((p.read() + p.read() * 256 + p.read() * 65536 + p.read() * 256 * 65536))+  "[µA]" + "\n";
+			
+			
+			headerData += 	patientName + patientIndex +indexMeasurement + "\n\n" +
+							scannerId + scannerType + "\n\n" +
+							sliceThickness + sliceIncrement + "\n\n" +
+							scanDistUm + sampleTimeUs + "\n" +
+							muScaling + "\n" + energy + intensity;
+			
+
+			p.close();
+			
+			//System.out.println(headerData);
+	
+			return headerData;
+			
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+	
+
+	
+	// adds the content of a string to the ImagePlus property which is labeled "Info"
+	// only the content of "Info" is displayed with the "Show Info"-Command from the menu.
+	private String addsNewContentToImagePlusPropertyInfo(String newinfo){
+		// is there already any content in "Info" ?
+		// use imp.getProperty("Info") and save the result in a string
+		// then add the new information to this string
+	    
+		String contentOfImagePlusPropertyInfo = (String)imp.getProperty("Info");
+		
+		
+		if (contentOfImagePlusPropertyInfo==null){
+			contentOfImagePlusPropertyInfo = newinfo;
+		}
+		else{
+			contentOfImagePlusPropertyInfo = contentOfImagePlusPropertyInfo + "\n------------------------\n" + newinfo;
+		}
+		
+		System.out.println("contentOfImagePlusPropertyInfo:\n" + contentOfImagePlusPropertyInfo);
+		
+		return contentOfImagePlusPropertyInfo;
+	}
+	
 }
