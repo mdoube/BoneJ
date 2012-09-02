@@ -129,4 +129,31 @@ public class Vectors {
 		return randomVectors;
 	}
 
+	/**
+	 * Generate an array of regularly-spaced 3D unit vectors. The vectors aren't
+	 * equally spaced in all directions, but there is no clustering around the
+	 * sphere's poles.
+	 * 
+	 * @param nVectors
+	 *            number of vectors to generate
+	 * 
+	 * @return 2D array (nVectors x 3) containing unit vectors
+	 */
+	public static double[][] regularVectors(int nVectors) {
+
+		double[][] vectors = new double[nVectors][];
+		double inc = Math.PI * (3 - Math.sqrt(5));
+		double off = 2 / (double) nVectors;
+
+		for (int k = 0; k < nVectors; k++) {
+			double y = k * off - 1 + (off / 2);
+			double r = Math.sqrt(1 - y * y);
+			double phi = k * inc;
+			double x = Math.cos(phi) * r;
+			double z = Math.sin(phi) * r;
+			double[] vector = { x, y, z };
+			vectors[k] = vector;
+		}
+		return vectors;
+	}
 }

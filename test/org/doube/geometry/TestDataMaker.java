@@ -11,6 +11,11 @@ import java.util.List;
 
 import javax.vecmath.Point3f;
 
+/**
+ * Static methods to generate images for testing
+ * 
+ * @author Michael Doube
+ */
 public class TestDataMaker {
 
 	/**
@@ -184,4 +189,33 @@ public class TestDataMaker {
 		return imp;
 	}
 
+	public static ImagePlus binaryNoise(int width, int height, int depth,
+			double ratio) {
+		final int npixels = width * height;
+		ImageStack stack = new ImageStack(width, height);
+		for (int i = 0; i < depth; i++) {
+			ByteProcessor bp = new ByteProcessor(width, height);
+			for (int index = 0; index < npixels; index ++){
+				double random = Math.random();
+				if (random > ratio)
+					bp.set(index, 255);
+			}
+			stack.addSlice(bp);
+		}
+		ImagePlus imp = new ImagePlus("binary-noise", stack);
+		return imp;
+	}
+
+	public static ImagePlus plates(int width, int height, int depth, int spacing) {
+		ImageStack stack = new ImageStack(width, height);
+		for (int i = 0; i < depth; i++)
+			stack.addSlice(new ByteProcessor(width, height));
+		
+		for (int i = 1; i <= depth; i += spacing){
+			ByteProcessor bp = (ByteProcessor) stack.getProcessor(i);
+			bp.add(255);
+		}
+		ImagePlus imp = new ImagePlus("plates", stack);
+		return imp; 
+	}
 }

@@ -1,8 +1,8 @@
 package org.doube.bonej;
 
 /**
- *Anisotropy_ plugin for ImageJ
- *Copyright 2009 2010 Michael Doube 
+ *Anisotropy plugin for ImageJ
+ *Copyright 2009 2010 2011 2012 Michael Doube 
  *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -32,6 +32,9 @@ import javax.vecmath.Point3f;
 import javax.vecmath.Color3f;
 import customnode.CustomPointMesh;
 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.TextField;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.ListIterator;
@@ -69,7 +72,7 @@ import org.doube.util.UsageReporter;
  * @author Michael Doube
  * 
  */
-public class Anisotropy implements PlugIn {
+public class Anisotropy implements PlugIn, DialogListener {
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
@@ -97,13 +100,16 @@ public class Anisotropy implements PlugIn {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
-		final double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
-		final double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
+		double vectorSampling = Math.max(vW, Math.max(vH, vD)) * 2.3;
+		double radius = Math.min(h * vH, Math.min(d * vD, w * vW)) / 4;
 
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addCheckbox("Auto Mode", true);
+		gd.addCheckbox("Single Sphere", false);
+		gd.addNumericField("Radius", radius, 1, 5, cal.getUnits());
 		// number of random vectors in vector field
 		gd.addNumericField("Vectors", 50000, 0, 6, "vectors");
+		gd.addNumericField("Vector_sampling", vectorSampling, 3, 6, cal.getUnits());
 		// number of randomly-positioned vector fields
 		gd.addNumericField("Min_Spheres", 100, 0, 5, "");
 		gd.addNumericField("Max_Spheres", 2000, 0, 5, "");
@@ -112,12 +118,16 @@ public class Anisotropy implements PlugIn {
 		gd.addCheckbox("3D_Result", false);
 		gd.addCheckbox("Align to fabric tensor", false);
 		gd.addHelp("http://bonej.org/anisotropy");
+		gd.addDialogListener(this);
 		gd.showDialog();
 		if (gd.wasCanceled()) {
 			return;
 		}
 		final boolean doAutoMode = gd.getNextBoolean();
+		final boolean doSingleSphere = gd.getNextBoolean();
+		radius = gd.getNextNumber();
 		final int nVectors = (int) gd.getNextNumber();
+		vectorSampling = gd.getNextNumber();
 		final int minSpheres = (int) gd.getNextNumber();
 		final int maxSpheres = (int) gd.getNextNumber();
 		final double tolerance = gd.getNextNumber();
@@ -126,10 +136,15 @@ public class Anisotropy implements PlugIn {
 		final boolean doAlign = gd.getNextBoolean();
 
 		Object[] result = new Object[3];
-		if (doAutoMode)
+		if (doAutoMode && !doSingleSphere)
 			result = runToStableResult(imp, minSpheres, maxSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
-		else
+		else if (doSingleSphere) {
+			double[] centroid = { w * vW / 2, h * vH / 2, d * vD / 2 };
+//			radius = Math.min(centroid[0], Math.min(centroid[1], centroid[2]));
+			result = calculateSingleSphere(imp, centroid, radius
+					- vectorSampling * 2, vectorSampling, nVectors, false);
+		} else
 			result = runToStableResult(imp, minSpheres, minSpheres, nVectors,
 					radius, vectorSampling, tolerance, doPlot);
 
@@ -235,20 +250,17 @@ public class Anisotropy implements PlugIn {
 			double[] meanInterceptLengths = new double[nVectors];
 			final double probeLength = radius * (double) s;
 			for (int v = 0; v < nVectors; v++) {
-				if (sumInterceptCounts[v] == 0) {
-					sumInterceptCounts[v] = 1;
-				}
+				if (sumInterceptCounts[v] == 0)
+					meanInterceptLengths[v] = probeLength;
 				// MIL = total vector length / number of intercepts
-				meanInterceptLengths[v] = probeLength / sumInterceptCounts[v];
+				// +1 is to avoid divide-by-zero errors, other approach
+				// is to replace 0 by 1
+				else
+					meanInterceptLengths[v] = probeLength
+							/ sumInterceptCounts[v];
 			}
-
 			// work out coordinates of vector cloud
-			for (int v = 0; v < nVectors; v++) {
-				final double milV = meanInterceptLengths[v];
-				coOrdinates[v][0] = milV * vectorList[v][0];
-				coOrdinates[v][1] = milV * vectorList[v][1];
-				coOrdinates[v][2] = milV * vectorList[v][2];
-			}
+			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
 			Object[] result = harriganMann(coOrdinates);
 			anisotropy = ((double[]) result[0])[0];
 			anisotropyHistory.add(anisotropy);
@@ -268,6 +280,78 @@ public class Anisotropy implements PlugIn {
 		double[] da = { anisotropy };
 		Object[] result = { da, coOrdinates, E };
 		return result;
+	}
+
+	/**
+	 * Calculate anisotropy using a single sampling sphere
+	 * 
+	 * @param imp
+	 *            binary stack
+	 * @param centroid
+	 *            3 element array containing (x,y,z) coordinates of the centroid
+	 * @param radius
+	 *            radius of the single sphere
+	 * @param vectorSampling
+	 *            sampling step within each vector
+	 * @param nVectors
+	 *            number of sampling vectors
+	 * @param randomVectors
+	 *            if true, use randomly distributed vectors, otherwise use
+	 *            regularly distributed vectors
+	 * @return Object array containing the degree of anisotropy in a one-element
+	 *         array, the coordinate array of the rose plot and
+	 *         Eigendecomposition
+	 */
+	public Object[] calculateSingleSphere(ImagePlus imp, double[] centroid,
+			double radius, double vectorSampling, int nVectors,
+			boolean randomVectors) throws IllegalArgumentException {
+		IJ.log("Single sphere parameters:");
+		IJ.log(imp.getTitle() + " centroid: " + centroid[0] + ", "
+				+ centroid[1] + ", " + centroid[2] + ", radius: " + radius
+				+ ", vectorSampling: " + vectorSampling + ", nVectors: "
+				+ nVectors + ", randomVectors: " + randomVectors);
+
+		double[][] vectorList = Vectors.regularVectors(nVectors);
+		double[] interceptCounts;
+		interceptCounts = countIntercepts(imp, centroid, vectorList, nVectors,
+				radius, vectorSampling);
+		double[] meanInterceptLengths = new double[nVectors];
+		for (int v = 0; v < nVectors; v++) {
+			if (interceptCounts[v] == 0)
+				meanInterceptLengths[v] = 0;
+			else
+				meanInterceptLengths[v] = radius / interceptCounts[v];
+		}
+		double[][] coOrdinates = calculateCoordinates(meanInterceptLengths,
+				vectorList);
+		Object[] daResult = harriganMann(coOrdinates);
+		Object[] result = { daResult[0], coOrdinates, daResult[1] };
+		return result;
+	}
+
+	/**
+	 * 
+	 * @param meanInterceptLengths
+	 * @param vectorList
+	 * @return
+	 */
+	private double[][] calculateCoordinates(double[] meanInterceptLengths,
+			double[][] vectorList) {
+		ArrayList<double[]> coordList = new ArrayList<double[]>();
+		final int nVectors = vectorList.length;
+		for (int v = 0; v < nVectors; v++) {
+			final double milV = meanInterceptLengths[v];
+			if (milV == 0)
+				continue;
+			double[] coordinate = { milV * vectorList[v][0],
+					milV * vectorList[v][1], milV * vectorList[v][2] };
+			coordList.add(coordinate);
+		}
+		double[][] coordinates = new double[coordList.size()][];
+		for (int i = 0; i < coordList.size(); i++)
+			coordinates[i] = coordList.get(i);
+
+		return coordinates;
 	}
 
 	/**
@@ -398,11 +482,13 @@ public class Anisotropy implements PlugIn {
 	 *            length of vectors
 	 * @param vectorSampling
 	 *            distance between tests along each vector
-	 * @return 1D array containing a count of intercepts for each vector
+	 * @return 1D array containing a count of intercepts for each vector, null
+	 *         if the centroid was < radius from sides of the image
 	 */
 	private double[] countIntercepts(ImagePlus imp, double[] centroid,
 			final double[][] vectorList, final int nVectors,
-			final double radius, final double vectorSampling) {
+			final double radius, final double vectorSampling)
+			throws IllegalArgumentException {
 		Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
@@ -413,6 +499,14 @@ public class Anisotropy implements PlugIn {
 		final double cZ = centroid[2];
 
 		final int width = imp.getWidth();
+		final int height = imp.getHeight();
+		final int depth = imp.getImageStackSize();
+
+		// if centroid is < radius from the sides of the image, throw exception
+		if (cX < radius || cY < radius || cZ < radius
+				|| cX > width * vW - radius || cY > height * vH - radius
+				|| cZ > depth * vD - radius)
+			throw new IllegalArgumentException("Centroid < radius from sides");
 
 		// create a work array containing pixels +- 1 radius from centroid
 		final int w = (int) Math.round(radius / vW);
@@ -645,6 +739,39 @@ public class Anisotropy implements PlugIn {
 		double[] anisotropy = { da };
 		Object[] result = { anisotropy, E };
 		return result;
+	}
+
+	@Override
+	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+		Vector<?> checkboxes = gd.getCheckboxes();
+		Vector<?> nFields = gd.getNumericFields();
+
+		Checkbox autoModeBox = (Checkbox) checkboxes.get(0);
+		Checkbox singleSphereBox = (Checkbox) checkboxes.get(1);
+		Checkbox showPlotBox = (Checkbox) checkboxes.get(2);
+
+		TextField radiusField = (TextField) nFields.get(0);
+		TextField minSpheresField = (TextField) nFields.get(3);
+		TextField maxSpheresField = (TextField) nFields.get(4);
+		TextField toleranceField = (TextField) nFields.get(5);
+
+		if (singleSphereBox.getState()) {
+			radiusField.setEnabled(true);
+			autoModeBox.setEnabled(false);
+			showPlotBox.setEnabled(false);
+			minSpheresField.setEnabled(false);
+			maxSpheresField.setEnabled(false);
+			toleranceField.setEnabled(false);
+		} else {
+			radiusField.setEnabled(false);
+			autoModeBox.setEnabled(true);
+			showPlotBox.setEnabled(true);
+			minSpheresField.setEnabled(true);
+			maxSpheresField.setEnabled(true);
+			toleranceField.setEnabled(true);
+		}
+
+		return true;
 	}
 
 }
