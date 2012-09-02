@@ -938,11 +938,13 @@ public class ISQReader implements PlugIn {
 		
         System.out.print("bi-from-byte-sequence " + bi +" # " + "value of unix epoch " + epochAsBigInteger + "  ##  " + "bi after correction for unix epoch: " + value + "   ");
 		
-        // I leave the code which did not work. Either the function is buggy or I did not use it right.
-        /* 
+        // Calender.Month returns the numbers starting with zero -> January = 0, February = 1 ... etc.
+        // a good alternative to Java's Date/Time/Calender methods seams to be http://joda-time.sourceforge.net/
+        /*
+         * The following code would work, too.
 		Calendar mydate = Calendar.getInstance();
 		mydate.setTimeInMillis(value);
-		System.out.println(mydate.get(Calendar.DAY_OF_MONTH)+"."+mydate.get(Calendar.MONTH)+"."+mydate.get(Calendar.YEAR)+"   "+mydate.get(Calendar.HOUR_OF_DAY)+":"+mydate.get(Calendar.MINUTE)+":"+mydate.get(Calendar.SECOND));
+		System.out.println(mydate.get(Calendar.DAY_OF_MONTH)+"."+(mydate.get(Calendar.MONTH)+1)+"."+mydate.get(Calendar.YEAR)+"   "+mydate.get(Calendar.HOUR_OF_DAY)+":"+mydate.get(Calendar.MINUTE)+":"+mydate.get(Calendar.SECOND));
 		*/
         
         
