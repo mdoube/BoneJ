@@ -25,6 +25,7 @@ import java.lang.Math; //atan2
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 import org.doube.bonej.pqct.io.*;
 //import ij.text.*;		//Debugging text window
+import ij.*;		//Debugging log window
 public class DistributionAnalysis{
 	
 	//image array pointers
@@ -107,7 +108,7 @@ public class DistributionAnalysis{
 		}
 		marrowCenter[0] /=(double)marrowI.size();
 		marrowCenter[1] /=(double)marrowJ.size();
-
+		//IJ.log("C0 "+marrowCenter[0]+" C1 "+marrowCenter[1]);
 		maxRadius = 0;
 		cortexI = new Vector<Integer>();
 		cortexJ = new Vector<Integer>();

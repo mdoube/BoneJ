@@ -72,7 +72,7 @@ public class Export_Header implements PlugIn {
 
 	
 	void writeHeader(TextPanel textPanel){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
+		String[] propertyNames = {"File Name","File Path","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
@@ -81,7 +81,7 @@ public class Export_Header implements PlugIn {
 	}
 
 	String printResults(String results, ImagePlus imp){
-		String[] propertyNames = {"File Name","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
+		String[] propertyNames = {"File Name","File Path","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","ObjLen"};
 		if (imp != null){
 			if (getInfoProperty(imageInfo,"File Name")!= null){
 				results+=getInfoProperty(imageInfo,"File Name")+"\t";

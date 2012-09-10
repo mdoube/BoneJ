@@ -165,7 +165,7 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		this.setImage(tempImage.getImage());
 		this.setProcessor(fileName,tempImage.getProcessor());
 		//Set ImageJ image properties
-		setProperties();
+		setProperties(directory);
 		short[] pixels = (short[]) this.getProcessor().getPixels();
 		int min = (int) Math.pow(2,16);
 		int max = 0;
@@ -248,12 +248,12 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 		PicMatrixY = ((int) ((int) (fileData[offset+1] & 0xFF)) <<8 | ((int) (fileData[offset+0] & 0xFF)));
 	}
 	
-	private void setProperties(){
-		String[] propertyNames = {"File Name","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
+	private void setProperties(String directory){
+		String[] propertyNames = {"File Name","File Path","Pixel Spacing","ObjLen","MeasInfo","Acquisition Date",
 									"Device","PatMeasNo","PatNo","Patient's Birth Date","Patient's Name",
 									"Patient ID","PicX0","PicY0",
 									"Width","Height","Stratec File"};
-		String[] propertyValues = {fileName,Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
+		String[] propertyValues = {fileName,directory,Double.toString(VoxelSize),Double.toString(ObjLen),MeasInfo,Long.toString(MeasDate),
 									Device,Integer.toString(PatMeasNo),Long.toString(PatNo),Long.toString(PatBirth),PatName,
 									PatID,Integer.toString(PicX0),Integer.toString(PicY0),
 									Integer.toString(PicMatrixX),Integer.toString(PicMatrixY),"1"};
