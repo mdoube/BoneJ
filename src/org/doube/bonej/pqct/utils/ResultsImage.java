@@ -40,11 +40,14 @@ public class ResultsImage{
 	}
 	
 	public static ImagePlus addScale(ImagePlus tempImage, double pixelSpacing){
+		//System.out.println("Adding scale");
 		Calibration cal = new Calibration();
 		cal.setUnit("mm");
+		//System.out.println("w and h");
 		cal.pixelWidth = cal.pixelHeight = pixelSpacing;
 		tempImage.setCalibration(cal);
 		tempImage.getProcessor().setColor(new Color(255,0,0));
+		//System.out.println("drawLine");
 		tempImage.getProcessor().drawLine(5, 5, (int)(5.0+10.0/pixelSpacing), 5);
 		tempImage.getProcessor().drawString("1 cm", 5, 20);
 		return tempImage;
@@ -215,11 +218,12 @@ public class ResultsImage{
 		int height = tempImage.getHeight();
 		int hypot = (int) (Math.sqrt(((double)width)*((double)width)+((double)height)*((double)height)));
 		ImageProcessor tIP;
-		int nW = (int) Math.abs(Math.ceil(Math.sin((alfa-45)/180.0*Math.PI)*hypot));
-		int nH = (int) Math.abs(Math.ceil(Math.cos((alfa-45)/180.0*Math.PI)*hypot));
+		int nW = (int) Math.abs(Math.ceil(Math.sin((alfa-45.0)/180.0*Math.PI)*hypot));
+		int nH = (int) Math.abs(Math.ceil(Math.cos((alfa-45.0)/180.0*Math.PI)*hypot));
+		//System.out.println("nW "+nW+" nH "+nH);
 		int nSize = 0;
-		if (nW == nH){tIP = tempImage.getProcessor();}
-		if (nW > nH){nSize = nW;}
+		//if (nW == nH){tIP = tempImage.getProcessor();}
+		if (nW >= nH){nSize = nW;}
 		if (nW < nH){nSize = nH;}
 		
 		int offs = nSize-width;
@@ -229,10 +233,14 @@ public class ResultsImage{
 			offs = offs/2;
 			nSize = nSize+1;
 		}
+		//System.out.println("RotateExpand w "+tempImage.getWidth()+" h "+" nSize "+nSize+" offs "+offs);
 		tIP = expandImage(tempImage.getProcessor(), nSize, nSize, offs, offs);
+		//System.out.println("RotateExpanded w "+tIP.getWidth());
 		//Image expaded.
 		tempImage.setProcessor(null,tIP);
+		//System.out.println("Prior to rotate w "+tempImage.getWidth());
 		tempImage.getProcessor().rotate(alfa);
+		//System.out.println("AfterRotate w "+tempImage.getWidth());
 		//IJ.run(tempImage, "Rotate...", "angle=" + alfa + " grid=1 interpolation=Bilinear enlarge");  
 		return tempImage;
 	}
