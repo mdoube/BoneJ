@@ -135,11 +135,11 @@ public class CorticalAnalysis{
 			ssixmax	+= Math.pow((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing,2.0)
 						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
 						/(maxRadiusY*roi.pixelSpacing);
-			ssiymax	+= Math.pow((roi.cortexAreaRoiI.get(i)-cortexCenter[1])*roi.pixelSpacing,2.0)
+			ssiymax	+= Math.pow((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing,2.0)
 						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
 						/(maxRadiusY*roi.pixelSpacing);
 			ssimo	+= (roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing*
-						(roi.cortexAreaRoiI.get(i)-cortexCenter[1])*roi.pixelSpacing
+						(roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing
 						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
 						/(maxRadiusY*roi.pixelSpacing);
 			SSI = SSI+(( ((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing)*((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing) + ((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing)*((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing))*roi.pixelSpacing*roi.pixelSpacing*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200))/(maxRadiusY*roi.pixelSpacing);
