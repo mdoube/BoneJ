@@ -18,10 +18,10 @@
 	<property name="ijPath" location="../imagej" />
 	<property name="imagej" location="${ijPath}/ij.jar" />
 	<property name="3dviewer" location="../ImageJ_3D_Viewer.jar" />
-	<property name="vecmath" location="../vecmath/build/debug/lib/ext/vecmath.jar" />
-	<property name="j3dcore" location="../j3d-core/build/default/debug/lib/ext/j3dcore.jar" />
-	<property name="j3dutils" location="../j3d-core/build/default/debug/lib/ext/j3dutils.jar" />
-	<property name="imglib" location="../imglib.jar" />	
+	<property name="vecmath" location="../vecmath.jar" />
+	<property name="j3dcore" location="../j3dcore.jar" />
+	<property name="j3dutils" location="../j3dutils.jar" />
+	<property name="imglib" location="../imglib-2.0.0-SNAPSHOT.jar" />	
 	<property name="junit" location="../unit4.11-SNAPSHOT-20120805-1225/junit-4.11-SNAPSHOT-20120805-1225.jar" />
 	
 	

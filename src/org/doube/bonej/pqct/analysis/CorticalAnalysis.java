@@ -37,6 +37,8 @@ public class CorticalAnalysis{
 	public double maxRadiusY;
 	public double[] cortexCenter;
 	public double SSI;
+	public double SSIMax;
+	public double SSIMin;
 	public double BSId;
 	public double IPo;
 	public double IMax;
@@ -112,6 +114,9 @@ public class CorticalAnalysis{
 			}
 		}
 		//Calculate CSMIs and rotation angle to align maximal and minimal bending axes with X and Y axes
+		double ssimo = 0;
+		double ssixmax = 0;
+		double ssiymax = 0;
 		double moment = 0;
 		double xmax = 0;
 		double ymax = 0;
@@ -127,6 +132,16 @@ public class CorticalAnalysis{
 			dwxmax = dwxmax+((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing/10)*((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]);
 			dwymax = dwymax+((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing/10)*((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]);
 			dwmo = dwmo+((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing/10)*((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.pixelSpacing/10)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]);
+			ssixmax	+= Math.pow((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing,2.0)
+						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
+						/(maxRadiusY*roi.pixelSpacing);
+			ssiymax	+= Math.pow((roi.cortexAreaRoiI.get(i)-cortexCenter[1])*roi.pixelSpacing,2.0)
+						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
+						/(maxRadiusY*roi.pixelSpacing);
+			ssimo	+= (roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing*
+						(roi.cortexAreaRoiI.get(i)-cortexCenter[1])*roi.pixelSpacing
+						*Math.pow(roi.pixelSpacing,2.0)*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200)
+						/(maxRadiusY*roi.pixelSpacing);
 			SSI = SSI+(( ((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing)*((roi.cortexAreaRoiI.get(i)-cortexCenter[0])*roi.pixelSpacing) + ((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing)*((roi.cortexAreaRoiJ.get(i)-cortexCenter[1])*roi.pixelSpacing))*roi.pixelSpacing*roi.pixelSpacing*(roi.scaledImage[roi.cortexAreaRoiI.get(i)+roi.cortexAreaRoiJ.get(i)*roi.width]/1200))/(maxRadiusY*roi.pixelSpacing);
 		}
 
@@ -157,6 +172,17 @@ public class CorticalAnalysis{
 		} else {
 			dwIMax = vali4;
 			dwIMin = vali3;
+		}
+		
+		//Calculate the maximal and minimal SSI
+		vali3 = (ssiymax+ssixmax)/2+(ssiymax-ssixmax)/2*Math.cos(2*(-alfa))-ssimo*Math.sin(2*(-alfa));
+		vali4 =(ssiymax+ssixmax)/2-(ssiymax-ssixmax)/2*Math.cos(2*(-alfa))+ssimo*Math.sin(2*(-alfa));
+		if (vali3 > vali4){
+			SSIMax = vali3;
+			SSIMin = vali4;
+		} else {
+			SSIMax = vali4;
+			SSIMin = vali3;
 		}
 		
 		//Calculate Stratec/Geanie compatible CoA and CoD, i.e. define a ROI larger than the bone and calculate
