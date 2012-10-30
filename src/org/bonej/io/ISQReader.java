@@ -2,6 +2,38 @@ package org.bonej.io;
 
 /*
  History:
+ 1.9.12		Decoder for Creation Time in Scanco header implemented 
+ 			(vms quadword, big endian, converted to unix timestamp and finally date/time).
+ 30.08.12	corrected errors in the Scanco header information
+ 			updated a few comments
+ 			added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
+ 			the menu command "Show Info"
+ 			Trying to format this information like the web interface from Scanco would display them (example):
+ 			
+			      Patient Name  : Syntricer_120620017_TCP06_ø16
+			      Patient Index : 2721
+			  Measurement Index : 3648
+			
+			      Creation Date : 14-AUG-2012 15:42:26.07
+			
+			          	
+			         Scanner-ID :   4258
+			       Scanner_type :     10
+			
+			    Slice Thickness :      8 [µm]
+			    Slice Increment :      8 [µm]
+			
+			
+			      Scan-Distance :  16384 [µm]
+			         Sampletime : 300000 [µs]
+			
+			          µ-Scaling :   4096
+			
+			             Energy :  70000 [V]
+			          Intensity :    114 [µA]
+
+			Hint: use monospaced fonts like Courier to display the output of "Show Info"
+
  26.08.12   removed unnecessary comments
  *          added missing {} in if-else-statements
  *          formated Scanco header information to ease readability
@@ -64,12 +96,71 @@ package org.bonej.io;
  Programming esthetics is nice, but it is beyond my capabilities.
 
 
- TODOs: Select the ROI with the mouse
- */
+       
+         
+        /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
+          
+	   Little endian byte order (the least significant bit occupies the lowest memory position.
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+           00   char    check[16];              // CTDATA-HEADER_V1
+           16   int     data_type;              
+           20   int     nr_of_bytes;     
+           24   int     nr_of_blocks;           
+           28   int     patient_index;          //p.skip(28);
+           32   int     scanner_id;				//p.skip(32);
+           36   int     creation_date[2];		//P.skip(36);
+           44   int     dimx_p;					//p.skip(44);
+           48   int     dimy_p;
+           52   int     dimz_p;
+           56   int     dimx_um;				//p.skip(56);
+           60   int     dimy_um;
+           64   int     dimz_um;
+           68   int     slice_thickness_um;		//p.skip(68);
+           72   int     slice_increment_um;		//p.skip(72);
+           76   int     slice_1_pos_um;
+           80   int     min_data_value;
+           84   int     max_data_value;
+           88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
+           92	int     nr_of_samples;
+           96	int     nr_of_projections;
+           100  int     scandist_um;
+           104  int     scanner_type;
+           108  int     sampletime_us;
+           112  int     index_measurement;
+           116  int     site;                   //coded value
+           120  int     reference_line_um;
+           124  int     recon_alg;              //coded value
+           128  char    name[40]; 		 		//p.skip(128);
+           168  int     energy;        /* V     //p.skip(168);  
+           172  int     intensity;     /* uA    //p.skip(172);
+           
+			 ...
+
+           508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
+
+        /*
+	 * 
+	 * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
+	 * the type of data. The 'int' are all 4-byte integers.
+	 * 
+	 * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
+	 * 
+	 * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
+	 * slices) at 48.
+	 * 
+	 * The microCT calculates so called 'x-ray linear attenuation' values. These
+	 * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
+	 * get to the signed 2-byte integers values that we save in the .isq file.
+	 * 
+	 * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
+	 * (8192/4096)
+	 * 
+	 * Following to the headers is the data part. It is in 2-byte short integers
+	 * (signed) and starts from the top-left pixel of slice 1 to the left, then
+	 * the next line follows, until the last pixel of the last sclice in the
+	 * lower right.
+	 */
+
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -80,6 +171,17 @@ import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.io.FileInfo;
 import ij.io.OpenDialog;
+import ij.measure.Calibration;
+import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 import org.doube.util.UsageReporter;
 
@@ -96,6 +198,8 @@ public class ISQReader implements PlugIn {
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
+	private ImagePlus imp;
+	private String scancoHeaderdata;
 
 	public void run(String arg) {
 
@@ -147,6 +251,11 @@ public class ISQReader implements PlugIn {
 			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
 			imp.show();
+			
+			scancoHeaderdata = getHeaderData(path);													// KHK new 30.8.12
+			// System.out.println("returned headerdata string: " + scancoHeaderdata);				// KHK new 30.8.12
+			imp.setProperty("Info", addsNewContentToImagePlusPropertyInfo(scancoHeaderdata));		// KHK new 30.8.12
+			
 			UsageReporter.reportEvent(this).send();
 		} catch (IllegalArgumentException e) {
 			IJ.error("ISQ Reader", e.getMessage());
@@ -180,7 +289,7 @@ public class ISQReader implements PlugIn {
 		fi.height = height;
                 
 		// during the development process I had to adjust the code for files > 2 GB 
-                // this comment just serves the purpose to find the changes easier, it can be removed
+        // this comment just serves the purpose to find the changes easier, it can be removed
 		if (startZ > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * startZ;
@@ -305,9 +414,8 @@ public class ISQReader implements PlugIn {
 									+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
 									+ w + 1]) / 4);
 							index = index + 1;
-							if (index >= widthStack * heightStack) {
-                                                            index = 0;
-                                                        }
+							if (index >= widthStack * heightStack)
+								index = 0;
 						}
 					}
 					if (i % 2 > 0) {
@@ -367,8 +475,6 @@ public class ISQReader implements PlugIn {
 		if (fi.info != null)
 			imp.setProperty("Info", fi.info);
 		imp.setFileInfo(fi);
-		System.out.println("after imp.show() -> x: " + fi.pixelWidth + " ; y: "
-				+ fi.pixelHeight);
 
 		cal.pixelWidth = (downsample) ? pixelSize[0] * 2 : pixelSize[0];
 		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
@@ -430,7 +536,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	/************************************************************************
-         *                                                                      *
+     *                                                                      *
 	 *   this is the central import routine                                 *
 	 *                                                                      * 
 	 ***********************************************************************/
