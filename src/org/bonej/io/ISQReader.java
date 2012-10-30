@@ -3,36 +3,36 @@ package org.bonej.io;
 /*
  History:
  1.9.12		Decoder for Creation Time in Scanco header implemented 
- 			(vms quadword, big endian, converted to unix timestamp and finally date/time).
+ (vms quadword, big endian, converted to unix timestamp and finally date/time).
  30.08.12	corrected errors in the Scanco header information
- 			updated a few comments
- 			added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
- 			the menu command "Show Info"
- 			Trying to format this information like the web interface from Scanco would display them (example):
- 			
-			      Patient Name  : Syntricer_120620017_TCP06_ø16
-			      Patient Index : 2721
-			  Measurement Index : 3648
-			
-			      Creation Date : 14-AUG-2012 15:42:26.07
-			
-			          	
-			         Scanner-ID :   4258
-			       Scanner_type :     10
-			
-			    Slice Thickness :      8 [µm]
-			    Slice Increment :      8 [µm]
-			
-			
-			      Scan-Distance :  16384 [µm]
-			         Sampletime : 300000 [µs]
-			
-			          µ-Scaling :   4096
-			
-			             Energy :  70000 [V]
-			          Intensity :    114 [µA]
+ updated a few comments
+ added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
+ the menu command "Show Info"
+ Trying to format this information like the web interface from Scanco would display them (example):
 
-			Hint: use monospaced fonts like Courier to display the output of "Show Info"
+ Patient Name  : Syntricer_120620017_TCP06_ø16
+ Patient Index : 2721
+ Measurement Index : 3648
+
+ Creation Date : 14-AUG-2012 15:42:26.07
+
+
+ Scanner-ID :   4258
+ Scanner_type :     10
+
+ Slice Thickness :      8 [µm]
+ Slice Increment :      8 [µm]
+
+
+ Scan-Distance :  16384 [µm]
+ Sampletime : 300000 [µs]
+
+ µ-Scaling :   4096
+
+ Energy :  70000 [V]
+ Intensity :    114 [µA]
+
+ Hint: use monospaced fonts like Courier to display the output of "Show Info"
 
  26.08.12   removed unnecessary comments
  *          added missing {} in if-else-statements
@@ -96,71 +96,70 @@ package org.bonej.io;
  Programming esthetics is nice, but it is beyond my capabilities.
 
 
-       
-         
-        /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
-          
-	   Little endian byte order (the least significant bit occupies the lowest memory position.
 
-           00   char    check[16];              // CTDATA-HEADER_V1
-           16   int     data_type;              
-           20   int     nr_of_bytes;     
-           24   int     nr_of_blocks;           
-           28   int     patient_index;          //p.skip(28);
-           32   int     scanner_id;				//p.skip(32);
-           36   int     creation_date[2];		//P.skip(36);
-           44   int     dimx_p;					//p.skip(44);
-           48   int     dimy_p;
-           52   int     dimz_p;
-           56   int     dimx_um;				//p.skip(56);
-           60   int     dimy_um;
-           64   int     dimz_um;
-           68   int     slice_thickness_um;		//p.skip(68);
-           72   int     slice_increment_um;		//p.skip(72);
-           76   int     slice_1_pos_um;
-           80   int     min_data_value;
-           84   int     max_data_value;
-           88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
-           92	int     nr_of_samples;
-           96	int     nr_of_projections;
-           100  int     scandist_um;
-           104  int     scanner_type;
-           108  int     sampletime_us;
-           112  int     index_measurement;
-           116  int     site;                   //coded value
-           120  int     reference_line_um;
-           124  int     recon_alg;              //coded value
-           128  char    name[40]; 		 		//p.skip(128);
-           168  int     energy;        /* V     //p.skip(168);  
-           172  int     intensity;     /* uA    //p.skip(172);
-           
-			 ...
 
-           508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
+ /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
 
-        /*
-	 * 
-	 * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
-	 * the type of data. The 'int' are all 4-byte integers.
-	 * 
-	 * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
-	 * 
-	 * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
-	 * slices) at 48.
-	 * 
-	 * The microCT calculates so called 'x-ray linear attenuation' values. These
-	 * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
-	 * get to the signed 2-byte integers values that we save in the .isq file.
-	 * 
-	 * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
-	 * (8192/4096)
-	 * 
-	 * Following to the headers is the data part. It is in 2-byte short integers
-	 * (signed) and starts from the top-left pixel of slice 1 to the left, then
-	 * the next line follows, until the last pixel of the last sclice in the
-	 * lower right.
-	 */
+ Little endian byte order (the least significant bit occupies the lowest memory position.
 
+ 00   char    check[16];              // CTDATA-HEADER_V1
+ 16   int     data_type;              
+ 20   int     nr_of_bytes;     
+ 24   int     nr_of_blocks;           
+ 28   int     patient_index;          //p.skip(28);
+ 32   int     scanner_id;				//p.skip(32);
+ 36   int     creation_date[2];		//P.skip(36);
+ 44   int     dimx_p;					//p.skip(44);
+ 48   int     dimy_p;
+ 52   int     dimz_p;
+ 56   int     dimx_um;				//p.skip(56);
+ 60   int     dimy_um;
+ 64   int     dimz_um;
+ 68   int     slice_thickness_um;		//p.skip(68);
+ 72   int     slice_increment_um;		//p.skip(72);
+ 76   int     slice_1_pos_um;
+ 80   int     min_data_value;
+ 84   int     max_data_value;
+ 88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
+ 92	int     nr_of_samples;
+ 96	int     nr_of_projections;
+ 100  int     scandist_um;
+ 104  int     scanner_type;
+ 108  int     sampletime_us;
+ 112  int     index_measurement;
+ 116  int     site;                   //coded value
+ 120  int     reference_line_um;
+ 124  int     recon_alg;              //coded value
+ 128  char    name[40]; 		 		//p.skip(128);
+ 168  int     energy;        /* V     //p.skip(168);  
+ 172  int     intensity;     /* uA    //p.skip(172);
+
+ ...
+
+ 508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
+
+ /*
+ * 
+ * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
+ * the type of data. The 'int' are all 4-byte integers.
+ * 
+ * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
+ * 
+ * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
+ * slices) at 48.
+ * 
+ * The microCT calculates so called 'x-ray linear attenuation' values. These
+ * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
+ * get to the signed 2-byte integers values that we save in the .isq file.
+ * 
+ * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
+ * (8192/4096)
+ * 
+ * Following to the headers is the data part. It is in 2-byte short integers
+ * (signed) and starts from the top-left pixel of slice 1 to the left, then
+ * the next line follows, until the last pixel of the last sclice in the
+ * lower right.
+ */
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -171,17 +170,9 @@ import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.io.FileInfo;
 import ij.io.OpenDialog;
-import ij.measure.Calibration;
-import ij.plugin.PlugIn;
-import ij.process.ImageProcessor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.math.BigInteger;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 
 import org.doube.util.UsageReporter;
 
@@ -251,11 +242,15 @@ public class ISQReader implements PlugIn {
 			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
 			imp.show();
-			
-			scancoHeaderdata = getHeaderData(path);													// KHK new 30.8.12
-			// System.out.println("returned headerdata string: " + scancoHeaderdata);				// KHK new 30.8.12
-			imp.setProperty("Info", addsNewContentToImagePlusPropertyInfo(scancoHeaderdata));		// KHK new 30.8.12
-			
+
+			scancoHeaderdata = getHeaderData(path); // KHK new 30.8.12
+			// System.out.println("returned headerdata string: " +
+			// scancoHeaderdata); // KHK new 30.8.12
+			imp.setProperty("Info",
+					addsNewContentToImagePlusPropertyInfo(scancoHeaderdata)); // KHK
+																				// new
+																				// 30.8.12
+
 			UsageReporter.reportEvent(this).send();
 		} catch (IllegalArgumentException e) {
 			IJ.error("ISQ Reader", e.getMessage());
@@ -287,14 +282,16 @@ public class ISQReader implements PlugIn {
 				+ ((IJ.isWindows()) ? "\\" : "/");
 		fi.width = width;
 		fi.height = height;
-                
-		// during the development process I had to adjust the code for files > 2 GB 
-        // this comment just serves the purpose to find the changes easier, it can be removed
+
+		// during the development process I had to adjust the code for files > 2
+		// GB
+		// this comment just serves the purpose to find the changes easier, it
+		// can be removed
 		if (startZ > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * startZ;
 			// multiplication * 2 because a "short" value is 2 bytes long
-			long sliceTimesAreaTimes2 = sliceTimesArea * 2;  
+			long sliceTimesAreaTimes2 = sliceTimesArea * 2;
 			long dummy = (long) fi.offset + sliceTimesAreaTimes2;
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
@@ -359,7 +356,7 @@ public class ISQReader implements PlugIn {
 			// avoid a nullpointerexception error
 			for (int i = 1; i <= nSlices; i++) {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
-				
+
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
@@ -384,12 +381,22 @@ public class ISQReader implements PlugIn {
 				for (int s = 0; s < widthROI * heightROI; s++) {
 					pixels32[s] = (pixelsROI[s] & 0xffff);
 					pixels32[s] = pixels32[s] - 32768;
-                                        
-					// The ISQ File is scaled according to the variable mu_scaling in the scanco header
-                                        // at present we use a hardcoded value of 4096
 
-					pixels32[s] = pixels32[s] / 4096;       //KHK correction for mu_scaling -> we should use the content of your variable muScaling here which is returned by getMuScaling()
-                                                                                //    or could you use cal.setFunction... here, too?
+					// The ISQ File is scaled according to the variable
+					// mu_scaling in the scanco header
+					// at present we use a hardcoded value of 4096
+
+					pixels32[s] = pixels32[s] / 4096; // KHK correction for
+														// mu_scaling -> we
+														// should use the
+														// content of your
+														// variable muScaling
+														// here which is
+														// returned by
+														// getMuScaling()
+														// or could you use
+														// cal.setFunction...
+														// here, too?
 					if (pixels32[s] < 0) {
 						pixels32[s] = 0;
 					}
@@ -440,19 +447,17 @@ public class ISQReader implements PlugIn {
 								downsampledPixels_av);
 					}
 				} else {
-					
+
 					for (int index = 0; index < widthROI * heightROI; index++) {
 						pixelsROI[index] = (short) (pixelsROI[index] - 32768);
 						if (pixelsROI[index] < 0)
 							pixelsROI[index] = 0;
 					}
 
-					
-					stack.addSlice("microCT-Import_by_KHK_w_" + widthROI + "_h_"
-							+ heightROI + "_slice." + i, pixelsROI);
+					stack.addSlice("microCT-Import_by_KHK_w_" + widthROI
+							+ "_h_" + heightROI + "_slice." + i, pixelsROI);
 				}
 
-				
 				skip = fi.gapBetweenImages;
 				IJ.showProgress((double) i / nSlices);
 			}
@@ -536,9 +541,7 @@ public class ISQReader implements PlugIn {
 	}
 
 	/************************************************************************
-     *                                                                      *
-	 *   this is the central import routine                                 *
-	 *                                                                      * 
+	 * * this is the central import routine * *
 	 ***********************************************************************/
 	// there is still room to reduce code bits which are not really necessary
 	// for the ISQ-Import.
@@ -587,7 +590,7 @@ public class ISQReader implements PlugIn {
 			throws IOException {
 
 		// This routine is called for every slice
-            
+
 		if (skipCount > 0) {
 			long bytesRead = 0;
 			int skipAttempts = 0;
@@ -598,7 +601,7 @@ public class ISQReader implements PlugIn {
 				if (count == -1 || skipAttempts > 5)
 					break;
 				bytesRead += count;
-				
+
 			}
 		}
 		byteCount = width * height * bytesPerPixel;
@@ -686,20 +689,14 @@ public class ISQReader implements PlugIn {
 	}
 
 	public int[] getImageSize(String path) {
-		int[] sizes = {
-			readInt(path, 44),
-			readInt(path, 48),
-			readInt(path, 52)
-		};
+		int[] sizes = { readInt(path, 44), readInt(path, 48), readInt(path, 52) };
 		return sizes;
 	}
 
 	public double[] getRealSize(String path) {
-		double[] sizes = {
-			(double) readInt(path, 56) / 1000.0,
-			(double) readInt(path, 60) / 1000.0,
-			(double) readInt(path, 64) / 1000.0
-		};
+		double[] sizes = { (double) readInt(path, 56) / 1000.0,
+				(double) readInt(path, 60) / 1000.0,
+				(double) readInt(path, 64) / 1000.0 };
 		return sizes;
 	}
 
@@ -739,8 +736,8 @@ public class ISQReader implements PlugIn {
 		}
 		return -1;
 	}
-	
-	private String readString(String path, int firstByte, int length){
+
+	private String readString(String path, int firstByte, int length) {
 		if (path == null)
 			throw new IllegalArgumentException();
 		try {
@@ -759,4 +756,133 @@ public class ISQReader implements PlugIn {
 		}
 		return null;
 	}
+
+	public String getHeaderData(String path) {
+		if (path == null) {
+			throw new IllegalArgumentException();
+		}
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+
+			String headerData = "    Scanco Header Data\n\n";
+			String patientIndex = "    Patient Index : ";
+			String scannerId = "       Scanner-ID : ";
+			String creationDate = "    Creation Date : ";
+			String sliceThickness = "  Slice Thickness : ";
+			String sliceIncrement = "  Slice Increment : ";
+			String muScaling = "        µ-Scaling : ";
+			String scanDistUm = "    Scan-Distance : "; // Um = micrometers
+			String scannerType = "     Scanner_type : ";
+			String sampleTimeUs = "       Sampletime : "; // Us = microseconds
+			String indexMeasurement = "Measurement Index : ";
+			String patientName = "    Patient Name  : ";
+			String energy = "           Energy : ";
+			String intensity = "        Intensity : ";
+
+			p.skip(28);
+
+			patientIndex += String.valueOf((p.read() + p.read() * 256
+					+ p.read() * 65536 + p.read() * 256 * 65536))
+					+ "\n";
+			scannerId += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "\n";
+
+			int tempCreationDate1 = (p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536); // + "\n";
+			int tempCreationDate2 = (p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536); // + "\n";
+			System.out.println("CreationDate: " + tempCreationDate1 + " + "
+					+ tempCreationDate2);
+
+			p.skip(24);
+
+			sliceThickness += String.valueOf((p.read() + p.read() * 256
+					+ p.read() * 65536 + p.read() * 256 * 65536))
+					+ "[µm]" + "\n";
+			sliceIncrement += String.valueOf((p.read() + p.read() * 256
+					+ p.read() * 65536 + p.read() * 256 * 65536))
+					+ "[µm]" + "\n";
+
+			p.skip(12);
+
+			muScaling += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "\n";
+
+			p.skip(8);
+
+			scanDistUm += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "[µm]" + "\n";
+			scannerType += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "\n";
+			sampleTimeUs += String.valueOf((p.read() + p.read() * 256
+					+ p.read() * 65536 + p.read() * 256 * 65536))
+					+ "µs" + "\n";
+			indexMeasurement += String.valueOf((p.read() + p.read() * 256
+					+ p.read() * 65536 + p.read() * 256 * 65536))
+					+ "\n";
+
+			p.skip(12);
+
+			for (int kh = 0; kh < 40; kh++) {
+				char ch = (char) p.read();
+				patientName += ch;
+			}
+			patientName += "\n";
+
+			energy += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "[V]" + "\n";
+			intensity += String.valueOf((p.read() + p.read() * 256 + p.read()
+					* 65536 + p.read() * 256 * 65536))
+					+ "[µA]" + "\n";
+
+			headerData += patientName + patientIndex + indexMeasurement
+					+ "\n\n" + scannerId + scannerType + "\n\n"
+					+ sliceThickness + sliceIncrement + "\n\n" + scanDistUm
+					+ sampleTimeUs + "\n" + muScaling + "\n" + energy
+					+ intensity;
+
+			p.close();
+
+			// System.out.println(headerData);
+
+			return headerData;
+
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+
+	/**
+	 * adds the content of a string to the ImagePlus property which is labeled
+	 * "Info" only the content of "Info" is displayed with the
+	 * "Show Info"-Command from the menu.
+	 */
+	private String addsNewContentToImagePlusPropertyInfo(String newinfo) {
+		// is there already any content in "Info" ?
+		// use imp.getProperty("Info") and save the result in a string
+		// then add the new information to this string
+
+		String contentOfImagePlusPropertyInfo = (String) imp
+				.getProperty("Info");
+
+		if (contentOfImagePlusPropertyInfo == null) {
+			contentOfImagePlusPropertyInfo = newinfo;
+		} else {
+			contentOfImagePlusPropertyInfo = contentOfImagePlusPropertyInfo
+					+ "\n------------------------\n" + newinfo;
+		}
+
+		System.out.println("contentOfImagePlusPropertyInfo:\n"
+				+ contentOfImagePlusPropertyInfo);
+
+		return contentOfImagePlusPropertyInfo;
+	}
+
 }
