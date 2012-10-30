@@ -2,6 +2,13 @@ package org.bonej.io;
 
 /*
  History:
+ 26.08.12   removed unnecessary comments
+ *          added missing {} in if-else-statements
+ *          formated Scanco header information to ease readability
+ *          
+ *          @Michael: please check two comments beginning with "//KHK"
+ *         
+ * 
  14.09.09 added information about the name[] field in the header (nameStringInHeader)
  22.03.08 old and now irrelevant_code_removed
  23.03.08 KHKs_Scanco_ISQ_FileReader : Downsampling by factor 2 in x, y and z direction by calculating the average of the pixels which are reduced to one new pixel
@@ -10,24 +17,24 @@ package org.bonej.io;
  29.06.06 pixeldistance is taken from the orginal ISQ file header and used for metric scaling in ImageJ (fi.info)
  02.08.06 Bugfix for files larger than 2 GB (adjustment of offset and longOffset so that Skip will be correct)
 
- This file is nothing else then copying the modules which are used by imagej to import
+ This file is nothing else then copying the modules which are used by ImageJ to import
  raw data or files into this one single file.
- It helped me a lot to understand imagej
- and it made it easier to devolop this tool
+ It helped me a lot to understand ImageJ
+ and it made it easier to develop this tool
 
  The usage should be self-explanatory.
 
  In short you select a ROI for the import by entering the upper left and the lower right coordinate
  of the rectangle.
 
- In order to obtain these coordinates you can deside how many slices you want to import and with which slice
+ In order to obtain these coordinates you can decide how many slices you want to import and with which slice
  you start the import.
 
 
 
- Then you take paper and pencile and note the required coordinates for the second import attempt.
+ Then you take paper and pencil and note the required coordinates for the second import attempt.
 
- Note: this tool was writen because we have only limited memory on our Windows PCs. It was my very first Java program!
+ Note: this tool was written because we have only limited memory on our Windows PCs. It was my very first Java program!
 
  Meaning of the checkboxes:
  "Scale for lin. attenuation coeff.(LAC):"
@@ -48,10 +55,10 @@ package org.bonej.io;
  "8-bit-import (overrules 'Scale for LAC')"
  To save even more RAM then with Short one can decide to use 8-Bit stacks only. 
  The 8-Bit-Stack is a massive data reduction. The values are a simple division of the short values by 256.
- For better visability - auto-adjust brightness and contrast yourself.
+ For better visibility - auto-adjust brightness and contrast yourself.
  To get a quick idea of the LAC based on the 8-bit-data you can multiply by 256 and divide by 4096 yourself. But be aware you will lose precision this way due to rounding errors. 
 
- Please consider: this tool was writen by a dentist
+ Please consider: this tool was written by a dentist
  I have no programming experience.
  I am satisfied if the code is running.
  Programming esthetics is nice, but it is beyond my capabilities.
@@ -171,13 +178,14 @@ public class ISQReader implements PlugIn {
 				+ ((IJ.isWindows()) ? "\\" : "/");
 		fi.width = width;
 		fi.height = height;
-		// hier Anpassung fuer Files > 2 GB
-
+                
+		// during the development process I had to adjust the code for files > 2 GB 
+                // this comment just serves the purpose to find the changes easier, it can be removed
 		if (startZ > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * startZ;
-			// * 2 wegen Short = 2 Byte
-			long sliceTimesAreaTimes2 = sliceTimesArea * 2;
+			// multiplication * 2 because a "short" value is 2 bytes long
+			long sliceTimesAreaTimes2 = sliceTimesArea * 2;  
 			long dummy = (long) fi.offset + sliceTimesAreaTimes2;
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
@@ -207,8 +215,8 @@ public class ISQReader implements PlugIn {
 		fi.pixelDepth = pixelSize[2];
 		fi.unit = "mm";
 
-		int widthStack = 0;
-		int heightStack = 0;
+		int widthStack;
+		int heightStack;
 
 		final int widthROI = endX - startX + 1;
 		final int heightROI = endY - startY + 1;
@@ -232,11 +240,6 @@ public class ISQReader implements PlugIn {
 		// modified to match the size of the ROI
 		ImageStack stack = new ImageStack(widthStack, heightStack);
 		long skip = fi.longOffset > 0 ? fi.longOffset : fi.offset;
-		// System.out.println("longoffset-vor-skip: "+fi.longOffset);
-		// System.out.println("offset-vor-skip: "+offset);
-		// System.out.println("skip: "+skip);
-		System.out.println("after Imagestack -> x: " + fi.pixelWidth + " ; y: "
-				+ fi.pixelHeight);
 
 		try {
 			FileInputStream is = new FileInputStream(path);
@@ -247,7 +250,7 @@ public class ISQReader implements PlugIn {
 			// avoid a nullpointerexception error
 			for (int i = 1; i <= nSlices; i++) {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
-				// System.out.println("fi.nImages: "+fi.nImages);
+				
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
@@ -263,7 +266,6 @@ public class ISQReader implements PlugIn {
 					indexCountPixels = indexCountPixels + widthROI
 							+ (width - endX) + startX - 1;
 					indexCountROI = indexCountROI + widthROI;
-					// System.out.println(i+"::"+"indexCountPixels:"+indexCountPixels+":"+"IndexCountROI:"+indexCountROI+":"+"Size:"+widthROI+heightROI);
 				}
 
 				if (pixels == null)
@@ -273,9 +275,12 @@ public class ISQReader implements PlugIn {
 				for (int s = 0; s < widthROI * heightROI; s++) {
 					pixels32[s] = (pixelsROI[s] & 0xffff);
 					pixels32[s] = pixels32[s] - 32768;
-					// hier wird nun ISQ bzgl. des lin. att. Coeff. skaliert
-					// (nächste Zeile)
-					pixels32[s] = pixels32[s] / 4096;
+                                        
+					// The ISQ File is scaled according to the variable mu_scaling in the scanco header
+                                        // at present we use a hardcoded value of 4096
+
+					pixels32[s] = pixels32[s] / 4096;       //KHK correction for mu_scaling -> we should use the content of your variable muScaling here which is returned by getMuScaling()
+                                                                                //    or could you use cal.setFunction... here, too?
 					if (pixels32[s] < 0) {
 						pixels32[s] = 0;
 					}
@@ -300,9 +305,9 @@ public class ISQReader implements PlugIn {
 									+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
 									+ w + 1]) / 4);
 							index = index + 1;
-							if (index >= widthStack * heightStack)
-								index = 0;
-							// System.out.print(".");
+							if (index >= widthStack * heightStack) {
+                                                            index = 0;
+                                                        }
 						}
 					}
 					if (i % 2 > 0) {
@@ -310,7 +315,7 @@ public class ISQReader implements PlugIn {
 								downsampledPixels32_temp, 0,
 								downsampledPixels32.length);
 					} else {
-						float temp1, temp2, temp3 = 0;
+						float temp1, temp2, temp3;
 						for (int s = 0; s < heightStack * widthStack; s++) {
 							temp1 = downsampledPixels32[s];
 							temp2 = downsampledPixels32_temp[s];
@@ -327,24 +332,19 @@ public class ISQReader implements PlugIn {
 								downsampledPixels_av);
 					}
 				} else {
-					// System.out.println("Instead of downsample loop ... ELSE loop");
+					
 					for (int index = 0; index < widthROI * heightROI; index++) {
 						pixelsROI[index] = (short) (pixelsROI[index] - 32768);
 						if (pixelsROI[index] < 0)
 							pixelsROI[index] = 0;
 					}
 
-					// System.out.println("Instead of downsample loop ... ELSE loop - just before add stack");
-					stack.addSlice("microCT-Import_by_KH_w_" + widthROI + "_h_"
+					
+					stack.addSlice("microCT-Import_by_KHK_w_" + widthROI + "_h_"
 							+ heightROI + "_slice." + i, pixelsROI);
 				}
 
-				// *************************************************
-				// war orginal
-				// stack.addSlice("microCT-Import_by_KH_w_"+widthROI+"_h_"+heightROI+"_slice."+
-				// i, pixelsROI);
-				// }
-
+				
 				skip = fi.gapBetweenImages;
 				IJ.showProgress((double) i / nSlices);
 			}
@@ -397,7 +397,7 @@ public class ISQReader implements PlugIn {
 
 	/** *********************************************************************** **/
 	/**
-	 * aus ImageReader.java: Skips the specified number of bytes, then reads an
+	 * from ImageReader.java: Skips the specified number of bytes, then reads an
 	 * image and returns the pixel array (byte, short, int or float). Returns
 	 * null if there was an IO exception. Does not close the InputStream.
 	 */
@@ -429,10 +429,11 @@ public class ISQReader implements PlugIn {
 		}
 	}
 
-	/**
-	 * *********************** this is the central import routine
-	 * ***********************************
-	 **/
+	/************************************************************************
+         *                                                                      *
+	 *   this is the central import routine                                 *
+	 *                                                                      * 
+	 ***********************************************************************/
 	// there is still room to reduce code bits which are not really necessary
 	// for the ISQ-Import.
 
@@ -479,10 +480,8 @@ public class ISQReader implements PlugIn {
 	private void skip(FileInputStream in, int width, int height)
 			throws IOException {
 
-		// I count, how often this routine is used:
-		// System.out.println("skip_kh called");
-		// answer: called for every slice
-
+		// This routine is called for every slice
+            
 		if (skipCount > 0) {
 			long bytesRead = 0;
 			int skipAttempts = 0;
@@ -493,7 +492,7 @@ public class ISQReader implements PlugIn {
 				if (count == -1 || skipAttempts > 5)
 					break;
 				bytesRead += count;
-				// IJ.log("skip: "+skipCount+" "+count+" "+bytesRead+" "+skipAttempts);
+				
 			}
 		}
 		byteCount = width * height * bytesPerPixel;
