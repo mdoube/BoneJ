@@ -695,6 +695,33 @@ public class ISQReader implements PlugIn {
 		return readInt(path, 32);
 	}
 
+	public Date getCreationDate(String path) {
+		int[] quadWord = new int[8];
+
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(36);
+			for (int index = 7; index >= 0; index--) {
+				quadWord[index] = p.read();
+			}
+			p.close();
+			return vmsQuadwordToTimestamp(quadWord);
+		} catch (Exception e) {
+
+		}
+		return null;
+	}
+
+	public String getCreationDateAsString(String path) {
+		Date date = getCreationDate(path);
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss");
+		String reportDate = df.format(date);
+		return reportDate;
+	}
+
 	public int[] getImageSize(String path) {
 		int[] sizes = { readInt(path, 44), readInt(path, 48), readInt(path, 52) };
 		return sizes;
@@ -838,14 +865,6 @@ public class ISQReader implements PlugIn {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
 
-			// Create the byte array to hold the data
-			// Big Endian Byte Order
-			int[] quadWordByteSequence = new int[8];
-
-			for (int index = 7; index >= 0; index--) {
-				quadWordByteSequence[index] = p.read();
-			}
-
 			String headerData = "Scanco Header Data\n\n";
 			String patientIndex = "Patient Index: ";
 			String scannerId = "Scanner-ID: ";
@@ -863,7 +882,7 @@ public class ISQReader implements PlugIn {
 
 			patientIndex += getPatientIndex(path);
 			scannerId += getScannerID(path);
-			creationDate += convertVmsQuadwordTimestamp(quadWordByteSequence);
+			creationDate += getCreationDateAsString(path);
 			sliceThickness += getSliceThickness(path) + "[µm]";
 			sliceIncrement += getSliceIncrement(path) + "[µm]";
 			muScaling += getMuScaling(path);
@@ -876,10 +895,10 @@ public class ISQReader implements PlugIn {
 			intensity += getIntensity(path) + "[µA]";
 
 			headerData += patientName + "\n" + patientIndex + "\n"
-					+ indexMeasurement + "\n" + scannerId + "\n" + creationDate + "\n" + scannerType
-					+ "\n" + sliceThickness + "\n" + sliceIncrement + "\n"
-					+ scanDistUm + "\n" + sampleTimeUs + "\n" + muScaling
-					+ "\n" + energy + "\n" + intensity;
+					+ indexMeasurement + "\n" + scannerId + "\n" + creationDate
+					+ "\n" + scannerType + "\n" + sliceThickness + "\n"
+					+ sliceIncrement + "\n" + scanDistUm + "\n" + sampleTimeUs
+					+ "\n" + muScaling + "\n" + energy + "\n" + intensity;
 
 			p.close();
 			return headerData;
@@ -890,60 +909,54 @@ public class ISQReader implements PlugIn {
 		return null;
 	}
 
-	// converts the VMS quadword timestamp to date/time
-	private String convertVmsQuadwordTimestamp(
-			int[] timestampByteSequenceFromISQFile) {
-
-		// A VMS quadword - they are 64 bit unsigned integers.
-		// The system base date is: November 17, 1858 00:00:00.00
-
-		/*
-		 * OpenVMS and Unix Date and Time Conversions
-		 * 
-		 * Read the invaluable background information from Stephen Hoffman,
-		 * Hoffman Labs.
-		 * 
-		 * http://labs.hoffmanlabs.com/node/735
-		 * http://labs.hoffmanlabs.com/node/282
-		 * 
-		 * Another invaluable source of information is:
-		 * 
-		 * http://www.mpp.mpg.de/~huber/util/main/cvdate.html
-		 * 
-		 * Especially the conversion utility was very helpful for debugging this
-		 * routine.
-		 * 
-		 * The creation date of the Scanco ISQ files is coded as an 8 Byte
-		 * sequence which is called a quadword. The byte order of the creation
-		 * date is "big endian".
-		 * 
-		 * In summary, the 8 Bytes encode a large number, which represents the
-		 * numbers of 100 nanosecond intervals since 00:00 on November 17, 1858
-		 * local time; the OpenVMS Epoch.
-		 * 
-		 * To convert this number to a date/time just follow the recommendations
-		 * of Stephen Hoffman:
-		 * 
-		 * "To get from the OpenVMS quadword to the C quadword, subtract the
-		 * OpenVMS quadword value containing the Unix epoch value for
-		 * 1-Jan-1970:00:00 (0x007c95674beb4000) from the OpenVMS quadword
-		 * value, and then divide by 10000000 to get from the 100ns-unit to the
-		 * seconds longword."
-		 * 
-		 * For Java the divisor is a bit different as the date functions of Java
-		 * are based on ms (milliseconds) and not on s. Therefore we just have
-		 * to divide by 10000.
-		 * 
-		 * A word of caution has to be added here:
-		 * 
-		 * It took me a few hours to figure out that the use of the recommended
-		 * Calender object and its methods either was not correctly initialized
-		 * by me or it is simply buggy. I could not get the correct creation
-		 * date. The date was always 1 month off the original value.
-		 * 
-		 * When I changed to the depreciated approach to use the "Date" object
-		 * everything worked fine.
-		 */
+	/**
+	 * converts the VMS quadword timestamp to date/time
+	 * 
+	 * OpenVMS and Unix Date and Time Conversions
+	 * 
+	 * The creation date of the Scanco ISQ files is coded as an 8 Byte sequence
+	 * which is called a quadword. The byte order of the creation date is
+	 * "big endian".
+	 * 
+	 * In summary, the 8 Bytes encode a large number, which represents the
+	 * numbers of 100 nanosecond intervals since 00:00 on November 17, 1858
+	 * local time; the OpenVMS Epoch.
+	 * 
+	 * To convert this number to a date/time just follow the recommendations of
+	 * Stephen Hoffman:
+	 * 
+	 * "To get from the OpenVMS quadword to the C quadword, subtract the OpenVMS
+	 * quadword value containing the Unix epoch value for 1-Jan-1970:00:00
+	 * (0x007c95674beb4000) from the OpenVMS quadword value, and then divide by
+	 * 10000000 to get from the 100ns-unit to the seconds longword."
+	 * 
+	 * For Java the divisor is a bit different as the date functions of Java are
+	 * based on ms (milliseconds) and not on s. Therefore we just have to divide
+	 * by 10000.
+	 * 
+	 * A word of caution has to be added here:
+	 * 
+	 * It took me a few hours to figure out that the use of the recommended
+	 * Calender object and its methods either was not correctly initialized by
+	 * me or it is simply buggy. I could not get the correct creation date. The
+	 * date was always 1 month off the original value.
+	 * 
+	 * When I changed to the depreciated approach to use the "Date" object
+	 * everything worked fine.
+	 * 
+	 * Read the invaluable background information from Stephen Hoffman, Hoffman
+	 * Labs. Especially the conversion utility was very helpful for debugging
+	 * this routine.
+	 * 
+	 * @see http://labs.hoffmanlabs.com/node/735
+	 * @see http://labs.hoffmanlabs.com/node/282
+	 * @see http://www.mpp.mpg.de/~huber/util/main/cvdate.html
+	 * @param vmsQuadWord
+	 *            A VMS quadword - they are 64 bit unsigned integers. The system
+	 *            base date is: November 17, 1858 00:00:00.00
+	 * @return Date object containing the creation date of the ISQ file
+	 */
+	private Date vmsQuadwordToTimestamp(int[] vmsQuadWord) {
 
 		String hexString = "";
 
@@ -957,13 +970,10 @@ public class ISQReader implements PlugIn {
 
 			// if ...else loop: just necessary to format the byte in the string
 			// correct for later use
-			if (timestampByteSequenceFromISQFile[index] > 0xf) {
-				hexString += Integer
-						.toHexString(timestampByteSequenceFromISQFile[index]);
+			if (vmsQuadWord[index] > 0xf) {
+				hexString += Integer.toHexString(vmsQuadWord[index]);
 			} else {
-				hexString += "0"
-						+ Integer
-								.toHexString(timestampByteSequenceFromISQFile[index]);
+				hexString += "0" + Integer.toHexString(vmsQuadWord[index]);
 			}
 		}
 
@@ -971,10 +981,7 @@ public class ISQReader implements PlugIn {
 		// hexString+" # ");
 
 		BigInteger bi = new BigInteger(hexString, 16);
-		BigInteger epochAsBigInteger = new BigInteger("007C95674BEB4000", 16); // 007C95674BEB4000
-																				// =
-																				// 1.1.1970;
-
+		BigInteger epochAsBigInteger = new BigInteger("007C95674BEB4000", 16);
 		bi = bi.subtract(epochAsBigInteger);
 		BigInteger divisor = BigInteger.valueOf(10000);
 		bi = bi.divide(divisor);
@@ -998,24 +1005,14 @@ public class ISQReader implements PlugIn {
 
 		Date date = new Date();
 		date.setTime(value);
-		System.out.println("Creation date: " + date);
-
-		// Create an instance of SimpleDateFormat used for formatting
-		// the string representation of date (month/day/year)
-		DateFormat df = new SimpleDateFormat("yyyy-MM-dd'  'HH:mm:ss");
-
-		// Using DateFormat format method we can create a string
-		// representation of a date with the defined format.
-		String reportDate = df.format(date);
-
-		System.out.println("Creation date formated:  " + reportDate);
-		return reportDate;
+		return date;
 	}
 
-	// adds the content of a string to the ImagePlus property which is labeled
-	// "Info"
-	// only the content of "Info" is displayed with the "Show Info"-Command from
-	// the menu.
+	/**
+	 * adds the content of a string to the ImagePlus property which is labeled
+	 * "Info" only the content of "Info" is displayed with the
+	 * "Show Info"-Command from the menu.
+	 */
 	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp,
 			String newinfo) {
 		// is there already any content in "Info" ?
