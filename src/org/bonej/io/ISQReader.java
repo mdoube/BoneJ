@@ -176,7 +176,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 import org.doube.util.UsageReporter;
@@ -865,40 +864,27 @@ public class ISQReader implements PlugIn {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
 
-			String headerData = "Scanco Header Data\n\n";
-			String patientIndex = "Patient Index: ";
-			String scannerId = "Scanner-ID: ";
-			String creationDate = "Creation Date: ";
-			String sliceThickness = "Slice Thickness: ";
-			String sliceIncrement = "Slice Increment: ";
-			String muScaling = "µ-Scaling: ";
-			String scanDistUm = "Scan-Distance: "; // Um = micrometers
-			String scannerType = "Scanner_type: ";
-			String sampleTimeUs = "Sampletime: "; // Us = microseconds
-			String indexMeasurement = "Measurement Index: ";
-			String patientName = "Patient Name: ";
-			String energy = "Energy : ";
-			String intensity = "Intensity : ";
-
-			patientIndex += getPatientIndex(path);
-			scannerId += getScannerID(path);
-			creationDate += getCreationDateAsString(path);
-			sliceThickness += getSliceThickness(path) + "[µm]";
-			sliceIncrement += getSliceIncrement(path) + "[µm]";
-			muScaling += getMuScaling(path);
-			scanDistUm += getScanDistanceUm(path) + "[µm]";
-			scannerType += getScannerType(path);
-			sampleTimeUs += getSampleTimeUs(path) + "µs";
-			indexMeasurement += getMeasurementIndex(path);
-			patientName += getPatientName(path);
-			energy += getEnergy(path) + "[V]";
-			intensity += getIntensity(path) + "[µA]";
-
-			headerData += patientName + "\n" + patientIndex + "\n"
-					+ indexMeasurement + "\n" + scannerId + "\n" + creationDate
-					+ "\n" + scannerType + "\n" + sliceThickness + "\n"
-					+ sliceIncrement + "\n" + scanDistUm + "\n" + sampleTimeUs
-					+ "\n" + muScaling + "\n" + energy + "\n" + intensity;
+			String headerData = "Scanco Header Data\n\n"
+			+ "Patient Name: " + getPatientName(path) + "\n"
+			+ "Patient Index: " + getPatientIndex(path) + "\n"
+			+ "Site: " + getSite(path) + "\n"
+			+ "Reference Line: " + getReferenceLineUm(path) + " µm\n"
+			+ "Scanner-ID: " + getScannerID(path) + "\n"
+			+ "Scanner_type: " + getScannerType(path) + "\n"
+			+ "Creation Date: "	+ getCreationDateAsString(path) + "\n"
+			+ "Slice Thickness: " + getSliceThickness(path) + " µm\n"
+			+ "Slice Increment: " + getSliceIncrement(path) + " µm\n"
+			+ "Min Value: " + getMinDataValue(path) + "\n"
+			+ "Max Value: " + getMaxDataValue(path) + "\n"
+			+ "µ-Scaling: " + getMuScaling(path) + "\n"
+			+ "Scan-Distance: " + getScanDistanceUm(path) + " µm\n"
+			+ "Sampletime: " + getSampleTimeUs(path) + " µs\n"
+			+ "Samples: " + getNrSamples(path) + "\n"
+			+ "Projections: " + getNrProjections(path) + "\n"
+			+ "Reconstruction Algorithm: " + getReconstructionAlgorithm(path) + "\n"
+			+ "Measurement Index: "	+ getMeasurementIndex(path) + "\n"
+			+ "Energy : " + getEnergy(path) + " V\n"
+			+ "Intensity : " + getIntensity(path) + " µA";
 
 			p.close();
 			return headerData;
