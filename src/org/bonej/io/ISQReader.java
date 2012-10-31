@@ -37,31 +37,13 @@ package org.bonej.io;
  Note: this tool was written because we have only limited memory on our Windows PCs. It was my very first Java program!
 
  Meaning of the checkboxes:
- "Scale for lin. attenuation coeff.(LAC):"
- the ISQ files are signed integer (short) raw data (see Scanco Website for more information).
- To get a meaningful value for the linear attenuation coefficient the short values have to be divided by 4096.
- This makes it necessary to use float (4byte) instead of 2byte images, which consumes more memory
- It should be default to use the scaled images for any grey level evaluation, if the morphology is the only important criterion 
- then scaling is unnecessary and safes memory.
 
  "Downsample by factor 2 in x,y,z (method = average:)"
  for a view overview on a computer with limited RAM the stack can be downscaled by the factor of 2 in x and y and z direction
- The downsampling is made by averaging 8 pixels into 1 new pixel 
-
- "Check = distances in metric units, uncheck = pixels"
- Option to decide whether to import the images with metric units as taken from the ISQ-file or alternatively keep the distances in pixels
- The pixel variant is useful to determine the ROI, otherwise it is better to use the metric units
-
- "8-bit-import (overrules 'Scale for LAC')"
- To save even more RAM then with Short one can decide to use 8-Bit stacks only. 
- The 8-Bit-Stack is a massive data reduction. The values are a simple division of the short values by 256.
- For better visibility - auto-adjust brightness and contrast yourself.
- To get a quick idea of the LAC based on the 8-bit-data you can multiply by 256 and divide by 4096 yourself. But be aware you will lose precision this way due to rounding errors. 
+ The downsampling is made by averaging 8 pixels into 1 new pixel
 
  Please consider: this tool was written by a dentist
- I have no programming experience.
- I am satisfied if the code is running.
- Programming esthetics is nice, but it is beyond my capabilities.
+ -> and modified by a veterinary surgeon ;-)
 
  /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
 
@@ -220,7 +202,19 @@ public class ISQReader implements PlugIn {
 		}
 	}
 
-	/** Opens a stack of images. */
+	/**
+	 * Opens a Scanco ISQ file as an ImageJ ImagePlus
+	 * 
+	 * @param path
+	 * @param downsample
+	 * @param startX
+	 * @param startY
+	 * @param endX
+	 * @param endY
+	 * @param startZ
+	 * @param nSlices
+	 * @return
+	 */
 	public ImagePlus openScancoISQ(String path, boolean downsample, int startX,
 			int startY, int endX, int endY, int startZ, int nSlices) {
 
@@ -245,10 +239,6 @@ public class ISQReader implements PlugIn {
 		fi.width = width;
 		fi.height = height;
 
-		// during the development process I had to adjust the code for files > 2
-		// GB
-		// this comment just serves the purpose to find the changes easier, it
-		// can be removed
 		if (startZ > 0) {
 			long area = width * height;
 			long sliceTimesArea = area * startZ;
@@ -473,6 +463,11 @@ public class ISQReader implements PlugIn {
 	 * Reads the image from the InputStream and returns the pixel array (byte,
 	 * short, int or float). Returns null if there was an IO exception. Does not
 	 * close the InputStream.
+	 * 
+	 * @param in
+	 * @param width
+	 * @param height
+	 * @return
 	 */
 	private short[] readPixels(FileInputStream in, int width, int height) {
 		try {
@@ -487,15 +482,13 @@ public class ISQReader implements PlugIn {
 		}
 	}
 
-	/************************************************************************
-	 * * this is the central import routine * *
-	 ***********************************************************************/
-	// there is still room to reduce code bits which are not really necessary
-	// for the ISQ-Import.
-
 	/**
 	 * Reads a 16-bit image. Signed pixels are converted to unsigned by adding
 	 * 32768.
+	 * 
+	 * @param in
+	 * @return
+	 * @throws IOException
 	 */
 	private short[] read16bitImage(FileInputStream in) throws IOException {
 		int pixelsRead;
@@ -533,6 +526,13 @@ public class ISQReader implements PlugIn {
 		return pixels;
 	}
 
+	/**
+	 * 
+	 * @param in
+	 * @param width
+	 * @param height
+	 * @throws IOException
+	 */
 	private void skip(FileInputStream in, int width, int height)
 			throws IOException {
 
@@ -561,6 +561,12 @@ public class ISQReader implements PlugIn {
 			bufferSize = (bufferSize / 8192) * 8192;
 	}
 
+	/**
+	 * Check the magic number to determine if a file is a Scanco ISQ
+	 * 
+	 * @param path
+	 * @return true if the file is a Scanco ISQ
+	 */
 	public boolean isScancoISQ(String path) {
 		if (getMagic(path).equals(MAGIC))
 			return true;
@@ -568,6 +574,12 @@ public class ISQReader implements PlugIn {
 			return false;
 	}
 
+	/**
+	 * Get the magic number from a file
+	 * 
+	 * @param path
+	 * @return the first 16 bytes as a character string
+	 */
 	public String getMagic(String path) {
 		return readString(path, 0, 16);
 	}
@@ -595,11 +607,16 @@ public class ISQReader implements PlugIn {
 			p.close();
 			return vmsQuadwordToTimestamp(quadWord);
 		} catch (Exception e) {
-
+			IJ.handleException(e);
 		}
 		return null;
 	}
 
+	/**
+	 * Get the ISQ creation date as a string
+	 * @param path
+	 * @return date in yyyy-MM-dd HH:mm:ss format
+	 */
 	public String getCreationDateAsString(String path) {
 		Date date = getCreationDate(path);
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss");
@@ -607,11 +624,21 @@ public class ISQReader implements PlugIn {
 		return reportDate;
 	}
 
+	/**
+	 * Get the pixel size of the image
+	 * @param path
+	 * @return {x, y, z} image size in pixels
+	 */
 	public int[] getImageSize(String path) {
 		int[] sizes = { readInt(path, 44), readInt(path, 48), readInt(path, 52) };
 		return sizes;
 	}
 
+	/**
+	 * Get the real size of the image
+	 * @param path
+	 * @return {x, y, z} image size in metric units
+	 */
 	public double[] getRealSize(String path) {
 		double[] sizes = { (double) readInt(path, 56) / 1000.0,
 				(double) readInt(path, 60) / 1000.0,
