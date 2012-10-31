@@ -138,8 +138,6 @@ package org.bonej.io;
 
  508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
 
- /*
- * 
  * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
  * the type of data. The 'int' are all 4-byte integers.
  * 
@@ -185,6 +183,10 @@ import org.doube.util.UsageReporter;
  * 
  * @author B. Koller, SCANCO Medical AG, April 2005
  * @author K.-H. Kunzelmann, Operative Dentistry, LMU-München, Ger, April 2006
+ */
+/**
+ * @author mdoube
+ *
  */
 public class ISQReader implements PlugIn {
 
@@ -611,69 +613,6 @@ public class ISQReader implements PlugIn {
 		else
 			bufferSize = (bufferSize / 8192) * 8192;
 	}
-
-	// Scanco ISQ Header Information:
-	//
-	// typedef struct {
-	// ---------------------------------------------
-	// 00 char check[16]; // Char is in Java 2 Byte
-	// 16 int data_type; // Int is in Java 4 Byte
-	// 20 int nr_of_bytes; /* either one of them
-	// 24 int nr_of_blocks; /* or both, but min. of 1
-	// 28 int patient_index; /* 1 block = 512 bytes
-	// 32 int scanner_id;
-	// 36 int creation_date[2];
-	// ---------------------------------------------
-	// 44 int dimx_p;
-	// 48 int dimy_p;
-	// 52 int dimz_p;
-	// 56 int dimx_um;
-	// 60 int dimy_um;
-	// 64 int dimz_um;
-	// 68 int slice_thickness_um;
-	// 72 int slice_increment_um;
-	// 76 int slice_1_pos_um;
-	// 80 int min_data_value;
-	// 84 int max_data_value;
-	// 88 int mu_scaling; p(x,y,z)/mu_scaling = value [1/cm]
-	// 92 int nr_of_samples;
-	// 96 int nr_of_projections;
-	// 100 int scandist_um;
-	// 104 int scanner_type;
-	// 108 int sampletime_us;
-	// 112 int index_measurement;
-	// 116 int site; Coded value
-	// 120 int reference_line_um;
-	// 124 int recon_alg; Coded value
-	// 128 char name[40];
-	// 168 int energy; V
-	// 172 int intensity; uA
-	// 176 int fill[83];
-	// --------------------------------------------
-	// 508 int data_offset; in 512-byte-blocks
-	// } ima_data_type, *ima_data_typeP;
-	//
-	//
-	// So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
-	// the type of data. The 'int' are all 4-byte integers.
-	//
-	// dimx_p is the dimension in pixels, dimx_um the dimension in microns.
-	//
-	// So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
-	// slices) at 48.
-	//
-	// The microCT calculates so called 'x-ray linear attenuation' values.
-	// These (float) values are scaled with 'mu_scaling' (see header, e.g. 4096)
-	// to get to the signed 2-byte integers values that we save in the .isq
-	// file.
-	//
-	// e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
-	// (8192/4096)
-	//
-	// Following to the headers is the data part. It is in 2-byte short
-	// integers (signed) and starts from the top-left pixel of slice 1 to the
-	// left, then the next line follows, until the last pixel of the last slice
-	// in the lower right.
 
 	public boolean isScancoISQ(String path) {
 		if (getMagic(path).equals(MAGIC))
