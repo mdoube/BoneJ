@@ -339,18 +339,17 @@ public class ISQReader implements PlugIn {
 				if (pixels == null)
 					break;
 
-				float[] pixels32 = new float[widthROI * heightROI];
-				final int muScaling = getMuScaling(path);
-				for (int s = 0; s < widthROI * heightROI; s++) {
-					float value = (pixelsROI[s] & 0xffff);
-					value -= 32768;
-					value /= muScaling;
-					if (value < 0)
-						value = 0;
-					pixels32[s] = value; 
-				}
-
 				if (downsample == true) {
+					float[] pixels32 = new float[widthROI * heightROI];
+					final int muScaling = getMuScaling(path);
+					for (int s = 0; s < widthROI * heightROI; s++) {
+						float value = (pixelsROI[s] & 0xffff);
+						value -= 32768;
+						value /= muScaling;
+						if (value < 0)
+							value = 0;
+						pixels32[s] = value; 
+					}
 					// System.out.println("Downsample loop ... ");
 					float[] downsampledPixels32 = new float[(widthROI * heightROI)
 							/ (2 * 2)];
