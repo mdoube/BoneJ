@@ -340,28 +340,14 @@ public class ISQReader implements PlugIn {
 					break;
 
 				float[] pixels32 = new float[widthROI * heightROI];
+				final int muScaling = getMuScaling(path);
 				for (int s = 0; s < widthROI * heightROI; s++) {
-					pixels32[s] = (pixelsROI[s] & 0xffff);
-					pixels32[s] = pixels32[s] - 32768;
-
-					// The ISQ File is scaled according to the variable
-					// mu_scaling in the scanco header
-					// at present we use a hardcoded value of 4096
-
-					pixels32[s] = pixels32[s] / 4096; // KHK correction for
-														// mu_scaling -> we
-														// should use the
-														// content of your
-														// variable muScaling
-														// here which is
-														// returned by
-														// getMuScaling()
-														// or could you use
-														// cal.setFunction...
-														// here, too?
-					if (pixels32[s] < 0) {
-						pixels32[s] = 0;
-					}
+					float value = (pixelsROI[s] & 0xffff);
+					value -= 32768;
+					value /= muScaling;
+					if (value < 0)
+						value = 0;
+					pixels32[s] = value; 
 				}
 
 				if (downsample == true) {
