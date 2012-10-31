@@ -3,36 +3,36 @@ package org.bonej.io;
 /*
  History:
  1.9.12		Decoder for Creation Time in Scanco header implemented 
- 			(vms quadword, big endian, converted to unix timestamp and finally date/time).
+ (vms quadword, big endian, converted to unix timestamp and finally date/time).
  30.08.12	corrected errors in the Scanco header information
- 			updated a few comments
- 			added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
- 			the menu command "Show Info"
- 			Trying to format this information like the web interface from Scanco would display them (example):
- 			
-			      Patient Name  : Syntricer_120620017_TCP06_ø16
-			      Patient Index : 2721
-			  Measurement Index : 3648
-			
-			      Creation Date : 14-AUG-2012 15:42:26.07
-			
-			          	
-			         Scanner-ID :   4258
-			       Scanner_type :     10
-			
-			    Slice Thickness :      8 [µm]
-			    Slice Increment :      8 [µm]
-			
-			
-			      Scan-Distance :  16384 [µm]
-			         Sampletime : 300000 [µs]
-			
-			          µ-Scaling :   4096
-			
-			             Energy :  70000 [V]
-			          Intensity :    114 [µA]
+ updated a few comments
+ added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
+ the menu command "Show Info"
+ Trying to format this information like the web interface from Scanco would display them (example):
 
-			Hint: use monospaced fonts like Courier to display the output of "Show Info"
+ Patient Name  : Syntricer_120620017_TCP06_ø16
+ Patient Index : 2721
+ Measurement Index : 3648
+
+ Creation Date : 14-AUG-2012 15:42:26.07
+
+
+ Scanner-ID :   4258
+ Scanner_type :     10
+
+ Slice Thickness :      8 [µm]
+ Slice Increment :      8 [µm]
+
+
+ Scan-Distance :  16384 [µm]
+ Sampletime : 300000 [µs]
+
+ µ-Scaling :   4096
+
+ Energy :  70000 [V]
+ Intensity :    114 [µA]
+
+ Hint: use monospaced fonts like Courier to display the output of "Show Info"
 
  26.08.12   removed unnecessary comments
  *          added missing {} in if-else-statements
@@ -96,71 +96,70 @@ package org.bonej.io;
  Programming esthetics is nice, but it is beyond my capabilities.
 
 
-       
-         
-        /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
-          
-	   Little endian byte order (the least significant bit occupies the lowest memory position.
 
-           00   char    check[16];              // CTDATA-HEADER_V1
-           16   int     data_type;              
-           20   int     nr_of_bytes;     
-           24   int     nr_of_blocks;           
-           28   int     patient_index;          //p.skip(28);
-           32   int     scanner_id;				//p.skip(32);
-           36   int     creation_date[2];		//P.skip(36);
-           44   int     dimx_p;					//p.skip(44);
-           48   int     dimy_p;
-           52   int     dimz_p;
-           56   int     dimx_um;				//p.skip(56);
-           60   int     dimy_um;
-           64   int     dimz_um;
-           68   int     slice_thickness_um;		//p.skip(68);
-           72   int     slice_increment_um;		//p.skip(72);
-           76   int     slice_1_pos_um;
-           80   int     min_data_value;
-           84   int     max_data_value;
-           88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
-           92	int     nr_of_samples;
-           96	int     nr_of_projections;
-           100  int     scandist_um;
-           104  int     scanner_type;
-           108  int     sampletime_us;
-           112  int     index_measurement;
-           116  int     site;                   //coded value
-           120  int     reference_line_um;
-           124  int     recon_alg;              //coded value
-           128  char    name[40]; 		 		//p.skip(128);
-           168  int     energy;        /* V     //p.skip(168);  
-           172  int     intensity;     /* uA    //p.skip(172);
-           
-			 ...
 
-           508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
+ /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
 
-        /*
-	 * 
-	 * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
-	 * the type of data. The 'int' are all 4-byte integers.
-	 * 
-	 * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
-	 * 
-	 * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
-	 * slices) at 48.
-	 * 
-	 * The microCT calculates so called 'x-ray linear attenuation' values. These
-	 * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
-	 * get to the signed 2-byte integers values that we save in the .isq file.
-	 * 
-	 * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
-	 * (8192/4096)
-	 * 
-	 * Following to the headers is the data part. It is in 2-byte short integers
-	 * (signed) and starts from the top-left pixel of slice 1 to the left, then
-	 * the next line follows, until the last pixel of the last sclice in the
-	 * lower right.
-	 */
+ Little endian byte order (the least significant bit occupies the lowest memory position.
 
+ 00   char    check[16];              // CTDATA-HEADER_V1
+ 16   int     data_type;              
+ 20   int     nr_of_bytes;     
+ 24   int     nr_of_blocks;           
+ 28   int     patient_index;          //p.skip(28);
+ 32   int     scanner_id;				//p.skip(32);
+ 36   int     creation_date[2];		//P.skip(36);
+ 44   int     dimx_p;					//p.skip(44);
+ 48   int     dimy_p;
+ 52   int     dimz_p;
+ 56   int     dimx_um;				//p.skip(56);
+ 60   int     dimy_um;
+ 64   int     dimz_um;
+ 68   int     slice_thickness_um;		//p.skip(68);
+ 72   int     slice_increment_um;		//p.skip(72);
+ 76   int     slice_1_pos_um;
+ 80   int     min_data_value;
+ 84   int     max_data_value;
+ 88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
+ 92	int     nr_of_samples;
+ 96	int     nr_of_projections;
+ 100  int     scandist_um;
+ 104  int     scanner_type;
+ 108  int     sampletime_us;
+ 112  int     index_measurement;
+ 116  int     site;                   //coded value
+ 120  int     reference_line_um;
+ 124  int     recon_alg;              //coded value
+ 128  char    name[40]; 		 		//p.skip(128);
+ 168  int     energy;        /* V     //p.skip(168);  
+ 172  int     intensity;     /* uA    //p.skip(172);
+
+ ...
+
+ 508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
+
+ /*
+ * 
+ * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
+ * the type of data. The 'int' are all 4-byte integers.
+ * 
+ * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
+ * 
+ * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
+ * slices) at 48.
+ * 
+ * The microCT calculates so called 'x-ray linear attenuation' values. These
+ * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
+ * get to the signed 2-byte integers values that we save in the .isq file.
+ * 
+ * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
+ * (8192/4096)
+ * 
+ * Following to the headers is the data part. It is in 2-byte short integers
+ * (signed) and starts from the top-left pixel of slice 1 to the left, then
+ * the next line follows, until the last pixel of the last sclice in the
+ * lower right.
+ */
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -841,14 +840,11 @@ public class ISQReader implements PlugIn {
 
 			// Create the byte array to hold the data
 			// Big Endian Byte Order
-		    int[] quadWordByteSequence = new int[8];
-		    
-			for (int index = 7; index >=0; index--) {
-				quadWordByteSequence[index]=p.read();
+			int[] quadWordByteSequence = new int[8];
+
+			for (int index = 7; index >= 0; index--) {
+				quadWordByteSequence[index] = p.read();
 			}
-			
-			creationDate+=convertVmsQuadwordTimestamp(quadWordByteSequence)+ "\n";
-			
 
 			String headerData = "Scanco Header Data\n\n";
 			String patientIndex = "Patient Index: ";
@@ -867,11 +863,7 @@ public class ISQReader implements PlugIn {
 
 			patientIndex += getPatientIndex(path);
 			scannerId += getScannerID(path);
-			int tempCreationDate1 = readInt(path, 36);
-			int tempCreationDate2 = readInt(path, 40);
-			IJ.log("CreationDate: " + tempCreationDate1 + " + "
-					+ tempCreationDate2);
-
+			creationDate += convertVmsQuadwordTimestamp(quadWordByteSequence);
 			sliceThickness += getSliceThickness(path) + "[µm]";
 			sliceIncrement += getSliceIncrement(path) + "[µm]";
 			muScaling += getMuScaling(path);
@@ -884,7 +876,7 @@ public class ISQReader implements PlugIn {
 			intensity += getIntensity(path) + "[µA]";
 
 			headerData += patientName + "\n" + patientIndex + "\n"
-					+ indexMeasurement + "\n" + scannerId + "\n" + scannerType
+					+ indexMeasurement + "\n" + scannerId + "\n" + creationDate + "\n" + scannerType
 					+ "\n" + sliceThickness + "\n" + sliceIncrement + "\n"
 					+ scanDistUm + "\n" + sampleTimeUs + "\n" + muScaling
 					+ "\n" + energy + "\n" + intensity;
@@ -897,19 +889,20 @@ public class ISQReader implements PlugIn {
 		}
 		return null;
 	}
-	
-    // converts the VMS quadword timestamp to date/time
-	private String convertVmsQuadwordTimestamp(int[] timestampByteSequenceFromISQFile){
-		
-		
-		// A VMS quadword - they are 64 bit unsigned integers. 
+
+	// converts the VMS quadword timestamp to date/time
+	private String convertVmsQuadwordTimestamp(
+			int[] timestampByteSequenceFromISQFile) {
+
+		// A VMS quadword - they are 64 bit unsigned integers.
 		// The system base date is: November 17, 1858 00:00:00.00
-		
-		/*  
+
+		/*
 		 * OpenVMS and Unix Date and Time Conversions
 		 * 
-		 * Read the invaluable background information from Stephen Hoffman, Hoffman Labs.
-		 
+		 * Read the invaluable background information from Stephen Hoffman,
+		 * Hoffman Labs.
+		 * 
 		 * http://labs.hoffmanlabs.com/node/735
 		 * http://labs.hoffmanlabs.com/node/282
 		 * 
@@ -917,89 +910,114 @@ public class ISQReader implements PlugIn {
 		 * 
 		 * http://www.mpp.mpg.de/~huber/util/main/cvdate.html
 		 * 
-		 * Especially the conversion utility was very helpful for debugging this routine.
+		 * Especially the conversion utility was very helpful for debugging this
+		 * routine.
 		 * 
-		 * The creation date of the Scanco ISQ files is coded as an 8 Byte sequence which is
-		 * called a quadword. The byte order of the creation date is "big endian". 
+		 * The creation date of the Scanco ISQ files is coded as an 8 Byte
+		 * sequence which is called a quadword. The byte order of the creation
+		 * date is "big endian".
 		 * 
-		 * In summary, the 8 Bytes encode a large number, which represents the 
-		 * numbers of 100 nanosecond intervals since 00:00 on November 17, 1858 local time; the OpenVMS Epoch.
+		 * In summary, the 8 Bytes encode a large number, which represents the
+		 * numbers of 100 nanosecond intervals since 00:00 on November 17, 1858
+		 * local time; the OpenVMS Epoch.
 		 * 
-		 * To convert this number to a date/time just follow the recommendations of Stephen Hoffman:
+		 * To convert this number to a date/time just follow the recommendations
+		 * of Stephen Hoffman:
 		 * 
-		 * "To get from the OpenVMS quadword to the C quadword, 
-		 * subtract the OpenVMS quadword value containing the Unix epoch value for 1-Jan-1970:00:00 (0x007c95674beb4000) 
-		 * from the OpenVMS quadword value, and then divide by 10000000 to get from the 100ns-unit to the seconds longword."
+		 * "To get from the OpenVMS quadword to the C quadword, subtract the
+		 * OpenVMS quadword value containing the Unix epoch value for
+		 * 1-Jan-1970:00:00 (0x007c95674beb4000) from the OpenVMS quadword
+		 * value, and then divide by 10000000 to get from the 100ns-unit to the
+		 * seconds longword."
 		 * 
-		 * For Java the divisor is a bit different as the date functions of Java are based on ms (milliseconds) and not on s. 
-		 * Therefore we just have to divide by 10000.
+		 * For Java the divisor is a bit different as the date functions of Java
+		 * are based on ms (milliseconds) and not on s. Therefore we just have
+		 * to divide by 10000.
 		 * 
 		 * A word of caution has to be added here:
 		 * 
-		 * It took me a few hours to figure out that the use of the recommended Calender object and its methods 
-		 * either was not correctly initialized by me or it is simply buggy. I could not get the correct creation date.
-		 * The date was always 1 month off the original value.
+		 * It took me a few hours to figure out that the use of the recommended
+		 * Calender object and its methods either was not correctly initialized
+		 * by me or it is simply buggy. I could not get the correct creation
+		 * date. The date was always 1 month off the original value.
 		 * 
-		 * When I changed to the depreciated approach to use the "Date" object everything worked fine.
+		 * When I changed to the depreciated approach to use the "Date" object
+		 * everything worked fine.
 		 */
-				
+
 		String hexString = "";
-	
-		// OpenVMS VAX, OpenVMS Alpha and OpenVMS I64 (as well as all Microsoft Windows implementations) 
-		// all support and all use the little-endian byte ordering. BUT in our case - found by trial and error - 
+
+		// OpenVMS VAX, OpenVMS Alpha and OpenVMS I64 (as well as all Microsoft
+		// Windows implementations)
+		// all support and all use the little-endian byte ordering. BUT in our
+		// case - found by trial and error -
 		// we have to use the big-endian byte order.
-		
+
 		for (int index = 0; index < 8; index++) {
-			
-			// if ...else loop: just necessary to format the byte in the string correct for later use
-			if (timestampByteSequenceFromISQFile[index] > 0xf){
-				hexString += Integer.toHexString(timestampByteSequenceFromISQFile[index]);
-			}
-			else {
-				hexString += "0" + Integer.toHexString(timestampByteSequenceFromISQFile[index]);
+
+			// if ...else loop: just necessary to format the byte in the string
+			// correct for later use
+			if (timestampByteSequenceFromISQFile[index] > 0xf) {
+				hexString += Integer
+						.toHexString(timestampByteSequenceFromISQFile[index]);
+			} else {
+				hexString += "0"
+						+ Integer
+								.toHexString(timestampByteSequenceFromISQFile[index]);
 			}
 		}
-			
-		//KHK debug: System.out.print("hexstring: Big Endian "+ hexString+" # ");
-			
-		BigInteger bi = new BigInteger(hexString,16); 
-		BigInteger epochAsBigInteger = new BigInteger("007C95674BEB4000",16);  //007C95674BEB4000 = 1.1.1970;  
-		
+
+		// KHK debug: System.out.print("hexstring: Big Endian "+
+		// hexString+" # ");
+
+		BigInteger bi = new BigInteger(hexString, 16);
+		BigInteger epochAsBigInteger = new BigInteger("007C95674BEB4000", 16); // 007C95674BEB4000
+																				// =
+																				// 1.1.1970;
+
 		bi = bi.subtract(epochAsBigInteger);
 		BigInteger divisor = BigInteger.valueOf(10000);
 		bi = bi.divide(divisor);
 		long value = bi.longValue();
-		
-        System.out.print("bi-from-byte-sequence " + bi +" # " + "value of unix epoch " + epochAsBigInteger + "  ##  " + "bi after correction for unix epoch: " + value + "   ");
-		
-        // I leave the code which did not work. Either the function is buggy or I did not use it right.
-        /* 
-		Calendar mydate = Calendar.getInstance();
-		mydate.setTimeInMillis(value);
-		System.out.println(mydate.get(Calendar.DAY_OF_MONTH)+"."+mydate.get(Calendar.MONTH)+"."+mydate.get(Calendar.YEAR)+"   "+mydate.get(Calendar.HOUR_OF_DAY)+":"+mydate.get(Calendar.MINUTE)+":"+mydate.get(Calendar.SECOND));
-		*/
-        
-        
-		Date date = new Date ();
+
+		System.out.print("bi-from-byte-sequence " + bi + " # "
+				+ "value of unix epoch " + epochAsBigInteger + "  ##  "
+				+ "bi after correction for unix epoch: " + value + "   ");
+
+		// I leave the code which did not work. Either the function is buggy or
+		// I did not use it right.
+		/*
+		 * Calendar mydate = Calendar.getInstance();
+		 * mydate.setTimeInMillis(value);
+		 * System.out.println(mydate.get(Calendar.
+		 * DAY_OF_MONTH)+"."+mydate.get(Calendar
+		 * .MONTH)+"."+mydate.get(Calendar.YEAR
+		 * )+"   "+mydate.get(Calendar.HOUR_OF_DAY
+		 * )+":"+mydate.get(Calendar.MINUTE)+":"+mydate.get(Calendar.SECOND));
+		 */
+
+		Date date = new Date();
 		date.setTime(value);
 		System.out.println("Creation date: " + date);
-		
-		
+
 		// Create an instance of SimpleDateFormat used for formatting
-        // the string representation of date (month/day/year)
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'  'HH:mm:ss");
-        
-        // Using DateFormat format method we can create a string
-        // representation of a date with the defined format.
-        String reportDate = df.format(date);
-        
-        System.out.println("Creation date formated:  " + reportDate);
+		// the string representation of date (month/day/year)
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd'  'HH:mm:ss");
+
+		// Using DateFormat format method we can create a string
+		// representation of a date with the defined format.
+		String reportDate = df.format(date);
+
+		System.out.println("Creation date formated:  " + reportDate);
 		return reportDate;
 	}
-	
-	// adds the content of a string to the ImagePlus property which is labeled "Info"
-	// only the content of "Info" is displayed with the "Show Info"-Command from the menu.
-	private String addsNewContentToImagePlusPropertyInfo(String newinfo){
+
+	// adds the content of a string to the ImagePlus property which is labeled
+	// "Info"
+	// only the content of "Info" is displayed with the "Show Info"-Command from
+	// the menu.
+	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp,
+			String newinfo) {
 		// is there already any content in "Info" ?
 		// use imp.getProperty("Info") and save the result in a string
 		// then add the new information to this string
@@ -1013,12 +1031,7 @@ public class ISQReader implements PlugIn {
 			contentOfImagePlusPropertyInfo = contentOfImagePlusPropertyInfo
 					+ "\n------------------------\n" + newinfo;
 		}
-		else{
-			contentOfImagePlusPropertyInfo = contentOfImagePlusPropertyInfo + "\n------------------------\n" + newinfo;
-		}
-		
-		//System.out.println("contentOfImagePlusPropertyInfo:\n" + contentOfImagePlusPropertyInfo);
-		
+
 		return contentOfImagePlusPropertyInfo;
 	}
 
