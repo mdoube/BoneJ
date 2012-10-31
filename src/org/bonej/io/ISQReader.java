@@ -148,10 +148,7 @@ import org.doube.util.UsageReporter;
  * 
  * @author B. Koller, SCANCO Medical AG, April 2005
  * @author K.-H. Kunzelmann, Operative Dentistry, LMU-München, Ger, April 2006
- */
-/**
- * @author mdoube
- *
+ * @author Michael Doube, RVC, London, UK. Refactoring for BoneJ 2012
  */
 public class ISQReader implements PlugIn {
 
@@ -214,7 +211,7 @@ public class ISQReader implements PlugIn {
 			String scancoHeaderdata = getHeaderData(path);
 			imp.setProperty(
 					"Info",
-					addsNewContentToImagePlusPropertyInfo(imp, scancoHeaderdata));
+					appendToFileInfo(imp, scancoHeaderdata));
 			imp.show();
 			UsageReporter.reportEvent(this).send();
 		} catch (IllegalArgumentException e) {
@@ -888,7 +885,7 @@ public class ISQReader implements PlugIn {
 	 * "Info" only the content of "Info" is displayed with the
 	 * "Show Info"-Command from the menu.
 	 */
-	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp,
+	private String appendToFileInfo(ImagePlus imp,
 			String newinfo) {
 
 		String contentOfImagePlusPropertyInfo = (String) imp
