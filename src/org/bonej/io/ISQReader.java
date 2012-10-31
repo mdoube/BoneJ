@@ -855,11 +855,6 @@ public class ISQReader implements PlugIn {
 		BigInteger divisor = BigInteger.valueOf(10000);
 		bi = bi.divide(divisor);
 		long value = bi.longValue();
-
-		System.out.print("bi-from-byte-sequence " + bi + " # "
-				+ "value of unix epoch " + epochAsBigInteger + "  ##  "
-				+ "bi after correction for unix epoch: " + value + "   ");
-
 		Date date = new Date();
 		date.setTime(value);
 		return date;
