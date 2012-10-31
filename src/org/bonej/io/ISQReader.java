@@ -173,7 +173,6 @@ import ij.io.OpenDialog;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-
 import org.doube.util.UsageReporter;
 
 /**
@@ -189,8 +188,6 @@ public class ISQReader implements PlugIn {
 	private long skipCount;
 	private int bytesPerPixel, bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
-	private ImagePlus imp;
-	private String scancoHeaderdata;
 
 	public void run(String arg) {
 
@@ -241,16 +238,11 @@ public class ISQReader implements PlugIn {
 		try {
 			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
-			imp.show();
 
-			scancoHeaderdata = getHeaderData(path); // KHK new 30.8.12
-			// System.out.println("returned headerdata string: " +
-			// scancoHeaderdata); // KHK new 30.8.12
+			String scancoHeaderdata = getHeaderData(path);
 			imp.setProperty("Info",
-					addsNewContentToImagePlusPropertyInfo(scancoHeaderdata)); // KHK
-																				// new
-																				// 30.8.12
-
+					addsNewContentToImagePlusPropertyInfo(imp, scancoHeaderdata));
+			imp.show();
 			UsageReporter.reportEvent(this).send();
 		} catch (IllegalArgumentException e) {
 			IJ.error("ISQ Reader", e.getMessage());
@@ -864,7 +856,7 @@ public class ISQReader implements PlugIn {
 	 * "Info" only the content of "Info" is displayed with the
 	 * "Show Info"-Command from the menu.
 	 */
-	private String addsNewContentToImagePlusPropertyInfo(String newinfo) {
+	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp, String newinfo) {
 		// is there already any content in "Info" ?
 		// use imp.getProperty("Info") and save the result in a string
 		// then add the new information to this string
