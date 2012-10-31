@@ -8,39 +8,9 @@ package org.bonej.io;
  updated a few comments
  added the most meaningful file header information to the ImagePlus property "Info" which can be retrieved with 
  the menu command "Show Info"
- Trying to format this information like the web interface from Scanco would display them (example):
-
- Patient Name  : Syntricer_120620017_TCP06_ø16
- Patient Index : 2721
- Measurement Index : 3648
-
- Creation Date : 14-AUG-2012 15:42:26.07
-
-
- Scanner-ID :   4258
- Scanner_type :     10
-
- Slice Thickness :      8 [µm]
- Slice Increment :      8 [µm]
-
-
- Scan-Distance :  16384 [µm]
- Sampletime : 300000 [µs]
-
- µ-Scaling :   4096
-
- Energy :  70000 [V]
- Intensity :    114 [µA]
-
- Hint: use monospaced fonts like Courier to display the output of "Show Info"
-
  26.08.12   removed unnecessary comments
- *          added missing {} in if-else-statements
- *          formated Scanco header information to ease readability
- *          
- *          @Michael: please check two comments beginning with "//KHK"
- *         
- * 
+ added missing {} in if-else-statements
+ formated Scanco header information to ease readability
  14.09.09 added information about the name[] field in the header (nameStringInHeader)
  22.03.08 old and now irrelevant_code_removed
  23.03.08 KHKs_Scanco_ISQ_FileReader : Downsampling by factor 2 in x, y and z direction by calculating the average of the pixels which are reduced to one new pixel
@@ -61,8 +31,6 @@ package org.bonej.io;
 
  In order to obtain these coordinates you can decide how many slices you want to import and with which slice
  you start the import.
-
-
 
  Then you take paper and pencil and note the required coordinates for the second import attempt.
 
@@ -94,9 +62,6 @@ package org.bonej.io;
  I have no programming experience.
  I am satisfied if the code is running.
  Programming esthetics is nice, but it is beyond my capabilities.
-
-
-
 
  /* Scanco ISQ Header Information: - note: Scanco uses OpenVMS on Alpha workstations
 
@@ -902,9 +867,6 @@ public class ISQReader implements PlugIn {
 			}
 		}
 
-		// KHK debug: System.out.print("hexstring: Big Endian "+
-		// hexString+" # ");
-
 		BigInteger bi = new BigInteger(hexString, 16);
 		BigInteger epochAsBigInteger = new BigInteger("007C95674BEB4000", 16);
 		bi = bi.subtract(epochAsBigInteger);
@@ -915,18 +877,6 @@ public class ISQReader implements PlugIn {
 		System.out.print("bi-from-byte-sequence " + bi + " # "
 				+ "value of unix epoch " + epochAsBigInteger + "  ##  "
 				+ "bi after correction for unix epoch: " + value + "   ");
-
-		// I leave the code which did not work. Either the function is buggy or
-		// I did not use it right.
-		/*
-		 * Calendar mydate = Calendar.getInstance();
-		 * mydate.setTimeInMillis(value);
-		 * System.out.println(mydate.get(Calendar.
-		 * DAY_OF_MONTH)+"."+mydate.get(Calendar
-		 * .MONTH)+"."+mydate.get(Calendar.YEAR
-		 * )+"   "+mydate.get(Calendar.HOUR_OF_DAY
-		 * )+":"+mydate.get(Calendar.MINUTE)+":"+mydate.get(Calendar.SECOND));
-		 */
 
 		Date date = new Date();
 		date.setTime(value);
@@ -940,9 +890,6 @@ public class ISQReader implements PlugIn {
 	 */
 	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp,
 			String newinfo) {
-		// is there already any content in "Info" ?
-		// use imp.getProperty("Info") and save the result in a string
-		// then add the new information to this string
 
 		String contentOfImagePlusPropertyInfo = (String) imp
 				.getProperty("Info");
