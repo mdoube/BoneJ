@@ -49,6 +49,7 @@ import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.jama.Matrix;
 import org.doube.jama.EigenvalueDecomposition;
+import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
@@ -770,7 +771,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 			maxSpheresField.setEnabled(true);
 			toleranceField.setEnabled(true);
 		}
-
+		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
 
