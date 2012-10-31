@@ -210,7 +210,7 @@ public class ISQReader implements PlugIn {
 		int depth = imageSize[2];
 
 		GenericDialog gd = new GenericDialog("Import Scanco ISQ file");
-		String name = getName(path);
+		String name = getPatientName(path);
 		gd.addMessage("Patient:" + name + "\n");
 		gd.addMessage("\nEnter the coordinates for the bounding rectangle\n"
 				+ "to crop the microCT stack during import");
@@ -681,6 +681,14 @@ public class ISQReader implements PlugIn {
 		return readString(path, 0, 16);
 	}
 
+	public int getPatientIndex(String path) {
+		return readInt(path, 28);
+	}
+
+	public int getScannerID(String path) {
+		return readInt(path, 32);
+	}
+
 	public int[] getImageSize(String path) {
 		int[] sizes = { readInt(path, 44), readInt(path, 48), readInt(path, 52) };
 		return sizes;
@@ -693,24 +701,90 @@ public class ISQReader implements PlugIn {
 		return sizes;
 	}
 
-	public double[] getPixelSize(String path) {
-		int[] nPixels = getImageSize(path);
-		double[] realSize = getRealSize(path);
-		double[] pixelSize = { realSize[0] / nPixels[0],
-				realSize[1] / nPixels[1], realSize[2] / nPixels[2] };
-		return pixelSize;
+	public int getSliceThickness(String path) {
+		return readInt(path, 68);
+	}
+
+	public int getSliceIncrement(String path) {
+		return readInt(path, 72);
+	}
+
+	public int getScanDistance(String path) {
+		return readInt(path, 76);
+	}
+
+	public int getMinDataValue(String path) {
+		return readInt(path, 80);
+	}
+
+	public int getMaxDataValue(String path) {
+		return readInt(path, 84);
 	}
 
 	public int getMuScaling(String path) {
 		return readInt(path, 88);
 	}
 
-	public String getName(String path) {
+	public int getNrSamples(String path) {
+		return readInt(path, 92);
+	}
+
+	public int getNrProjections(String path) {
+		return readInt(path, 96);
+	}
+
+	public int getScanDistanceUm(String path) {
+		return readInt(path, 100);
+	}
+
+	public int getScannerType(String path) {
+		return readInt(path, 104);
+	}
+
+	public int getSampleTimeUs(String path) {
+		return readInt(path, 108);
+	}
+
+	public int getMeasurementIndex(String path) {
+		return readInt(path, 112);
+	}
+
+	public int getSite(String path) {
+		return readInt(path, 116);
+	}
+
+	public int getReferenceLineUm(String path) {
+		return readInt(path, 120);
+	}
+
+	public int getReconstructionAlgorithm(String path) {
+		return readInt(path, 124);
+	}
+
+	public String getPatientName(String path) {
 		return readString(path, 128, 40);
 	}
 
+	public int getEnergy(String path) {
+		return readInt(path, 168);
+	}
+
+	public int getIntensity(String path) {
+		return readInt(path, 172);
+	}
+
+	// what to do with 176 int fill[83]? Skip?
+
 	public int getOffset(String path) {
 		return readInt(path, 508) * 512 + 512;
+	}
+
+	public double[] getPixelSize(String path) {
+		int[] nPixels = getImageSize(path);
+		double[] realSize = getRealSize(path);
+		double[] pixelSize = { realSize[0] / nPixels[0],
+				realSize[1] / nPixels[1], realSize[2] / nPixels[2] };
+		return pixelSize;
 	}
 
 	private int readInt(String path, int firstByte) {
@@ -773,58 +847,23 @@ public class ISQReader implements PlugIn {
 			String energy = "Energy : ";
 			String intensity = "Intensity : ";
 
-			p.skip(28);
-
-			patientIndex += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536));
-			scannerId += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536));
-			int tempCreationDate1 = (p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536);
-			int tempCreationDate2 = (p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536);
+			patientIndex += getPatientIndex(path);
+			scannerId += getScannerID(path);
+			int tempCreationDate1 = readInt(path, 36);
+			int tempCreationDate2 = readInt(path, 40);
 			IJ.log("CreationDate: " + tempCreationDate1 + " + "
 					+ tempCreationDate2);
 
-			p.skip(24);
-
-			sliceThickness += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "[µm]";
-			sliceIncrement += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "[µm]";
-
-			p.skip(12);
-
-			muScaling += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536));
-
-			p.skip(8);
-
-			scanDistUm += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "[µm]";
-			scannerType += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536));
-			sampleTimeUs += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "µs";
-			indexMeasurement += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536));
-
-			p.skip(12);
-
-			for (int kh = 0; kh < 40; kh++) {
-				char ch = (char) p.read();
-				patientName += ch;
-			}
-			energy += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "[V]";
-			intensity += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "[µA]";
+			sliceThickness += getSliceThickness(path) + "[µm]";
+			sliceIncrement += getSliceIncrement(path) + "[µm]";
+			muScaling += getMuScaling(path);
+			scanDistUm += getScanDistanceUm(path) + "[µm]";
+			scannerType += getScannerType(path);
+			sampleTimeUs += getSampleTimeUs(path) + "µs";
+			indexMeasurement += getMeasurementIndex(path);
+			patientName += getPatientName(path);
+			energy += getEnergy(path) + "[V]";
+			intensity += getIntensity(path) + "[µA]";
 
 			headerData += patientName + "\n" + patientIndex + "\n"
 					+ indexMeasurement + "\n" + scannerId + "\n" + scannerType
