@@ -824,7 +824,7 @@ public class ISQReader implements PlugIn {
 		return null;
 	}
 
-	public String getHeaderData(String path) {
+	private String getHeaderData(String path) {
 		if (path == null) {
 			throw new IllegalArgumentException();
 		}
