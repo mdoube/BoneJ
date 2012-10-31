@@ -240,7 +240,8 @@ public class ISQReader implements PlugIn {
 					endX, endY, startZ, nSlices);
 
 			String scancoHeaderdata = getHeaderData(path);
-			imp.setProperty("Info",
+			imp.setProperty(
+					"Info",
 					addsNewContentToImagePlusPropertyInfo(imp, scancoHeaderdata));
 			imp.show();
 			UsageReporter.reportEvent(this).send();
@@ -757,66 +758,60 @@ public class ISQReader implements PlugIn {
 			File iFile = new File(path);
 			FileInputStream p = new FileInputStream(iFile);
 
-			String headerData = "    Scanco Header Data\n\n";
-			String patientIndex = "    Patient Index : ";
-			String scannerId = "       Scanner-ID : ";
-			String creationDate = "    Creation Date : ";
-			String sliceThickness = "  Slice Thickness : ";
-			String sliceIncrement = "  Slice Increment : ";
-			String muScaling = "        µ-Scaling : ";
-			String scanDistUm = "    Scan-Distance : "; // Um = micrometers
-			String scannerType = "     Scanner_type : ";
-			String sampleTimeUs = "       Sampletime : "; // Us = microseconds
-			String indexMeasurement = "Measurement Index : ";
-			String patientName = "    Patient Name  : ";
-			String energy = "           Energy : ";
-			String intensity = "        Intensity : ";
+			String headerData = "Scanco Header Data\n\n";
+			String patientIndex = "Patient Index: ";
+			String scannerId = "Scanner-ID: ";
+			String creationDate = "Creation Date: ";
+			String sliceThickness = "Slice Thickness: ";
+			String sliceIncrement = "Slice Increment: ";
+			String muScaling = "µ-Scaling: ";
+			String scanDistUm = "Scan-Distance: "; // Um = micrometers
+			String scannerType = "Scanner_type: ";
+			String sampleTimeUs = "Sampletime: "; // Us = microseconds
+			String indexMeasurement = "Measurement Index: ";
+			String patientName = "Patient Name: ";
+			String energy = "Energy : ";
+			String intensity = "Intensity : ";
 
 			p.skip(28);
 
 			patientIndex += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "\n";
+					+ p.read() * 65536 + p.read() * 256 * 65536));
 			scannerId += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "\n";
-
+					* 65536 + p.read() * 256 * 65536));
 			int tempCreationDate1 = (p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536); // + "\n";
+					* 65536 + p.read() * 256 * 65536);
 			int tempCreationDate2 = (p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536); // + "\n";
-			System.out.println("CreationDate: " + tempCreationDate1 + " + "
+					* 65536 + p.read() * 256 * 65536);
+			IJ.log("CreationDate: " + tempCreationDate1 + " + "
 					+ tempCreationDate2);
 
 			p.skip(24);
 
 			sliceThickness += String.valueOf((p.read() + p.read() * 256
 					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "[µm]" + "\n";
+					+ "[µm]";
 			sliceIncrement += String.valueOf((p.read() + p.read() * 256
 					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "[µm]" + "\n";
+					+ "[µm]";
 
 			p.skip(12);
 
 			muScaling += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "\n";
+					* 65536 + p.read() * 256 * 65536));
 
 			p.skip(8);
 
 			scanDistUm += String.valueOf((p.read() + p.read() * 256 + p.read()
 					* 65536 + p.read() * 256 * 65536))
-					+ "[µm]" + "\n";
+					+ "[µm]";
 			scannerType += String.valueOf((p.read() + p.read() * 256 + p.read()
-					* 65536 + p.read() * 256 * 65536))
-					+ "\n";
+					* 65536 + p.read() * 256 * 65536));
 			sampleTimeUs += String.valueOf((p.read() + p.read() * 256
 					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "µs" + "\n";
+					+ "µs";
 			indexMeasurement += String.valueOf((p.read() + p.read() * 256
-					+ p.read() * 65536 + p.read() * 256 * 65536))
-					+ "\n";
+					+ p.read() * 65536 + p.read() * 256 * 65536));
 
 			p.skip(12);
 
@@ -824,25 +819,20 @@ public class ISQReader implements PlugIn {
 				char ch = (char) p.read();
 				patientName += ch;
 			}
-			patientName += "\n";
-
 			energy += String.valueOf((p.read() + p.read() * 256 + p.read()
 					* 65536 + p.read() * 256 * 65536))
-					+ "[V]" + "\n";
+					+ "[V]";
 			intensity += String.valueOf((p.read() + p.read() * 256 + p.read()
 					* 65536 + p.read() * 256 * 65536))
-					+ "[µA]" + "\n";
+					+ "[µA]";
 
-			headerData += patientName + patientIndex + indexMeasurement
-					+ "\n\n" + scannerId + scannerType + "\n\n"
-					+ sliceThickness + sliceIncrement + "\n\n" + scanDistUm
-					+ sampleTimeUs + "\n" + muScaling + "\n" + energy
-					+ intensity;
+			headerData += patientName + "\n" + patientIndex + "\n"
+					+ indexMeasurement + "\n" + scannerId + "\n" + scannerType
+					+ "\n" + sliceThickness + "\n" + sliceIncrement + "\n"
+					+ scanDistUm + "\n" + sampleTimeUs + "\n" + muScaling
+					+ "\n" + energy + "\n" + intensity;
 
 			p.close();
-
-			// System.out.println(headerData);
-
 			return headerData;
 
 		} catch (IOException e) {
@@ -856,7 +846,8 @@ public class ISQReader implements PlugIn {
 	 * "Info" only the content of "Info" is displayed with the
 	 * "Show Info"-Command from the menu.
 	 */
-	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp, String newinfo) {
+	private String addsNewContentToImagePlusPropertyInfo(ImagePlus imp,
+			String newinfo) {
 		// is there already any content in "Info" ?
 		// use imp.getProperty("Info") and save the result in a string
 		// then add the new information to this string
