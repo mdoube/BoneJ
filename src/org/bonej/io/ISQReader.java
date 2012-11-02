@@ -302,10 +302,6 @@ public class ISQReader implements PlugIn {
 		try {
 			FileInputStream is = new FileInputStream(path);
 
-			System.out.println("Try FileInputStream");
-
-			// Obsolet comment: I reduce the no of slices by 1 to
-			// avoid a nullpointerexception error
 			for (int i = 1; i <= nSlices; i++) {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
 
