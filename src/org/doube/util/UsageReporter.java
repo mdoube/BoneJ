@@ -31,7 +31,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 import org.bonej.Help;
@@ -96,7 +98,7 @@ public class UsageReporter {
 		inc++;
 		bonejSession = Integer.toString(inc);
 		Prefs.set(ReporterOptions.SESSIONKEY, inc);
-		
+
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		GraphicsEnvironment ge;
 		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -152,12 +154,12 @@ public class UsageReporter {
 		if (lastTime == 0)
 			lastTime = time;
 		thisTime = time;
-		
+
 		if (utmcnr == "")
 			utmcnr = "utmcn=1&";
 		else
 			utmcnr = "utmcr=1&";
-		
+
 		utmcc = getCookieString();
 		return INSTANCE;
 	}
@@ -213,6 +215,15 @@ public class UsageReporter {
 			if (IJ.debugMode)
 				IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
+			uc.setRequestProperty(
+					"User-Agent",
+					System.getProperty("os.name") + " "
+							+ System.getProperty("os.version") + " "
+							+ System.getProperty("os.arch") + " "
+							+ System.getProperty("java.vendor") + " "
+							+ "Java/"
+							+ System.getProperty("java.version"));
+
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;
