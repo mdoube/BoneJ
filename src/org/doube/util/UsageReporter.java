@@ -63,6 +63,7 @@ public class UsageReporter {
 	private static final String utmp = "utmp=%2Fstats&";
 
 	private static String bonejSession;
+	private static String utmcnr = "";
 	private static String utme;
 	private static String utmn;
 	private static String utms;
@@ -95,7 +96,7 @@ public class UsageReporter {
 		inc++;
 		bonejSession = Integer.toString(inc);
 		Prefs.set(ReporterOptions.SESSIONKEY, inc);
-
+		
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		GraphicsEnvironment ge;
 		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -151,6 +152,12 @@ public class UsageReporter {
 		if (lastTime == 0)
 			lastTime = time;
 		thisTime = time;
+		
+		if (utmcnr == "")
+			utmcnr = "utmcn=1&";
+		else
+			utmcnr = "utmcr=1&";
+		
 		utmcc = getCookieString();
 		return INSTANCE;
 	}
@@ -202,7 +209,7 @@ public class UsageReporter {
 		try {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
-					+ utmdt + utmhid + utmr + utmp + utmac + utmcc);
+					+ utmcnr + utmdt + utmhid + utmr + utmp + utmac + utmcc);
 			if (IJ.debugMode)
 				IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
