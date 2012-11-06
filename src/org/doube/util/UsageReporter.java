@@ -217,13 +217,13 @@ public class UsageReporter {
 			URLConnection uc = url.openConnection();
 			uc.setRequestProperty(
 					"User-Agent",
-					"Mozilla/5.0 (" + System.getProperty("os.name") + " "
+					"Java/"	+ System.getProperty("java.version") + " ("
+							+ System.getProperty("os.name") + " "
 							+ System.getProperty("os.version") + " "
 							+ System.getProperty("os.arch") + "; "
 							+ getLocaleString() + ") "
-							+ System.getProperty("java.vendor") + " " + "Java/"
-							+ System.getProperty("java.version"));
-
+							+ System.getProperty("java.vendor"));
+			
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;
