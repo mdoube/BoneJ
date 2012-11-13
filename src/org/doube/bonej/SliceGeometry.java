@@ -449,7 +449,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// list of centroids
 		List<Point3f> centroids = new ArrayList<Point3f>();
 		// list of axes
-		List<Point3f> axes = new ArrayList<Point3f>();
+		List<Point3f> minAxes = new ArrayList<Point3f>();
+		List<Point3f> maxAxes = new ArrayList<Point3f>();
 		for (int s = 1; s <= roiImp.getImageStackSize(); s++) {
 			if (((Double) this.cortArea[s]).equals(Double.NaN))
 				continue;
@@ -474,25 +475,25 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			start1.x = (float) (cX - Math.cos(thPi) * 2 * rMin);
 			start1.y = (float) (cY - Math.sin(thPi) * 2 * rMin);
 			start1.z = (float) cZ;
-			axes.add(start1);
+			minAxes.add(start1);
 
 			Point3f end1 = new Point3f();
 			end1.x = (float) (cX + Math.cos(thPi) * 2 * rMin);
 			end1.y = (float) (cY + Math.sin(thPi) * 2 * rMin);
 			end1.z = (float) cZ;
-			axes.add(end1);
+			minAxes.add(end1);
 
 			Point3f start2 = new Point3f();
 			start2.x = (float) (cX - Math.cos(-th) * 2 * rMax);
 			start2.y = (float) (cY + Math.sin(-th) * 2 * rMax);
 			start2.z = (float) cZ;
-			axes.add(start2);
+			maxAxes.add(start2);
 
 			Point3f end2 = new Point3f();
 			end2.x = (float) (cX + Math.cos(-th) * 2 * rMax);
 			end2.y = (float) (cY - Math.sin(-th) * 2 * rMax);
 			end2.z = (float) cZ;
-			axes.add(end2);
+			maxAxes.add(end2);
 		}
 		// show the centroids
 		CustomPointMesh mesh = new CustomPointMesh(centroids);
@@ -510,14 +511,29 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 
 		// show the axes
-		Color3f aColour = new Color3f(red, green, blue);
+		red = 1.0f;
+		green = 0.0f;
+		blue = 0.0f;
+		Color3f minColour = new Color3f(red, green, blue);
 		try {
-			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(
+			univ.addLineMesh(minAxes, minColour, "Minimum axis", false).setLocked(
 					true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
 		}
+		red = 0.0f;
+		green = 0.0f;
+		blue = 1.0f;
+		Color3f maxColour = new Color3f(red, green, blue);
+		try {
+			univ.addLineMesh(maxAxes, maxColour, "Maximum axis", false).setLocked(
+					true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+		
 		// show the stack
 		try {
 			new StackConverter(roiImp).convertToGray8();
