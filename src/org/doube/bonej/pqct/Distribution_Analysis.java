@@ -147,7 +147,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_constant (intercept)",-856.036, 4, 8, null);
 		*/
 		//Get ROI selection
-		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
+		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"
+								,"FirstFromLeft","SecondFromLeft","ThirdFromLeft","FourthFromLeft","FifthFromLeft"
+								,"FirstFromTop","SecondFromTop","ThirdFromTop","FourthFromTop","FifthFromTop"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};

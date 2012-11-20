@@ -221,7 +221,20 @@ public abstract class RoiSelector{
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBoneDetectedEdges(edges);}
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(edges);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(edges);}	
-		
+		/*Metatarsals and carpals*/
+		int i = 11;
+		/*From Left*/
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		/*From Top*/
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
 		/*Debugging*/
 		/*
 		for (int i = 0; i<edges.size();++i){
@@ -488,6 +501,22 @@ public abstract class RoiSelector{
 		}
 		return counter;
 	}
+
+	/*DetectedEdge , indexing from 0*/
+	int selectRoiFirstNthFromLeft(Vector<DetectedEdge> edges,int nth){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).iit.get(0));
+			temp2.add(edges.get(iii).iit.get(0));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(nth)){
+			++counter;
+		}
+		return counter;
+	}
 	
 	/*DetectedEdge*/
 	int selectRoiRightMostBone(Vector<DetectedEdge> edges){
@@ -500,6 +529,22 @@ public abstract class RoiSelector{
 		Collections.sort(temp);
 		int counter=0;
 		while (temp2.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
+	}
+	
+			/*DetectedEdge, indexing from 0*/
+	int selectRoiFirstNthFromTop(Vector<DetectedEdge> edges, int nth){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).jiit.get(0));
+			temp2.add(edges.get(iii).jiit.get(0));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(nth)){
 			++counter;
 		}
 		return counter;
