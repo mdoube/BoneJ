@@ -65,7 +65,11 @@ public class ResultsWriter{
 		}
 		
 		if(imageAndAnalysisDetails.cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","Stratec CoD [mg/cm³]","Stratec CoA [mm²]","SSI [mm³]","ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
+			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","Stratec CoD [mg/cm³]","Stratec CoA [mm²]",
+				"SSI [mm³]","SSImax [mm³]","SSImin [mm³]",
+				"IPo [mm4]","Imax [mm4]","Imin [mm4]",
+				"dwIPo [mg/cm]","dwImax [mg/cm]","dwImin [mg/cm]",
+				"ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -196,6 +200,14 @@ public class ResultsWriter{
 		results+=cortAnalysis.CoD+"\t";
 		results+=cortAnalysis.CoA+"\t";
 		results+=cortAnalysis.SSI+"\t";
+		results+=cortAnalysis.SSIMax+"\t";
+		results+=cortAnalysis.SSIMin+"\t";
+		results+=cortAnalysis.IPo+"\t";
+		results+=cortAnalysis.IMax+"\t";
+		results+=cortAnalysis.IMin+"\t";
+		results+=cortAnalysis.dwIPo+"\t";
+		results+=cortAnalysis.dwIMax+"\t";
+		results+=cortAnalysis.dwIMin+"\t";
 		results+=cortAnalysis.ToD+"\t";
 		results+=cortAnalysis.ToA+"\t";
 		results+=cortAnalysis.MeA+"\t";
