@@ -572,7 +572,6 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		}
 	}
 
-	@Override
 	public void itemStateChanged(ItemEvent e) {
 		Object source = e.getSource();
 		if (source.equals(axis0Choice)) {
@@ -614,7 +613,6 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		}
 	}
 
-	@Override
 	public void textValueChanged(TextEvent e) {
 		TextField field = (TextField) e.getSource();
 		double value = Double.parseDouble(field.getText());
@@ -627,7 +625,6 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		rotateTo(value);
 	}
 
-	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		final int oldPos = slider.getValue();
 		int newPos = oldPos + e.getWheelRotation();
