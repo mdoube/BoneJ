@@ -220,10 +220,12 @@ public class UsageReporter {
 					"Java/"	+ System.getProperty("java.version") + " ("
 							+ System.getProperty("os.name") + " "
 							+ System.getProperty("os.version") + " "
-							+ System.getProperty("os.arch") + "; "
+							+ ((!IJ.isWindows()) ? System.getProperty("os.arch") : "") + "; "
 							+ getLocaleString() + ") "
 							+ System.getProperty("java.vendor"));
 			
+			if (IJ.debugMode)
+				IJ.log(uc.getRequestProperty("User-Agent"));
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;
