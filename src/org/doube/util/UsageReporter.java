@@ -218,9 +218,10 @@ public class UsageReporter {
 			uc.setRequestProperty(
 					"User-Agent",
 					"Java/"	+ System.getProperty("java.version") + " ("
+							+ ((IJ.isWindows()) ? "Windows; U; " : "")
 							+ System.getProperty("os.name") + " "
-							+ System.getProperty("os.version") + " "
-							+ ((!IJ.isWindows()) ? System.getProperty("os.arch") : "") + "; "
+							+ System.getProperty("os.version")
+							+ ((!IJ.isWindows()) ? " " + System.getProperty("os.arch") : "") + "; "
 							+ getLocaleString() + ") "
 							+ System.getProperty("java.vendor"));
 			
