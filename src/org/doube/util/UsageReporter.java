@@ -219,7 +219,8 @@ public class UsageReporter {
 					"User-Agent",
 					"Java/"	+ System.getProperty("java.version") + " ("
 							+ ((IJ.isWindows()) ? "Windows; U; " : "")
-							+ System.getProperty("os.name") + " "
+							+ ((IJ.isMacintosh()) ? "Macintosh; U; " : "")
+							+ ((IJ.isWindows()) ? "Windows NT" : System.getProperty("os.name")) + " "
 							+ System.getProperty("os.version")
 							+ ((!IJ.isWindows()) ? " " + System.getProperty("os.arch") : "") + "; "
 							+ getLocaleString() + ") "
