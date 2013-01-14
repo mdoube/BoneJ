@@ -219,10 +219,10 @@ public class UsageReporter {
 					"User-Agent",
 					"Java/"	+ System.getProperty("java.version") + " ("
 							+ ((IJ.isWindows()) ? "Windows; U; " : "")
-							+ ((IJ.isMacintosh()) ? "Macintosh; U; " : "")
+							+ ((IJ.isMacintosh()) ? "Macintosh; " : "")
 							+ ((IJ.isWindows()) ? "Windows NT" : System.getProperty("os.name")) + " "
 							+ System.getProperty("os.version")
-							+ ((!IJ.isWindows()) ? " " + System.getProperty("os.arch") : "") + "; "
+							+ ((!IJ.isWindows() && !IJ.isMacintosh()) ? " " + System.getProperty("os.arch") : "") + "; "
 							+ getLocaleString() + ") "
 							+ System.getProperty("java.vendor"));
 			
