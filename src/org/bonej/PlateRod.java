@@ -1,4 +1,4 @@
-package org.doube.bonej;
+package org.bonej;
 
 /**
  * PlateRod plugin for ImageJ
