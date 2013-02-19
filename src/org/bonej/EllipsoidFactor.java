@@ -55,7 +55,7 @@ import org.doube.util.UsageReporter;
  * Eigenvalues plot ev2/ev1 on 3d skeleton
  */
 
-public class PlateRod implements PlugIn {
+public class EllipsoidFactor implements PlugIn {
 	private int nVectors = 1000;
 
 	public void run(String arg) {
