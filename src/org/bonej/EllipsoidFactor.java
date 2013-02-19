@@ -1,8 +1,8 @@
 package org.bonej;
 
 /**
- * PlateRod plugin for ImageJ
- * Copyright 2009 2010 Michael Doube
+ * EllipsoidFactor plugin for ImageJ
+ * Copyright 2013 Michael Doube
  * 
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.util.Comparator;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -28,6 +30,7 @@ import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
 import org.doube.geometry.Vectors;
+import org.doube.geometry.Ellipsoid;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
@@ -55,7 +58,7 @@ import org.doube.util.UsageReporter;
  * Eigenvalues plot ev2/ev1 on 3d skeleton
  */
 
-public class EllipsoidFactor implements PlugIn {
+public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int nVectors = 1000;
 
 	public void run(String arg) {
@@ -276,4 +279,8 @@ public class EllipsoidFactor implements PlugIn {
 				covarianceMatrix);
 		return E;
 	}/* end PrincipalComponents */
+
+	public int compare(Ellipsoid o1, Ellipsoid o2) {
+		return Double.compare(o1.getVolume(), o2.getVolume());
+	}
 }
