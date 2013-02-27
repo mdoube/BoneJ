@@ -147,7 +147,9 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Scaling_constant (intercept)",-856.036, 4, 8, null);
 		*/
 		//Get ROI selection
-		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"};
+		String[] choiceLabels = {"Bigger","Smaller","Left","Right","Top","Bottom","Central","Peripheral","SecondLargest","TwoLargestLeft","TwoLargestRight"
+								,"FirstFromLeft","SecondFromLeft","ThirdFromLeft","FourthFromLeft","FifthFromLeft"
+								,"FirstFromTop","SecondFromTop","ThirdFromTop","FourthFromTop","FifthFromTop"};
 		dialog.addChoice("Roi_selection", choiceLabels, choiceLabels[0]); 
 		dialog.addChoice("Soft_Tissue_Roi_selection", choiceLabels, choiceLabels[0]); 
 		String[] rotationLabels = {"According_to_Imax/Imin","Furthest_point","All_Bones_Imax/Imin","Not_selected_to_right","Selected_to_right"};
@@ -162,7 +164,7 @@ public class Distribution_Analysis implements PlugIn {
 		middleLabels[2] = "Analyse_concentric_density_distribution";
 		middleDefaults[2] = false;
 		middleLabels[3] = "Analyse_density_distribution";
-		middleDefaults[3] = false;
+		middleDefaults[3] = true;
 		middleLabels[4] = "Analyse_soft_tissues";
 		middleDefaults[4] = false;
 		middleLabels[5] = "Prevent_peeling_PVE_pixels";
@@ -310,62 +312,85 @@ public class Distribution_Analysis implements PlugIn {
 				if(imageAndAnalysisDetails.suppressImages && !imageAndAnalysisDetails.saveImageOnDisk && roi != null){
 					makeImage = false;
 				}else{
+					//System.out.println("Trying to create image "+roi.scaledImage.length+" "+roi.width+" "+roi.height);
 					resultImage = ResultsImage.getRGBResultImage(roi.scaledImage,roi.width,roi.height, imageSavePath);
+					//System.out.println("Returned image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					resultImage.setTitle(imp.getTitle()+"-result");
 				}
-
+				//IJ.log("ST.");
 				if(imageAndAnalysisDetails.stOn){
 					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
 					results = resultsWriter.printSoftTissueResults(results,softTissueAnalysis);
 					if(makeImage && resultImage != null){
 						resultImage = ResultsImage.addSoftTissueSieve(resultImage,softRoi.softSieve);
+						//System.out.println("ST image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 				}
-				
+				//IJ.log("cON.");
 				if (imageAndAnalysisDetails.cOn){
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
 						resultImage = ResultsImage.addBoneSieve(resultImage,roi.sieve,roi.scaledImage,roi.details.marrowThreshold,cortAnalysis.cortexSieve);
+						//System.out.println("cON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 					
 				}
+				//IJ.log("mON.");
 				if (imageAndAnalysisDetails.mOn){
 					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printMassDistributionResults(results,massDistribution,imageAndAnalysisDetails);
+					//System.out.println("mON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 				}
+				//IJ.log("conON.");
 				if (imageAndAnalysisDetails.conOn){
 					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printConcentricRingResults(results,concentricRingAnalysis,imageAndAnalysisDetails);
 					if(!imageAndAnalysisDetails.dOn && makeImage && resultImage != null){
 						resultImage = ResultsImage.addPeriRadii(resultImage,concentricRingAnalysis.boneCenter, determineAlfa.pindColor,concentricRingAnalysis.Ru,concentricRingAnalysis.Theta);
 						resultImage = ResultsImage.addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,concentricRingAnalysis.boneCenter);
+						//System.out.println("conON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 				}
 				
-				
+				//IJ.log("dON.");
 				if (imageAndAnalysisDetails.dOn){
 					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printDistributionResults(results,DistributionAnalysis,imageAndAnalysisDetails);
 					if (makeImage && resultImage != null){
 						resultImage = ResultsImage.addRadii(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter, determineAlfa.pindColor,DistributionAnalysis.R,DistributionAnalysis.R2,DistributionAnalysis.Theta);
 						resultImage = ResultsImage.addMarrowCenter(resultImage,determineAlfa.alfa/Math.PI*180.0,DistributionAnalysis.marrowCenter);
+						//System.out.println("dON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 				}
 				
+				//IJ.log("rotate.");
+				//IJ.log("Ready to rotate image "+(determineAlfa.alfa/Math.PI*180.0));
 				if ((imageAndAnalysisDetails.dOn || imageAndAnalysisDetails.conOn) && makeImage && resultImage != null){
 					resultImage = ResultsImage.addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
+					//System.out.println("rotate image "+resultImage.getWidth()+" height "+resultImage.getHeight()+" rotated "+(determineAlfa.alfa/Math.PI*180.0));
 				}
 				
+				//IJ.log("scale. "+resultImage.getWidth()+" height "+resultImage.getHeight());
 				if (!imageAndAnalysisDetails.suppressImages && resultImage!= null){
 					resultImage = ResultsImage.addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
+					//IJ.log("Image done");
+					//System.out.println("Scale done "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					resultImage.show();
 				}
+				//IJ.log("saveImage.");
 				if (imageAndAnalysisDetails.saveImageOnDisk && resultImage!= null){
-					resultImage = ResultsImage.addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
+					if (imageAndAnalysisDetails.suppressImages){
+						resultImage = ResultsImage.addScale(resultImage,roi.pixelSpacing);	//Add scale after rotating
+						//System.out.println("Scale surpress done "+resultImage.getWidth()+" height "+resultImage.getHeight());
+					}
+					//System.out.println("Creating fileSaver");
 					FileSaver fSaver = new FileSaver(resultImage);
+					//System.out.println("Saving");
 					fSaver.saveAsPng(imageSavePath+imageName+".png"); 
+					//System.out.println("Saving done");
 				}
+				//IJ.log("saveSuccessful.");
 				textPanel.appendLine(results);
 				textPanel.updateDisplay();
 			}else{

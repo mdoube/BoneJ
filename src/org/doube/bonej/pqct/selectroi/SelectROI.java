@@ -91,7 +91,7 @@ public class SelectROI extends RoiSelector{
 		
 		for (int j = 0;j< height;j++){
 			for (int i = 0; i < width;i++){
-				if (scaledImage[i+j*width]<marrowThreshold && sieve[i+j*width] > 0){
+				if (scaledImage[i+j*width]<areaThreshold && sieve[i+j*width] > 0){
 					boneMarrowRoiI.add(i);
 					boneMarrowRoiJ.add(j);
 				}

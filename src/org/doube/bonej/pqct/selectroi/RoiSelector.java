@@ -221,7 +221,20 @@ public abstract class RoiSelector{
 		if (roiChoice.equals(details.choiceLabels[8])){selection = selectRoiSecondLargestBoneDetectedEdges(edges);}
 		if (roiChoice.equals(details.choiceLabels[9])){selection = selectRoiTwoLargestLeft(edges);}
 		if (roiChoice.equals(details.choiceLabels[10])){selection = selectRoiTwoLargestRight(edges);}	
-		
+		/*Metatarsals and carpals*/
+		int i = 11;
+		/*From Left*/
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromLeft(edges,i-11);}	i = i+1;
+		/*From Top*/
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
+		if (roiChoice.equals(details.choiceLabels[i])){selection = selectRoiFirstNthFromTop(edges,i-16);}	i = i+1;
 		/*Debugging*/
 		/*
 		for (int i = 0; i<edges.size();++i){
@@ -235,12 +248,14 @@ public abstract class RoiSelector{
 		//Try to guess whether the bones were stacked or not....
 		if(guessStacked){
 			int[] guessingStack = twoLargestBonesDetectedEdges(edges);
-			if (Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[0]).jiit.get(1))>
-			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[0]).iit.get(1))){
+			
+			if (Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>
+			1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1))){
 				details.stacked = true;
 			} else{
 				details.stacked = false;
 			}
+			//IJ.log("Guessing Stacked "+Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1)) +" "+(1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" onko "+(Math.abs((double)edges.get(guessingStack[0]).jiit.get(0)- (double)edges.get(guessingStack[1]).jiit.get(1))>1.1*Math.abs((double)edges.get(guessingStack[0]).iit.get(0)- (double)edges.get(guessingStack[1]).iit.get(1)))+" paatos "+details.stacked);
 		}
 		
 		
@@ -325,30 +340,37 @@ public abstract class RoiSelector{
 	boolean guessFlipLarger(Vector<DetectedEdge> edges,boolean stacked){
 		Vector<Integer> temp = new Vector<Integer>();
 		Vector<Integer> temp2 = new Vector<Integer>();
+		//IJ.log("Checking number of edges");
 		for (int iii =0;iii<edges.size();iii++){
 				temp.add(edges.get(iii).area);
 				temp2.add(edges.get(iii).area);
 		}
 		Collections.sort(temp);
-		int[] counter= new int[2];
-		while (temp2.get(counter[0]) !=temp.get(temp.size()-1)){
+		
+		int[] counter= {0,0};
+		//IJ.log("Sorting edges c "+counter[0]+" t2 "+temp2.get(counter[0])+" tMax "+temp.get(temp.size()-1)+" true "+(temp2.get(counter[0]) != temp.get(temp.size()-1)));
+		while (((int) temp2.get(counter[0])) != ((int) temp.get(temp.size()-1))){
 			++counter[0];
+			//IJ.log("Sorting edges c "+counter[0]+" t2 "+temp2.get(counter[0])+" tMax "+temp.get(temp.size()-1)+" true "+(temp2.get(counter[0]) !=temp.get(temp.size()-1)));
 		}
+		//IJ.log("Found largest");
 		boolean returnValue = false;
 		if (temp.size() > 1){
-			while (temp2.get(counter[1]) !=temp.get(temp.size()-2)){
+			while (((int)temp2.get(counter[1])) != ((int)temp.get(temp.size()-2))){
 				++counter[1];
 			}
 			if (stacked){
-				if (edges.get(counter[0]).jiit.get(0)<edges.get(counter[1]).jiit.get(0)){
+				//IJ.log("Decision "+(((int)edges.get(counter[0]).jiit.get(0))<((int)edges.get(counter[1]).jiit.get(0))));
+				if (((int)edges.get(counter[0]).jiit.get(0))<((int)edges.get(counter[1]).jiit.get(0))){
 					returnValue = false;
 				}else{returnValue = true;}
 			}else{
-				if (edges.get(counter[0]).iit.get(0)<edges.get(counter[1]).iit.get(0)){
+				if (((int)edges.get(counter[0]).iit.get(0))<((int)edges.get(counter[1]).iit.get(0))){
 					returnValue = false;
 				}else{returnValue = true;}
 			}
 		}		
+		//IJ.log("Done with largest "+returnValue);
 		//IJ.error("RV "+returnValue+" c0 "+iit.get(beginning.get(counter[0]))+" c1 "+iit.get(beginning.get(counter[1])));
 		return returnValue;
 	}
@@ -411,22 +433,17 @@ public abstract class RoiSelector{
 	
 	/*DetectedEdge*/
 	int selectRoiSecondLargestBoneDetectedEdges(Vector<DetectedEdge> edges){
-		int counter = 0;
-		int maxArea = 0;
-		int maxPos = 0;
-		int secondPos = 0;
-		
-		Iterator<DetectedEdge> it = edges.iterator();
-		while (it.hasNext()){
-			int a = it.next().area;
-			if (a > maxArea){
-				maxArea = a;
-				secondPos = maxPos;
-				maxPos = counter;
-			}
-			counter++;
+		if (edges.size() < 2){return 0;}
+		Vector<DetectedEdge> temp = new Vector<DetectedEdge>();
+		for (int iii =0;iii<edges.size();++iii){
+			temp.add(edges.get(iii));
 		}
-		return secondPos;
+		Collections.sort(temp);
+		int counter=0;
+		while (edges.get(counter).area !=temp.get(temp.size()-2).area){	//Select second largest
+			++counter;
+		}
+		return counter;
 	}
 	
 		/*DetectedEdge*/
@@ -484,6 +501,22 @@ public abstract class RoiSelector{
 		}
 		return counter;
 	}
+
+	/*DetectedEdge , indexing from 0*/
+	int selectRoiFirstNthFromLeft(Vector<DetectedEdge> edges,int nth){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).iit.get(0));
+			temp2.add(edges.get(iii).iit.get(0));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(nth)){
+			++counter;
+		}
+		return counter;
+	}
 	
 	/*DetectedEdge*/
 	int selectRoiRightMostBone(Vector<DetectedEdge> edges){
@@ -496,6 +529,22 @@ public abstract class RoiSelector{
 		Collections.sort(temp);
 		int counter=0;
 		while (temp2.get(counter) !=temp.get(temp.size()-1)){
+			++counter;
+		}
+		return counter;
+	}
+	
+			/*DetectedEdge, indexing from 0*/
+	int selectRoiFirstNthFromTop(Vector<DetectedEdge> edges, int nth){
+		Vector<Integer> temp = new Vector<Integer>();
+		Vector<Integer> temp2 = new Vector<Integer>();
+		for (int iii =0;iii<edges.size();iii++){
+			temp.add(edges.get(iii).jiit.get(0));
+			temp2.add(edges.get(iii).jiit.get(0));
+		}
+		Collections.sort(temp);
+		int counter=0;
+		while (temp2.get(counter) !=temp.get(nth)){
 			++counter;
 		}
 		return counter;
