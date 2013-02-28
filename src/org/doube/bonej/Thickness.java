@@ -1313,7 +1313,7 @@ public class Thickness implements PlugIn {
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
 	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
-		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
+		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3) && imp.getStackSize() > 1) {
 			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
 		}
 		float[][] s = geometryToDistanceMap(imp, inv);
