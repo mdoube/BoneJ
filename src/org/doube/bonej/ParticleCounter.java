@@ -1847,7 +1847,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				if (particleLists.get(b).isEmpty()) {
 					continue;
 				}
-
+				
 				for (int l = 0; l < particleLists.get(b).size(); l++) {
 					final short[] voxel = particleLists.get(b).get(l);
 					final int x = voxel[0];
@@ -1940,10 +1940,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		for (short z = 0; z < d; z++) {
 			IJ.showStatus("Listing substructures...");
 			IJ.showProgress(z, d);
+			final int[] sliceLabels = particleLabels[z];
 			for (short y = 0; y < h; y++) {
 				final int i = y * w;
 				for (short x = 0; x < w; x++) {
-					final int p = particleLabels[z][i + x];
+					final int p = sliceLabels[i + x];
 					if (p > 0) { // ignore background
 						final short[] voxel = { x, y, z };
 						pL.get(p).add(voxel);
