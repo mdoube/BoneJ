@@ -2031,35 +2031,61 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				continue;
 			}
 		}
-		
-		//iterate again, this time merging based on values
+
+		// iterate again, this time merging based on values & LUT values
 		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
 			Integer a = entry.getKey();
+			Integer b = Integer.valueOf(a.intValue());
 			HashSet<Integer> set = entry.getValue();
-			 
-					//value:value merging
-					//all the values must be checked to make sure that
-					//their LUT value agrees with their key
-					//the LUT value cannot be larger than the key,
-					//because we traverse in ascending order.
-					//If the LUT value is less than the key, then 
-					//all values on the key must be updated with the new LUT value
-					//Complications:
-					//there might be multiple disagreeing LUT values on a single key
-					// - must choose smallest LUT value and apply to all
-					//does doing it in two passes guarantee that the minimum LUT value from
-					//a set mean that there can't be the same value later on with a lower
-					//LUT value?
-			//No, need to search all keys with non-minimum LUT values (maybe recursively?) and replace
-			//with minimum LUT value
+			for (Integer v : set) {
+				Integer lutValue = lut.get(v);
+				if (b.compareTo(lutValue) > 0)
+					b = lutValue;
+			}
+			// b now contains the lowest value reference for the set
+			// if b == the set's key then there is nothing to do
+			if (b.compareTo(a) == 0)
+				continue;
+
+			// otherwise update the LUT and move the set
+			updateLUT(b, set, lut);
+			HashSet<Integer> target = map.get(b);
+			for (Integer i : set)
+				target.add(i);
+			map.remove(a);
+			continue;
+
+			// value:value merging
+			// all the values must be checked to make sure that
+			// their LUT value agrees with their key
+			// the LUT value cannot be larger than the key,
+			// because we traverse in ascending order.
+			// If the LUT value is less than the key, then
+			// all values on the key must be updated with the new LUT value
+			// Complications:
+			// there might be multiple disagreeing LUT values on a single key
+			// - must choose smallest LUT value and apply to all
+			// does doing it in two passes guarantee that the minimum LUT value
+			// from
+			// a set mean that there can't be the same value later on with a
+			// lower
+			// LUT value?
+			// No, need to search all keys with non-minimum LUT values (maybe
+			// recursively?) and replace
+			// with minimum LUT value
 		}
-		
 	}
 
 	private void merge(TreeMap<Integer, HashSet<Integer>> map,
 			HashMap<Integer, Integer> lut, int[] array) {
-		// get the minimum value from the neighbourhood and use that for the key
-		final Integer a = new Integer(getNonZeroMin(array));
+		// get the minimum value from the neighbourhood
+		Integer a = Integer.valueOf(getNonZeroMin(array));
+		// get the minimum LUT value associated with the neighbours
+		Integer b = getMinimumKey(lut, array);
+
+		// assign the neighbourhood to the lower of a or b
+		a = (a.compareTo(b) < 0) ? a : b;
+
 		if (map.containsKey(a)) {
 			HashSet<Integer> set = map.get(a);
 			for (final int val : array) {
@@ -2082,9 +2108,35 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	}
 
 	/**
+	 * Return the minimum LUT key associated with this neighbourhood. If no key
+	 * has been made for any of the neighbourhood values, returns Integer.MAX_VALUE
+	 * 
+	 * @param lut
+	 * @param array
+	 * @return
+	 */
+	private Integer getMinimumKey(HashMap<Integer, Integer> lut, int[] array) {
+		Integer minLutValue = Integer.valueOf(Integer.MAX_VALUE);
+		for (final int i : array) {
+			if (i == 0)
+				continue;
+			final Integer lutValue = lut.get(Integer.valueOf(i));
+			if (lutValue == null)
+				continue;
+			minLutValue = (minLutValue.compareTo(lut.get(Integer.valueOf(i))) < 0) ? minLutValue
+					: lutValue;
+		}
+		return minLutValue;
+	}
+
+	/**
+	 * Update the LUT
 	 * 
 	 * @param a
+	 *            the value of minimised particle label, normally less than v as
+	 *            it will be used to translate v later on
 	 * @param v
+	 *            the key the original particle label
 	 * @param lut
 	 */
 	private void updateLUT(Integer a, Integer v, HashMap<Integer, Integer> lut) {
@@ -2095,10 +2147,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	}
 
 	/**
+	 * Update the LUT for a set of values
 	 * 
 	 * @param a
+	 *            the transformed (minimised) particle label
 	 * @param set
+	 *            the set of values to be updated
 	 * @param lut
+	 *            the LUT
 	 */
 	private void updateLUT(Integer a, HashSet<Integer> set,
 			HashMap<Integer, Integer> lut) {
