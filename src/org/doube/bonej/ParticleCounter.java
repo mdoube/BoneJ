@@ -23,9 +23,13 @@ import java.awt.Choice;
 import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1847,7 +1851,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				if (particleLists.get(b).isEmpty()) {
 					continue;
 				}
-				
+
 				for (int l = 0; l < particleLists.get(b).size(); l++) {
 					final short[] voxel = particleLists.get(b).get(l);
 					final int x = voxel[0];
@@ -1978,6 +1982,231 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 		particleLists.get(p).clear();
 	}
+
+	private void joinMappedStructures(ImagePlus imp, int[][] particleLabels,
+			int nParticles, int phase) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+
+		// TreeMap is ordered list of unique values and HashSet is unordered
+		// list of unique values
+		// where we store the list of particle labels and the minimum label in
+		// their neighbourhood
+		TreeMap<Integer, HashSet<Integer>> map = new TreeMap<Integer, HashSet<Integer>>();
+
+		// Place to store final translation of particle labels for label
+		// minimisation
+		HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
+				nParticles);
+
+		// populate the first list with neighbourhoods
+		for (int z = 0; z < d; z++) {
+			for (int y = 0; y < h; y++) {
+				// final int i = y * w;
+				for (int x = 0; x < w; x++) {
+					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
+							d, phase);
+					merge(map, lut, nbh);
+				}
+			}
+		}
+
+		// minimise the map and the lut
+		// iterate over all minimum neighbours, merging on keys as we go
+		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
+			Integer a = entry.getKey();
+			HashSet<Integer> set = entry.getValue();
+			// key:value merge
+			// key's LUT value is less than key, therefore
+			// all values in set must have their LUT value updated
+			// and be moved to the set with lower-valued key
+			Integer currentLookUpValue = lut.get(a);
+			if (currentLookUpValue.compareTo(a) < 0) {
+				updateLUT(currentLookUpValue, set, lut);
+				HashSet<Integer> target = map.get(currentLookUpValue);
+				for (Integer i : set)
+					target.add(i);
+				map.remove(a);
+				continue;
+			}
+		}
+		
+		//iterate again, this time merging based on values
+		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
+			Integer a = entry.getKey();
+			HashSet<Integer> set = entry.getValue();
+			 
+					//value:value merging
+					//all the values must be checked to make sure that
+					//their LUT value agrees with their key
+					//the LUT value cannot be larger than the key,
+					//because we traverse in ascending order.
+					//If the LUT value is less than the key, then 
+					//all values on the key must be updated with the new LUT value
+					//Complications:
+					//there might be multiple disagreeing LUT values on a single key
+					// - must choose smallest LUT value and apply to all
+					//does doing it in two passes guarantee that the minimum LUT value from
+					//a set mean that there can't be the same value later on with a lower
+					//LUT value?
+		}
+		
+	}
+
+	private void merge(TreeMap<Integer, HashSet<Integer>> map,
+			HashMap<Integer, Integer> lut, int[] array) {
+		// get the minimum value from the neighbourhood and use that for the key
+		final Integer a = new Integer(getNonZeroMin(array));
+		if (map.containsKey(a)) {
+			HashSet<Integer> set = map.get(a);
+			for (final int val : array) {
+				if (val == 0)
+					continue;
+				Integer v = new Integer(val);
+				set.add(v);
+				updateLUT(a, v, lut);
+			}
+		} else {
+			HashSet<Integer> set = new HashSet<Integer>();
+			for (final int val : array) {
+				if (val == 0)
+					continue;
+				set.add(new Integer(val));
+			}
+			map.put(a, set);
+			updateLUT(a, set, lut);
+		}
+	}
+
+	/**
+	 * 
+	 * @param a
+	 * @param v
+	 * @param lut
+	 */
+	private void updateLUT(Integer a, Integer v, HashMap<Integer, Integer> lut) {
+		// update the LUT if the supplied value a is smaller than the current
+		// LUT value
+		if (lut.get(v) == null || lut.get(v).compareTo(a) > 0)
+			lut.put(v, a);
+	}
+
+	/**
+	 * 
+	 * @param a
+	 * @param set
+	 * @param lut
+	 */
+	private void updateLUT(Integer a, HashSet<Integer> set,
+			HashMap<Integer, Integer> lut) {
+		for (Integer i : set) {
+			updateLUT(a, i, lut);
+		}
+	}
+
+	private int getNonZeroMin(int[] array) {
+		int a = Integer.MAX_VALUE;
+		final int l = array.length;
+		for (int i = 0; i < l; i++) {
+			final int val = array[i];
+			// 0 is the background particle
+			if (val == 0)
+				continue;
+			a = Math.min(a, val);
+		}
+		return a;
+	}
+
+	/**
+	 * Get neighborhood of a pixel in a 3D image (0 border conditions)
+	 * 
+	 * @param image
+	 *            3D image (int[][])
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @return corresponding 27-pixels neighborhood (0 if out of image)
+	 */
+	private int[] getNeighborhood(int[][] image, int x, int y, int z, int w,
+			int h, int d, int phase) {
+		if (phase == FORE) {
+			int[] neighborhood = new int[27];
+
+			neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1, w, h, d);
+			neighborhood[1] = getPixel(image, x, y - 1, z - 1, w, h, d);
+			neighborhood[2] = getPixel(image, x + 1, y - 1, z - 1, w, h, d);
+
+			neighborhood[3] = getPixel(image, x - 1, y, z - 1, w, h, d);
+			neighborhood[4] = getPixel(image, x, y, z - 1, w, h, d);
+			neighborhood[5] = getPixel(image, x + 1, y, z - 1, w, h, d);
+
+			neighborhood[6] = getPixel(image, x - 1, y + 1, z - 1, w, h, d);
+			neighborhood[7] = getPixel(image, x, y + 1, z - 1, w, h, d);
+			neighborhood[8] = getPixel(image, x + 1, y + 1, z - 1, w, h, d);
+
+			neighborhood[9] = getPixel(image, x - 1, y - 1, z, w, h, d);
+			neighborhood[10] = getPixel(image, x, y - 1, z, w, h, d);
+			neighborhood[11] = getPixel(image, x + 1, y - 1, z, w, h, d);
+
+			neighborhood[12] = getPixel(image, x - 1, y, z, w, h, d);
+			neighborhood[13] = getPixel(image, x, y, z, w, h, d);
+			neighborhood[14] = getPixel(image, x + 1, y, z, w, h, d);
+
+			neighborhood[15] = getPixel(image, x - 1, y + 1, z, w, h, d);
+			neighborhood[16] = getPixel(image, x, y + 1, z, w, h, d);
+			neighborhood[17] = getPixel(image, x + 1, y + 1, z, w, h, d);
+
+			neighborhood[18] = getPixel(image, x - 1, y - 1, z + 1, w, h, d);
+			neighborhood[19] = getPixel(image, x, y - 1, z + 1, w, h, d);
+			neighborhood[20] = getPixel(image, x + 1, y - 1, z + 1, w, h, d);
+
+			neighborhood[21] = getPixel(image, x - 1, y, z + 1, w, h, d);
+			neighborhood[22] = getPixel(image, x, y, z + 1, w, h, d);
+			neighborhood[23] = getPixel(image, x + 1, y, z + 1, w, h, d);
+
+			neighborhood[24] = getPixel(image, x - 1, y + 1, z + 1, w, h, d);
+			neighborhood[25] = getPixel(image, x, y + 1, z + 1, w, h, d);
+			neighborhood[26] = getPixel(image, x + 1, y + 1, z + 1, w, h, d);
+
+			return neighborhood;
+		} else if (phase == BACK) {
+			int[] neighborhood = new int[6];
+			neighborhood[0] = getPixel(image, x - 1, y, z, w, h, d);
+			neighborhood[1] = getPixel(image, x, y - 1, z, w, h, d);
+			neighborhood[2] = getPixel(image, x, y, z - 1, w, h, d);
+
+			neighborhood[3] = getPixel(image, x + 1, y, z, w, h, d);
+			neighborhood[4] = getPixel(image, x, y + 1, z, w, h, d);
+			neighborhood[5] = getPixel(image, x, y, z + 1, w, h, d);
+			return neighborhood;
+		} else
+			return null;
+	} /* end getNeighborhood */
+
+	/* ----------------------------------------------------------------------- */
+	/**
+	 * Get pixel in 3D image (0 border conditions)
+	 * 
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @return corresponding pixel (0 if out of image)
+	 */
+	private int getPixel(int[][] image, int x, int y, int z, int w, int h, int d) {
+		if (x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
+			return image[z][x + y * w];
+		else
+			return 0;
+	} /* end getPixel */
 
 	/**
 	 * Create a work array
