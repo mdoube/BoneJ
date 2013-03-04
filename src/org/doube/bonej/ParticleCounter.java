@@ -2050,6 +2050,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					//does doing it in two passes guarantee that the minimum LUT value from
 					//a set mean that there can't be the same value later on with a lower
 					//LUT value?
+			//No, need to search all keys with non-minimum LUT values (maybe recursively?) and replace
+			//with minimum LUT value
 		}
 		
 	}
@@ -2063,7 +2065,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			for (final int val : array) {
 				if (val == 0)
 					continue;
-				Integer v = new Integer(val);
+				Integer v = Integer.valueOf(val);
 				set.add(v);
 				updateLUT(a, v, lut);
 			}
@@ -2072,7 +2074,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			for (final int val : array) {
 				if (val == 0)
 					continue;
-				set.add(new Integer(val));
+				set.add(Integer.valueOf(val));
 			}
 			map.put(a, set);
 			updateLUT(a, set, lut);
