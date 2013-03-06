@@ -1299,9 +1299,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				connectStructures(imp, workArray, particleLabels, phase,
 						stitchRanges);
 			}
-		} else if (labelMethod == LINEAR ) {
+		} else if (labelMethod == LINEAR) {
 			joinStructures(imp, particleLabels, phase);
-		} else if (labelMethod == MAPPED ) {
+		} else if (labelMethod == MAPPED) {
 			joinMappedStructures(imp, particleLabels, nParticles, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
@@ -1999,92 +1999,166 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// list of unique values
 		// where we store the list of particle labels and the minimum label in
 		// their neighbourhood
-		TreeMap<Integer, HashSet<Integer>> map = new TreeMap<Integer, HashSet<Integer>>();
+		// TreeMap<Integer, HashSet<Integer>> map = new TreeMap<Integer,
+		// HashSet<Integer>>();
 
 		// Place to store final translation of particle labels for label
 		// minimisation
-		HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
-				nParticles);
+		// // HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
+		// nParticles);
+
+		int[] lutArray = new int[nParticles];
+		// set each label to be its own root
+		for (int i = 0; i < nParticles; i++)
+			lutArray[i] = i;
 
 		// populate the first list with neighbourhoods
 		for (int z = 0; z < d; z++) {
 			IJ.showStatus("Building neighbourhood list");
-			IJ.showProgress(z, d-1);
+			IJ.showProgress(z, d - 1);
 			for (int y = 0; y < h; y++) {
 				for (int x = 0; x < w; x++) {
 					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
 							d, phase);
-					merge(map, lut, nbh);
+					// merge(map, lut, nbh);
+					addNeighboursToLUT(lutArray, nbh);
 				}
 			}
 		}
 
-		// minimise the map and the lut
-		// iterate over all minimum neighbours, merging on keys as we go
-		Iterator<Integer> it = map.keySet().iterator();
-		while (it.hasNext()) {
-			IJ.showStatus("Merging on keys");
-			Integer a = it.next();
-			IJ.showProgress(a.intValue(), map.lastKey().intValue());
-			HashSet<Integer> set = map.get(a);
-			// key:value merge
-			// key's LUT value is less than key, therefore
-			// all values in set must have their LUT value updated
-			// and be moved to the set with lower-valued key
-			Integer currentLookUpValue = lut.get(a);
-			if (currentLookUpValue.compareTo(a) < 0) {
-				updateLUT(currentLookUpValue, set, lut);
-				HashSet<Integer> target = map.get(currentLookUpValue);
-				for (Integer i : set)
-					target.add(i);
-				it.remove();
-				continue;
-			}
-		}
+		// minimise the LUT to the right
+		minimiseLutArray(lutArray);
+				
+		//replace all labels with LUT values
+		applyLUT(particleLabels, lutArray, w, h, d);
+		
 
-		// iterate again, this time merging based on values & LUT values
-		it = map.keySet().iterator();
-		while (it.hasNext()) {
-			Integer a = it.next();
-			Integer b = Integer.valueOf(a.intValue());
-			HashSet<Integer> set = map.get(a);
-			for (Integer v : set) {
-				Integer lutValue = lut.get(v);
-				if (b.compareTo(lutValue) > 0)
-					b = lutValue;
-			}
-			// b now contains the lowest value reference for the set
-			// if b == the set's key then there is nothing to do
-			if (b.compareTo(a) == 0)
-				continue;
+		//
+		// // minimise the map and the lut
+		// // iterate over all minimum neighbours, merging on keys as we go
+		// Iterator<Integer> it = map.keySet().iterator();
+		// while (it.hasNext()) {
+		// IJ.showStatus("Merging on keys");
+		// Integer a = it.next();
+		// IJ.showProgress(a.intValue(), map.lastKey().intValue());
+		// HashSet<Integer> set = map.get(a);
+		// // key:value merge
+		// // key's LUT value is less than key, therefore
+		// // all values in set must have their LUT value updated
+		// // and be moved to the set with lower-valued key
+		// Integer currentLookUpValue = lut.get(a);
+		// if (currentLookUpValue.compareTo(a) < 0) {
+		// updateLUT(currentLookUpValue, set, lut);
+		// HashSet<Integer> target = map.get(currentLookUpValue);
+		// for (Integer i : set)
+		// target.add(i);
+		// it.remove();
+		// continue;
+		// }
+		// }
+		//
+		// // iterate again, this time merging based on values & LUT values
+		// it = map.keySet().iterator();
+		// while (it.hasNext()) {
+		// Integer a = it.next();
+		// Integer b = Integer.valueOf(a.intValue());
+		// HashSet<Integer> set = map.get(a);
+		// for (Integer v : set) {
+		// Integer lutValue = lut.get(v);
+		// if (b.compareTo(lutValue) > 0)
+		// b = lutValue;
+		// }
+		// // b now contains the lowest value reference for the set
+		// // if b == the set's key then there is nothing to do
+		// if (b.compareTo(a) == 0)
+		// continue;
+		//
+		// // otherwise update the LUT and move the set
+		// updateLUT(b, set, lut);
+		// HashSet<Integer> target = map.get(b);
+		// for (Integer i : set)
+		// target.add(i);
+		// it.remove();
+		// continue;
+		// }
+		//
+		// // now check the TreeMap to make sure each value appears only once
+		//
+		// // store a count of each particle label
+		// HashMap<Integer, Integer> counter = new HashMap<Integer, Integer>(
+		// nParticles);
+		//
+		// for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
+		// Integer a = entry.getKey();
+		// HashSet<Integer> set = entry.getValue();
+		// for (Integer i : set) {
+		// Integer count = counter.get(i);
+		// if (count == null)
+		// counter.put(i, Integer.valueOf(1));
+		// else {
+		// counter.put(i, Integer.valueOf(count.intValue() + 1));
+		// IJ.log("Value " + i.intValue() + " repeated "
+		// + counter.get(i).intValue() + " times.");
+		// }
+		// }
+		// }
+	}
 
-			// otherwise update the LUT and move the set
-			updateLUT(b, set, lut);
-			HashSet<Integer> target = map.get(b);
-			for (Integer i : set)
-				target.add(i);
-			it.remove();
-			continue;
-		}
-
-		// now check the TreeMap to make sure each value appears only once
-
-		// store a count of each particle label
-		HashMap<Integer, Integer> counter = new HashMap<Integer, Integer>(
-				nParticles);
-
-		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
-			Integer a = entry.getKey();
-			HashSet<Integer> set = entry.getValue();
-			for (Integer i : set) {
-				Integer count = counter.get(i);
-				if (count == null)
-					counter.put(i, Integer.valueOf(1));
-				else {
-					counter.put(i, Integer.valueOf(count.intValue() + 1));
-					IJ.log("Value " + i.intValue() + " repeated "
-							+ counter.get(i).intValue() + " times.");
+	private void applyLUT(int[][] particleLabels, final int[] lutArray, final int w, final int h, final int d) {
+		for (int z = 0; z < d; z++){
+			int[] slice = particleLabels[z];
+			for (int y = 0; y < h; y++){
+				final int yd = y * d;
+				for (int x = 0; x < w; x++){
+					final int i = yd + x;
+					final int label = slice[i];
+					if (label == 0)
+						continue;
+					slice[i] = lutArray[label]; 
 				}
+			}
+		}
+	}
+
+	private void minimiseLutArray(int[] lutArray) {
+		final int l = lutArray.length;
+		for (int key = 1; key < l; key++) {
+			final int value = lutArray[key];
+			// this is a root
+			if (value == key)
+				continue;
+			// otherwise update the current key with the
+			// value from the referred key
+			final int minValue = lutArray[value];
+			lutArray[key] = minValue;
+		}
+	}
+
+	private void addNeighboursToLUT(int[] lutArray, int[] nbh) {
+		final int size = nbh.length;
+
+		// find the minimum neighbour
+		int min = getNonZeroMin(nbh);
+		// if the neighours are all 0, stop
+		if (min == Integer.MAX_VALUE)
+			return;
+		// find the minimum LUT value of the neighbours
+		// use the minimum of neighbour or LUT
+		min = Math.min(min, getMinLutValue(lutArray, nbh));
+		// apply minimum value cascading to left for each
+		// neighbour
+		for (int i = 0; i < size; i++) {
+			// get the neighbour value
+			int currentKey = nbh[i];
+			final int newLabel = min;
+			int currentValue = lutArray[currentKey];
+			int nextKey = currentValue;
+			// propagate to the left
+			// termination condition not particularly efficient
+			while (nextKey > newLabel) {
+				nextKey = lutArray[currentKey];
+				lutArray[currentKey] = newLabel;
+				currentKey = nextKey;
 			}
 		}
 	}
@@ -2097,9 +2171,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		if (min == Integer.MAX_VALUE)
 			return;
 		Integer a = Integer.valueOf(min);
-				
+
 		// get the minimum LUT value associated with the neighbours
-		Integer b = getMinimumKey(lut, array);
+		Integer b = getMinLutValue(lut, array);
 
 		// assign the neighbourhood to the lower of a or b
 		a = (a.compareTo(b) < 0) ? a : b;
@@ -2114,7 +2188,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				set.add(v);
 				updateLUT(a, v, lut);
 			}
-			
+
 		} else {
 			HashSet<Integer> set = new HashSet<Integer>();
 			for (int i = 0; i < size; i++) {
@@ -2137,7 +2211,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param array
 	 * @return
 	 */
-	private Integer getMinimumKey(HashMap<Integer, Integer> lut, int[] array) {
+	private Integer getMinLutValue(HashMap<Integer, Integer> lut, int[] array) {
 		Integer minLutValue = Integer.valueOf(Integer.MAX_VALUE);
 		for (final int i : array) {
 			if (i == 0)
@@ -2149,6 +2223,16 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					: lutValue;
 		}
 		return minLutValue;
+	}
+
+	private int getMinLutValue(int[] lutArray, int[] nbh) {
+		int min = Integer.MAX_VALUE;
+		for (final int i : nbh) {
+			if (i == 0)
+				continue;
+			min = Math.min(min, lutArray[i]);
+		}
+		return min;
 	}
 
 	/**
@@ -2211,8 +2295,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private int[] getNeighborhood(int[][] image, int x, int y, int z, int w,
-			int h, int d, int phase) {
+	private int[] getNeighborhood(final int[][] image, final int x, final int y, final int z, final int w,
+			final int h, final int d, final int phase) {
 		if (phase == FORE) {
 			int[] neighborhood = new int[27];
 
@@ -2281,7 +2365,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private int getPixel(int[][] image, int x, int y, int z, int w, int h, int d) {
+	private int getPixel(final int[][] image, final int x, final int y, final int z, final int w, final int h, final int d) {
 		if (withinBounds(x, y, z, w, h, d))
 			return image[z][x + y * w];
 		else
@@ -2423,7 +2507,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= startZ && o < endZ);
 	}
 
-	private boolean withinBounds(int m, int n, int o, int w, int h, int d) {
+	private boolean withinBounds(final int m, final int n, final int o, final int w, final int h, final int d) {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= 0 && o < d);
 	}
 
