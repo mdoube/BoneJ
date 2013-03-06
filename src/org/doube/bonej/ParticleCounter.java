@@ -29,6 +29,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -115,7 +117,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	public final static int BACK = 0;
 
 	/** Particle joining method */
-	public final static int MULTI = 0, LINEAR = 1;
+	public final static int MULTI = 0, LINEAR = 1, MAPPED = 2;
 
 	/** Surface colour style */
 	private final static int GRADIENT = 0, SPLIT = 1;
@@ -190,7 +192,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addChoice("Surface colours", items, items[0]);
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
 		gd.addNumericField("Volume_resampling", 2, 0);
-		String[] items2 = { "Multithreaded", "Linear" };
+		String[] items2 = { "Multithreaded", "Linear", "Mapped" };
 		gd.addChoice("Labelling algorithm", items2, items2[0]);
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addHelp("http://bonej.org/particles");
@@ -225,11 +227,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
 		final String choice = gd.getNextChoice();
-		if (choice.equals(items[0])) {
+		if (choice.equals(items2[0]))
 			labelMethod = MULTI;
-		} else {
+		else if (choice.equals(items2[1]))
 			labelMethod = LINEAR;
-		}
+		else
+			labelMethod = MAPPED;
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
@@ -1270,6 +1273,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				slicesPerChunk);
 
 		int[][] particleLabels = firstIDAttribution(imp, workArray, phase);
+		final int nParticles = getParticleSizes(particleLabels).length;
 
 		if (labelMethod == MULTI) {
 			// connect particles within chunks
@@ -1295,8 +1299,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				connectStructures(imp, workArray, particleLabels, phase,
 						stitchRanges);
 			}
-		} else if (labelMethod == LINEAR) {
+		} else if (labelMethod == LINEAR ) {
 			joinStructures(imp, particleLabels, phase);
+		} else if (labelMethod == MAPPED ) {
+			joinMappedStructures(imp, particleLabels, nParticles, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		if (doExclude)
@@ -2002,8 +2008,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// populate the first list with neighbourhoods
 		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Building neighbourhood list");
+			IJ.showProgress(z, d-1);
 			for (int y = 0; y < h; y++) {
-				// final int i = y * w;
 				for (int x = 0; x < w; x++) {
 					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
 							d, phase);
@@ -2014,9 +2021,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// minimise the map and the lut
 		// iterate over all minimum neighbours, merging on keys as we go
-		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
-			Integer a = entry.getKey();
-			HashSet<Integer> set = entry.getValue();
+		Iterator<Integer> it = map.keySet().iterator();
+		while (it.hasNext()) {
+			IJ.showStatus("Merging on keys");
+			Integer a = it.next();
+			IJ.showProgress(a.intValue(), map.lastKey().intValue());
+			HashSet<Integer> set = map.get(a);
 			// key:value merge
 			// key's LUT value is less than key, therefore
 			// all values in set must have their LUT value updated
@@ -2027,16 +2037,17 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				HashSet<Integer> target = map.get(currentLookUpValue);
 				for (Integer i : set)
 					target.add(i);
-				map.remove(a);
+				it.remove();
 				continue;
 			}
 		}
 
 		// iterate again, this time merging based on values & LUT values
-		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
-			Integer a = entry.getKey();
+		it = map.keySet().iterator();
+		while (it.hasNext()) {
+			Integer a = it.next();
 			Integer b = Integer.valueOf(a.intValue());
-			HashSet<Integer> set = entry.getValue();
+			HashSet<Integer> set = map.get(a);
 			for (Integer v : set) {
 				Integer lutValue = lut.get(v);
 				if (b.compareTo(lutValue) > 0)
@@ -2052,34 +2063,41 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			HashSet<Integer> target = map.get(b);
 			for (Integer i : set)
 				target.add(i);
-			map.remove(a);
+			it.remove();
 			continue;
+		}
 
-			// value:value merging
-			// all the values must be checked to make sure that
-			// their LUT value agrees with their key
-			// the LUT value cannot be larger than the key,
-			// because we traverse in ascending order.
-			// If the LUT value is less than the key, then
-			// all values on the key must be updated with the new LUT value
-			// Complications:
-			// there might be multiple disagreeing LUT values on a single key
-			// - must choose smallest LUT value and apply to all
-			// does doing it in two passes guarantee that the minimum LUT value
-			// from
-			// a set mean that there can't be the same value later on with a
-			// lower
-			// LUT value?
-			// No, need to search all keys with non-minimum LUT values (maybe
-			// recursively?) and replace
-			// with minimum LUT value
+		// now check the TreeMap to make sure each value appears only once
+
+		// store a count of each particle label
+		HashMap<Integer, Integer> counter = new HashMap<Integer, Integer>(
+				nParticles);
+
+		for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
+			Integer a = entry.getKey();
+			HashSet<Integer> set = entry.getValue();
+			for (Integer i : set) {
+				Integer count = counter.get(i);
+				if (count == null)
+					counter.put(i, Integer.valueOf(1));
+				else {
+					counter.put(i, Integer.valueOf(count.intValue() + 1));
+					IJ.log("Value " + i.intValue() + " repeated "
+							+ counter.get(i).intValue() + " times.");
+				}
+			}
 		}
 	}
 
 	private void merge(TreeMap<Integer, HashSet<Integer>> map,
 			HashMap<Integer, Integer> lut, int[] array) {
+		final int size = array.length;
 		// get the minimum value from the neighbourhood
-		Integer a = Integer.valueOf(getNonZeroMin(array));
+		int min = getNonZeroMin(array);
+		if (min == Integer.MAX_VALUE)
+			return;
+		Integer a = Integer.valueOf(min);
+				
 		// get the minimum LUT value associated with the neighbours
 		Integer b = getMinimumKey(lut, array);
 
@@ -2088,16 +2106,19 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		if (map.containsKey(a)) {
 			HashSet<Integer> set = map.get(a);
-			for (final int val : array) {
+			for (int i = 0; i < size; i++) {
+				final int val = array[i];
 				if (val == 0)
 					continue;
 				Integer v = Integer.valueOf(val);
 				set.add(v);
 				updateLUT(a, v, lut);
 			}
+			
 		} else {
 			HashSet<Integer> set = new HashSet<Integer>();
-			for (final int val : array) {
+			for (int i = 0; i < size; i++) {
+				final int val = array[i];
 				if (val == 0)
 					continue;
 				set.add(Integer.valueOf(val));
@@ -2109,7 +2130,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	/**
 	 * Return the minimum LUT key associated with this neighbourhood. If no key
-	 * has been made for any of the neighbourhood values, returns Integer.MAX_VALUE
+	 * has been made for any of the neighbourhood values, returns
+	 * Integer.MAX_VALUE
 	 * 
 	 * @param lut
 	 * @param array
@@ -2260,7 +2282,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @return corresponding pixel (0 if out of image)
 	 */
 	private int getPixel(int[][] image, int x, int y, int z, int w, int h, int d) {
-		if (x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
+		if (withinBounds(x, y, z, w, h, d))
 			return image[z][x + y * w];
 		else
 			return 0;
@@ -2557,7 +2579,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            one of ParticleCounter.MULTI or .LINEAR
 	 */
 	public void setLabelMethod(int label) {
-		if (label != MULTI && label != LINEAR) {
+		if (label != MULTI && label != LINEAR && label != MAPPED) {
 			throw new IllegalArgumentException();
 		}
 		labelMethod = label;
