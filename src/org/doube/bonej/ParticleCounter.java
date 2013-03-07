@@ -28,9 +28,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -2007,13 +2005,18 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// // HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
 		// nParticles);
 
-		HashMap<int[], HashSet<int[]>> map = new HashMap<int[], HashSet<int[]>>(nParticles);
+		// map linkages using boolean
+		// map[a][b] = true means that b is in a's neighbourhood
+		// a will also turn up in b's neighbourhood
+		boolean[][] map = new boolean[nParticles][];
 		int[] lutArray = new int[nParticles];
 		// set each label to be its own root
-		for (int i = 0; i < nParticles; i++)
+		for (int i = 0; i < nParticles; i++) {
 			lutArray[i] = i;
-		for (Map.Entry<int[], HashSet<int[]>> entry : map.entrySet())
-			entry.getValue().add(entry.getKey());
+			// a label must be in its own neighbourhood
+			map[i] = new boolean[nParticles];
+			map[i][i] = true;
+		}
 
 		// populate the first list with neighbourhoods
 		for (int z = 0; z < d; z++) {
@@ -2024,19 +2027,21 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
 							d, phase);
 					// merge(map, lut, nbh);
-//					addNeighboursToLUT(lutArray, nbh);
-					addNeighboursToMap(map, lutArray, nbh);
+					// addNeighboursToLUT(lutArray, nbh);
+					// addNeighboursToMap(map, lutArray, nbh);
+					int centre = getPixel(particleLabels, x, y, z, w, h, d);
+					addNeighboursToMap(map, nbh, centre);
 				}
 			}
 		}
 
+		int[] lut = new int[nParticles];
+		minimiseMap(map, lut);
 		// minimise the LUT to the right
-		minimiseLutArray(lutArray);
+		// minimiseLutArray(lutArray);
 
-				
-		//replace all labels with LUT values
-		applyLUT(particleLabels, lutArray, w, h, d);
-		
+		// replace all labels with LUT values
+		applyLUT(particleLabels, lut, w, h, d);
 
 		//
 		// // minimise the map and the lut
@@ -2109,23 +2114,99 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 	}
 
+	private int[] generateLUT(boolean[][] map) {
+		final int l = map.length;
+		int[] lut = new int[l];
+		for (int i = 0; i < l; i++)
+			lut[i] = Integer.MAX_VALUE;
+		for (int i = 1; i < l; i++) {
+			final boolean[] children = map[i];
+			if (children == null)
+				continue;
+			final int m = children.length;
+			for (int j = 1; j < m; j++) {
+				if (children[j] && i < lut[j])
+					lut[j] = i;
+			}
+		}
+		return lut;
+	}
+
+	private int countTrue(boolean[] array) {
+		int count = 0;
+		for (boolean b : array)
+			if (b)
+				count++;
+		return count;
+	}
+
+	private void minimiseMap(boolean[][] map, int[] lut) {
+
+		for (int i = 0; i < lut.length; i++)
+			lut[i] = i;
+
+		for (int i = 1; i < map.length; i++) {
+			boolean[] parent = map[i];
+			final int l = parent.length;
+			// set to true if copy a value < current parent value into parent
+			// then start again
+			boolean recheckFromStart = false;
+			for (int j = 0; j < l; j++) {
+				if (parent[j]) {
+					boolean[] child = map[j];
+					final int m = child.length;
+					for (int k = 1; k < m; k++)
+						if (child[k]) {
+							parent[k] = true;
+							if (k < j)
+								recheckFromStart = true;
+						}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Set relationship to true for centre value and all its greater-valued
+	 * neighbours.
+	 * 
+	 * Centre value will be seen again as its neighbours' neighbour during
+	 * iteration over particleLabels, and will then be added to its neighbours'
+	 * relation table
+	 * 
+	 * @param map
+	 * @param nbh
+	 * @param centre
+	 */
+	private void addNeighboursToMap(boolean[][] map, final int[] nbh,
+			final int centre) {
+		final int l = nbh.length;
+		boolean[] children = map[centre];
+		for (int i = 0; i < l; i++) {
+			final int v = nbh[i];
+			if (v > 0)
+				children[v] = true;
+		}
+	}
+
 	private void addNeighboursToMap(HashMap<int[], HashSet<int[]>> map,
 			int[] lutArray, int[] nbh) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
-	private void applyLUT(int[][] particleLabels, final int[] lutArray, final int w, final int h, final int d) {
-		for (int z = 0; z < d; z++){
+	private void applyLUT(int[][] particleLabels, final int[] lutArray,
+			final int w, final int h, final int d) {
+		for (int z = 0; z < d; z++) {
 			int[] slice = particleLabels[z];
-			for (int y = 0; y < h; y++){
+			for (int y = 0; y < h; y++) {
 				final int yd = y * d;
-				for (int x = 0; x < w; x++){
+				for (int x = 0; x < w; x++) {
 					final int i = yd + x;
 					final int label = slice[i];
 					if (label == 0)
 						continue;
-					slice[i] = lutArray[label]; 
+					slice[i] = lutArray[label];
 				}
 			}
 		}
@@ -2165,7 +2246,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			final int newLabel = min;
 			int currentValue = lutArray[currentKey];
 			int nextKey = currentValue;
-						
+
 			// propagate to the left
 			// termination condition not particularly efficient
 			while (nextKey > newLabel) {
@@ -2315,8 +2396,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private int[] getNeighborhood(final int[][] image, final int x, final int y, final int z, final int w,
-			final int h, final int d, final int phase) {
+	private int[] getNeighborhood(final int[][] image, final int x,
+			final int y, final int z, final int w, final int h, final int d,
+			final int phase) {
 		if (phase == FORE) {
 			int[] neighborhood = new int[27];
 
@@ -2385,7 +2467,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private int getPixel(final int[][] image, final int x, final int y, final int z, final int w, final int h, final int d) {
+	private int getPixel(final int[][] image, final int x, final int y,
+			final int z, final int w, final int h, final int d) {
 		if (withinBounds(x, y, z, w, h, d))
 			return image[z][x + y * w];
 		else
@@ -2527,7 +2610,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= startZ && o < endZ);
 	}
 
-	private boolean withinBounds(final int m, final int n, final int o, final int w, final int h, final int d) {
+	private boolean withinBounds(final int m, final int n, final int o,
+			final int w, final int h, final int d) {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= 0 && o < d);
 	}
 
