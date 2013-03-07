@@ -2007,10 +2007,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// // HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
 		// nParticles);
 
+		HashMap<int[], HashSet<int[]>> map = new HashMap<int[], HashSet<int[]>>(nParticles);
 		int[] lutArray = new int[nParticles];
 		// set each label to be its own root
 		for (int i = 0; i < nParticles; i++)
 			lutArray[i] = i;
+		for (Map.Entry<int[], HashSet<int[]>> entry : map.entrySet())
+			entry.getValue().add(entry.getKey());
 
 		// populate the first list with neighbourhoods
 		for (int z = 0; z < d; z++) {
@@ -2021,13 +2024,15 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
 							d, phase);
 					// merge(map, lut, nbh);
-					addNeighboursToLUT(lutArray, nbh);
+//					addNeighboursToLUT(lutArray, nbh);
+					addNeighboursToMap(map, lutArray, nbh);
 				}
 			}
 		}
 
 		// minimise the LUT to the right
 		minimiseLutArray(lutArray);
+
 				
 		//replace all labels with LUT values
 		applyLUT(particleLabels, lutArray, w, h, d);
@@ -2104,6 +2109,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 	}
 
+	private void addNeighboursToMap(HashMap<int[], HashSet<int[]>> map,
+			int[] lutArray, int[] nbh) {
+		// TODO Auto-generated method stub
+		
+	}
+
 	private void applyLUT(int[][] particleLabels, final int[] lutArray, final int w, final int h, final int d) {
 		for (int z = 0; z < d; z++){
 			int[] slice = particleLabels[z];
@@ -2136,6 +2147,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private void addNeighboursToLUT(int[] lutArray, int[] nbh) {
 		final int size = nbh.length;
+		final int l = lutArray.length;
 
 		// find the minimum neighbour
 		int min = getNonZeroMin(nbh);
@@ -2153,6 +2165,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			final int newLabel = min;
 			int currentValue = lutArray[currentKey];
 			int nextKey = currentValue;
+						
 			// propagate to the left
 			// termination condition not particularly efficient
 			while (nextKey > newLabel) {
@@ -2161,6 +2174,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				currentKey = nextKey;
 			}
 		}
+	}
+
+	private void replaceLUT(int oldLabel, int newLabel, int[] lutArray) {
+		final int l = lutArray.length;
+		for (int i = 1; i < l; i++)
+			if (lutArray[i] == oldLabel)
+				lutArray[i] = newLabel;
 	}
 
 	private void merge(TreeMap<Integer, HashSet<Integer>> map,
