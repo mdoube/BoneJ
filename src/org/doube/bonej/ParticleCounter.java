@@ -1624,7 +1624,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param phase
 	 *            foreground or background
 	 * @param scanRanges
-	 *            int[][] listing ranges to run connectStructures on
+	 *            int[][] listgetPixel(particleLabels, x, y, z, w, h, d);ing
+	 *            ranges to run connectStructures on
 	 * @return particleLabels with all particles connected
 	 */
 	private void connectStructures(ImagePlus imp, final byte[][] workArray,
@@ -2005,17 +2006,28 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// // HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
 		// nParticles);
 
+		// HashMap<Integer, HashSet<Integer>> more efficient than TreeMap,
+		// and I think there's no need to force ordered iteration over the Map
+		// initialise with one key-value pair per first label
+		HashMap<Integer, HashSet<Integer>> map = new HashMap<Integer, HashSet<Integer>>(
+				nParticles);
+
 		// map linkages using boolean
 		// map[a][b] = true means that b is in a's neighbourhood
 		// a will also turn up in b's neighbourhood
-		boolean[][] map = new boolean[nParticles][];
-		int[] lutArray = new int[nParticles];
+		// boolean[][] map = new boolean[nParticles][];
+		int[] lut = new int[nParticles + 1];
 		// set each label to be its own root
-		for (int i = 0; i < nParticles; i++) {
-			lutArray[i] = i;
+		final int initialCapacity = 10;
+		for (int i = 1; i <= nParticles; i++) {
+			lut[i] = i;
+			Integer root = Integer.valueOf(i);
+			HashSet<Integer> set = new HashSet<Integer>(initialCapacity);
+			set.add(root);
+			map.put(root, set);
 			// a label must be in its own neighbourhood
-			map[i] = new boolean[nParticles];
-			map[i][i] = true;
+			// map[i] = new boolean[nParticles];
+			// map[i][i] = true;
 		}
 
 		// populate the first list with neighbourhoods
@@ -2023,20 +2035,33 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			IJ.showStatus("Building neighbourhood list");
 			IJ.showProgress(z, d - 1);
 			for (int y = 0; y < h; y++) {
+				final int yw = y * w;
 				for (int x = 0; x < w; x++) {
-					int[] nbh = getNeighborhood(particleLabels, x, y, z, w, h,
-							d, phase);
+					final int centre = particleLabels[z][yw + x];
+					// ignore background
+					if (centre == 0)
+						continue;
+					// should do the phase 'if' higher up, otherwise have to
+					// do an if
+					// for every pixel
+					
+					int[] nbh = null;
+					// two methods e.g. get 6 NBH and get 26 NBH
+					if (phase == FORE)
+						nbh = get26Neighborhood(particleLabels, x, y, z, w, h,
+								d);
+					else if (phase == BACK)
+						nbh = get6Neighborhood(particleLabels, x, y, z, w, h, d);
 					// merge(map, lut, nbh);
 					// addNeighboursToLUT(lutArray, nbh);
 					// addNeighboursToMap(map, lutArray, nbh);
-					int centre = getPixel(particleLabels, x, y, z, w, h, d);
-					addNeighboursToMap(map, nbh, centre);
+					// addNeighboursToMap(map, nbh, centre);
+					addNeighboursToMap(map, nbh, centre, lut);
 				}
 			}
 		}
-
-		int[] lut = new int[nParticles];
-		minimiseMap(map, lut);
+		lut = new int[nParticles];
+		// minimiseMap(map, lut);
 		// minimise the LUT to the right
 		// minimiseLutArray(lutArray);
 
@@ -2112,6 +2137,35 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 		// }
 		// }
+	}
+
+	/**
+	 * Add all the neighbouring labels of a pixel to the map, except 0
+	 * (background) and the pixel's own label, which is already in the map.
+	 * 
+	 * The LUT gets updated with the minimum neighbour found, but this is only
+	 * within the first neighbours and not the minimum label in the pixel's
+	 * neighbour network
+	 * 
+	 * @param map
+	 * @param nbh
+	 * @param centre
+	 *            current pixel's label
+	 * @param lut
+	 */
+	private void addNeighboursToMap(HashMap<Integer, HashSet<Integer>> map,
+			int[] nbh, int centre, int[] lut) {
+		Integer root = Integer.valueOf(centre);
+		HashSet<Integer> set = map.get(root);
+		final int l = nbh.length;
+		for (int i = 0; i < l; i++) {
+			final int val = nbh[i];
+			// skip background and self-similar labels
+			// adding them again is a redundant waste of time
+			if (val == 0 || val == centre)
+				continue;
+			set.add(Integer.valueOf(val));
+		}
 	}
 
 	private int[] generateLUT(boolean[][] map) {
@@ -2394,64 +2448,64 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            y- coordinate
 	 * @param z
 	 *            z- coordinate (in image stacks the indexes start at 1)
-	 * @return corresponding 27-pixels neighborhood (0 if out of image)
+	 * @return corresponding 26-pixels neighborhood (0 if out of image)
 	 */
-	private int[] getNeighborhood(final int[][] image, final int x,
-			final int y, final int z, final int w, final int h, final int d,
-			final int phase) {
-		if (phase == FORE) {
-			int[] neighborhood = new int[27];
+	private int[] get26Neighborhood(final int[][] image, final int x,
+			final int y, final int z, final int w, final int h, final int d) {
+		// if (phase == FORE) {
+		int[] neighborhood = new int[26];
 
-			neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1, w, h, d);
-			neighborhood[1] = getPixel(image, x, y - 1, z - 1, w, h, d);
-			neighborhood[2] = getPixel(image, x + 1, y - 1, z - 1, w, h, d);
+		neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1, w, h, d);
+		neighborhood[1] = getPixel(image, x, y - 1, z - 1, w, h, d);
+		neighborhood[2] = getPixel(image, x + 1, y - 1, z - 1, w, h, d);
 
-			neighborhood[3] = getPixel(image, x - 1, y, z - 1, w, h, d);
-			neighborhood[4] = getPixel(image, x, y, z - 1, w, h, d);
-			neighborhood[5] = getPixel(image, x + 1, y, z - 1, w, h, d);
+		neighborhood[3] = getPixel(image, x - 1, y, z - 1, w, h, d);
+		neighborhood[4] = getPixel(image, x, y, z - 1, w, h, d);
+		neighborhood[5] = getPixel(image, x + 1, y, z - 1, w, h, d);
 
-			neighborhood[6] = getPixel(image, x - 1, y + 1, z - 1, w, h, d);
-			neighborhood[7] = getPixel(image, x, y + 1, z - 1, w, h, d);
-			neighborhood[8] = getPixel(image, x + 1, y + 1, z - 1, w, h, d);
+		neighborhood[6] = getPixel(image, x - 1, y + 1, z - 1, w, h, d);
+		neighborhood[7] = getPixel(image, x, y + 1, z - 1, w, h, d);
+		neighborhood[8] = getPixel(image, x + 1, y + 1, z - 1, w, h, d);
 
-			neighborhood[9] = getPixel(image, x - 1, y - 1, z, w, h, d);
-			neighborhood[10] = getPixel(image, x, y - 1, z, w, h, d);
-			neighborhood[11] = getPixel(image, x + 1, y - 1, z, w, h, d);
+		neighborhood[9] = getPixel(image, x - 1, y - 1, z, w, h, d);
+		neighborhood[10] = getPixel(image, x, y - 1, z, w, h, d);
+		neighborhood[11] = getPixel(image, x + 1, y - 1, z, w, h, d);
 
-			neighborhood[12] = getPixel(image, x - 1, y, z, w, h, d);
-			neighborhood[13] = getPixel(image, x, y, z, w, h, d);
-			neighborhood[14] = getPixel(image, x + 1, y, z, w, h, d);
+		neighborhood[12] = getPixel(image, x - 1, y, z, w, h, d);
+		// neighborhood[13] = getPixel(image, x, y, z, w, h, d);
+		neighborhood[13] = getPixel(image, x + 1, y, z, w, h, d);
 
-			neighborhood[15] = getPixel(image, x - 1, y + 1, z, w, h, d);
-			neighborhood[16] = getPixel(image, x, y + 1, z, w, h, d);
-			neighborhood[17] = getPixel(image, x + 1, y + 1, z, w, h, d);
+		neighborhood[14] = getPixel(image, x - 1, y + 1, z, w, h, d);
+		neighborhood[15] = getPixel(image, x, y + 1, z, w, h, d);
+		neighborhood[16] = getPixel(image, x + 1, y + 1, z, w, h, d);
 
-			neighborhood[18] = getPixel(image, x - 1, y - 1, z + 1, w, h, d);
-			neighborhood[19] = getPixel(image, x, y - 1, z + 1, w, h, d);
-			neighborhood[20] = getPixel(image, x + 1, y - 1, z + 1, w, h, d);
+		neighborhood[17] = getPixel(image, x - 1, y - 1, z + 1, w, h, d);
+		neighborhood[18] = getPixel(image, x, y - 1, z + 1, w, h, d);
+		neighborhood[19] = getPixel(image, x + 1, y - 1, z + 1, w, h, d);
 
-			neighborhood[21] = getPixel(image, x - 1, y, z + 1, w, h, d);
-			neighborhood[22] = getPixel(image, x, y, z + 1, w, h, d);
-			neighborhood[23] = getPixel(image, x + 1, y, z + 1, w, h, d);
+		neighborhood[20] = getPixel(image, x - 1, y, z + 1, w, h, d);
+		neighborhood[21] = getPixel(image, x, y, z + 1, w, h, d);
+		neighborhood[22] = getPixel(image, x + 1, y, z + 1, w, h, d);
 
-			neighborhood[24] = getPixel(image, x - 1, y + 1, z + 1, w, h, d);
-			neighborhood[25] = getPixel(image, x, y + 1, z + 1, w, h, d);
-			neighborhood[26] = getPixel(image, x + 1, y + 1, z + 1, w, h, d);
+		neighborhood[23] = getPixel(image, x - 1, y + 1, z + 1, w, h, d);
+		neighborhood[24] = getPixel(image, x, y + 1, z + 1, w, h, d);
+		neighborhood[25] = getPixel(image, x + 1, y + 1, z + 1, w, h, d);
 
-			return neighborhood;
-		} else if (phase == BACK) {
-			int[] neighborhood = new int[6];
-			neighborhood[0] = getPixel(image, x - 1, y, z, w, h, d);
-			neighborhood[1] = getPixel(image, x, y - 1, z, w, h, d);
-			neighborhood[2] = getPixel(image, x, y, z - 1, w, h, d);
+		return neighborhood;
+	}
 
-			neighborhood[3] = getPixel(image, x + 1, y, z, w, h, d);
-			neighborhood[4] = getPixel(image, x, y + 1, z, w, h, d);
-			neighborhood[5] = getPixel(image, x, y, z + 1, w, h, d);
-			return neighborhood;
-		} else
-			return null;
-	} /* end getNeighborhood */
+	private int[] get6Neighborhood(final int[][] image, final int x,
+			final int y, final int z, final int w, final int h, final int d) {
+		int[] neighborhood = new int[6];
+		neighborhood[0] = getPixel(image, x - 1, y, z, w, h, d);
+		neighborhood[1] = getPixel(image, x, y - 1, z, w, h, d);
+		neighborhood[2] = getPixel(image, x, y, z - 1, w, h, d);
+
+		neighborhood[3] = getPixel(image, x + 1, y, z, w, h, d);
+		neighborhood[4] = getPixel(image, x, y + 1, z, w, h, d);
+		neighborhood[5] = getPixel(image, x, y, z + 1, w, h, d);
+		return neighborhood;
+	}
 
 	/* ----------------------------------------------------------------------- */
 	/**
