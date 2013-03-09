@@ -2009,7 +2009,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// HashMap<Integer, HashSet<Integer>> more efficient than TreeMap,
 		// and I think there's no need to force ordered iteration over the Map
 		// initialise with one key-value pair per first label
-		HashMap<Integer, HashSet<Integer>> map = new HashMap<Integer, HashSet<Integer>>(
+		ArrayList<HashSet<Integer>> map = new ArrayList<HashSet<Integer>>(
 				nParticles);
 
 		// map linkages using boolean
@@ -2024,7 +2024,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			Integer root = Integer.valueOf(i);
 			HashSet<Integer> set = new HashSet<Integer>(initialCapacity);
 			set.add(root);
-			map.put(root, set);
+			map.add(set);
 			// a label must be in its own neighbourhood
 			// map[i] = new boolean[nParticles];
 			// map[i][i] = true;
@@ -2044,7 +2044,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// should do the phase 'if' higher up, otherwise have to
 					// do an if
 					// for every pixel
-					
+
 					int[] nbh = null;
 					// two methods e.g. get 6 NBH and get 26 NBH
 					if (phase == FORE)
@@ -2060,6 +2060,31 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				}
 			}
 		}
+		// map now contains for every value the set of first degree neighbours
+		// lut contains the lowest value first degree neighbour
+
+		// first step is to reduce complexity by moving sets out of values where
+		// lutValue < value, and leaving behind an empty set
+
+		// further references to those indexes are via the lut, which will
+		// point
+		// any queries
+		// to the lowest discovered value in the key's neighbour network
+
+		for (int i = 1; i <= nParticles; i++) {
+			final int lutValue = lut[i];
+			if (lutValue < i) {
+				HashSet<Integer> set = map.get(i);
+				HashSet<Integer> target = map.get(lutValue);
+				for (Integer n : set)
+					target.add(n);
+				//set is made empty
+				set.clear();
+			}
+		}
+
+		// final result
+
 		lut = new int[nParticles];
 		// minimiseMap(map, lut);
 		// minimise the LUT to the right
@@ -2153,10 +2178,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            current pixel's label
 	 * @param lut
 	 */
-	private void addNeighboursToMap(HashMap<Integer, HashSet<Integer>> map,
+	private void addNeighboursToMap(ArrayList<HashSet<Integer>> map,
 			int[] nbh, int centre, int[] lut) {
-		Integer root = Integer.valueOf(centre);
-		HashSet<Integer> set = map.get(root);
+		HashSet<Integer> set = map.get(centre);
 		final int l = nbh.length;
 		for (int i = 0; i < l; i++) {
 			final int val = nbh[i];
