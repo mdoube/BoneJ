@@ -2088,6 +2088,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		for (int i = 1; i <= nParticles; i++) {
 			HashSet<Integer> set = map.get(i);
+			//TODO use proper iterator, ConcurrentModification!!
 			for (Integer n : set) {
 				HashSet<Integer> source = map.get(n.intValue());
 				if (source.size() > 0) {
