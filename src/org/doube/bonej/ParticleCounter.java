@@ -2079,9 +2079,25 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				for (Integer n : set)
 					target.add(n);
 				//set is made empty
+				//if later tests come across empty sets, then
+				//must look up the lut to find the new location of the
+				//neighbour network
 				set.clear();
 			}
 		}
+		
+		for (int i = 1; i <= nParticles; i++){
+			HashSet<Integer> set = map.get(i);
+			for (Integer n : set){
+				HashSet<Integer> source = map.get(n.intValue());
+				if (source.size() > 0){
+					for (Integer s : source)
+						set.add(s);
+					//TODO update LUT
+				}
+			}
+		}
+		
 
 		// final result
 
