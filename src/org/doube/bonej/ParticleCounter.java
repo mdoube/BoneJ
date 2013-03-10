@@ -2078,26 +2078,32 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				HashSet<Integer> target = map.get(lutValue);
 				for (Integer n : set)
 					target.add(n);
-				//set is made empty
-				//if later tests come across empty sets, then
-				//must look up the lut to find the new location of the
-				//neighbour network
+				// set is made empty
+				// if later tests come across empty sets, then
+				// must look up the lut to find the new location of the
+				// neighbour network
 				set.clear();
 			}
 		}
-		
-		for (int i = 1; i <= nParticles; i++){
+
+		for (int i = 1; i <= nParticles; i++) {
 			HashSet<Integer> set = map.get(i);
-			for (Integer n : set){
+			for (Integer n : set) {
 				HashSet<Integer> source = map.get(n.intValue());
-				if (source.size() > 0){
+				if (source.size() > 0) {
 					for (Integer s : source)
 						set.add(s);
-					//TODO update LUT
+					// TODO update LUT
 				}
 			}
 		}
-		
+
+		// in final result, each value should be present in only one set,
+		// because
+		// it can belong to only one network
+		// therefore can make a summary list of multiple appearances, and merge
+		// sets across them, to the minimal root, maybe iteratively until no
+		// more multipple appearances occur
 
 		// final result
 
@@ -2194,8 +2200,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            current pixel's label
 	 * @param lut
 	 */
-	private void addNeighboursToMap(ArrayList<HashSet<Integer>> map,
-			int[] nbh, int centre, int[] lut) {
+	private void addNeighboursToMap(ArrayList<HashSet<Integer>> map, int[] nbh,
+			int centre, int[] lut) {
 		HashSet<Integer> set = map.get(centre);
 		final int l = nbh.length;
 		for (int i = 0; i < l; i++) {
