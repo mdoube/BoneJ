@@ -2032,6 +2032,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// populate the first list with neighbourhoods
 		int[] nbh = null;
+		if (phase == FORE)
+			nbh = new int[26];
+		else if (phase == BACK)
+			nbh = new int[6];
 		for (int z = 0; z < d; z++) {
 			IJ.showStatus("Building neighbourhood list");
 			IJ.showProgress(z, d - 1);
@@ -2047,10 +2051,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// for every pixel
 					// two methods e.g. get 6 NBH and get 26 NBH
 					if (phase == FORE)
-						nbh = get26Neighborhood(particleLabels, x, y, z, w, h,
-								d);
+						get26Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
 					else if (phase == BACK)
-						nbh = get6Neighborhood(particleLabels, x, y, z, w, h, d);
+						get6Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
 					// merge(map, lut, nbh);
 					// addNeighboursToLUT(lutArray, nbh);
 					// addNeighboursToMap(map, lutArray, nbh);
@@ -2070,9 +2073,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// any queries
 		// to the lowest discovered value in the key's neighbour network
 
-		//iterate backwards, so that values collapse into lower values,
-		//in a snowball
-		//result is chain of lut key-value-key-value....
+		// iterate backwards, so that values collapse into lower values,
+		// in a snowball
+		// result is chain of lut key-value-key-value....
 		for (int i = nParticles; i > 0; i--) {
 			final int lutValue = lut[i];
 			if (lutValue < i) {
@@ -2090,7 +2093,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		for (int i = 1; i <= nParticles; i++) {
 			HashSet<Integer> set = map.get(i);
-			//TODO use proper iterator, ConcurrentModification!!
+			// TODO use proper iterator, ConcurrentModification!!
 			for (Integer n : set) {
 				HashSet<Integer> source = map.get(n.intValue());
 				if (source.size() > 0) {
@@ -2499,10 +2502,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 26-pixels neighborhood (0 if out of image)
 	 */
-	private int[] get26Neighborhood(final int[][] image, final int x,
-			final int y, final int z, final int w, final int h, final int d) {
+	private void get26Neighborhood(int[] neighborhood, final int[][] image,
+			final int x, final int y, final int z, final int w, final int h,
+			final int d) {
 		// if (phase == FORE) {
-		int[] neighborhood = new int[26];
+		// int[] neighborhood = new int[26];
 
 		neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1, w, h, d);
 		neighborhood[1] = getPixel(image, x, y - 1, z - 1, w, h, d);
@@ -2540,12 +2544,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		neighborhood[24] = getPixel(image, x, y + 1, z + 1, w, h, d);
 		neighborhood[25] = getPixel(image, x + 1, y + 1, z + 1, w, h, d);
 
-		return neighborhood;
+		// return neighborhood;
 	}
 
-	private int[] get6Neighborhood(final int[][] image, final int x,
-			final int y, final int z, final int w, final int h, final int d) {
-		int[] neighborhood = new int[6];
+	private void get6Neighborhood(int[] neighborhood, final int[][] image,
+			final int x, final int y, final int z, final int w, final int h,
+			final int d) {
+		// int[] neighborhood = new int[6];
 		neighborhood[0] = getPixel(image, x - 1, y, z, w, h, d);
 		neighborhood[1] = getPixel(image, x, y - 1, z, w, h, d);
 		neighborhood[2] = getPixel(image, x, y, z - 1, w, h, d);
@@ -2553,7 +2558,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		neighborhood[3] = getPixel(image, x + 1, y, z, w, h, d);
 		neighborhood[4] = getPixel(image, x, y + 1, z, w, h, d);
 		neighborhood[5] = getPixel(image, x, y, z + 1, w, h, d);
-		return neighborhood;
+		// return neighborhood;
 	}
 
 	/* ----------------------------------------------------------------------- */
