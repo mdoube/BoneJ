@@ -2031,6 +2031,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 
 		// populate the first list with neighbourhoods
+		int[] nbh = null;
 		for (int z = 0; z < d; z++) {
 			IJ.showStatus("Building neighbourhood list");
 			IJ.showProgress(z, d - 1);
@@ -2044,8 +2045,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// should do the phase 'if' higher up, otherwise have to
 					// do an if
 					// for every pixel
-
-					int[] nbh = null;
 					// two methods e.g. get 6 NBH and get 26 NBH
 					if (phase == FORE)
 						nbh = get26Neighborhood(particleLabels, x, y, z, w, h,
@@ -2071,7 +2070,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// any queries
 		// to the lowest discovered value in the key's neighbour network
 
-		for (int i = 1; i <= nParticles; i++) {
+		//iterate backwards, so that values collapse into lower values,
+		//in a snowball
+		//result is chain of lut key-value-key-value....
+		for (int i = nParticles; i > 0; i--) {
 			final int lutValue = lut[i];
 			if (lutValue < i) {
 				HashSet<Integer> set = map.get(i);
