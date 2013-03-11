@@ -1307,13 +1307,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		if (doExclude)
 			excludeOnEdges(imp, particleLabels, workArray);
-		//TODO remove once mapped algo is working
-		
-		if (labelMethod != MAPPED)
-		minimiseLabels(particleLabels);
+		// TODO remove once mapped algo is working
+
+		// if (labelMethod != MAPPED)
+		// minimiseLabels(particleLabels);
 		long[] particleSizes = getParticleSizes(particleLabels);
 		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
+
 	}
 
 	/**
@@ -2112,12 +2113,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			// update the LUT
 			update = updateLUTwithMinPosition(lut, map);
 
-			
 			find = findFirstAppearance(lut, map);
 
 			// minimise the LUT
 			minimise = minimiseLutArray(lut);
-			
+
 			consistent = checkConsistence(lut, map);
 		}
 
@@ -2216,7 +2216,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	private boolean checkConsistence(int[] lut, ArrayList<HashSet<Integer>> map) {
 		final int l = lut.length;
 		Integer val = null;
-		for (int i = 1; i < l; i++){
+		for (int i = 1; i < l; i++) {
 			val = Integer.valueOf(i);
 			if (!map.get(lut[i]).contains(val))
 				return false;
@@ -2250,15 +2250,29 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		boolean changed = false;
 		for (int i = 1; i < l; i++) {
 			HashSet<Integer> set = map.get(i);
-			// find minimal value in the set
+			if (set.isEmpty())
+				continue;
+			// find minimal value or lut value in the set
 			int min = Integer.MAX_VALUE;
-			for (Integer val : set)
-				min = Math.min(min, val.intValue());
-			// add minimal value to lut
-			if (lut[i] > min) {
-				lut[i] = min;
-				changed = true;
+			int minLut = Integer.MAX_VALUE;
+			for (Integer val : set) {
+				int v = val.intValue();
+				min = Math.min(min, v);
+				minLut = Math.min(minLut, lut[v]);
 			}
+			// min now contains the smaller of the neighbours or their LUT
+			// values
+			min = Math.min(min, minLut);
+			// add minimal value to lut
+			HashSet<Integer> target = map.get(min);
+			for (Integer val : set) {
+				target.add(val);
+				final int v = val.intValue();
+				if (lut[v] > min)
+					lut[v] = min;
+			}
+			set.clear();
+			updateLUT(i, min, lut);
 		}
 		return changed;
 	}
@@ -2296,6 +2310,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					changed = true;
 					Iterator<Integer> iter = set.iterator();
 					HashSet<Integer> target = map.get(lutValue);
+					if (target.isEmpty())
+						IJ.log("attempting to merge with empty target"
+								+ lutValue);
 					while (iter.hasNext()) {
 						Integer val = iter.next();
 						target.add(val);
@@ -2306,6 +2323,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					updateLUT(i, lutValue, lut);
 					// move to the next set
 					break;
+
 				}
 			}
 		}
@@ -2330,6 +2348,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				changed = true;
 				HashSet<Integer> set = map.get(i);
 				HashSet<Integer> target = map.get(lutValue);
+				if (target.isEmpty())
+					IJ.log("merging with empty target " + lutValue);
 				for (Integer n : set) {
 					target.add(n);
 					lut[n.intValue()] = lutValue;
@@ -2339,8 +2359,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				// must look up the lut to find the new location of the
 				// neighbour network
 				set.clear();
-				//update lut so that anything pointing
-				//to cleared set points to the new set
+				// update lut so that anything pointing
+				// to cleared set points to the new set
 				updateLUT(i, lutValue, lut);
 			}
 		}
@@ -2349,6 +2369,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	/**
 	 * Replace old value with new value in LUT
+	 * 
 	 * @param oldValue
 	 * @param newValue
 	 * @param lut
