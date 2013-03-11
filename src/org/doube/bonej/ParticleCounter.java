@@ -23,19 +23,15 @@ import java.awt.Choice;
 import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
-import javax.vecmath.Tuple3f;
 
 import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
@@ -1307,10 +1303,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		if (doExclude)
 			excludeOnEdges(imp, particleLabels, workArray);
-		// TODO remove once mapped algo is working
-
-		// if (labelMethod != MAPPED)
-		// minimiseLabels(particleLabels);
+		minimiseLabels(particleLabels);
 		long[] particleSizes = getParticleSizes(particleLabels);
 		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
@@ -2052,18 +2045,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// ignore background
 					if (centre == 0)
 						continue;
-					// should do the phase 'if' higher up, otherwise have to
-					// do an if
-					// for every pixel
-					// two methods e.g. get 6 NBH and get 26 NBH
 					if (phase == FORE)
 						get26Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
 					else if (phase == BACK)
 						get6Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
-					// merge(map, lut, nbh);
-					// addNeighboursToLUT(lutArray, nbh);
-					// addNeighboursToMap(map, lutArray, nbh);
-					// addNeighboursToMap(map, nbh, centre);
 					addNeighboursToMap(map, nbh, centre);
 				}
 			}
@@ -2078,18 +2063,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// find the minimal position of each value
 		findFirstAppearance(lut, map);
-
-		// first step is to reduce complexity by moving sets out of values where
-		// lutValue < value, and leaving behind an empty set
-
-		// further references to those indexes are via the lut, which will
-		// point
-		// any queries
-		// to the lowest discovered value in the key's neighbour network
-
-		// iterate backwards, so that values collapse into lower values,
-		// in a snowball
-		// result is chain of lut key-value-key-value....
 
 		// de-chain the lut array
 		minimiseLutArray(lut);
@@ -2121,96 +2094,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			consistent = checkConsistence(lut, map);
 		}
 
-		// in final result, each value should be present in only one set,
-		// because
-		// it can belong to only one network
-		// therefore can make a summary list of multiple appearances, and merge
-		// sets across them, to the minimal root, maybe iteratively until no
-		// more multipple appearances occur
-
-		// final result
-
-		// minimiseMap(map, lut);
-		// minimise the LUT to the right
-		// minimiseLutArray(lutArray);
-
-		for (int i = 0; i < lut.length; i++) {
-			if (lut[i] != i)
-				IJ.log("lut[" + i + "] = " + lut[i]);
-
-		}
 		// replace all labels with LUT values
 		applyLUT(particleLabels, lut, w, h, d);
-
-		//
-		// // minimise the map and the lut
-		// // iterate over all minimum neighbours, merging on keys as we go
-		// Iterator<Integer> it = map.keySet().iterator();
-		// while (it.hasNext()) {
-		// IJ.showStatus("Merging on keys");
-		// Integer a = it.next();
-		// IJ.showProgress(a.intValue(), map.lastKey().intValue());
-		// HashSet<Integer> set = map.get(a);
-		// // key:value merge
-		// // key's LUT value is less than key, therefore
-		// // all values in set must have their LUT value updated
-		// // and be moved to the set with lower-valued key
-		// Integer currentLookUpValue = lut.get(a);
-		// if (currentLookUpValue.compareTo(a) < 0) {
-		// updateLUT(currentLookUpValue, set, lut);
-		// HashSet<Integer> target = map.get(currentLookUpValue);
-		// for (Integer i : set)
-		// target.add(i);
-		// it.remove();
-		// continue;
-		// }
-		// }
-		//
-		// // iterate again, this time merging based on values & LUT values
-		// it = map.keySet().iterator();
-		// while (it.hasNext()) {
-		// Integer a = it.next();
-		// Integer b = Integer.valueOf(a.intValue());
-		// HashSet<Integer> set = map.get(a);
-		// for (Integer v : set) {
-		// Integer lutValue = lut.get(v);
-		// if (b.compareTo(lutValue) > 0)
-		// b = lutValue;
-		// }
-		// // b now contains the lowest value reference for the set
-		// // if b == the set's key then there is nothing to do
-		// if (b.compareTo(a) == 0)
-		// continue;
-		//
-		// // otherwise update the LUT and move the set
-		// updateLUT(b, set, lut);
-		// HashSet<Integer> target = map.get(b);
-		// for (Integer i : set)
-		// target.add(i);
-		// it.remove();
-		// continue;
-		// }
-		//
-		// // now check the TreeMap to make sure each value appears only once
-		//
-		// // store a count of each particle label
-		// HashMap<Integer, Integer> counter = new HashMap<Integer, Integer>(
-		// nParticles);
-		//
-		// for (Map.Entry<Integer, HashSet<Integer>> entry : map.entrySet()) {
-		// Integer a = entry.getKey();
-		// HashSet<Integer> set = entry.getValue();
-		// for (Integer i : set) {
-		// Integer count = counter.get(i);
-		// if (count == null)
-		// counter.put(i, Integer.valueOf(1));
-		// else {
-		// counter.put(i, Integer.valueOf(count.intValue() + 1));
-		// IJ.log("Value " + i.intValue() + " repeated "
-		// + counter.get(i).intValue() + " times.");
-		// }
-		// }
-		// }
 	}
 
 	private boolean checkConsistence(int[] lut, ArrayList<HashSet<Integer>> map) {
@@ -2447,87 +2332,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 	}
 
-	private int[] generateLUT(boolean[][] map) {
-		final int l = map.length;
-		int[] lut = new int[l];
-		for (int i = 0; i < l; i++)
-			lut[i] = Integer.MAX_VALUE;
-		for (int i = 1; i < l; i++) {
-			final boolean[] children = map[i];
-			if (children == null)
-				continue;
-			final int m = children.length;
-			for (int j = 1; j < m; j++) {
-				if (children[j] && i < lut[j])
-					lut[j] = i;
-			}
-		}
-		return lut;
-	}
-
-	private int countTrue(boolean[] array) {
-		int count = 0;
-		for (boolean b : array)
-			if (b)
-				count++;
-		return count;
-	}
-
-	private void minimiseMap(boolean[][] map, int[] lut) {
-
-		for (int i = 0; i < lut.length; i++)
-			lut[i] = i;
-
-		for (int i = 1; i < map.length; i++) {
-			boolean[] parent = map[i];
-			final int l = parent.length;
-			// set to true if copy a value < current parent value into parent
-			// then start again
-			boolean recheckFromStart = false;
-			for (int j = 0; j < l; j++) {
-				if (parent[j]) {
-					boolean[] child = map[j];
-					final int m = child.length;
-					for (int k = 1; k < m; k++)
-						if (child[k]) {
-							parent[k] = true;
-							if (k < j)
-								recheckFromStart = true;
-						}
-				}
-			}
-		}
-	}
-
-	/**
-	 * Set relationship to true for centre value and all its greater-valued
-	 * neighbours.
-	 * 
-	 * Centre value will be seen again as its neighbours' neighbour during
-	 * iteration over particleLabels, and will then be added to its neighbours'
-	 * relation table
-	 * 
-	 * @param map
-	 * @param nbh
-	 * @param centre
-	 */
-	private void addNeighboursToMap(boolean[][] map, final int[] nbh,
-			final int centre) {
-		final int l = nbh.length;
-		boolean[] children = map[centre];
-		for (int i = 0; i < l; i++) {
-			final int v = nbh[i];
-			if (v > 0)
-				children[v] = true;
-		}
-	}
-
-	private void addNeighboursToMap(HashMap<int[], HashSet<int[]>> map,
-			int[] lutArray, int[] nbh) {
-		// TODO Auto-generated method stub
-
-	}
-
 	private void applyLUT(int[][] particleLabels, final int[] lut, final int w,
 			final int h, final int d) {
 		for (int z = 0; z < d; z++) {
@@ -2560,163 +2364,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			changed = true;
 		}
 		return changed;
-	}
-
-	private void addNeighboursToLUT(int[] lutArray, int[] nbh) {
-		final int size = nbh.length;
-		final int l = lutArray.length;
-
-		// find the minimum neighbour
-		int min = getNonZeroMin(nbh);
-		// if the neighours are all 0, stop
-		if (min == Integer.MAX_VALUE)
-			return;
-		// find the minimum LUT value of the neighbours
-		// use the minimum of neighbour or LUT
-		min = Math.min(min, getMinLutValue(lutArray, nbh));
-		// apply minimum value cascading to left for each
-		// neighbour
-		for (int i = 0; i < size; i++) {
-			// get the neighbour value
-			int currentKey = nbh[i];
-			final int newLabel = min;
-			int currentValue = lutArray[currentKey];
-			int nextKey = currentValue;
-
-			// propagate to the left
-			// termination condition not particularly efficient
-			while (nextKey > newLabel) {
-				nextKey = lutArray[currentKey];
-				lutArray[currentKey] = newLabel;
-				currentKey = nextKey;
-			}
-		}
-	}
-
-	private void replaceLUT(int oldLabel, int newLabel, int[] lutArray) {
-		final int l = lutArray.length;
-		for (int i = 1; i < l; i++)
-			if (lutArray[i] == oldLabel)
-				lutArray[i] = newLabel;
-	}
-
-	private void merge(TreeMap<Integer, HashSet<Integer>> map,
-			HashMap<Integer, Integer> lut, int[] array) {
-		final int size = array.length;
-		// get the minimum value from the neighbourhood
-		int min = getNonZeroMin(array);
-		if (min == Integer.MAX_VALUE)
-			return;
-		Integer a = Integer.valueOf(min);
-
-		// get the minimum LUT value associated with the neighbours
-		Integer b = getMinLutValue(lut, array);
-
-		// assign the neighbourhood to the lower of a or b
-		a = (a.compareTo(b) < 0) ? a : b;
-
-		if (map.containsKey(a)) {
-			HashSet<Integer> set = map.get(a);
-			for (int i = 0; i < size; i++) {
-				final int val = array[i];
-				if (val == 0)
-					continue;
-				Integer v = Integer.valueOf(val);
-				set.add(v);
-				updateLUT(a, v, lut);
-			}
-
-		} else {
-			HashSet<Integer> set = new HashSet<Integer>();
-			for (int i = 0; i < size; i++) {
-				final int val = array[i];
-				if (val == 0)
-					continue;
-				set.add(Integer.valueOf(val));
-			}
-			map.put(a, set);
-			updateLUT(a, set, lut);
-		}
-	}
-
-	/**
-	 * Return the minimum LUT key associated with this neighbourhood. If no key
-	 * has been made for any of the neighbourhood values, returns
-	 * Integer.MAX_VALUE
-	 * 
-	 * @param lut
-	 * @param array
-	 * @return
-	 */
-	private Integer getMinLutValue(HashMap<Integer, Integer> lut, int[] array) {
-		Integer minLutValue = Integer.valueOf(Integer.MAX_VALUE);
-		for (final int i : array) {
-			if (i == 0)
-				continue;
-			final Integer lutValue = lut.get(Integer.valueOf(i));
-			if (lutValue == null)
-				continue;
-			minLutValue = (minLutValue.compareTo(lut.get(Integer.valueOf(i))) < 0) ? minLutValue
-					: lutValue;
-		}
-		return minLutValue;
-	}
-
-	private int getMinLutValue(int[] lutArray, int[] nbh) {
-		int min = Integer.MAX_VALUE;
-		for (final int i : nbh) {
-			if (i == 0)
-				continue;
-			min = Math.min(min, lutArray[i]);
-		}
-		return min;
-	}
-
-	/**
-	 * Update the LUT
-	 * 
-	 * @param a
-	 *            the value of minimised particle label, normally less than v as
-	 *            it will be used to translate v later on
-	 * @param v
-	 *            the key the original particle label
-	 * @param lut
-	 */
-	private void updateLUT(Integer a, Integer v, HashMap<Integer, Integer> lut) {
-		// update the LUT if the supplied value a is smaller than the current
-		// LUT value
-		if (lut.get(v) == null || lut.get(v).compareTo(a) > 0)
-			lut.put(v, a);
-	}
-
-	/**
-	 * Update the LUT for a set of values
-	 * 
-	 * @param a
-	 *            the transformed (minimised) particle label
-	 * @param set
-	 *            the set of values to be updated
-	 * @param lut
-	 *            the LUT
-	 */
-	private void updateLUT(Integer a, HashSet<Integer> set,
-			HashMap<Integer, Integer> lut) {
-		for (Integer i : set) {
-			updateLUT(a, i, lut);
-		}
-	}
-
-	private int getNonZeroMin(int[] array) {
-		int a = Integer.MAX_VALUE;
-		final int l = array.length;
-		for (int i = 0; i < l; i++) {
-			final int val = array[i];
-			// 0 is the background particle
-			if (val == 0)
-				continue;
-			a = Math.min(a, val);
-		}
-		return a;
 	}
 
 	/**
