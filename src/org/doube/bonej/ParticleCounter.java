@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
+import javax.vecmath.Tuple3f;
 
 import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
@@ -2010,7 +2011,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// and I think there's no need to force ordered iteration over the Map
 		// initialise with one key-value pair per first label
 		ArrayList<HashSet<Integer>> map = new ArrayList<HashSet<Integer>>(
-				nParticles);
+				nParticles + 1);
 
 		// map linkages using boolean
 		// map[a][b] = true means that b is in a's neighbourhood
@@ -2019,7 +2020,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		int[] lut = new int[nParticles + 1];
 		// set each label to be its own root
 		final int initialCapacity = 10;
-		for (int i = 1; i <= nParticles; i++) {
+		for (int i = 0; i < nParticles + 1; i++) {
 			lut[i] = i;
 			Integer root = Integer.valueOf(i);
 			HashSet<Integer> set = new HashSet<Integer>(initialCapacity);
@@ -2058,12 +2059,18 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// addNeighboursToLUT(lutArray, nbh);
 					// addNeighboursToMap(map, lutArray, nbh);
 					// addNeighboursToMap(map, nbh, centre);
-					addNeighboursToMap(map, nbh, centre, lut);
+					addNeighboursToMap(map, nbh, centre);
+					
 				}
 			}
 		}
 		// map now contains for every value the set of first degree neighbours
-		// lut contains the lowest value first degree neighbour
+
+		// place to store counts of each label
+		int[] counter = new int[lut.length];
+
+		// initialise LUT with minimal label in set
+		updateLUTwithMinPosition(lut, map);
 
 		// first step is to reduce complexity by moving sets out of values where
 		// lutValue < value, and leaving behind an empty set
@@ -2076,32 +2083,20 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// iterate backwards, so that values collapse into lower values,
 		// in a snowball
 		// result is chain of lut key-value-key-value....
-		for (int i = nParticles; i > 0; i--) {
-			final int lutValue = lut[i];
-			if (lutValue < i) {
-				HashSet<Integer> set = map.get(i);
-				HashSet<Integer> target = map.get(lutValue);
-				for (Integer n : set)
-					target.add(n);
-				// set is made empty
-				// if later tests come across empty sets, then
-				// must look up the lut to find the new location of the
-				// neighbour network
-				set.clear();
-			}
-		}
+		snowballLUT(lut, map);
 
-		for (int i = 1; i <= nParticles; i++) {
-			HashSet<Integer> set = map.get(i);
-			// TODO use proper iterator, ConcurrentModification!!
-			for (Integer n : set) {
-				HashSet<Integer> source = map.get(n.intValue());
-				if (source.size() > 0) {
-					for (Integer s : source)
-						set.add(s);
-					// TODO update LUT
-				}
-			}
+		int duplicates = 0;
+		while (duplicates > 0) {
+			duplicates = countDuplicates(counter, map, lut);
+			
+			//merge duplicates
+			mergeDuplicates(map, counter, duplicates, lut);
+			
+			//update the LUT
+			updateLUTwithMinPosition(lut, map);
+			
+			//cleanup any strays
+			snowballLUT(lut, map);
 		}
 
 		// in final result, each value should be present in only one set,
@@ -2113,7 +2108,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// final result
 
-		lut = new int[nParticles];
 		// minimiseMap(map, lut);
 		// minimise the LUT to the right
 		// minimiseLutArray(lutArray);
@@ -2192,6 +2186,130 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 	}
 
+	private void updateLUTwithMinPosition(int[] lut, ArrayList<HashSet<Integer>> map) {
+		final int l = lut.length;
+		for (int i = 1; i < l; i++) {
+			HashSet<Integer> set = map.get(i);
+			// find minimal value in the set
+			int min = Integer.MAX_VALUE;
+			for (Integer val : set)
+				min = Math.min(min, val.intValue());
+			// add minimal value to lut
+			lut[i] = min;
+		}
+	}
+
+	private void mergeDuplicates(ArrayList<HashSet<Integer>> map,
+			int[] counter, int duplicates, int[] lut) {
+		//create a list of duplicate values to check for
+		int[] dupList = new int[duplicates];
+		final int l = counter.length;
+		int dup = 0;
+		for (int i = 1; i < l; i++){
+			if (counter[i] > 1)
+				dupList[dup] = i;
+			dup++;
+		}
+		
+		//find duplicates hiding in sets which are greater than the lut
+//		HashSet<Integer> set = null;
+//		HashSet<Integer> target = null;
+//		Iterator<Integer> iter = null;
+//		Integer val = null;
+		for (int i = 1; i < l; i++){
+			HashSet<Integer> set = map.get(i);
+			if (set.isEmpty())
+				continue;
+			for (int d : dupList){
+				//if we are in the lut key of this value, continue
+				final int lutValue = lut[d];
+				if (lutValue == i)
+					continue;
+				//otherwise check to see if the non-lut set contains our dup
+				if (set.contains(Integer.valueOf(d))){
+					//we found a dup, merge whole set back to lut
+					Iterator<Integer> iter = set.iterator();
+					HashSet<Integer> target = map.get(lutValue);
+					while (iter.hasNext()){
+						Integer val = iter.next();
+						target.add(val);
+						lut[val.intValue()] = lutValue;
+					}
+					//empty the set
+					set.clear();
+					//move to the next set
+					break;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Iterate backwards over map entries, moving set values to their new lut
+	 * positions in the map. Updates LUT value of shifted values
+	 * 
+	 * @param lut
+	 * @param map
+	 */
+	private void snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
+//		HashSet<Integer> set = null;
+//		HashSet<Integer> target = null;
+		for (int i = lut.length - 1; i > 0; i--) {
+			final int lutValue = lut[i];
+			if (lutValue < i) {
+				HashSet<Integer> set = map.get(i);
+				HashSet<Integer> target = map.get(lutValue);
+				for (Integer n : set){
+					target.add(n);
+					lut[n.intValue()] = lutValue;
+				}
+				// set is made empty
+				// if later tests come across empty sets, then
+				// must look up the lut to find the new location of the
+				// neighbour network
+				set.clear();
+				
+			}
+		}
+	}
+
+	/**
+	 * Find duplicated values and update the LUT
+	 * 
+	 * @param counter
+	 * @param map
+	 * @param lut
+	 * @return
+	 */
+	private int countDuplicates(int[] counter, ArrayList<HashSet<Integer>> map,
+			int[] lut) {
+		// reset to 0 the counter array
+		final int l = counter.length;
+		counter = new int[l];
+		HashSet<Integer> set = null;
+		for (int i = 1; i < map.size(); i++) {
+			set = map.get(i);
+			for (Integer val : set) {
+				final int v = val.intValue();
+				// every time a value is seen, log it
+				counter[v]++;
+				// update its LUT value if value was
+				// found in a set with lower than current
+				// lut value
+				if (lut[v] > i)
+					lut[v] = i;
+			}
+		}
+		// all values should be seen only once,
+		// count how many >1s there are.
+		int count = 0;
+		for (int i = 1; i < l; i++) {
+			if (counter[i] > 1)
+				count++;
+		}
+		return count;
+	}
+
 	/**
 	 * Add all the neighbouring labels of a pixel to the map, except 0
 	 * (background) and the pixel's own label, which is already in the map.
@@ -2207,7 +2325,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param lut
 	 */
 	private void addNeighboursToMap(ArrayList<HashSet<Integer>> map, int[] nbh,
-			int centre, int[] lut) {
+			int centre) {
 		HashSet<Integer> set = map.get(centre);
 		final int l = nbh.length;
 		for (int i = 0; i < l; i++) {
