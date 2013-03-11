@@ -2083,6 +2083,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// iterate backwards, so that values collapse into lower values,
 		// in a snowball
 		// result is chain of lut key-value-key-value....
+		
+		minimiseLutArray(lut);
+		
 		snowballLUT(lut, map);
 
 		int duplicates = 0;
@@ -2094,6 +2097,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			
 			//update the LUT
 			updateLUTwithMinPosition(lut, map);
+			
+			//minimise the LUT
+			minimiseLutArray(lut);
 			
 			//cleanup any strays
 			snowballLUT(lut, map);
