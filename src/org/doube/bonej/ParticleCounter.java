@@ -978,6 +978,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				MCTriangulator mct = new MCTriangulator();
 				List<Point3f> points = mct.getTriangles(binaryImp, 128,
 						channels, resampling);
+
 				final double xOffset = (limits[p][0] - 1) * cal.pixelWidth;
 				final double yOffset = (limits[p][2] - 1) * cal.pixelHeight;
 				final double zOffset = (limits[p][4] - 1) * cal.pixelDepth;
@@ -1306,6 +1307,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		if (doExclude)
 			excludeOnEdges(imp, particleLabels, workArray);
+		//TODO remove once mapped algo is working
+		
+		if (labelMethod != MAPPED)
 		minimiseLabels(particleLabels);
 		long[] particleSizes = getParticleSizes(particleLabels);
 		Object[] result = { workArray, particleLabels, particleSizes };
@@ -2060,7 +2064,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// addNeighboursToMap(map, lutArray, nbh);
 					// addNeighboursToMap(map, nbh, centre);
 					addNeighboursToMap(map, nbh, centre);
-
 				}
 			}
 		}
@@ -2090,25 +2093,32 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// de-chain the lut array
 		minimiseLutArray(lut);
 
-		snowballLUT(lut, map);
+		int duplicates = Integer.MAX_VALUE;
+		boolean snowball = true;
+		boolean merge = true;
+		boolean update = true;
+		boolean find = true;
+		boolean minimise = true;
+		boolean consistent = false;
+		while ((duplicates > 0) && snowball && merge && update && find
+				&& minimise && !consistent) {
+			snowball = snowballLUT(lut, map);
 
-		int duplicates = 0;
-		while (duplicates > 0) {
 			duplicates = countDuplicates(counter, map, lut);
 
 			// merge duplicates
-			mergeDuplicates(map, counter, duplicates, lut);
+			merge = mergeDuplicates(map, counter, duplicates, lut);
 
 			// update the LUT
-			updateLUTwithMinPosition(lut, map);
+			update = updateLUTwithMinPosition(lut, map);
 
-			findFirstAppearance(lut, map);
+			
+			find = findFirstAppearance(lut, map);
 
 			// minimise the LUT
-			minimiseLutArray(lut);
-
-			// cleanup any strays
-			snowballLUT(lut, map);
+			minimise = minimiseLutArray(lut);
+			
+			consistent = checkConsistence(lut, map);
 		}
 
 		// in final result, each value should be present in only one set,
@@ -2127,7 +2137,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		for (int i = 0; i < lut.length; i++) {
 			if (lut[i] != i)
 				IJ.log("lut[" + i + "] = " + lut[i]);
-			
+
 		}
 		// replace all labels with LUT values
 		applyLUT(particleLabels, lut, w, h, d);
@@ -2203,8 +2213,21 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 	}
 
-	private void findFirstAppearance(int[] lut, ArrayList<HashSet<Integer>> map) {
+	private boolean checkConsistence(int[] lut, ArrayList<HashSet<Integer>> map) {
+		final int l = lut.length;
+		Integer val = null;
+		for (int i = 1; i < l; i++){
+			val = Integer.valueOf(i);
+			if (!map.get(lut[i]).contains(val))
+				return false;
+		}
+		return true;
+	}
+
+	private boolean findFirstAppearance(int[] lut,
+			ArrayList<HashSet<Integer>> map) {
 		final int l = map.size();
+		boolean changed = false;
 		for (int i = 0; i < l; i++) {
 			HashSet<Integer> set = map.get(i);
 			for (Integer val : set) {
@@ -2212,15 +2235,19 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				// than the current position
 				// update lut with current position
 				final int v = val.intValue();
-				if (lut[v] > i)
+				if (lut[v] > i) {
 					lut[v] = i;
+					changed = true;
+				}
 			}
 		}
+		return changed;
 	}
 
-	private void updateLUTwithMinPosition(int[] lut,
+	private boolean updateLUTwithMinPosition(int[] lut,
 			ArrayList<HashSet<Integer>> map) {
 		final int l = lut.length;
+		boolean changed = false;
 		for (int i = 1; i < l; i++) {
 			HashSet<Integer> set = map.get(i);
 			// find minimal value in the set
@@ -2228,12 +2255,17 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			for (Integer val : set)
 				min = Math.min(min, val.intValue());
 			// add minimal value to lut
-			lut[i] = min;
+			if (lut[i] > min) {
+				lut[i] = min;
+				changed = true;
+			}
 		}
+		return changed;
 	}
 
-	private void mergeDuplicates(ArrayList<HashSet<Integer>> map,
+	private boolean mergeDuplicates(ArrayList<HashSet<Integer>> map,
 			int[] counter, int duplicates, int[] lut) {
+		boolean changed = false;
 		// create a list of duplicate values to check for
 		int[] dupList = new int[duplicates];
 		final int l = counter.length;
@@ -2261,6 +2293,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				// otherwise check to see if the non-lut set contains our dup
 				if (set.contains(Integer.valueOf(d))) {
 					// we found a dup, merge whole set back to lut
+					changed = true;
 					Iterator<Integer> iter = set.iterator();
 					HashSet<Integer> target = map.get(lutValue);
 					while (iter.hasNext()) {
@@ -2270,11 +2303,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					}
 					// empty the set
 					set.clear();
+					updateLUT(i, lutValue, lut);
 					// move to the next set
 					break;
 				}
 			}
 		}
+		return changed;
 	}
 
 	/**
@@ -2283,13 +2318,16 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * 
 	 * @param lut
 	 * @param map
+	 * @return false if nothing changed, true if something changed
 	 */
-	private void snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
+	private boolean snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
 		// HashSet<Integer> set = null;
 		// HashSet<Integer> target = null;
+		boolean changed = false;
 		for (int i = lut.length - 1; i > 0; i--) {
 			final int lutValue = lut[i];
 			if (lutValue < i) {
+				changed = true;
 				HashSet<Integer> set = map.get(i);
 				HashSet<Integer> target = map.get(lutValue);
 				for (Integer n : set) {
@@ -2301,9 +2339,25 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				// must look up the lut to find the new location of the
 				// neighbour network
 				set.clear();
-
+				//update lut so that anything pointing
+				//to cleared set points to the new set
+				updateLUT(i, lutValue, lut);
 			}
 		}
+		return changed;
+	}
+
+	/**
+	 * Replace old value with new value in LUT
+	 * @param oldValue
+	 * @param newValue
+	 * @param lut
+	 */
+	private void updateLUT(int oldValue, int newValue, int[] lut) {
+		final int l = lut.length;
+		for (int j = 1; j < l; j++)
+			if (lut[j] == oldValue)
+				lut[j] = newValue;
 	}
 
 	/**
@@ -2453,8 +2507,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	}
 
-	private void applyLUT(int[][] particleLabels, final int[] lut,
-			final int w, final int h, final int d) {
+	private void applyLUT(int[][] particleLabels, final int[] lut, final int w,
+			final int h, final int d) {
 		for (int z = 0; z < d; z++) {
 			int[] slice = particleLabels[z];
 			for (int y = 0; y < h; y++) {
@@ -2470,8 +2524,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 	}
 
-	private void minimiseLutArray(int[] lutArray) {
+	private boolean minimiseLutArray(int[] lutArray) {
 		final int l = lutArray.length;
+		boolean changed = false;
 		for (int key = 1; key < l; key++) {
 			final int value = lutArray[key];
 			// this is a root
@@ -2481,7 +2536,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			// value from the referred key
 			final int minValue = lutArray[value];
 			lutArray[key] = minValue;
+			changed = true;
 		}
+		return changed;
 	}
 
 	private void addNeighboursToLUT(int[] lutArray, int[] nbh) {
