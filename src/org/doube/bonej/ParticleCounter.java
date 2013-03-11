@@ -2060,7 +2060,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					// addNeighboursToMap(map, lutArray, nbh);
 					// addNeighboursToMap(map, nbh, centre);
 					addNeighboursToMap(map, nbh, centre);
-					
+
 				}
 			}
 		}
@@ -2071,6 +2071,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// initialise LUT with minimal label in set
 		updateLUTwithMinPosition(lut, map);
+
+		// find the minimal position of each value
+		findFirstAppearance(lut, map);
 
 		// first step is to reduce complexity by moving sets out of values where
 		// lutValue < value, and leaving behind an empty set
@@ -2083,25 +2086,28 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// iterate backwards, so that values collapse into lower values,
 		// in a snowball
 		// result is chain of lut key-value-key-value....
-		
+
+		// de-chain the lut array
 		minimiseLutArray(lut);
-		
+
 		snowballLUT(lut, map);
 
 		int duplicates = 0;
 		while (duplicates > 0) {
 			duplicates = countDuplicates(counter, map, lut);
-			
-			//merge duplicates
+
+			// merge duplicates
 			mergeDuplicates(map, counter, duplicates, lut);
-			
-			//update the LUT
+
+			// update the LUT
 			updateLUTwithMinPosition(lut, map);
-			
-			//minimise the LUT
+
+			findFirstAppearance(lut, map);
+
+			// minimise the LUT
 			minimiseLutArray(lut);
-			
-			//cleanup any strays
+
+			// cleanup any strays
 			snowballLUT(lut, map);
 		}
 
@@ -2118,6 +2124,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// minimise the LUT to the right
 		// minimiseLutArray(lutArray);
 
+		for (int i = 0; i < lut.length; i++) {
+			if (lut[i] != i)
+				IJ.log("lut[" + i + "] = " + lut[i]);
+			
+		}
 		// replace all labels with LUT values
 		applyLUT(particleLabels, lut, w, h, d);
 
@@ -2192,7 +2203,23 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// }
 	}
 
-	private void updateLUTwithMinPosition(int[] lut, ArrayList<HashSet<Integer>> map) {
+	private void findFirstAppearance(int[] lut, ArrayList<HashSet<Integer>> map) {
+		final int l = map.size();
+		for (int i = 0; i < l; i++) {
+			HashSet<Integer> set = map.get(i);
+			for (Integer val : set) {
+				// if the current lut value is greater
+				// than the current position
+				// update lut with current position
+				final int v = val.intValue();
+				if (lut[v] > i)
+					lut[v] = i;
+			}
+		}
+	}
+
+	private void updateLUTwithMinPosition(int[] lut,
+			ArrayList<HashSet<Integer>> map) {
 		final int l = lut.length;
 		for (int i = 1; i < l; i++) {
 			HashSet<Integer> set = map.get(i);
@@ -2207,43 +2234,43 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private void mergeDuplicates(ArrayList<HashSet<Integer>> map,
 			int[] counter, int duplicates, int[] lut) {
-		//create a list of duplicate values to check for
+		// create a list of duplicate values to check for
 		int[] dupList = new int[duplicates];
 		final int l = counter.length;
 		int dup = 0;
-		for (int i = 1; i < l; i++){
+		for (int i = 1; i < l; i++) {
 			if (counter[i] > 1)
 				dupList[dup] = i;
 			dup++;
 		}
-		
-		//find duplicates hiding in sets which are greater than the lut
-//		HashSet<Integer> set = null;
-//		HashSet<Integer> target = null;
-//		Iterator<Integer> iter = null;
-//		Integer val = null;
-		for (int i = 1; i < l; i++){
+
+		// find duplicates hiding in sets which are greater than the lut
+		// HashSet<Integer> set = null;
+		// HashSet<Integer> target = null;
+		// Iterator<Integer> iter = null;
+		// Integer val = null;
+		for (int i = 1; i < l; i++) {
 			HashSet<Integer> set = map.get(i);
 			if (set.isEmpty())
 				continue;
-			for (int d : dupList){
-				//if we are in the lut key of this value, continue
+			for (int d : dupList) {
+				// if we are in the lut key of this value, continue
 				final int lutValue = lut[d];
 				if (lutValue == i)
 					continue;
-				//otherwise check to see if the non-lut set contains our dup
-				if (set.contains(Integer.valueOf(d))){
-					//we found a dup, merge whole set back to lut
+				// otherwise check to see if the non-lut set contains our dup
+				if (set.contains(Integer.valueOf(d))) {
+					// we found a dup, merge whole set back to lut
 					Iterator<Integer> iter = set.iterator();
 					HashSet<Integer> target = map.get(lutValue);
-					while (iter.hasNext()){
+					while (iter.hasNext()) {
 						Integer val = iter.next();
 						target.add(val);
 						lut[val.intValue()] = lutValue;
 					}
-					//empty the set
+					// empty the set
 					set.clear();
-					//move to the next set
+					// move to the next set
 					break;
 				}
 			}
@@ -2258,14 +2285,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param map
 	 */
 	private void snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
-//		HashSet<Integer> set = null;
-//		HashSet<Integer> target = null;
+		// HashSet<Integer> set = null;
+		// HashSet<Integer> target = null;
 		for (int i = lut.length - 1; i > 0; i--) {
 			final int lutValue = lut[i];
 			if (lutValue < i) {
 				HashSet<Integer> set = map.get(i);
 				HashSet<Integer> target = map.get(lutValue);
-				for (Integer n : set){
+				for (Integer n : set) {
 					target.add(n);
 					lut[n.intValue()] = lutValue;
 				}
@@ -2274,7 +2301,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				// must look up the lut to find the new location of the
 				// neighbour network
 				set.clear();
-				
+
 			}
 		}
 	}
@@ -2306,6 +2333,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					lut[v] = i;
 			}
 		}
+		minimiseLutArray(lut);
 		// all values should be seen only once,
 		// count how many >1s there are.
 		int count = 0;
@@ -2425,18 +2453,18 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	}
 
-	private void applyLUT(int[][] particleLabels, final int[] lutArray,
+	private void applyLUT(int[][] particleLabels, final int[] lut,
 			final int w, final int h, final int d) {
 		for (int z = 0; z < d; z++) {
 			int[] slice = particleLabels[z];
 			for (int y = 0; y < h; y++) {
-				final int yd = y * d;
+				final int yw = y * w;
 				for (int x = 0; x < w; x++) {
-					final int i = yd + x;
+					final int i = yw + x;
 					final int label = slice[i];
 					if (label == 0)
 						continue;
-					slice[i] = lutArray[label];
+					slice[i] = lut[label];
 				}
 			}
 		}
