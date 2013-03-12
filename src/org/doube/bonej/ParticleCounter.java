@@ -1993,28 +1993,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final int h = imp.getHeight();
 		final int d = imp.getImageStackSize();
 
-		// TreeMap is ordered list of unique values and HashSet is unordered
-		// list of unique values
-		// where we store the list of particle labels and the minimum label in
-		// their neighbourhood
-		// TreeMap<Integer, HashSet<Integer>> map = new TreeMap<Integer,
-		// HashSet<Integer>>();
-
-		// Place to store final translation of particle labels for label
-		// minimisation
-		// // HashMap<Integer, Integer> lut = new HashMap<Integer, Integer>(
-		// nParticles);
-
-		// HashMap<Integer, HashSet<Integer>> more efficient than TreeMap,
-		// and I think there's no need to force ordered iteration over the Map
-		// initialise with one key-value pair per first label
 		ArrayList<HashSet<Integer>> map = new ArrayList<HashSet<Integer>>(
 				nParticles + 1);
 
-		// map linkages using boolean
-		// map[a][b] = true means that b is in a's neighbourhood
-		// a will also turn up in b's neighbourhood
-		// boolean[][] map = new boolean[nParticles][];
 		int[] lut = new int[nParticles + 1];
 		// set each label to be its own root
 		final int initialCapacity = 10;
@@ -2024,9 +2005,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			HashSet<Integer> set = new HashSet<Integer>(initialCapacity);
 			set.add(root);
 			map.add(set);
-			// a label must be in its own neighbourhood
-			// map[i] = new boolean[nParticles];
-			// map[i][i] = true;
 		}
 
 		// populate the first list with neighbourhoods
