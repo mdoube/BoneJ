@@ -2689,15 +2689,17 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// find the highest value particleLabel
 		int maxParticle = 0;
 		for (int z = 0; z < d; z++) {
+			final int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				maxParticle = Math.max(maxParticle, particleLabels[z][i]);
+				maxParticle = Math.max(maxParticle, slice[i]);
 			}
 		}
 
 		long[] particleSizes = new long[maxParticle + 1];
 		for (int z = 0; z < d; z++) {
+			final int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				particleSizes[particleLabels[z][i]]++;
+				particleSizes[slice[i]]++;
 			}
 			IJ.showProgress(z, d);
 		}
