@@ -152,8 +152,6 @@ public class Purify implements PlugIn, DialogListener {
 		particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, bg);
 
-		IJ.showStatus("Image Purified");
-
 		ImageStack stack = new ImageStack(imp.getWidth(), imp.getHeight());
 		final int nSlices = workArray.length;
 		for (int z = 0; z < nSlices; z++) {
@@ -161,6 +159,8 @@ public class Purify implements PlugIn, DialogListener {
 		}
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
+		IJ.showStatus("Image Purified");
+		IJ.showProgress(1.0);
 		return purified;
 	}
 

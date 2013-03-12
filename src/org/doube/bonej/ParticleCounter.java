@@ -1383,11 +1383,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// now replace labels
 		final int wh = particleLabels[0].length;
 		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Replacing with minimised labels...");
 			IJ.showProgress(z, d);
+			int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				final int p = particleLabels[z][i];
+				final int p = slice[i];
 				if (p > 0) {
-					particleLabels[z][i] = newLabel[p];
+					slice[i] = newLabel[p];
 				}
 			}
 		}
@@ -1989,6 +1991,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private void joinMappedStructures(ImagePlus imp, int[][] particleLabels,
 			int nParticles, int phase) {
+		IJ.showStatus("Mapping structures and joining...");
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getImageStackSize();
@@ -2033,6 +2036,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 		// map now contains for every value the set of first degree neighbours
 
+		IJ.showStatus("Minimising list and generating LUT...");
 		// place to store counts of each label
 		int[] counter = new int[lut.length];
 
@@ -2074,6 +2078,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// replace all labels with LUT values
 		applyLUT(particleLabels, lut, w, h, d);
+		IJ.showStatus("LUT applied");
 	}
 
 	private boolean checkConsistence(int[] lut, ArrayList<HashSet<Integer>> map) {
