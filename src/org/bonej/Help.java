@@ -19,9 +19,14 @@ import org.doube.util.UsageReporter;
 public class Help implements PlugIn {
 
 	/**
+	 * branch
+	 */
+	public static final String branch = "-testing";
+	
+	/**
 	 * BoneJ version
 	 */
-	public static final String bonejVersion = "1.3.9";
+	public static final String bonejVersion = "1.3.9"+branch;
 
 	public void run(String arg) {
 		if (arg.equals("about")) {
