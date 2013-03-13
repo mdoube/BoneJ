@@ -21,8 +21,8 @@
 	<property name="vecmath" location="../vecmath.jar" />
 	<property name="j3dcore" location="../j3dcore.jar" />
 	<property name="j3dutils" location="../j3dutils.jar" />
-	<property name="imglib" location="../imglib-2.0.0-SNAPSHOT.jar" />	
-	<property name="junit" location="../unit4.11-SNAPSHOT-20120805-1225/junit-4.11-SNAPSHOT-20120805-1225.jar" />
+	<property name="imglib" location="../imglib.jar" />	
+	<property name="junit" location="../junit-4.11-SNAPSHOT" />
 	
 	
 	<!--
