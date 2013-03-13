@@ -64,4 +64,18 @@ public class VectorsTest {
 			assertEquals(1, length, 1e-9);
 		}
 	}
+	
+	@Test
+	public void testRegularVectors() {
+		final int n = 1000;
+		double[][] v = Vectors.regularVectors(n);
+		// check that vectors are unit vectors
+		for (int i = 0; i < n; i++) {
+			final double x = v[i][0];
+			final double y = v[i][1];
+			final double z = v[i][2];
+			final double length = Math.sqrt(x * x + y * y + z * z);
+			assertEquals(1, length, 1e-9);
+		}
+	}
 }

@@ -23,6 +23,7 @@ import java.awt.Choice;
 import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -111,7 +112,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	public final static int BACK = 0;
 
 	/** Particle joining method */
-	public final static int MULTI = 0, LINEAR = 1;
+	public final static int MULTI = 0, LINEAR = 1, MAPPED = 2;
 
 	/** Surface colour style */
 	private final static int GRADIENT = 0, SPLIT = 1;
@@ -186,7 +187,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addChoice("Surface colours", items, items[0]);
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
 		gd.addNumericField("Volume_resampling", 2, 0);
-		String[] items2 = { "Multithreaded", "Linear" };
+		String[] items2 = { "Multithreaded", "Linear", "Mapped" };
 		gd.addChoice("Labelling algorithm", items2, items2[0]);
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addHelp("http://bonej.org/particles");
@@ -221,11 +222,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean do3DOriginal = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
 		final String choice = gd.getNextChoice();
-		if (choice.equals(items[0])) {
+		if (choice.equals(items2[0]))
 			labelMethod = MULTI;
-		} else {
+		else if (choice.equals(items2[1]))
 			labelMethod = LINEAR;
-		}
+		else
+			labelMethod = MAPPED;
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
@@ -972,6 +974,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				MCTriangulator mct = new MCTriangulator();
 				List<Point3f> points = mct.getTriangles(binaryImp, 128,
 						channels, resampling);
+
 				final double xOffset = (limits[p][0] - 1) * cal.pixelWidth;
 				final double yOffset = (limits[p][2] - 1) * cal.pixelHeight;
 				final double zOffset = (limits[p][4] - 1) * cal.pixelDepth;
@@ -1266,6 +1269,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				slicesPerChunk);
 
 		int[][] particleLabels = firstIDAttribution(imp, workArray, phase);
+		final int nParticles = getParticleSizes(particleLabels).length;
 
 		if (labelMethod == MULTI) {
 			// connect particles within chunks
@@ -1293,6 +1297,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			}
 		} else if (labelMethod == LINEAR) {
 			joinStructures(imp, particleLabels, phase);
+		} else if (labelMethod == MAPPED) {
+			joinMappedStructures(imp, particleLabels, nParticles, phase);
 		}
 		filterParticles(imp, workArray, particleLabels, minVol, maxVol, phase);
 		if (doExclude)
@@ -1301,6 +1307,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		long[] particleSizes = getParticleSizes(particleLabels);
 		Object[] result = { workArray, particleLabels, particleSizes };
 		return result;
+
 	}
 
 	/**
@@ -1376,11 +1383,13 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// now replace labels
 		final int wh = particleLabels[0].length;
 		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Replacing with minimised labels...");
 			IJ.showProgress(z, d);
+			int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				final int p = particleLabels[z][i];
+				final int p = slice[i];
 				if (p > 0) {
-					particleLabels[z][i] = newLabel[p];
+					slice[i] = newLabel[p];
 				}
 			}
 		}
@@ -1616,7 +1625,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param phase
 	 *            foreground or background
 	 * @param scanRanges
-	 *            int[][] listing ranges to run connectStructures on
+	 *            int[][] listgetPixel(particleLabels, x, y, z, w, h, d);ing
+	 *            ranges to run connectStructures on
 	 * @return particleLabels with all particles connected
 	 */
 	private void connectStructures(ImagePlus imp, final byte[][] workArray,
@@ -1940,10 +1950,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		for (short z = 0; z < d; z++) {
 			IJ.showStatus("Listing substructures...");
 			IJ.showProgress(z, d);
+			final int[] sliceLabels = particleLabels[z];
 			for (short y = 0; y < h; y++) {
 				final int i = y * w;
 				for (short x = 0; x < w; x++) {
-					final int p = particleLabels[z][i + x];
+					final int p = sliceLabels[i + x];
 					if (p > 0) { // ignore background
 						final short[] voxel = { x, y, z };
 						pL.get(p).add(voxel);
@@ -1977,6 +1988,460 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		}
 		particleLists.get(p).clear();
 	}
+
+	private void joinMappedStructures(ImagePlus imp, int[][] particleLabels,
+			int nParticles, int phase) {
+		IJ.showStatus("Mapping structures and joining...");
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+
+		ArrayList<HashSet<Integer>> map = new ArrayList<HashSet<Integer>>(
+				nParticles + 1);
+
+		int[] lut = new int[nParticles + 1];
+		// set each label to be its own root
+		final int initialCapacity = 10;
+		for (int i = 0; i < nParticles + 1; i++) {
+			lut[i] = i;
+			Integer root = Integer.valueOf(i);
+			HashSet<Integer> set = new HashSet<Integer>(initialCapacity);
+			set.add(root);
+			map.add(set);
+		}
+
+		// populate the first list with neighbourhoods
+		int[] nbh = null;
+		if (phase == FORE)
+			nbh = new int[26];
+		else if (phase == BACK)
+			nbh = new int[6];
+		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Building neighbourhood list");
+			IJ.showProgress(z, d - 1);
+			for (int y = 0; y < h; y++) {
+				final int yw = y * w;
+				for (int x = 0; x < w; x++) {
+					final int centre = particleLabels[z][yw + x];
+					// ignore background
+					if (centre == 0)
+						continue;
+					if (phase == FORE)
+						get26Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
+					else if (phase == BACK)
+						get6Neighborhood(nbh, particleLabels, x, y, z, w, h, d);
+					addNeighboursToMap(map, nbh, centre);
+				}
+			}
+		}
+		// map now contains for every value the set of first degree neighbours
+
+		IJ.showStatus("Minimising list and generating LUT...");
+		// place to store counts of each label
+		int[] counter = new int[lut.length];
+
+		// initialise LUT with minimal label in set
+		updateLUTwithMinPosition(lut, map);
+
+		// find the minimal position of each value
+		findFirstAppearance(lut, map);
+
+		// de-chain the lut array
+		minimiseLutArray(lut);
+
+		int duplicates = Integer.MAX_VALUE;
+		boolean snowball = true;
+		boolean merge = true;
+		boolean update = true;
+		boolean find = true;
+		boolean minimise = true;
+		boolean consistent = false;
+		while ((duplicates > 0) && snowball && merge && update && find
+				&& minimise && !consistent) {
+			snowball = snowballLUT(lut, map);
+
+			duplicates = countDuplicates(counter, map, lut);
+
+			// merge duplicates
+			merge = mergeDuplicates(map, counter, duplicates, lut);
+
+			// update the LUT
+			update = updateLUTwithMinPosition(lut, map);
+
+			find = findFirstAppearance(lut, map);
+
+			// minimise the LUT
+			minimise = minimiseLutArray(lut);
+
+			consistent = checkConsistence(lut, map);
+		}
+
+		// replace all labels with LUT values
+		applyLUT(particleLabels, lut, w, h, d);
+		IJ.showStatus("LUT applied");
+	}
+
+	private boolean checkConsistence(int[] lut, ArrayList<HashSet<Integer>> map) {
+		final int l = lut.length;
+		Integer val = null;
+		for (int i = 1; i < l; i++) {
+			val = Integer.valueOf(i);
+			if (!map.get(lut[i]).contains(val))
+				return false;
+		}
+		return true;
+	}
+
+	private boolean findFirstAppearance(int[] lut,
+			ArrayList<HashSet<Integer>> map) {
+		final int l = map.size();
+		boolean changed = false;
+		for (int i = 0; i < l; i++) {
+			HashSet<Integer> set = map.get(i);
+			for (Integer val : set) {
+				// if the current lut value is greater
+				// than the current position
+				// update lut with current position
+				final int v = val.intValue();
+				if (lut[v] > i) {
+					lut[v] = i;
+					changed = true;
+				}
+			}
+		}
+		return changed;
+	}
+
+	private boolean updateLUTwithMinPosition(int[] lut,
+			ArrayList<HashSet<Integer>> map) {
+		final int l = lut.length;
+		boolean changed = false;
+		for (int i = 1; i < l; i++) {
+			HashSet<Integer> set = map.get(i);
+			if (set.isEmpty())
+				continue;
+			// find minimal value or lut value in the set
+			int min = Integer.MAX_VALUE;
+			int minLut = Integer.MAX_VALUE;
+			for (Integer val : set) {
+				int v = val.intValue();
+				min = Math.min(min, v);
+				minLut = Math.min(minLut, lut[v]);
+			}
+			// min now contains the smaller of the neighbours or their LUT
+			// values
+			min = Math.min(min, minLut);
+			// add minimal value to lut
+			HashSet<Integer> target = map.get(min);
+			for (Integer val : set) {
+				target.add(val);
+				final int v = val.intValue();
+				if (lut[v] > min)
+					lut[v] = min;
+			}
+			set.clear();
+			updateLUT(i, min, lut);
+		}
+		return changed;
+	}
+
+	private boolean mergeDuplicates(ArrayList<HashSet<Integer>> map,
+			int[] counter, int duplicates, int[] lut) {
+		boolean changed = false;
+		// create a list of duplicate values to check for
+		int[] dupList = new int[duplicates];
+		final int l = counter.length;
+		int dup = 0;
+		for (int i = 1; i < l; i++) {
+			if (counter[i] > 1)
+				dupList[dup] = i;
+			dup++;
+		}
+
+		// find duplicates hiding in sets which are greater than the lut
+		// HashSet<Integer> set = null;
+		// HashSet<Integer> target = null;
+		// Iterator<Integer> iter = null;
+		// Integer val = null;
+		for (int i = 1; i < l; i++) {
+			HashSet<Integer> set = map.get(i);
+			if (set.isEmpty())
+				continue;
+			for (int d : dupList) {
+				// if we are in the lut key of this value, continue
+				final int lutValue = lut[d];
+				if (lutValue == i)
+					continue;
+				// otherwise check to see if the non-lut set contains our dup
+				if (set.contains(Integer.valueOf(d))) {
+					// we found a dup, merge whole set back to lut
+					changed = true;
+					Iterator<Integer> iter = set.iterator();
+					HashSet<Integer> target = map.get(lutValue);
+					if (target.isEmpty())
+						IJ.log("attempting to merge with empty target"
+								+ lutValue);
+					while (iter.hasNext()) {
+						Integer val = iter.next();
+						target.add(val);
+						lut[val.intValue()] = lutValue;
+					}
+					// empty the set
+					set.clear();
+					updateLUT(i, lutValue, lut);
+					// move to the next set
+					break;
+
+				}
+			}
+		}
+		return changed;
+	}
+
+	/**
+	 * Iterate backwards over map entries, moving set values to their new lut
+	 * positions in the map. Updates LUT value of shifted values
+	 * 
+	 * @param lut
+	 * @param map
+	 * @return false if nothing changed, true if something changed
+	 */
+	private boolean snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
+		// HashSet<Integer> set = null;
+		// HashSet<Integer> target = null;
+		boolean changed = false;
+		for (int i = lut.length - 1; i > 0; i--) {
+			final int lutValue = lut[i];
+			if (lutValue < i) {
+				changed = true;
+				HashSet<Integer> set = map.get(i);
+				HashSet<Integer> target = map.get(lutValue);
+				if (target.isEmpty())
+					IJ.log("merging with empty target " + lutValue);
+				for (Integer n : set) {
+					target.add(n);
+					lut[n.intValue()] = lutValue;
+				}
+				// set is made empty
+				// if later tests come across empty sets, then
+				// must look up the lut to find the new location of the
+				// neighbour network
+				set.clear();
+				// update lut so that anything pointing
+				// to cleared set points to the new set
+				updateLUT(i, lutValue, lut);
+			}
+		}
+		return changed;
+	}
+
+	/**
+	 * Replace old value with new value in LUT
+	 * 
+	 * @param oldValue
+	 * @param newValue
+	 * @param lut
+	 */
+	private void updateLUT(int oldValue, int newValue, int[] lut) {
+		final int l = lut.length;
+		for (int j = 1; j < l; j++)
+			if (lut[j] == oldValue)
+				lut[j] = newValue;
+	}
+
+	/**
+	 * Find duplicated values and update the LUT
+	 * 
+	 * @param counter
+	 * @param map
+	 * @param lut
+	 * @return
+	 */
+	private int countDuplicates(int[] counter, ArrayList<HashSet<Integer>> map,
+			int[] lut) {
+		// reset to 0 the counter array
+		final int l = counter.length;
+		counter = new int[l];
+		HashSet<Integer> set = null;
+		for (int i = 1; i < map.size(); i++) {
+			set = map.get(i);
+			for (Integer val : set) {
+				final int v = val.intValue();
+				// every time a value is seen, log it
+				counter[v]++;
+				// update its LUT value if value was
+				// found in a set with lower than current
+				// lut value
+				if (lut[v] > i)
+					lut[v] = i;
+			}
+		}
+		minimiseLutArray(lut);
+		// all values should be seen only once,
+		// count how many >1s there are.
+		int count = 0;
+		for (int i = 1; i < l; i++) {
+			if (counter[i] > 1)
+				count++;
+		}
+		return count;
+	}
+
+	/**
+	 * Add all the neighbouring labels of a pixel to the map, except 0
+	 * (background) and the pixel's own label, which is already in the map.
+	 * 
+	 * The LUT gets updated with the minimum neighbour found, but this is only
+	 * within the first neighbours and not the minimum label in the pixel's
+	 * neighbour network
+	 * 
+	 * @param map
+	 * @param nbh
+	 * @param centre
+	 *            current pixel's label
+	 * @param lut
+	 */
+	private void addNeighboursToMap(ArrayList<HashSet<Integer>> map, int[] nbh,
+			int centre) {
+		HashSet<Integer> set = map.get(centre);
+		final int l = nbh.length;
+		for (int i = 0; i < l; i++) {
+			final int val = nbh[i];
+			// skip background and self-similar labels
+			// adding them again is a redundant waste of time
+			if (val == 0 || val == centre)
+				continue;
+			set.add(Integer.valueOf(val));
+		}
+	}
+
+	private void applyLUT(int[][] particleLabels, final int[] lut, final int w,
+			final int h, final int d) {
+		for (int z = 0; z < d; z++) {
+			int[] slice = particleLabels[z];
+			for (int y = 0; y < h; y++) {
+				final int yw = y * w;
+				for (int x = 0; x < w; x++) {
+					final int i = yw + x;
+					final int label = slice[i];
+					if (label == 0)
+						continue;
+					slice[i] = lut[label];
+				}
+			}
+		}
+	}
+
+	private boolean minimiseLutArray(int[] lutArray) {
+		final int l = lutArray.length;
+		boolean changed = false;
+		for (int key = 1; key < l; key++) {
+			final int value = lutArray[key];
+			// this is a root
+			if (value == key)
+				continue;
+			// otherwise update the current key with the
+			// value from the referred key
+			final int minValue = lutArray[value];
+			lutArray[key] = minValue;
+			changed = true;
+		}
+		return changed;
+	}
+
+	/**
+	 * Get neighborhood of a pixel in a 3D image (0 border conditions)
+	 * 
+	 * @param image
+	 *            3D image (int[][])
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @return corresponding 26-pixels neighborhood (0 if out of image)
+	 */
+	private void get26Neighborhood(int[] neighborhood, final int[][] image,
+			final int x, final int y, final int z, final int w, final int h,
+			final int d) {
+		// if (phase == FORE) {
+		// int[] neighborhood = new int[26];
+
+		neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1, w, h, d);
+		neighborhood[1] = getPixel(image, x, y - 1, z - 1, w, h, d);
+		neighborhood[2] = getPixel(image, x + 1, y - 1, z - 1, w, h, d);
+
+		neighborhood[3] = getPixel(image, x - 1, y, z - 1, w, h, d);
+		neighborhood[4] = getPixel(image, x, y, z - 1, w, h, d);
+		neighborhood[5] = getPixel(image, x + 1, y, z - 1, w, h, d);
+
+		neighborhood[6] = getPixel(image, x - 1, y + 1, z - 1, w, h, d);
+		neighborhood[7] = getPixel(image, x, y + 1, z - 1, w, h, d);
+		neighborhood[8] = getPixel(image, x + 1, y + 1, z - 1, w, h, d);
+
+		neighborhood[9] = getPixel(image, x - 1, y - 1, z, w, h, d);
+		neighborhood[10] = getPixel(image, x, y - 1, z, w, h, d);
+		neighborhood[11] = getPixel(image, x + 1, y - 1, z, w, h, d);
+
+		neighborhood[12] = getPixel(image, x - 1, y, z, w, h, d);
+		// neighborhood[13] = getPixel(image, x, y, z, w, h, d);
+		neighborhood[13] = getPixel(image, x + 1, y, z, w, h, d);
+
+		neighborhood[14] = getPixel(image, x - 1, y + 1, z, w, h, d);
+		neighborhood[15] = getPixel(image, x, y + 1, z, w, h, d);
+		neighborhood[16] = getPixel(image, x + 1, y + 1, z, w, h, d);
+
+		neighborhood[17] = getPixel(image, x - 1, y - 1, z + 1, w, h, d);
+		neighborhood[18] = getPixel(image, x, y - 1, z + 1, w, h, d);
+		neighborhood[19] = getPixel(image, x + 1, y - 1, z + 1, w, h, d);
+
+		neighborhood[20] = getPixel(image, x - 1, y, z + 1, w, h, d);
+		neighborhood[21] = getPixel(image, x, y, z + 1, w, h, d);
+		neighborhood[22] = getPixel(image, x + 1, y, z + 1, w, h, d);
+
+		neighborhood[23] = getPixel(image, x - 1, y + 1, z + 1, w, h, d);
+		neighborhood[24] = getPixel(image, x, y + 1, z + 1, w, h, d);
+		neighborhood[25] = getPixel(image, x + 1, y + 1, z + 1, w, h, d);
+
+		// return neighborhood;
+	}
+
+	private void get6Neighborhood(int[] neighborhood, final int[][] image,
+			final int x, final int y, final int z, final int w, final int h,
+			final int d) {
+		// int[] neighborhood = new int[6];
+		neighborhood[0] = getPixel(image, x - 1, y, z, w, h, d);
+		neighborhood[1] = getPixel(image, x, y - 1, z, w, h, d);
+		neighborhood[2] = getPixel(image, x, y, z - 1, w, h, d);
+
+		neighborhood[3] = getPixel(image, x + 1, y, z, w, h, d);
+		neighborhood[4] = getPixel(image, x, y + 1, z, w, h, d);
+		neighborhood[5] = getPixel(image, x, y, z + 1, w, h, d);
+		// return neighborhood;
+	}
+
+	/* ----------------------------------------------------------------------- */
+	/**
+	 * Get pixel in 3D image (0 border conditions)
+	 * 
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @return corresponding pixel (0 if out of image)
+	 */
+	private int getPixel(final int[][] image, final int x, final int y,
+			final int z, final int w, final int h, final int d) {
+		if (withinBounds(x, y, z, w, h, d))
+			return image[z][x + y * w];
+		else
+			return 0;
+	} /* end getPixel */
 
 	/**
 	 * Create a work array
@@ -2113,7 +2578,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= startZ && o < endZ);
 	}
 
-	private boolean withinBounds(int m, int n, int o, int w, int h, int d) {
+	private boolean withinBounds(final int m, final int n, final int o,
+			final int w, final int h, final int d) {
 		return (m >= 0 && m < w && n >= 0 && n < h && o >= 0 && o < d);
 	}
 
@@ -2206,15 +2672,17 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// find the highest value particleLabel
 		int maxParticle = 0;
 		for (int z = 0; z < d; z++) {
+			final int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				maxParticle = Math.max(maxParticle, particleLabels[z][i]);
+				maxParticle = Math.max(maxParticle, slice[i]);
 			}
 		}
 
 		long[] particleSizes = new long[maxParticle + 1];
 		for (int z = 0; z < d; z++) {
+			final int[] slice = particleLabels[z];
 			for (int i = 0; i < wh; i++) {
-				particleSizes[particleLabels[z][i]]++;
+				particleSizes[slice[i]]++;
 			}
 			IJ.showProgress(z, d);
 		}
@@ -2269,7 +2737,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 *            one of ParticleCounter.MULTI or .LINEAR
 	 */
 	public void setLabelMethod(int label) {
-		if (label != MULTI && label != LINEAR) {
+		if (label != MULTI && label != LINEAR && label != MAPPED) {
 			throw new IllegalArgumentException();
 		}
 		labelMethod = label;

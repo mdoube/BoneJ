@@ -77,12 +77,13 @@ public class ImageCheck {
 		final double vD = cal.pixelDepth;
 		final double tLow = 1 - tolerance;
 		final double tHigh = 1 + tolerance;
+		final boolean isStack = (imp.getStackSize() > 1);
 
 		if (vW < vH * tLow || vW > vH * tHigh)
 			return false;
-		if (vW < vD * tLow || vW > vD * tHigh)
+		if ((vW < vD * tLow || vW > vD * tHigh) && isStack)
 			return false;
-		if (vH < vD * tLow || vH > vD * tHigh)
+		if ((vH < vD * tLow || vH > vD * tHigh) && isStack)
 			return false;
 
 		return true;

@@ -230,9 +230,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addCheckbox("HU_Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
-		gd
-				.addMessage("Only pixels >= bone min\n"
-						+ "and <= bone max are used.");
+		gd.addMessage("Only pixels >= bone min\n" + "and <= bone max are used.");
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
@@ -335,10 +333,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			if (this.doOriented && orienteer != null) {
 				String[] dirs = orienteer.getDirections(imp);
-				rt.addValue(dirs[0] + " (rad)", orienteer.getOrientation(imp,
-						dirs[0]));
-				rt.addValue(dirs[2] + " (rad)", orienteer.getOrientation(imp,
-						dirs[2]));
+				rt.addValue(dirs[0] + " (rad)",
+						orienteer.getOrientation(imp, dirs[0]));
+				rt.addValue(dirs[2] + " (rad)",
+						orienteer.getOrientation(imp, dirs[2]));
 				rt.addValue("I" + dirs[0] + dirs[1] + "(" + units + "^4)",
 						this.I1[s]);
 				rt.addValue("I" + dirs[2] + dirs[3] + "(" + units + "^4)",
@@ -391,8 +389,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double cY = this.sliceCentroids[1][s] / this.vH;
 
 			if (this.doCentroids && !this.emptySlices[s]) {
-				annIP.drawOval((int) Math.floor(cX - 4), (int) Math
-						.floor(cY - 4), 8, 8);
+				annIP.drawOval((int) Math.floor(cX - 4),
+						(int) Math.floor(cY - 4), 8, 8);
 			}
 
 			if (this.doAxes && !this.emptySlices[s]) {
@@ -449,9 +447,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// list of centroids
 		List<Point3f> centroids = new ArrayList<Point3f>();
 		// list of axes
-		List<Point3f> axes = new ArrayList<Point3f>();
+		List<Point3f> minAxes = new ArrayList<Point3f>();
+		List<Point3f> maxAxes = new ArrayList<Point3f>();
 		for (int s = 1; s <= roiImp.getImageStackSize(); s++) {
-			if (((Double) this.cortArea[s]).equals(Double.NaN))
+			if (((Double) this.cortArea[s]).equals(Double.NaN)
+					|| this.cortArea[s] == 0)
 				continue;
 
 			final double cX = sliceCentroids[0][s] - rX;
@@ -474,25 +474,25 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			start1.x = (float) (cX - Math.cos(thPi) * 2 * rMin);
 			start1.y = (float) (cY - Math.sin(thPi) * 2 * rMin);
 			start1.z = (float) cZ;
-			axes.add(start1);
+			minAxes.add(start1);
 
 			Point3f end1 = new Point3f();
 			end1.x = (float) (cX + Math.cos(thPi) * 2 * rMin);
 			end1.y = (float) (cY + Math.sin(thPi) * 2 * rMin);
 			end1.z = (float) cZ;
-			axes.add(end1);
+			minAxes.add(end1);
 
 			Point3f start2 = new Point3f();
 			start2.x = (float) (cX - Math.cos(-th) * 2 * rMax);
 			start2.y = (float) (cY + Math.sin(-th) * 2 * rMax);
 			start2.z = (float) cZ;
-			axes.add(start2);
+			maxAxes.add(start2);
 
 			Point3f end2 = new Point3f();
 			end2.x = (float) (cX + Math.cos(-th) * 2 * rMax);
 			end2.y = (float) (cY - Math.sin(-th) * 2 * rMax);
 			end2.z = (float) cZ;
-			axes.add(end2);
+			maxAxes.add(end2);
 		}
 		// show the centroids
 		CustomPointMesh mesh = new CustomPointMesh(centroids);
@@ -510,14 +510,29 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		}
 
 		// show the axes
-		Color3f aColour = new Color3f(red, green, blue);
+		red = 1.0f;
+		green = 0.0f;
+		blue = 0.0f;
+		Color3f minColour = new Color3f(red, green, blue);
 		try {
-			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(
-					true);
+			univ.addLineMesh(minAxes, minColour, "Minimum axis", false)
+					.setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
 		}
+		red = 0.0f;
+		green = 0.0f;
+		blue = 1.0f;
+		Color3f maxColour = new Color3f(red, green, blue);
+		try {
+			univ.addLineMesh(maxAxes, maxColour, "Maximum axis", false)
+					.setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+			return;
+		}
+
 		// show the stack
 		try {
 			new StackConverter(roiImp).convertToGray8();
@@ -756,12 +771,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 									* (yCosTheta - xSinTheta);
 							sxys += (yCosTheta - xSinTheta)
 									* (xCosTheta + ySinTheta);
-							maxRadMinS = Math.max(maxRadMinS, Math.abs(xXc
-									* cosTheta + yYc * sinTheta));
-							maxRadMaxS = Math.max(maxRadMaxS, Math.abs(yYc
-									* cosTheta - xXc * sinTheta));
-							maxRadCentreS = Math.max(maxRadCentreS, Math
-									.sqrt(xXc * xXc + yYc * yYc));
+							maxRadMinS = Math.max(maxRadMinS,
+									Math.abs(xXc * cosTheta + yYc * sinTheta));
+							maxRadMaxS = Math.max(maxRadMaxS,
+									Math.abs(yYc * cosTheta - xXc * sinTheta));
+							maxRadCentreS = Math.max(maxRadCentreS,
+									Math.sqrt(xXc * xXc + yYc * yYc));
 						}
 					}
 				}
@@ -1017,8 +1032,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
 			Wand w = new Wand(ip);
-			w.autoOutline(0, (int) Math.round(this.sliceCentroids[1][s]
-					/ this.vH), min, max, Wand.EIGHT_CONNECTED);
+			w.autoOutline(0,
+					(int) Math.round(this.sliceCentroids[1][s] / this.vH), min,
+					max, Wand.EIGHT_CONNECTED);
 			if (this.emptySlices[s] || w.npoints == 0) {
 				this.feretMin[s] = Double.NaN;
 				this.feretAngle[s] = Double.NaN;

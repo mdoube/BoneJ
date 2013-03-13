@@ -74,7 +74,7 @@ public class StructureModelIndex implements PlugIn {
 
 		GenericDialog gd = new GenericDialog("Mesh Parameters");
 		String[] smiMethods = { "Hildebrand & Rüegsegger", "SkyScan" };
-		gd.addChoice("SMI Method", smiMethods, "Hildebrand & Rüegsegger");
+		gd.addChoice("SMI Method", smiMethods, smiMethods[0]);
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
 		gd.addHelp("http://bonej.org/smi");
@@ -88,10 +88,10 @@ public class StructureModelIndex implements PlugIn {
 		float meshSmoothing = (float) gd.getNextNumber();
 
 		double smi = 0;
-		if (smiMethod.equals(smiMethods[0])) {
-			smi = hildRueg(imp, voxelResampling, meshSmoothing);
-		} else {
+		if (smiMethod.equals(smiMethods[1])) {
 			smi = skyScan(imp, voxelResampling, meshSmoothing);
+		} else {
+			smi = hildRueg(imp, voxelResampling, meshSmoothing);
 		}
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
