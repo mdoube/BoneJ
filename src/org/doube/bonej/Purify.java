@@ -76,7 +76,7 @@ public class Purify implements PlugIn, DialogListener {
 			return;
 		}
 		GenericDialog gd = new GenericDialog("Setup");
-		String[] items = { "Multithreaded", "Linear" };
+		String[] items = { "Multithreaded", "Linear", "Mapped" };
 		gd.addChoice("Labelling algorithm", items, items[0]);
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
@@ -88,11 +88,12 @@ public class Purify implements PlugIn, DialogListener {
 			return;
 		final String choice = gd.getNextChoice();
 		int labelMethod;
-		if (choice.equals(items[0])) {
+		if (choice.equals(items[0]))
 			labelMethod = ParticleCounter.MULTI;
-		} else {
+		else if (choice.equals(items[1]))
 			labelMethod = ParticleCounter.LINEAR;
-		}
+		else
+			labelMethod = ParticleCounter.MAPPED;
 		int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 		boolean showPerformance = gd.getNextBoolean();
 		boolean doCopy = gd.getNextBoolean();
@@ -151,8 +152,6 @@ public class Purify implements PlugIn, DialogListener {
 		particleSizes = pc.getParticleSizes(particleLabels);
 		removeSmallParticles(workArray, particleLabels, particleSizes, bg);
 
-		IJ.showStatus("Image Purified");
-
 		ImageStack stack = new ImageStack(imp.getWidth(), imp.getHeight());
 		final int nSlices = workArray.length;
 		for (int z = 0; z < nSlices; z++) {
@@ -160,6 +159,8 @@ public class Purify implements PlugIn, DialogListener {
 		}
 		ImagePlus purified = new ImagePlus("Purified", stack);
 		purified.setCalibration(imp.getCalibration());
+		IJ.showStatus("Image Purified");
+		IJ.showProgress(1.0);
 		return purified;
 	}
 
@@ -392,7 +393,6 @@ public class Purify implements PlugIn, DialogListener {
 		return;
 	}
 
-	@Override
 	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

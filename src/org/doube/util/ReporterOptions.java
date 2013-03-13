@@ -15,6 +15,7 @@ public class ReporterOptions implements PlugIn {
 	public static final String COOKIE2 = "bonej.report.cookie2";
 	public static final String FIRSTTIMEKEY = "bonej.report.firstvisit";
 	public static final String SESSIONKEY = "bonej.report.bonejsession";
+	public static final String IJSESSIONKEY = "bonej.report.ijsession";
 
 	public void run(String arg) {
 
@@ -33,6 +34,7 @@ public class ReporterOptions implements PlugIn {
 			Prefs.set(ReporterOptions.COOKIE2, "");
 			Prefs.set(ReporterOptions.FIRSTTIMEKEY, "");
 			Prefs.set(ReporterOptions.SESSIONKEY, "");
+			Prefs.set(ReporterOptions.IJSESSIONKEY, "");
 		} else {
 			Prefs.set(OPTOUTKEY, true);
 			Prefs.set(ReporterOptions.COOKIE,

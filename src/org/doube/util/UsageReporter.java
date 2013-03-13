@@ -31,7 +31,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 import org.bonej.Help;
@@ -63,6 +65,7 @@ public class UsageReporter {
 	private static final String utmp = "utmp=%2Fstats&";
 
 	private static String bonejSession;
+	private static String utmcnr = "";
 	private static String utme;
 	private static String utmn;
 	private static String utms;
@@ -151,6 +154,12 @@ public class UsageReporter {
 		if (lastTime == 0)
 			lastTime = time;
 		thisTime = time;
+
+		if (utmcnr == "")
+			utmcnr = "utmcn=1&";
+		else
+			utmcnr = "utmcr=1&";
+
 		utmcc = getCookieString();
 		return INSTANCE;
 	}
@@ -202,10 +211,23 @@ public class UsageReporter {
 		try {
 			URL url = new URL(ga + utmwv + utms + utmn + utmhn + utmt + utme
 					+ utmcs + utmsr + utmvp + utmsc + utmul + utmje + utmfl
-					+ utmdt + utmhid + utmr + utmp + utmac + utmcc);
+					+ utmcnr + utmdt + utmhid + utmr + utmp + utmac + utmcc);
 			if (IJ.debugMode)
 				IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
+			uc.setRequestProperty(
+					"User-Agent",
+					"Java/"	+ System.getProperty("java.version") + " ("
+							+ ((IJ.isWindows()) ? "Windows; U; " : "")
+							+ ((IJ.isMacintosh()) ? "Macintosh; " : "")
+							+ ((IJ.isWindows()) ? "Windows NT" : System.getProperty("os.name")) + " "
+							+ System.getProperty("os.version")
+							+ ((!IJ.isWindows() && !IJ.isMacintosh()) ? " " + System.getProperty("os.arch") : "") + "; "
+							+ getLocaleString() + ") "
+							+ System.getProperty("java.vendor"));
+			
+			if (IJ.debugMode)
+				IJ.log(uc.getRequestProperty("User-Agent"));
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					uc.getInputStream()));
 			String inputLine;

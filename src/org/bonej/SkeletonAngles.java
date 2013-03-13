@@ -52,6 +52,7 @@ public class SkeletonAngles implements PlugIn {
 		String[] options = { "Opposite vertex", "nth edge pixel" };
 		gd.addChoice("Use:", options, options[0]);
 		gd.addNumericField("nth pixel", 0, 0);
+		gd.addHelp("http://bonej.org/triplepointangles");
 
 		gd.showDialog();
 
