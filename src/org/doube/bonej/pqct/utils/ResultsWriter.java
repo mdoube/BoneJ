@@ -200,6 +200,14 @@ public class ResultsWriter{
 		results+=cortAnalysis.CoD+"\t";
 		results+=cortAnalysis.CoA+"\t";
 		results+=cortAnalysis.SSI+"\t";
+		results+=cortAnalysis.SSIMax+"\t";
+		results+=cortAnalysis.SSIMin+"\t";
+		results+=cortAnalysis.IPo+"\t";
+	    results+=cortAnalysis.IMax+"\t";
+		results+=cortAnalysis.IMin+"\t";
+		results+=cortAnalysis.dwIPo+"\t";
+		results+=cortAnalysis.dwIMax+"\t";
+		results+=cortAnalysis.dwIMin+"\t"; 
 		results+=cortAnalysis.ToD+"\t";
 		results+=cortAnalysis.ToA+"\t";
 		results+=cortAnalysis.MeA+"\t";
