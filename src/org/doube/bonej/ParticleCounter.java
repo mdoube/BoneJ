@@ -2211,6 +2211,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// HashSet<Integer> target = null;
 		boolean changed = false;
 		for (int i = lut.length - 1; i > 0; i--) {
+			IJ.showStatus("Snowballing labels...");
+			IJ.showProgress(lut.length - i + 1, 1);
 			final int lutValue = lut[i];
 			if (lutValue < i) {
 				changed = true;
@@ -2318,6 +2320,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	private void applyLUT(int[][] particleLabels, final int[] lut, final int w,
 			final int h, final int d) {
 		for (int z = 0; z < d; z++) {
+			IJ.showStatus("Applying LUT...");
+			IJ.showProgress(z, d - 1);
 			int[] slice = particleLabels[z];
 			for (int y = 0; y < h; y++) {
 				final int yw = y * w;
