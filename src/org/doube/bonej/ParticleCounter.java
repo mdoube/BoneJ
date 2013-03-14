@@ -2268,7 +2268,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 */
 	private void updateLUT(int oldValue, int newValue, int[] lut,
 			ArrayList<HashSet<Integer>> lutlist) {
-		final int l = lut.length;
 		HashSet<Integer> list = lutlist.get(oldValue);
 		HashSet<Integer> newList = lutlist.get(newValue);
 
@@ -2277,10 +2276,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			newList.add(in);
 		}
 		list.clear();
-
-		// for (int j = 1; j < l; j++)
-		// if (lut[j] == oldValue)
-		// lut[j] = newValue;
 	}
 
 	/**
