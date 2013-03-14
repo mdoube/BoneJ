@@ -2040,8 +2040,27 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		// place to store counts of each label
 		int[] counter = new int[lut.length];
 
+		// place to map lut values and targets
+		//lutList lists the indexes which point to each transformed lutvalue
+		//for quick updating
+		ArrayList<HashSet<Integer>> lutList = new ArrayList<HashSet<Integer>>(
+				nParticles);
+
+		//initialise the lutList
+		for (int i = 0; i <= nParticles; i++){
+			HashSet<Integer> set = new HashSet<Integer>(2);
+			lutList.add(set);
+		}
+		
+		//set it up. ArrayList index is now the transformed value
+		// list contains the lut indices that have the transformed value
+		for (int i = 1; i < nParticles; i++){
+			HashSet<Integer> list = lutList.get(lut[i]);
+			list.add(Integer.valueOf(i));
+		}
+		
 		// initialise LUT with minimal label in set
-		updateLUTwithMinPosition(lut, map);
+		updateLUTwithMinPosition(lut, map, lutList);
 
 		// find the minimal position of each value
 		findFirstAppearance(lut, map);
@@ -2058,15 +2077,15 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		boolean consistent = false;
 		while ((duplicates > 0) && snowball && merge && update && find
 				&& minimise && !consistent) {
-			snowball = snowballLUT(lut, map);
+			snowball = snowballLUT(lut, map, lutList);
 
 			duplicates = countDuplicates(counter, map, lut);
 
 			// merge duplicates
-			merge = mergeDuplicates(map, counter, duplicates, lut);
+			merge = mergeDuplicates(map, counter, duplicates, lut, lutList);
 
 			// update the LUT
-			update = updateLUTwithMinPosition(lut, map);
+			update = updateLUTwithMinPosition(lut, map, lutList);
 
 			find = findFirstAppearance(lut, map);
 
@@ -2113,7 +2132,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	}
 
 	private boolean updateLUTwithMinPosition(int[] lut,
-			ArrayList<HashSet<Integer>> map) {
+			ArrayList<HashSet<Integer>> map, ArrayList<HashSet<Integer>> lutList) {
 		final int l = lut.length;
 		boolean changed = false;
 		for (int i = 1; i < l; i++) {
@@ -2140,13 +2159,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					lut[v] = min;
 			}
 			set.clear();
-			updateLUT(i, min, lut);
+			updateLUT(i, min, lut, lutList);
 		}
 		return changed;
 	}
 
 	private boolean mergeDuplicates(ArrayList<HashSet<Integer>> map,
-			int[] counter, int duplicates, int[] lut) {
+			int[] counter, int duplicates, int[] lut,
+			ArrayList<HashSet<Integer>> lutList) {
 		boolean changed = false;
 		// create a list of duplicate values to check for
 		int[] dupList = new int[duplicates];
@@ -2188,7 +2208,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					}
 					// empty the set
 					set.clear();
-					updateLUT(i, lutValue, lut);
+					updateLUT(i, lutValue, lut, lutList);
 					// move to the next set
 					break;
 
@@ -2206,20 +2226,21 @@ public class ParticleCounter implements PlugIn, DialogListener {
 	 * @param map
 	 * @return false if nothing changed, true if something changed
 	 */
-	private boolean snowballLUT(final int[] lut, ArrayList<HashSet<Integer>> map) {
+	private boolean snowballLUT(final int[] lut,
+			ArrayList<HashSet<Integer>> map, ArrayList<HashSet<Integer>> lutList) {
 		// HashSet<Integer> set = null;
 		// HashSet<Integer> target = null;
 		boolean changed = false;
 		for (int i = lut.length - 1; i > 0; i--) {
 			IJ.showStatus("Snowballing labels...");
-			IJ.showProgress(lut.length - i + 1, 1);
+			IJ.showProgress(lut.length - i + 1, lut.length);
 			final int lutValue = lut[i];
 			if (lutValue < i) {
 				changed = true;
 				HashSet<Integer> set = map.get(i);
 				HashSet<Integer> target = map.get(lutValue);
-				if (target.isEmpty())
-					IJ.log("merging with empty target " + lutValue);
+				// if (target.isEmpty())
+				// IJ.log("merging with empty target " + lutValue);
 				for (Integer n : set) {
 					target.add(n);
 					lut[n.intValue()] = lutValue;
@@ -2231,24 +2252,35 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				set.clear();
 				// update lut so that anything pointing
 				// to cleared set points to the new set
-				updateLUT(i, lutValue, lut);
+				updateLUT(i, lutValue, lut, lutList);
 			}
 		}
 		return changed;
 	}
 
 	/**
-	 * Replace old value with new value in LUT
+	 * Replace old value with new value in LUT using map
 	 * 
 	 * @param oldValue
 	 * @param newValue
 	 * @param lut
+	 * @param lutlist
 	 */
-	private void updateLUT(int oldValue, int newValue, int[] lut) {
+	private void updateLUT(int oldValue, int newValue, int[] lut,
+			ArrayList<HashSet<Integer>> lutlist) {
 		final int l = lut.length;
-		for (int j = 1; j < l; j++)
-			if (lut[j] == oldValue)
-				lut[j] = newValue;
+		HashSet<Integer> list = lutlist.get(oldValue);
+		HashSet<Integer> newList = lutlist.get(newValue);
+
+		for (Integer in : list){
+			lut[in.intValue()] = newValue;
+			newList.add(in);
+		}
+		list.clear();
+
+		// for (int j = 1; j < l; j++)
+		// if (lut[j] == oldValue)
+		// lut[j] = newValue;
 	}
 
 	/**
