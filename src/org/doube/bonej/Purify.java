@@ -77,7 +77,7 @@ public class Purify implements PlugIn, DialogListener {
 		}
 		GenericDialog gd = new GenericDialog("Setup");
 		String[] items = { "Multithreaded", "Linear", "Mapped" };
-		gd.addChoice("Labelling algorithm", items, items[0]);
+		gd.addChoice("Labelling algorithm", items, items[2]);
 		gd.addNumericField("Chunk Size", 4, 0, 4, "slices");
 		gd.addCheckbox("Performance Log", false);
 		gd.addCheckbox("Make_copy", true);

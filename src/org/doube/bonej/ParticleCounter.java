@@ -121,7 +121,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private String chunkString = "";
 
-	private int labelMethod = MULTI;
+	private int labelMethod = MAPPED;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -188,7 +188,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
 		gd.addNumericField("Volume_resampling", 2, 0);
 		String[] items2 = { "Multithreaded", "Linear", "Mapped" };
-		gd.addChoice("Labelling algorithm", items2, items2[0]);
+		gd.addChoice("Labelling algorithm", items2, items2[2]);
 		gd.addNumericField("Slices per chunk", 2, 0);
 		gd.addHelp("http://bonej.org/particles");
 		gd.addDialogListener(this);
