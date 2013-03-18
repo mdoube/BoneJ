@@ -552,9 +552,9 @@ public class Anisotropy implements PlugIn, DialogListener {
 
 		// loop through all vectors
 		// start multithreading here - each thread samples a set of vectors
-		final double radVw = -radius * vW;
-		final double radVh = -radius * vH;
-		final double radVd = -radius * vD;
+		final double radVw = -radius / vW;
+		final double radVh = -radius / vH;
+		final double radVd = -radius / vD;
 
 		// new multithread pattern
 		final AtomicInteger ai = new AtomicInteger(0);
@@ -589,8 +589,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 
 						for (double pos = -radius; pos <= radius; pos += vectorSampling) {
 							// find the index of the voxel that the sample falls
-							// within
-							// offset from centroid
+							// within offset from centroid
 							final int x = (int) Math.round(pos * vXvW);
 							final int y = (int) Math.round(pos * vYvH);
 							final int z = (int) Math.round(pos * vZvD);
@@ -603,14 +602,12 @@ public class Anisotropy implements PlugIn, DialogListener {
 								thisPos = false;
 							}
 							// if this pos is not equal to last pos then an
-							// interface is
-							// counted
+							// interface is counted
 							if (thisPos != lastPos) {
 								nIntercepts++;
 							}
 							// then before incrementing the for loop, set
-							// lastPos to
-							// thisPos
+							// lastPos to thisPos
 							lastPos = thisPos;
 						}
 						interceptCounts[v] = nIntercepts;
