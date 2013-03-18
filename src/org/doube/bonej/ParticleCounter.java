@@ -231,8 +231,12 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final int slicesPerChunk = (int) Math.floor(gd.getNextNumber());
 
 		// get the particles and do the analysis
+		final long start = System.nanoTime();
 		Object[] result = getParticles(imp, slicesPerChunk, minVol, maxVol,
 				FORE, doExclude);
+		// calculate particle labelling time in ms
+		final long time = (System.nanoTime() - start) / 1000000;
+		IJ.log("Particle labelling finished in "+time+" ms");
 		int[][] particleLabels = (int[][]) result[1];
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
@@ -2019,10 +2023,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		for (int z = 0; z < d; z++) {
 			IJ.showStatus("Building neighbourhood list");
 			IJ.showProgress(z, d - 1);
+			final int[] slice = particleLabels[z];
 			for (int y = 0; y < h; y++) {
 				final int yw = y * w;
 				for (int x = 0; x < w; x++) {
-					final int centre = particleLabels[z][yw + x];
+					final int centre = slice[yw + x];
 					// ignore background
 					if (centre == 0)
 						continue;
