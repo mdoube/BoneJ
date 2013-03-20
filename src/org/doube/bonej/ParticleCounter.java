@@ -2005,7 +2005,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		int[] lut = new int[nParticles + 1];
 		// set each label to be its own root
-		final int initialCapacity = 10;
+		final int initialCapacity = 1;
 		for (int i = 0; i < nParticles + 1; i++) {
 			lut[i] = i;
 			Integer root = Integer.valueOf(i);
@@ -2203,9 +2203,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					changed = true;
 					Iterator<Integer> iter = set.iterator();
 					HashSet<Integer> target = map.get(lutValue);
-					if (target.isEmpty())
-						IJ.log("attempting to merge with empty target"
-								+ lutValue);
+//					if (target.isEmpty())
+//						IJ.log("attempting to merge with empty target"
+//								+ lutValue);
 					while (iter.hasNext()) {
 						Integer val = iter.next();
 						target.add(val);
@@ -2343,7 +2343,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			final int val = nbh[i];
 			// skip background and self-similar labels
 			// adding them again is a redundant waste of time
-			if (val == 0 || val == centre)
+			if (val == 0 || val == centre )
 				continue;
 			set.add(Integer.valueOf(val));
 		}
