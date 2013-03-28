@@ -31,9 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
 
 import org.bonej.Help;
