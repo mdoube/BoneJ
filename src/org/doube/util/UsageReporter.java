@@ -262,7 +262,7 @@ public class UsageReporter {
 	private static String getLocaleString() {
 		String locale = Locale.getDefault().toString();
 		locale = locale.replace("_", "-");
-		locale = locale.toLowerCase();
+		locale = locale.toLowerCase(Locale.ENGLISH);
 		return locale;
 	}
 
