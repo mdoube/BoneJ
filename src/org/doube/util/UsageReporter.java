@@ -215,17 +215,7 @@ public class UsageReporter {
 			if (IJ.debugMode)
 				IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
-			uc.setRequestProperty(
-					"User-Agent",
-					"Java/"	+ System.getProperty("java.version") + " ("
-							+ ((IJ.isWindows()) ? "Windows; U; " : "")
-							+ ((IJ.isMacintosh()) ? "Macintosh; " : "")
-							+ ((IJ.isWindows()) ? "Windows NT" : System.getProperty("os.name")) + " "
-							+ System.getProperty("os.version")
-							+ ((!IJ.isWindows() && !IJ.isMacintosh()) ? " " + System.getProperty("os.arch") : "") + "; "
-							+ getLocaleString() + ") "
-							+ System.getProperty("java.vendor"));
-			
+			uc.setRequestProperty("User-Agent", userAgentString());
 			if (IJ.debugMode)
 				IJ.log(uc.getRequestProperty("User-Agent"));
 			BufferedReader in = new BufferedReader(new InputStreamReader(
@@ -242,6 +232,33 @@ public class UsageReporter {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private String userAgentString() {
+		String os = "";
+
+		// Handle Mac OSes on PPC and Intel
+		if (IJ.isMacintosh()) {
+			os = "Macintosh; U; " + System.getProperty("os.arch") + " "
+					+ System.getProperty("os.name") + " "
+					+ System.getProperty("os.version");
+			// Handle Windows using the NT version number
+		} else if (IJ.isWindows()) {
+			os = "Windows NT " + System.getProperty("os.version");
+			// Handle Linux and everything else
+		} else {
+			os = System.getProperty("os.name") + " "
+					+ System.getProperty("os.version")
+					+ System.getProperty("os.arch");
+		}
+
+		String browser = "Java/" + System.getProperty("java.version");
+		String vendor = System.getProperty("java.vendor");
+		String locale = getLocaleString();
+
+		String ua = browser + " (" + os + "; " + locale + ") " + vendor;
+
+		return ua;
 	}
 
 	private static String getLocaleString() {
