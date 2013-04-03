@@ -33,6 +33,18 @@ import org.doube.jama.Matrix;
  * 
  */
 public class FitEllipsoid {
+
+	/**
+	 * Find the best-fit ellipsoid using the default method (yuryPetrov)
+	 * 
+	 * @param coordinates
+	 *            in double[n][3] format
+	 * @return Object representing the best-fit ellipsoid
+	 */
+	public static Ellipsoid fitTo(double[][] coordinates) {
+		return new Ellipsoid(yuryPetrov(coordinates));
+	}
+
 	/**
 	 * Calculate the best-fit ellipsoid by least squares. Currently broken;
 	 * doesn't handle large numbers of points and often returns a singular
