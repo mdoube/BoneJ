@@ -75,9 +75,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			return;
 		}
 		Calibration cal = imp.getCalibration();
-		double vD = cal.pixelDepth;
-		double vH = cal.pixelHeight;
-		double vW = cal.pixelWidth;
+		final double vD = cal.pixelDepth;
+		final double vH = cal.pixelHeight;
+		final double vW = cal.pixelWidth;
 		String units = cal.getUnits();
 		double samplingIncrement = Math.max(vH, Math.max(vW, vD));
 		GenericDialog gd = new GenericDialog("Setup");
@@ -91,7 +91,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		if (gd.wasCanceled())
 			return;
-		double[][] randomVectors = Vectors.randomVectors(nVectors);
+		double[][] randomVectors = Vectors.regularVectors(nVectors);
 		double[][] skeletonPoints = skeletonPoints(imp);
 		double[][] localEigenValues = localEigenValues(imp, randomVectors,
 				skeletonPoints, samplingIncrement);
