@@ -81,11 +81,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		String units = cal.getUnits();
 		double samplingIncrement = Math.max(vH, Math.max(vW, vD));
 		GenericDialog gd = new GenericDialog("Setup");
-		gd
-				.addNumericField("Sampling increment", samplingIncrement, 3, 8,
-						units);
+		gd.addNumericField("Sampling increment", samplingIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
-		gd.addHelp("http://bonej.org/plateness");
+		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
 			samplingIncrement = gd.getNextNumber();
@@ -280,6 +278,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return E;
 	}/* end PrincipalComponents */
 
+	/**
+	 * Compare Ellipsoids by volume
+	 */
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
 		return Double.compare(o1.getVolume(), o2.getVolume());
 	}
