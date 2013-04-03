@@ -10,37 +10,45 @@ public class EigenCalculator {
 	 * covariance method and eigendecomposition.
 	 * 
 	 * @param coOrdinates
-	 *            n x 3 array centred on (0,0,0)
+	 *            n x 3 array
 	 * @return EigenvalueDecomposition containing eigenvectors and eigenvalues
 	 * 
 	 */
 	public static EigenvalueDecomposition principalComponents(
 			double[][] coOrdinates) {
+		final int nPoints = coOrdinates.length;
 		double sumX = 0, sumY = 0, sumZ = 0;
-		for (int n = 0; n < coOrdinates.length; n++) {
+		//calculate the centroid of the points
+		for (int n = 0; n < nPoints; n++) {
 			sumX += coOrdinates[n][0];
 			sumY += coOrdinates[n][1];
 			sumZ += coOrdinates[n][2];
 		}
-		double centX = sumX / coOrdinates.length;
-		double centY = sumY / coOrdinates.length;
-		double centZ = sumZ / coOrdinates.length;
+		//centroid is the mean (x, y, z) position
+		final double centX = sumX / nPoints;
+		final double centY = sumY / nPoints;
+		final double centZ = sumZ / nPoints;
 
+		//construct the covariance matrix
 		double[][] C = new double[3][3];
 		double count = 0;
-		for (int n = 0; n < coOrdinates.length; n++) {
-			double x = coOrdinates[n][0] - centX;
-			double y = coOrdinates[n][1] - centY;
-			double z = coOrdinates[n][2] - centZ;
+		for (int n = 0; n < nPoints; n++) {
+			//translate so that centroid is at (0,0,0)
+			final double x = coOrdinates[n][0] - centX;
+			final double y = coOrdinates[n][1] - centY;
+			final double z = coOrdinates[n][2] - centZ;
 			C[0][0] += x * x;
 			C[1][1] += y * y;
 			C[2][2] += z * z;
-			C[0][1] += x * y;
-			C[0][2] += x * z;
-			C[1][0] += x * y;
-			C[1][2] += y * z;
-			C[2][0] += x * z;
-			C[2][1] += y * z;
+			final double xy = x * y;
+			final double xz = x * z;
+			final double yz = y * z; 
+			C[0][1] += xy;
+			C[0][2] += xz;
+			C[1][0] += xy;
+			C[1][2] += yz;
+			C[2][0] += xz;
+			C[2][1] += yz;
 			count += 1;
 		}
 		double invCount = 1 / count;
