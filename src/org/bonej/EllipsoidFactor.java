@@ -18,6 +18,8 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 
 import ij.IJ;
@@ -93,6 +95,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			return;
 		double[][] randomVectors = Vectors.regularVectors(nVectors);
 		double[][] skeletonPoints = skeletonPoints(imp);
+		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints);
 		double[][] localEigenValues = localEigenValues(imp, randomVectors,
 				skeletonPoints, samplingIncrement);
 
@@ -123,7 +126,15 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		UsageReporter.reportEvent(this).send();
 	}
 
-	/* ----------------------------------------------------------------------- */
+
+	private Ellipsoid[] findEllipsoids(ImagePlus imp, double[][] skeletonPoints) {
+		final int nPoints = skeletonPoints.length;
+		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
+		
+		// TODO Auto-generated method stub
+		return ellipsoids;
+	}
+
 
 	private double[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
@@ -131,9 +142,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
-		double vW = imp.getCalibration().pixelWidth;
-		double vH = imp.getCalibration().pixelHeight;
-		double vD = imp.getCalibration().pixelDepth;
+		final double vW = imp.getCalibration().pixelWidth;
+		final double vH = imp.getCalibration().pixelHeight;
+		final double vD = imp.getCalibration().pixelDepth;
 		int count = 0;
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
