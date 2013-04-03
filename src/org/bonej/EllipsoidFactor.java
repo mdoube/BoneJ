@@ -94,7 +94,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (gd.wasCanceled())
 			return;
 		double[][] randomVectors = Vectors.regularVectors(nVectors);
-		double[][] skeletonPoints = skeletonPoints(imp);
+		int[][] skeletonPoints = skeletonPoints(imp);
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints);
 		double[][] localEigenValues = localEigenValues(imp, randomVectors,
 				skeletonPoints, samplingIncrement);
@@ -126,25 +126,22 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		UsageReporter.reportEvent(this).send();
 	}
 
-
-	private Ellipsoid[] findEllipsoids(ImagePlus imp, double[][] skeletonPoints) {
+	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
-		
-		// TODO Auto-generated method stub
+
 		return ellipsoids;
 	}
 
-
-	private double[][] skeletonPoints(ImagePlus imp) {
+	private int[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
 		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
-		final double vW = imp.getCalibration().pixelWidth;
-		final double vH = imp.getCalibration().pixelHeight;
-		final double vD = imp.getCalibration().pixelDepth;
+		// final double vW = imp.getCalibration().pixelWidth;
+		// final double vH = imp.getCalibration().pixelHeight;
+		// final double vD = imp.getCalibration().pixelDepth;
 		int count = 0;
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
@@ -158,7 +155,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 		}
 		IJ.log("Counted " + count + " skeleton points");
-		double[][] skeletonPoints = new double[count][3];
+		int[][] skeletonPoints = new int[count][3];
 		int p = 0;
 		for (int z = 0; z < d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z + 1);
@@ -166,9 +163,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
 					if (slicePixels[offset + x] < 0) {
-						skeletonPoints[p][0] = (double) x * vW;
-						skeletonPoints[p][1] = (double) y * vH;
-						skeletonPoints[p][2] = (double) z * vD;
+						skeletonPoints[p][0] = x;
+						skeletonPoints[p][1] = y;
+						skeletonPoints[p][2] = z;
 						p++;
 					}
 				}
@@ -178,14 +175,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	private double[][] localEigenValues(ImagePlus imp,
-			double[][] randomVectors, double[][] skeletonPoints,
+			double[][] randomVectors, int[][] skeletonPoints,
 			double samplingIncrement) {
+
 		ImageStack stack = imp.getImageStack();
 		double[][] localEigenValues = new double[skeletonPoints.length][3];
 		Calibration cal = imp.getCalibration();
 		final double vD = cal.pixelDepth;
 		final double vH = cal.pixelHeight;
 		final double vW = cal.pixelWidth;
+		double samplingIncrementInPixels = samplingIncrement
+				/ Math.min(Math.min(vD, vH), vW);
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
 		final int d = stack.getSize();
@@ -200,9 +200,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		for (int p = 0; p < nP; p++) {
 			IJ.showStatus("Calculating local eigenvalues");
 			IJ.showProgress(p, nP);
-			final double sX = skeletonPoints[p][0];
-			final double sY = skeletonPoints[p][1];
-			final double sZ = skeletonPoints[p][2];
+			final int sX = skeletonPoints[p][0];
+			final int sY = skeletonPoints[p][1];
+			final int sZ = skeletonPoints[p][2];
 			boolean hitSide = false;
 			double[][] localStar = new double[nV][3];
 			for (int v = 0; v < nV; v++) {
@@ -214,16 +214,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				int pixelValue = 255;
 				double vecL = 0;
 				while (pixelValue == 255 && !hitSide) {
-					final int tX = (int) Math.floor((sX + vecX * vecL) / vW);
-					final int tY = (int) Math.floor((sY + vecY * vecL) / vH);
-					final int tZ = (int) Math.floor((sZ + vecZ * vecL) / vD);
+					final int tX = (int) Math.floor((sX + vecX * vecL));
+					final int tY = (int) Math.floor((sY + vecY * vecL));
+					final int tZ = (int) Math.floor((sZ + vecZ * vecL));
 					if (tX < 0 || tX >= w || tY < 0 || tY >= h || tZ < 0
 							|| tZ >= d) {
 						hitSide = true;
 						break;
 					} else {
 						pixelValue = ips[tZ].get(tX, tY);
-						vecL += samplingIncrement;
+						vecL += samplingIncrementInPixels;
 					}
 				}
 				localStar[v][0] = vecL * vecX;
@@ -231,7 +231,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				localStar[v][2] = vecL * vecZ;
 			}
 			if (!hitSide) {
-				EigenvalueDecomposition E = EigenCalculator.principalComponents(localStar);
+				EigenvalueDecomposition E = EigenCalculator
+						.principalComponents(localStar);
 				localEigenValues[p][0] = E.getD().get(2, 2);
 				localEigenValues[p][1] = E.getD().get(1, 1);
 				localEigenValues[p][2] = E.getD().get(0, 0);
