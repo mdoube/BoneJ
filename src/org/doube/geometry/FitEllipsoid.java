@@ -177,8 +177,10 @@ public class FitEllipsoid {
 
 		double[][] d = new double[nPoints][9];
 		for (int i = 0; i < nPoints; i++) {
-			if (coOrdinates[i] == null)
+			if (coOrdinates[i] == null) {
+				d[i] = null;
 				continue;
+			}
 			final double x = coOrdinates[i][0];
 			final double y = coOrdinates[i][1];
 			final double z = coOrdinates[i][2];
@@ -193,7 +195,7 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
-		Matrix D = new Matrix(d);
+		Matrix D = new Matrix(removeNulls(d));
 		Matrix ones = Matrix.ones(nPoints, 1);
 		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
 				.times(ones));
@@ -225,6 +227,33 @@ public class FitEllipsoid {
 		double[] equation = v;
 		Object[] ellipsoid = { centre, radii, eigenVectors, equation, E };
 		return ellipsoid;
+	}
+
+	/**
+	 * Remove null values from an array
+	 * 
+	 * @param d
+	 * @return
+	 */
+	private static double[][] removeNulls(double[][] d) {
+		final int l = d.length;
+		int nullCount = 0;
+		for (int i = 0; i < l; i++)
+			if (d[i] == null)
+				nullCount++;
+
+		final int nonNulls = l - nullCount;
+		double[][] array = new double[nonNulls][];
+		
+		int j = 0;
+		for (int i = 0; i < l; i++){
+			if (d[i] != null){
+				array[j] = d[i];
+				j++;
+			}
+		}
+		
+		return array;
 	}
 
 	/**
