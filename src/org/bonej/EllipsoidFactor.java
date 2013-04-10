@@ -129,7 +129,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
-
+		
+		//Sort using this class' compare method
+		Arrays.sort(ellipsoids, this);
 		return ellipsoids;
 	}
 
