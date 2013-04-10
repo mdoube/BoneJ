@@ -18,7 +18,6 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -26,15 +25,12 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
-import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
-import org.doube.geometry.EigenCalculator;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
-import org.doube.jama.EigenvalueDecomposition;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
@@ -93,40 +89,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		if (gd.wasCanceled())
 			return;
-		double[][] unitVectors = Vectors.regularVectors(nVectors);
+		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
-		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints);
-		double[][] localEigenValues = localEigenValues(imp, unitVectors,
-				skeletonPoints, samplingIncrement);
-
-		double sumEv1 = 0, sumEv2 = 0, sumEv3 = 0;
-		int NaNs = 0;
-		for (int l = 0; l < localEigenValues.length; l++) {
-			final Double ex = localEigenValues[l][0];
-			final Double ey = localEigenValues[l][1];
-			final Double ez = localEigenValues[l][2];
-			if (ex.equals(Double.NaN) || ey.equals(Double.NaN)
-					|| ez.equals(Double.NaN)) {
-				NaNs++;
-			} else {
-				sumEv1 += localEigenValues[l][0];
-				sumEv2 += localEigenValues[l][1];
-				sumEv3 += localEigenValues[l][2];
-			}
-		}
-		IJ.log(NaNs + " tests hit the sides");
+		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints, unitVectors);
 
 		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "ΣeV1", sumEv1);
-		ri.setResultInRow(imp, "ΣeV2", sumEv2);
-		ri.setResultInRow(imp, "ΣeV3", sumEv3);
-		ri.setResultInRow(imp, "ΣeV2/ΣeV1", sumEv2 / sumEv1);
-		ri.setResultInRow(imp, "ΣeV3/ΣeV1", sumEv3 / sumEv1);
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 	}
 
-	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints) {
+	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints, double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 		
@@ -176,76 +148,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return skeletonPoints;
 	}
 
-	private double[][] localEigenValues(ImagePlus imp,
-			double[][] randomVectors, int[][] skeletonPoints,
-			double samplingIncrement) {
-
-		ImageStack stack = imp.getImageStack();
-		double[][] localEigenValues = new double[skeletonPoints.length][3];
-		Calibration cal = imp.getCalibration();
-		final double vD = cal.pixelDepth;
-		final double vH = cal.pixelHeight;
-		final double vW = cal.pixelWidth;
-		double samplingIncrementInPixels = samplingIncrement
-				/ Math.min(Math.min(vD, vH), vW);
-		final int w = stack.getWidth();
-		final int h = stack.getHeight();
-		final int d = stack.getSize();
-		final int nP = skeletonPoints.length;
-		final int nV = randomVectors.length;
-		// instantiate ImageProcessors to access the stack slices
-		ImageProcessor[] ips = new ImageProcessor[d];
-		for (int s = 0; s < d; s++) {
-			ips[s] = stack.getProcessor(s + 1);
-		}
-
-		for (int p = 0; p < nP; p++) {
-			IJ.showStatus("Calculating local eigenvalues");
-			IJ.showProgress(p, nP);
-			final int sX = skeletonPoints[p][0];
-			final int sY = skeletonPoints[p][1];
-			final int sZ = skeletonPoints[p][2];
-			boolean hitSide = false;
-			double[][] localStar = new double[nV][3];
-			for (int v = 0; v < nV; v++) {
-				final double vecX = randomVectors[v][0];
-				final double vecY = randomVectors[v][1];
-				final double vecZ = randomVectors[v][2];
-				if (hitSide)
-					break;
-				int pixelValue = 255;
-				double vecL = 0;
-				while (pixelValue == 255 && !hitSide) {
-					final int tX = (int) Math.floor((sX + vecX * vecL));
-					final int tY = (int) Math.floor((sY + vecY * vecL));
-					final int tZ = (int) Math.floor((sZ + vecZ * vecL));
-					if (tX < 0 || tX >= w || tY < 0 || tY >= h || tZ < 0
-							|| tZ >= d) {
-						hitSide = true;
-						break;
-					} else {
-						pixelValue = ips[tZ].get(tX, tY);
-						vecL += samplingIncrementInPixels;
-					}
-				}
-				localStar[v][0] = vecL * vecX;
-				localStar[v][1] = vecL * vecY;
-				localStar[v][2] = vecL * vecZ;
-			}
-			if (!hitSide) {
-				EigenvalueDecomposition E = EigenCalculator
-						.principalComponents(localStar);
-				localEigenValues[p][0] = E.getD().get(2, 2);
-				localEigenValues[p][1] = E.getD().get(1, 1);
-				localEigenValues[p][2] = E.getD().get(0, 0);
-			} else {
-				localEigenValues[p][0] = Double.NaN;
-				localEigenValues[p][1] = Double.NaN;
-				localEigenValues[p][2] = Double.NaN;
-			}
-		}
-		return localEigenValues;
-	}
+	
 
 	/**
 	 * Compare Ellipsoids by volume
