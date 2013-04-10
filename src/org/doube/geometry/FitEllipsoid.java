@@ -177,6 +177,8 @@ public class FitEllipsoid {
 
 		double[][] d = new double[nPoints][9];
 		for (int i = 0; i < nPoints; i++) {
+			if (coOrdinates[i] == null)
+				continue;
 			final double x = coOrdinates[i][0];
 			final double y = coOrdinates[i][1];
 			final double z = coOrdinates[i][2];
