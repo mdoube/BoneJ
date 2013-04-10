@@ -93,10 +93,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		if (gd.wasCanceled())
 			return;
-		double[][] randomVectors = Vectors.regularVectors(nVectors);
+		double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints);
-		double[][] localEigenValues = localEigenValues(imp, randomVectors,
+		double[][] localEigenValues = localEigenValues(imp, unitVectors,
 				skeletonPoints, samplingIncrement);
 
 		double sumEv1 = 0, sumEv2 = 0, sumEv3 = 0;
