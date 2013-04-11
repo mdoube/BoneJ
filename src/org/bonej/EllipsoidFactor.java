@@ -35,6 +35,7 @@ import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
 import org.doube.skeleton.Skeletonize3D;
+import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
@@ -112,6 +113,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			bigStack.addSlice("" + i, biggestEllipsoid[i]);
 		
 		ImagePlus bigImp = new ImagePlus("", bigStack);
+		bigImp.setDisplayRange(-ellipsoids.length/2, ellipsoids.length);
 		bigImp.show();
 
 		ResultInserter ri = ResultInserter.getInstance();
@@ -200,7 +202,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
 					unitVectors);
 		}
-
+		
+		ellipsoids = ArrayHelper.removeNulls(ellipsoids);
+		
 		// Sort using this class' compare method
 		Arrays.sort(ellipsoids, this);
 		return ellipsoids;
@@ -305,7 +309,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 	private int[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
-		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
+		ImagePlus skeleton = sk.getSkeleton(imp);
+		ImageStack skeletonStack = skeleton.getStack();
+		
+		skeleton.show();
 
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
