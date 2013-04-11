@@ -18,6 +18,7 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -226,41 +227,28 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
 		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
+		
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
-		// final double vW = imp.getCalibration().pixelWidth;
-		// final double vH = imp.getCalibration().pixelHeight;
-		// final double vD = imp.getCalibration().pixelDepth;
-		int count = 0;
+		
+		ArrayList<int[]> list = new ArrayList<int[]>();
+
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
 			for (int y = 0; y < h; y++) {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
 					if (slicePixels[offset + x] < 0) {
-						count++;
+						int[] array = {x, y, z};
+						list.add(array);
 					}
 				}
 			}
 		}
-		IJ.log("Counted " + count + " skeleton points");
-		int[][] skeletonPoints = new int[count][3];
-		int p = 0;
-		for (int z = 0; z < d; z++) {
-			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z + 1);
-			for (int y = 0; y < h; y++) {
-				int offset = y * w;
-				for (int x = 0; x < w; x++) {
-					if (slicePixels[offset + x] < 0) {
-						skeletonPoints[p][0] = x;
-						skeletonPoints[p][1] = y;
-						skeletonPoints[p][2] = z;
-						p++;
-					}
-				}
-			}
-		}
+	
+		int[][] skeletonPoints = list.toArray(new int[list.size()][]);
+		
 		return skeletonPoints;
 	}
 
