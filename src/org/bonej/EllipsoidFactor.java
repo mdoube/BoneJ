@@ -120,8 +120,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 		ImageStack stack = imp.getImageStack();
 
-	
-
 		for (int i = 0; i < nPoints; i++) {
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
 					unitVectors);
@@ -139,7 +137,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param imp
 	 * @param is
 	 * @param unitVectors
-	 * @return
+	 * @return ellipsoid fitting the point cloud of boundaries lying at the end
+	 *         of vectors surrounding the seed point. If ellipsoid fitting
+	 *         fails, returns null
 	 */
 	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
 			int[] skeletonPoint, double[][] unitVectors) {
@@ -148,15 +148,15 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double pW = cal.pixelWidth;
 		final double pH = cal.pixelHeight;
 		final double pD = cal.pixelDepth;
-		
+
 		ImageStack stack = imp.getImageStack();
-		
+
 		// cache slices into an array
 		ByteProcessor[] ips = new ByteProcessor[stack.getSize() + 1];
 		for (int i = 1; i <= stack.getSize(); i++) {
 			ips[i] = (ByteProcessor) stack.getProcessor(i);
-		}		
-		
+		}
+
 		final int w = ips[0].getWidth();
 		final int h = ips[1].getHeight();
 		final int d = ips.length - 1;
@@ -187,6 +187,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				final int y = (int) Math.floor(py + l * dy);
 				final int z = (int) Math.floor(pz + l * dz);
 
+				// set points to null when their vector goes out of bounds
 				if (isOutOfBounds(x, y, z, w, h, d)) {
 					pointCloud[v] = null;
 					break;
@@ -198,9 +199,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			pointCloud[v][2] = (int) Math.floor(pz + l * dz) * pD;
 		}
 
-		Ellipsoid ellipsoid = FitEllipsoid.fitTo(pointCloud);
-		
-		return ellipsoid;
+		try {
+			Ellipsoid ellipsoid = FitEllipsoid.fitTo(pointCloud);
+			return ellipsoid;
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	/**
