@@ -54,6 +54,9 @@ public class Ellipsoid {
 		this.ra = radii[0];
 		this.rb = radii[1];
 		this.rc = radii[2];
+		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
+			throw new IllegalArgumentException("Radius is NaN");
+		
 		setVolume();
 		IJ.log("ra = " + ra + ", rb =" + rb + ", rc = " + rc);
 
