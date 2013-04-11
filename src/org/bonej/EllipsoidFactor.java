@@ -76,16 +76,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp) || !ic.isMultiSlice(imp)) {
-			IJ.error("8-bit binary stack required.");
+		if (!ic.isBinary(imp) || !ic.isMultiSlice(imp) || !ic.isVoxelIsotropic(imp, 0.001)) {
+			IJ.error("8-bit binary stack with isotropic pixel spacing required.");
 			return;
 		}
 		Calibration cal = imp.getCalibration();
-		final double vD = cal.pixelDepth;
-		final double vH = cal.pixelHeight;
-		final double vW = cal.pixelWidth;
+//		final double vD = cal.pixelDepth;
+//		final double vH = cal.pixelHeight;
+//		final double vW = cal.pixelWidth;
 		String units = cal.getUnits();
-		vectorIncrement = Math.max(vH, Math.max(vW, vD));
+//		vectorIncrement = Math.max(vH, Math.max(vW, vD));
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
@@ -160,7 +160,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ips[i] = (ByteProcessor) stack.getProcessor(i);
 		}
 
-		final int w = ips[0].getWidth();
+		final int w = ips[1].getWidth();
 		final int h = ips[1].getHeight();
 		final int d = ips.length - 1;
 
