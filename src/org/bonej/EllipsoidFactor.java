@@ -61,7 +61,11 @@ import org.doube.util.UsageReporter;
 
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int nVectors = 1000;
-	private double vectorIncrement = 1;
+	/**
+	 * increment for vector searching in pixel units. Defaults to ~Nyquist
+	 * sampling
+	 */
+	private double vectorIncrement = 1 / 2.3;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -227,11 +231,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
 		ImageStack skeletonStack = sk.getSkeleton(imp).getStack();
-		
+
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
-		
+
 		ArrayList<int[]> list = new ArrayList<int[]>();
 
 		for (int z = 1; z <= d; z++) {
@@ -240,20 +244,22 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
 					if (slicePixels[offset + x] < 0) {
-						int[] array = {x, y, z};
+						int[] array = { x, y, z };
 						list.add(array);
 					}
 				}
 			}
 		}
-	
+
 		int[][] skeletonPoints = list.toArray(new int[list.size()][]);
-		
+
 		return skeletonPoints;
 	}
 
 	/**
-	 * Compare Ellipsoids by volume
+	 * Compare Ellipsoids by volume. Ordering could be reversed by swapping o1
+	 * and o2
+	 * 
 	 */
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
 		return Double.compare(o1.getVolume(), o2.getVolume());
