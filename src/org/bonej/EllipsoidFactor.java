@@ -30,7 +30,6 @@ import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
-import org.doube.geometry.FitEllipse;
 import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
@@ -118,7 +117,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
-		ImageStack stack = imp.getImageStack();
 
 		for (int i = 0; i < nPoints; i++) {
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
