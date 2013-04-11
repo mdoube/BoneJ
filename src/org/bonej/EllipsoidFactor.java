@@ -177,7 +177,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			double z) {
 		final int l = ellipsoids.length;
 		for (int i = 0; i < l; i++) {
-			if (ellipsoids[i].solve(x, y, z) < 1)
+			if (ellipsoids[i].solve(x, y, z) > 1)
 				return i;
 		}
 		return -1;
