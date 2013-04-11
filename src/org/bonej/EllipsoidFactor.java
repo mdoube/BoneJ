@@ -110,7 +110,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
 
 		for (Ellipsoid e : ellipsoids) {
-			IJ.log("" + e.getVolume() + "/n");
+			IJ.log("" + e.getVolume());
 		}
 
 		ResultInserter ri = ResultInserter.getInstance();
