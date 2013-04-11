@@ -241,7 +241,8 @@ public class FitEllipsoid {
 		for (int i = 0; i < l; i++)
 			if (d[i] == null)
 				nullCount++;
-
+		if (nullCount == 0)
+			return d;
 		final int nonNulls = l - nullCount;
 		double[][] array = new double[nonNulls][];
 		
