@@ -25,10 +25,13 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
+import ij.process.ByteProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 
+import org.doube.geometry.FitEllipse;
+import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
 import org.doube.skeleton.Skeletonize3D;
@@ -58,6 +61,7 @@ import org.doube.util.UsageReporter;
 
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int nVectors = 1000;
+	private double vectorIncrement = 1;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -77,34 +81,144 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double vH = cal.pixelHeight;
 		final double vW = cal.pixelWidth;
 		String units = cal.getUnits();
-		double samplingIncrement = Math.max(vH, Math.max(vW, vD));
+		vectorIncrement = Math.max(vH, Math.max(vW, vD));
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addNumericField("Sampling increment", samplingIncrement, 3, 8, units);
+		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
-			samplingIncrement = gd.getNextNumber();
+			vectorIncrement = gd.getNextNumber();
 			nVectors = (int) Math.round(gd.getNextNumber());
 		}
 		if (gd.wasCanceled())
 			return;
+
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
-		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints, unitVectors);
+		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
+				unitVectors);
 
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 	}
 
-	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints, double[][] unitVectors) {
+	/**
+	 * Using skeleton points as seeds, propagate along each vector until a
+	 * boundary is hit. Use the resulting cloud of boundary points as input into
+	 * an ellipsoid fit.
+	 * 
+	 * @param imp
+	 * @param skeletonPoints
+	 * @param unitVectors
+	 * @return
+	 */
+	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints,
+			double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
-		
-		//Sort using this class' compare method
+		ImageStack stack = imp.getImageStack();
+
+	
+
+		for (int i = 0; i < nPoints; i++) {
+			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
+					unitVectors);
+		}
+
+		// Sort using this class' compare method
 		Arrays.sort(ellipsoids, this);
 		return ellipsoids;
+	}
+
+	/**
+	 * given a seed point, find the ellipsoid which best fits the binarised
+	 * structure
+	 * 
+	 * @param imp
+	 * @param is
+	 * @param unitVectors
+	 * @return
+	 */
+	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
+			int[] skeletonPoint, double[][] unitVectors) {
+
+		Calibration cal = imp.getCalibration();
+		final double pW = cal.pixelWidth;
+		final double pH = cal.pixelHeight;
+		final double pD = cal.pixelDepth;
+		
+		ImageStack stack = imp.getImageStack();
+		
+		// cache slices into an array
+		ByteProcessor[] ips = new ByteProcessor[stack.getSize() + 1];
+		for (int i = 1; i <= stack.getSize(); i++) {
+			ips[i] = (ByteProcessor) stack.getProcessor(i);
+		}		
+		
+		final int w = ips[0].getWidth();
+		final int h = ips[1].getHeight();
+		final int d = ips.length - 1;
+
+		// centre point of vector field
+		final int px = skeletonPoint[0];
+		final int py = skeletonPoint[1];
+		final int pz = skeletonPoint[2];
+
+		double[][] pointCloud = new double[nVectors][3];
+
+		// for each vector
+		for (int v = 0; v < nVectors; v++) {
+			final double[] vector = unitVectors[v];
+			// search the direction
+			final double dx = vector[0];
+			final double dy = vector[1];
+			final double dz = vector[2];
+
+			// TODO check that foreground actually is (byte) 255
+			final byte foreground = (byte) 255;
+			byte pixel = foreground;
+			double l = 0;
+			while (pixel == foreground) {
+				l += vectorIncrement;
+				// pixel is defined as minimal corner of box
+				final int x = (int) Math.floor(px + l * dx);
+				final int y = (int) Math.floor(py + l * dy);
+				final int z = (int) Math.floor(pz + l * dz);
+
+				if (isOutOfBounds(x, y, z, w, h, d)) {
+					pointCloud[v] = null;
+					break;
+				} else
+					pixel = (byte) ips[z].get(x, y);
+			}
+			pointCloud[v][0] = (int) Math.floor(px + l * dx) * pW;
+			pointCloud[v][1] = (int) Math.floor(py + l * dy) * pH;
+			pointCloud[v][2] = (int) Math.floor(pz + l * dz) * pD;
+		}
+
+		Ellipsoid ellipsoid = FitEllipsoid.fitTo(pointCloud);
+		
+		return ellipsoid;
+	}
+
+	/**
+	 * return true if pixel coordinate is out of image bounds
+	 * 
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private boolean isOutOfBounds(int x, int y, int z, int w, int h, int d) {
+		if (x < 0 || x >= w || y < 0 || y >= h || z < 1 || z > d)
+			return true;
+		else
+			return false;
 	}
 
 	private int[][] skeletonPoints(ImagePlus imp) {
@@ -147,8 +261,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		return skeletonPoints;
 	}
-
-	
 
 	/**
 	 * Compare Ellipsoids by volume
