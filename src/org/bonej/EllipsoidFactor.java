@@ -60,6 +60,7 @@ import org.doube.util.UsageReporter;
  */
 
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
+	private final byte foreground = (byte) 255;
 	private int nVectors = 1000;
 	/**
 	 * increment for vector searching in pixel units. Defaults to ~Nyquist
@@ -189,8 +190,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			final double dy = vector[1];
 			final double dz = vector[2];
 
-			// TODO check that foreground actually is (byte) 255
-			final byte foreground = (byte) 255;
 			byte pixel = foreground;
 			double l = 0;
 			while (pixel == foreground) {
@@ -208,11 +207,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					pixel = (byte) ips[z].get(x, y);
 			}
 
-			//point is in real units, simply pixel location times pixel spacing
+			// point is in real units, simply pixel location times pixel spacing
 			double[] point = { ((int) Math.floor(px + l * dx)) * pW,
 					((int) Math.floor(py + l * dy)) * pH,
 					((int) Math.floor(pz + l * dz)) * pD };
-			
+
 			pointCloud[v] = point;
 		}
 
@@ -253,14 +252,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Skeleton image is " + w + " x " + h + " x " + d);
 
 		ArrayList<int[]> list = new ArrayList<int[]>();
-
+		
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
 			for (int y = 0; y < h; y++) {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
 					// 0 is background
-					if (slicePixels[offset + x] != 0) {
+					if (slicePixels[offset + x] == foreground) {
 						int[] array = { x, y, z };
 						list.add(array);
 					}
@@ -276,11 +275,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	/**
-	 * Compare Ellipsoids by volume. Ordering could be reversed by swapping o1
-	 * and o2
+	 * Compare Ellipsoids by volume.
+	 * 
+	 * Sorting based on this method will result in Ellipsoids sorted in order of
+	 * <b>descending</b> volume.
 	 * 
 	 */
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
-		return Double.compare(o1.getVolume(), o2.getVolume());
+		return Double.compare(o2.getVolume(), o1.getVolume());
 	}
 }
