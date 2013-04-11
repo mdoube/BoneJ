@@ -105,7 +105,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			IJ.log("" + e.getVolume());
 		}
 
-		int[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
+		float[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
+
+		ImageStack bigStack = new ImageStack(imp.getWidth(), imp.getHeight());
+		for (int i = 1; i < biggestEllipsoid.length; i++)
+			bigStack.addSlice("" + i, biggestEllipsoid[i]);
+		
+		ImagePlus bigImp = new ImagePlus("", bigStack);
+		bigImp.show();
 
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.updateTable();
@@ -121,7 +128,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return array containing the indexes of the biggest ellipsoids which
 	 *         contain each point
 	 */
-	private int[][] findBiggestEllipsoid(ImagePlus imp, Ellipsoid[] ellipsoids) {
+	private float[][] findBiggestEllipsoid(ImagePlus imp, Ellipsoid[] ellipsoids) {
 
 		ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
@@ -133,13 +140,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
 
-		int[][] biggest = new int[d + 1][w * h];
+		float[][] biggest = new float[d + 1][w * h];
 
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) stack.getPixels(z);
-			int[] bigSlice = biggest[z];
+			float[] bigSlice = biggest[z];
 			// -1 means background, 0 will be the biggest ellipsoid
-			Arrays.fill(bigSlice, -1);
+			Arrays.fill(bigSlice, -ellipsoids.length);
 			for (int y = 0; y < h; y++) {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
