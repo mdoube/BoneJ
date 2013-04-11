@@ -1,5 +1,7 @@
 package org.doube.util;
 
+import org.doube.geometry.Ellipsoid;
+
 /**
  * Methods for doing helpful things with arrays
  * 
@@ -36,6 +38,28 @@ public class ArrayHelper {
 			}
 		}
 
+		return array;
+	}
+	
+	
+	public static Ellipsoid[] removeNulls(Ellipsoid[] o){
+		final int l = o.length;
+		int nullCount = 0;
+		for (int i = 0; i < l; i++)
+			if (o[i] == null)
+				nullCount++;
+		if (nullCount == 0)
+			return o;
+		final int nonNulls = l - nullCount;
+		Ellipsoid[] array = new Ellipsoid[nonNulls];
+
+		int j = 0;
+		for (int i = 0; i < l; i++) {
+			if (o[i] != null) {
+				array[j] = o[i];
+				j++;
+			}
+		}
 		return array;
 	}
 }
