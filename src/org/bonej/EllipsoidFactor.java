@@ -105,9 +105,73 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			IJ.log("" + e.getVolume());
 		}
 
+		int[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
+
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
+	}
+
+	/**
+	 * For each foreground pixel of the input image, find the ellipsoid of
+	 * greatest volume
+	 * 
+	 * @param imp
+	 * @param ellipsoids
+	 * @return array containing the indexes of the biggest ellipsoids which
+	 *         contain each point
+	 */
+	private int[][] findBiggestEllipsoid(ImagePlus imp, Ellipsoid[] ellipsoids) {
+
+		ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+
+		Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+
+		int[][] biggest = new int[d + 1][w * h];
+
+		for (int z = 1; z <= d; z++) {
+			byte[] slicePixels = (byte[]) stack.getPixels(z);
+			int[] bigSlice = biggest[z];
+			// -1 means background, 0 will be the biggest ellipsoid
+			Arrays.fill(bigSlice, -1);
+			for (int y = 0; y < h; y++) {
+				int offset = y * w;
+				for (int x = 0; x < w; x++) {
+					if (slicePixels[offset + x] == foreground) {
+						bigSlice[offset + x] = biggestEllipsoid(ellipsoids, x
+								* vW, y * vH, z * vD);
+					}
+				}
+			}
+		}
+
+		return biggest;
+	}
+
+	/**
+	 * Search the list of ellipsoids and return the index of the largest
+	 * ellipsoid which contains the point x, y, z
+	 * 
+	 * @param ellipsoids
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @return the index of the largest ellipsoid which contains this point
+	 */
+	private int biggestEllipsoid(Ellipsoid[] ellipsoids, double x, double y,
+			double z) {
+		final int l = ellipsoids.length;
+		for (int i = 0; i < l; i++) {
+			if (ellipsoids[i].solve(x, y, z) < 1)
+				return i;
+		}
+		return -1;
 	}
 
 	/**
@@ -243,7 +307,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Skeleton image is " + w + " x " + h + " x " + d);
 
 		ArrayList<int[]> list = new ArrayList<int[]>();
-		
+
 		for (int z = 1; z <= d; z++) {
 			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
 			for (int y = 0; y < h; y++) {
