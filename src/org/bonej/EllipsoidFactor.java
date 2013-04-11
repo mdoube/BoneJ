@@ -207,9 +207,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				} else
 					pixel = (byte) ips[z].get(x, y);
 			}
-			pointCloud[v][0] = (int) Math.floor(px + l * dx) * pW;
-			pointCloud[v][1] = (int) Math.floor(py + l * dy) * pH;
-			pointCloud[v][2] = (int) Math.floor(pz + l * dz) * pD;
+
+			//point is in real units, simply pixel location times pixel spacing
+			double[] point = { ((int) Math.floor(px + l * dx)) * pW,
+					((int) Math.floor(py + l * dy)) * pH,
+					((int) Math.floor(pz + l * dz)) * pD };
+			
+			pointCloud[v] = point;
 		}
 
 		try {
@@ -255,7 +259,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			for (int y = 0; y < h; y++) {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
-					//0 is background
+					// 0 is background
 					if (slicePixels[offset + x] != 0) {
 						int[] array = { x, y, z };
 						list.add(array);
