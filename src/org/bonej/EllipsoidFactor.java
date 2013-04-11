@@ -76,16 +76,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			return;
 		}
 		ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp) || !ic.isMultiSlice(imp) || !ic.isVoxelIsotropic(imp, 0.001)) {
+		if (!ic.isBinary(imp) || !ic.isMultiSlice(imp)
+				|| !ic.isVoxelIsotropic(imp, 0.001)) {
 			IJ.error("8-bit binary stack with isotropic pixel spacing required.");
 			return;
 		}
 		Calibration cal = imp.getCalibration();
-//		final double vD = cal.pixelDepth;
-//		final double vH = cal.pixelHeight;
-//		final double vW = cal.pixelWidth;
+		// final double vD = cal.pixelDepth;
+		// final double vH = cal.pixelHeight;
+		// final double vW = cal.pixelWidth;
 		String units = cal.getUnits();
-//		vectorIncrement = Math.max(vH, Math.max(vW, vD));
+		// vectorIncrement = Math.max(vH, Math.max(vW, vD));
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
@@ -100,8 +101,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
+
+		IJ.log("Found " + skeletonPoints.length + " skeleton points");
+
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
+
+		IJ.log("Found " + ellipsoids.length + " ellipsoids");
+
+		for (Ellipsoid e : ellipsoids) {
+			IJ.log("" + e.getVolume() + "/n");
+		}
 
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.updateTable();
@@ -236,6 +246,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
 
+		IJ.log("Skeleton image is " + w + " x " + h + " x " + d);
+
 		ArrayList<int[]> list = new ArrayList<int[]>();
 
 		for (int z = 1; z <= d; z++) {
@@ -243,13 +255,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			for (int y = 0; y < h; y++) {
 				int offset = y * w;
 				for (int x = 0; x < w; x++) {
-					if (slicePixels[offset + x] < 0) {
+					//0 is background
+					if (slicePixels[offset + x] != 0) {
 						int[] array = { x, y, z };
 						list.add(array);
 					}
 				}
 			}
 		}
+
+		IJ.log("Skeleton point ArrayList contains " + list.size() + " points");
 
 		int[][] skeletonPoints = list.toArray(new int[list.size()][]);
 
