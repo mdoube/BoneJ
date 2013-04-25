@@ -36,6 +36,17 @@ public class Ellipsoid {
 
 	// calculated volume
 	private double volume = -1;
+	
+	//eigenvectors of axes
+	private double eV00;
+	private double eV01;
+	private double eV02;
+	private double eV10;
+	private double eV11;
+	private double eV12;
+	private double eV20;
+	private double eV21;
+	private double eV22;
 
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
@@ -60,6 +71,17 @@ public class Ellipsoid {
 		setVolume();
 		IJ.log("ra = " + ra + ", rb =" + rb + ", rc = " + rc);
 
+		double[][] eigenVectors = (double[][]) ellipsoid[2];
+		this.eV00 = eigenVectors[0][0];
+		this.eV01 = eigenVectors[0][1];
+		this.eV02 = eigenVectors[0][2];
+		this.eV10 = eigenVectors[1][0];
+		this.eV11 = eigenVectors[1][1];
+		this.eV12 = eigenVectors[1][2];
+		this.eV20 = eigenVectors[2][0];
+		this.eV21 = eigenVectors[2][1];
+		this.eV22 = eigenVectors[2][2];
+		
 		double[] equation = (double[]) ellipsoid[3];
 		this.a = equation[0];
 		this.b = equation[1];
@@ -111,4 +133,19 @@ public class Ellipsoid {
 		double[] centre = {cx, cy, cz};
 		return centre.clone();
 	}
+	
+	public double[][] getSurfacePoints(final int nPoints){
+		double[][] points = FitEllipsoid.testEllipsoid(a, b, c, nPoints);
+
+		for (int p = 0; p < nPoints; p++) {
+			final double x = points[p][0];
+			final double y = points[p][1];
+			final double z = points[p][2];
+			points[p][0] = x * eV00 + y * eV01 + z * eV02 + cx;
+			points[p][1] = x * eV10 + y * eV11 + z * eV12 + cy;
+			points[p][2] = x * eV20 + y * eV21 + z * eV22 + cz;
+		}
+		return points;
+	}
+	
 }
