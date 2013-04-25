@@ -346,6 +346,21 @@ public class FitEllipsoid {
 	}
 
 	/**
+	 * Return points on an ellipsoid with radii a, b, c and centred on (0,0,0),
+	 * axes aligned with Cartesian axes
+	 * 
+	 * @param a
+	 * @param b
+	 * @param c
+	 * @param nPoints
+	 * @return
+	 */
+	public static double[][] testEllipsoid(double a, double b, double c,
+			int nPoints) {
+		return testEllipsoid(a, b, c, 0, 0, 0, 0, 0, nPoints, false);
+	}
+
+	/**
 	 * Return normal unit vectors at points on an ellipsoid given the radii of
 	 * an ellipsoid and points on the ellipsoid. Assumes an ellipsoid centred on
 	 * (0,0,0) and with no rotation
