@@ -135,12 +135,16 @@ public class Ellipsoid {
 	}
 	
 	public double[][] getSurfacePoints(final int nPoints){
-		double[][] points = FitEllipsoid.testEllipsoid(a, b, c, nPoints);
-
+		
+		//get regularly-spaced points on the unit sphere
+		double[][] points = Vectors.regularVectors(nPoints);
+		
 		for (int p = 0; p < nPoints; p++) {
-			final double x = points[p][0];
-			final double y = points[p][1];
-			final double z = points[p][2];
+			//stretch the unit sphere into an ellipsoid	
+			final double x = ra * points[p][0];
+			final double y = rb * points[p][1];
+			final double z = rc * points[p][2];
+			//rotate and translate the ellipsoid into position
 			points[p][0] = x * eV00 + y * eV01 + z * eV02 + cx;
 			points[p][1] = x * eV10 + y * eV11 + z * eV12 + cy;
 			points[p][2] = x * eV20 + y * eV21 + z * eV22 + cz;
