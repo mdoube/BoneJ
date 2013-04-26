@@ -98,8 +98,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		if (gd.wasCanceled())
 			return;
-
-		displayEllipsoid(1, 2, 3, 1000);
 		
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
@@ -111,9 +109,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
 
+		Image3DUniverse univ = new Image3DUniverse();
+		
 		for (Ellipsoid e : ellipsoids) {
 			IJ.log("" + e.getVolume());
+			displayEllipsoid(univ, e, 1000);
 		}
+		
+		univ.show();
 
 		float[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
 
@@ -362,24 +365,24 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return Double.compare(o2.getVolume(), o1.getVolume());
 	}
 	
-	private void displayEllipsoid(double a, double b, double c, int nPoints){
-		Image3DUniverse univ = new Image3DUniverse();
-		double[][] unitVectors = Vectors.regularVectors(nPoints);
-		List<Point3f> points = new ArrayList<Point3f>();
+	private void displayEllipsoid(Image3DUniverse univ, Ellipsoid ellipsoid, int nPoints){
+		
+		final double[][] points = ellipsoid.getSurfacePoints(nPoints);
+		
+		List<Point3f> pointList = new ArrayList<Point3f>();
 		for (int p = 0; p < nPoints; p++) {
 			Point3f e = new Point3f();
-			e.x = (float) (a * unitVectors[p][0]);
-			e.y = (float) (b * unitVectors[p][1]);
-			e.z = (float) (c * unitVectors[p][2]);
-			points.add(e);
+			e.x = (float) points[p][0];
+			e.y = (float) points[p][1];
+			e.z = (float) points[p][2];
+			pointList.add(e);
 		}
-		CustomPointMesh mesh = new CustomPointMesh(points);
+		CustomPointMesh mesh = new CustomPointMesh(pointList);
 		mesh.setPointSize(2.0f);
 		Color3f cColour = new Color3f(0.0f, 0.5f, 1.0f);
 		mesh.setColor(cColour);
 		try {
-			univ.addCustomMesh(mesh, "Ellipsoid").setLocked(true);
-			univ.show();
+			univ.addCustomMesh(mesh, "Ellipsoid "+ellipsoid.getVolume()).setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
