@@ -308,7 +308,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		CustomPointMesh mesh = new CustomPointMesh(pointList);
 		mesh.setPointSize(2.0f);
-		Color3f cColour = new Color3f(0.0f, 1.0f, 0.0f);
+		Color3f cColour = new Color3f((float)px/w, (float)py/h, (float)pz/d);
 		mesh.setColor(cColour);
 		try {
 			universe.addCustomMesh(mesh, "Point cloud "+px+" "+py+" "+pz).setLocked(true);
@@ -318,9 +318,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		
 		
 		try {
-			Ellipsoid ellipsoid = FitEllipsoid.fitTo(pointCloud);
+			Ellipsoid ellipsoid = FitEllipsoid.fitTo(ArrayHelper.removeNulls(pointCloud));
 			return ellipsoid;
 		} catch (Exception e) {
+			IJ.log("Couldn't fit ellipsoid: "+e.getMessage());
 			return null;
 		}
 	}

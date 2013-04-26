@@ -168,9 +168,9 @@ public class FitEllipsoid {
 	 * @throws IllegalArgumentException
 	 *             if number of coordinates is less than 9
 	 */
-	public static Object[] yuryPetrov(double[][] coOrdinates) {
-
-		final int nPoints = coOrdinates.length;
+	public static Object[] yuryPetrov(double[][] points) {
+		
+		final int nPoints = points.length;
 		if (nPoints < 9) {
 			throw new IllegalArgumentException(
 					"Too few points; need at least 9 to calculate a unique ellipsoid");
@@ -178,13 +178,9 @@ public class FitEllipsoid {
 
 		double[][] d = new double[nPoints][9];
 		for (int i = 0; i < nPoints; i++) {
-			if (coOrdinates[i] == null) {
-				d[i] = null;
-				continue;
-			}
-			final double x = coOrdinates[i][0];
-			final double y = coOrdinates[i][1];
-			final double z = coOrdinates[i][2];
+			final double x = points[i][0];
+			final double y = points[i][1];
+			final double z = points[i][2];
 			d[i][0] = x * x;
 			d[i][1] = y * y;
 			d[i][2] = z * z;
@@ -196,7 +192,7 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
-		Matrix D = new Matrix(ArrayHelper.removeNulls(d));
+		Matrix D = new Matrix(d);
 		Matrix ones = Matrix.ones(nPoints, 1);
 		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
 				.times(ones));
