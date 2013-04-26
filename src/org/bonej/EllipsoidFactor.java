@@ -65,6 +65,8 @@ import customnode.CustomPointMesh;
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private final byte foreground = (byte) 255;
 	private int nVectors = 1000;
+	private Image3DUniverse universe = new Image3DUniverse();
+	
 	/**
 	 * increment for vector searching in pixel units. Defaults to ~Nyquist
 	 * sampling
@@ -109,14 +111,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
 
-		Image3DUniverse univ = new Image3DUniverse();
+//		Image3DUniverse univ = new Image3DUniverse();
 		
 		for (Ellipsoid e : ellipsoids) {
 			IJ.log("" + e.getVolume());
-			displayEllipsoid(univ, e, 1000);
+			displayEllipsoid(universe, e, 1000);
 		}
 		
-		univ.show();
+		universe.show();
 
 		float[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
 
@@ -189,7 +191,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			double z) {
 		final int l = ellipsoids.length;
 		for (int i = 0; i < l; i++) {
-			if (ellipsoids[i].solve(x, y, z) > 1)
+			if (ellipsoids[i].contains(x, y, z))
 				return i;
 		}
 		return -1;
@@ -261,6 +263,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double[][] pointCloud = new double[nVectors][3];
 
 		// for each vector
+		vectorLoop:
 		for (int v = 0; v < nVectors; v++) {
 			final double[] vector = unitVectors[v];
 			// search the direction
@@ -280,7 +283,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				// set points to null when their vector goes out of bounds
 				if (isOutOfBounds(x, y, z, w, h, d)) {
 					pointCloud[v] = null;
-					break;
+					continue vectorLoop;
 				} else
 					pixel = (byte) ips[z].get(x, y);
 			}
@@ -293,6 +296,27 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			pointCloud[v] = point;
 		}
 
+		List<Point3f> pointList = new ArrayList<Point3f>();
+		for (int p = 0; p < nVectors; p++) {
+			if (pointCloud[p] == null)
+				continue;
+			Point3f e = new Point3f();
+			e.x = (float) pointCloud[p][0];
+			e.y = (float) pointCloud[p][1];
+			e.z = (float) pointCloud[p][2];
+			pointList.add(e);
+		}
+		CustomPointMesh mesh = new CustomPointMesh(pointList);
+		mesh.setPointSize(2.0f);
+		Color3f cColour = new Color3f(0.0f, 1.0f, 0.0f);
+		mesh.setColor(cColour);
+		try {
+			universe.addCustomMesh(mesh, "Point cloud "+px+" "+py+" "+pz).setLocked(true);
+		} catch (NullPointerException npe) {
+			IJ.log("3D Viewer was closed before rendering completed.");
+		}
+		
+		
 		try {
 			Ellipsoid ellipsoid = FitEllipsoid.fitTo(pointCloud);
 			return ellipsoid;
