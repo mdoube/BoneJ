@@ -197,7 +197,7 @@ public class Ellipsoid {
 	 * 
 	 * @param increment
 	 */
-	public void constrict(double increment){
+	public void contract(double increment){
 		dilate(-increment);
 	}
 }
