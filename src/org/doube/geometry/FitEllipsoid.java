@@ -162,7 +162,7 @@ public class FitEllipsoid {
 	 *             if number of coordinates is less than 9
 	 */
 	public static Object[] yuryPetrov(double[][] points) {
-		
+
 		final int nPoints = points.length;
 		if (nPoints < 9) {
 			throw new IllegalArgumentException(
@@ -216,6 +216,82 @@ public class FitEllipsoid {
 		double[][] eigenVectors = eVec.getArrayCopy();
 		double[] equation = v;
 		Object[] ellipsoid = { centre, radii, eigenVectors, equation, E };
+		return ellipsoid;
+	}
+
+	/**
+	 * Estimate an ellipsoid using the inertia tensor of the input points
+	 * 
+	 * @param points
+	 * @return
+	 */
+	public static Ellipsoid inertia(double[][] points) {
+
+		final int nPoints = points.length;
+
+		// calculate centroid
+		double sx = 0;
+		double sy = 0;
+		double sz = 0;
+		for (double[] p : points) {
+			sx += p[0];
+			sy += p[1];
+			sz += p[2];
+		}
+		final double cx = sx / nPoints;
+		final double cy = sy / nPoints;
+		final double cz = sz / nPoints;
+
+		double Icxx = 0;
+		double Icyy = 0;
+		double Iczz = 0;
+		double Icxy = 0;
+		double Icxz = 0;
+		double Icyz = 0;
+
+		// sum moments
+		for (double[] p : points) {
+			final double x = p[0] - cx;
+			final double y = p[1] - cy;
+			final double z = p[2] - cz;
+			final double xx = x * x;
+			final double yy = y * y;
+			final double zz = z * z;
+			Icxx += yy + zz;
+			Icyy += xx + zz;
+			Iczz += xx + yy;
+			Icxy += x * y;
+			Icxz += x * z;
+			Icyz += y * z;
+		}
+		// create the inertia tensor matrix
+		double[][] inertiaTensor = new double[3][3];
+		inertiaTensor[0][0] = Icxx / nPoints;
+		inertiaTensor[1][1] = Icyy / nPoints;
+		inertiaTensor[2][2] = Iczz / nPoints;
+		inertiaTensor[0][1] = -Icxy / nPoints;
+		inertiaTensor[0][2] = -Icxz / nPoints;
+		inertiaTensor[1][0] = -Icxy / nPoints;
+		inertiaTensor[1][2] = -Icyz / nPoints;
+		inertiaTensor[2][0] = -Icxz / nPoints;
+		inertiaTensor[2][1] = -Icyz / nPoints;
+		Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
+		inertiaTensorMatrix.printToIJLog("Inertia tensor");
+
+		// do the Eigenvalue decomposition
+		EigenvalueDecomposition E = new EigenvalueDecomposition(
+				inertiaTensorMatrix);
+
+		E.getD().printToIJLog("Eigenvalues");
+		E.getV().printToIJLog("Eigenvectors");
+		double I1 = E.getD().get(2, 2);
+		double I2 = E.getD().get(1, 1);
+		double I3 = E.getD().get(0, 0);
+
+		Ellipsoid ellipsoid = new Ellipsoid(1 / Math.sqrt(I1),
+				1 / Math.sqrt(I2), 1 / Math.sqrt(I3), cx, cy, cz, E
+						.getV().getArray());
+
 		return ellipsoid;
 	}
 

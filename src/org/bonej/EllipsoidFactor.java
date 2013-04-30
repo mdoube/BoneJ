@@ -212,7 +212,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 
-		for (int i = 0; i < nPoints; i++) {
+		//TODO tweak number of skipped skeleton points
+		for (int i = 0; i < nPoints; i += 20) {
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
 					unitVectors);
 		}
@@ -311,14 +312,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Color3f cColour = new Color3f((float)px/w, (float)py/h, (float)pz/d);
 		mesh.setColor(cColour);
 		try {
-			universe.addCustomMesh(mesh, "Point cloud "+px+" "+py+" "+pz).setLocked(true);
+			universe.addCustomMesh(mesh, "Point cloud "+px+" "+py+" "+pz).setLocked(false);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 		}
 		
 		
 		try {
-			Ellipsoid ellipsoid = FitEllipsoid.fitTo(ArrayHelper.removeNulls(pointCloud));
+			Ellipsoid ellipsoid = FitEllipsoid.inertia(ArrayHelper.removeNulls(pointCloud));
 			return ellipsoid;
 		} catch (Exception e) {
 			IJ.log("Couldn't fit ellipsoid: "+e.getMessage());
