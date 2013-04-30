@@ -191,4 +191,13 @@ public class Ellipsoid {
 		rc += increment;
 		setVolume();
 	}
+	
+	/**
+	 * Constrict all three axes by an increment
+	 * 
+	 * @param increment
+	 */
+	public void constrict(double increment){
+		dilate(-increment);
+	}
 }
