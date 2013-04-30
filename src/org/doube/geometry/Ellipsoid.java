@@ -180,4 +180,15 @@ public class Ellipsoid {
 		this.eV22 = eigenVectors[2][2];
 	}
 
+	/**
+	 * Dilate all three axes by an increment
+	 *  
+	 * @param increment
+	 */
+	public void dilate(double increment) {
+		ra += increment;
+		rb += increment;
+		rc += increment;
+		setVolume();
+	}
 }
