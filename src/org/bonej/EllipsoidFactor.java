@@ -66,7 +66,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private final byte foreground = (byte) 255;
 	private int nVectors = 1000;
 	private Image3DUniverse universe = new Image3DUniverse();
-	
+
 	/**
 	 * increment for vector searching in pixel units. Defaults to ~Nyquist
 	 * sampling
@@ -100,34 +100,28 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		if (gd.wasCanceled())
 			return;
-		
+
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
 
+		universe.show();
+		
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
 
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
 
-//		Image3DUniverse univ = new Image3DUniverse();
-		
-		for (Ellipsoid e : ellipsoids) {
-			IJ.log("" + e.getVolume());
-			displayEllipsoid(universe, e, 1000);
-		}
-		
-		universe.show();
 
 		float[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
 
 		ImageStack bigStack = new ImageStack(imp.getWidth(), imp.getHeight());
 		for (int i = 1; i < biggestEllipsoid.length; i++)
 			bigStack.addSlice("" + i, biggestEllipsoid[i]);
-		
+
 		ImagePlus bigImp = new ImagePlus("", bigStack);
-		bigImp.setDisplayRange(-ellipsoids.length/2, ellipsoids.length);
+		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		bigImp.show();
 
 		ResultInserter ri = ResultInserter.getInstance();
@@ -212,14 +206,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 
-		//TODO tweak number of skipped skeleton points
+		// TODO tweak number of skipped skeleton points
 		for (int i = 0; i < nPoints; i += 20) {
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
 					unitVectors);
 		}
-		
+
 		ellipsoids = ArrayHelper.removeNulls(ellipsoids);
-		
+
 		// Sort using this class' compare method
 		Arrays.sort(ellipsoids, this);
 		return ellipsoids;
@@ -261,44 +255,31 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int py = skeletonPoint[1];
 		final int pz = skeletonPoint[2];
 
-		double[][] pointCloud = new double[nVectors][3];
+		// Instantiate a small spherical ellipsoid
+		final double[][] orthogonalVectors = { { 1, 0, 0 }, { 0, 1, 0 },
+				{ 0, 0, 1 } };
 
-		// for each vector
-		vectorLoop:
-		for (int v = 0; v < nVectors; v++) {
-			final double[] vector = unitVectors[v];
-			// search the direction
-			final double dx = vector[0];
-			final double dy = vector[1];
-			final double dz = vector[2];
+		Ellipsoid ellipsoid = new Ellipsoid(0, 0, 0, px, py, pz,
+				orthogonalVectors);
 
-			byte pixel = foreground;
-			double l = 0;
-			while (pixel == foreground) {
-				l += vectorIncrement;
-				// pixel is defined as minimal corner of box
-				final int x = (int) Math.floor(px + l * dx);
-				final int y = (int) Math.floor(py + l * dy);
-				final int z = (int) Math.floor(pz + l * dz);
-
-				// set points to null when their vector goes out of bounds
-				if (isOutOfBounds(x, y, z, w, h, d)) {
-					pointCloud[v] = null;
-					continue vectorLoop;
-				} else
-					pixel = (byte) ips[z].get(x, y);
-			}
-
-			// point is in real units, simply pixel location times pixel spacing
-			double[] point = { ((int) Math.floor(px + l * dx)) * pW,
-					((int) Math.floor(py + l * dy)) * pH,
-					((int) Math.floor(pz + l * dz)) * pD };
-
-			pointCloud[v] = point;
+		// dilate the sphere until it hits the background
+		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
+			ellipsoid.dilate(vectorIncrement);
 		}
+		
+		IJ.log("Sphere fit with radius "+ellipsoid.getMajorRadius());
+		
+		//get the points of contact
+		double[][] contactPoints = findContactPoints(ellipsoid, ips); 
+		
+		//contract the ellipsoid by one increment so all points are
+		//inside the foregrounds
+		ellipsoid.contract(vectorIncrement);
 
+		double[][] pointCloud = ellipsoid.getSurfacePoints(500);
+				
 		List<Point3f> pointList = new ArrayList<Point3f>();
-		for (int p = 0; p < nVectors; p++) {
+		for (int p = 0; p < pointCloud.length; p++) {
 			if (pointCloud[p] == null)
 				continue;
 			Point3f e = new Point3f();
@@ -309,22 +290,36 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		CustomPointMesh mesh = new CustomPointMesh(pointList);
 		mesh.setPointSize(2.0f);
-		Color3f cColour = new Color3f((float)px/w, (float)py/h, (float)pz/d);
+		Color3f cColour = new Color3f((float) px / w, (float) py / h,
+				(float) pz / d);
 		mesh.setColor(cColour);
 		try {
-			universe.addCustomMesh(mesh, "Point cloud "+px+" "+py+" "+pz).setLocked(false);
+			universe.addCustomMesh(mesh,
+					"Point cloud " + px + " " + py + " " + pz).setLocked(true);
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 		}
-		
-		
-		try {
-			Ellipsoid ellipsoid = FitEllipsoid.inertia(ArrayHelper.removeNulls(pointCloud));
-			return ellipsoid;
-		} catch (Exception e) {
-			IJ.log("Couldn't fit ellipsoid: "+e.getMessage());
-			return null;
+		return ellipsoid;
+	}
+
+	private double[][] findContactPoints(Ellipsoid ellipsoid, ByteProcessor[] ips) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private boolean isContained(Ellipsoid ellipsoid, ByteProcessor[] ips,
+			final double pW, final double pH, final double pD, final int w, final int h, final int d) {
+		double[][] points = ellipsoid.getSurfacePoints(nVectors);
+		for (double[] p : points) {
+			final int x = (int) Math.floor(p[0] / pW);
+			final int y = (int) Math.floor(p[1] / pH);
+			final int z = (int) Math.floor(p[2] / pD);
+			if (isOutOfBounds(x, y, z, w, h, d))
+				continue;
+			if ((byte) ips[z].get(x, y) != foreground)
+				return false;
 		}
+		return true;
 	}
 
 	/**
@@ -349,7 +344,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Skeletonize3D sk = new Skeletonize3D();
 		ImagePlus skeleton = sk.getSkeleton(imp);
 		ImageStack skeletonStack = skeleton.getStack();
-		
+
 		skeleton.show();
 
 		final int d = imp.getStackSize();
@@ -390,31 +385,5 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
 		return Double.compare(o2.getVolume(), o1.getVolume());
 	}
-	
-	private void displayEllipsoid(Image3DUniverse univ, Ellipsoid ellipsoid, int nPoints){
-		
-		final double[][] points = ellipsoid.getSurfacePoints(nPoints);
-		
-		List<Point3f> pointList = new ArrayList<Point3f>();
-		for (int p = 0; p < nPoints; p++) {
-			Point3f e = new Point3f();
-			e.x = (float) points[p][0];
-			e.y = (float) points[p][1];
-			e.z = (float) points[p][2];
-			pointList.add(e);
-		}
-		CustomPointMesh mesh = new CustomPointMesh(pointList);
-		mesh.setPointSize(2.0f);
-		Color3f cColour = new Color3f(0.0f, 0.5f, 1.0f);
-		mesh.setColor(cColour);
-		try {
-			univ.addCustomMesh(mesh, "Ellipsoid "+ellipsoid.getVolume()).setLocked(true);
-		} catch (NullPointerException npe) {
-			IJ.log("3D Viewer was closed before rendering completed.");
-			return;
-		}
-		return;
-		
-	}
-	
+
 }
