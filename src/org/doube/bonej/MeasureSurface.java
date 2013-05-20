@@ -201,8 +201,8 @@ public class MeasureSurface implements PlugIn {
 			out.writeByte((triangles >> 24) & 0xFF);
 			for (int i = 0; i < vertices.size(); i += 3) {
 				Point3f p0 = vertices.get(i);
-				Point3f p1 = vertices.get(i + 1);
-				Point3f p2 = vertices.get(i + 2);
+				Point3f p1 = vertices.get(i + 2);
+				Point3f p2 = vertices.get(i + 1);
 				Point3f n = unitNormal(p0, p1, p2);
 				ByteBuffer bb = ByteBuffer.allocate(50);
 				bb.order(ByteOrder.LITTLE_ENDIAN);
