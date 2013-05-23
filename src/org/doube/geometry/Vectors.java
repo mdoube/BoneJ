@@ -156,4 +156,11 @@ public class Vectors {
 		}
 		return vectors;
 	}
+
+	public static Point3f normalise(Point3f n) {
+		final double d = Trig.distance3D(n.x, n.y, n.z);
+		Point3f o = new Point3f((float) (n.x / d), (float) (n.y / d),
+				(float) (n.z / d));
+		return o;
+	}
 }

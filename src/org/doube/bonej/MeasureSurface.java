@@ -203,7 +203,7 @@ public class MeasureSurface implements PlugIn {
 				Point3f p0 = vertices.get(i);
 				Point3f p1 = vertices.get(i + 2);
 				Point3f p2 = vertices.get(i + 1);
-				Point3f n = unitNormal(p0, p1, p2);
+				Point3f n = Vectors.normalise(Vectors.crossProduct(p0, p1, p2));
 				ByteBuffer bb = ByteBuffer.allocate(50);
 				bb.order(ByteOrder.LITTLE_ENDIAN);
 				bb.putFloat(n.x);
