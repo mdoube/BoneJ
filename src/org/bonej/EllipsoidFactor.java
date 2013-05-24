@@ -284,7 +284,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// contract the ellipsoid by one increment so all points are
 		// inside the foregrounds
-		ellipsoid.contract(vectorIncrement);
+//		ellipsoid.contract(vectorIncrement);
 
 		double[][] pointCloud = ellipsoid.getSurfacePoints(500);
 
