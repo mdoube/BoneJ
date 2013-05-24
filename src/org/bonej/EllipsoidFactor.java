@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
+import javax.vecmath.Tuple3f;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -107,12 +108,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
 
 		universe.show();
-		
+
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
 
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
-
 
 		float[][] biggestEllipsoid = findBiggestEllipsoid(imp, ellipsoids);
 
@@ -266,18 +266,28 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
 			ellipsoid.dilate(vectorIncrement);
 		}
-		
-		IJ.log("Sphere fit with radius "+ellipsoid.getMajorRadius());
-		
-		//get the points of contact
-		double[][] contactPoints = findContactPoints(ellipsoid, ips); 
-		
-		//contract the ellipsoid by one increment so all points are
-		//inside the foregrounds
+
+		IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
+
+		// get the points of contact
+		List<double[]> contactPoints = findContactPoints(ellipsoid, ips, pW,
+				pH, pD, w, h, d);
+
+		// add them to the 3D viewer
+		List<Point3f> contactPointsf = new ArrayList<Point3f>(
+				contactPoints.size());
+		for (double[] p : contactPoints) {
+			Point3f point = new Point3f((float) p[0], (float) p[1],
+					(float) p[2]);
+			contactPointsf.add(point);
+		}
+
+		// contract the ellipsoid by one increment so all points are
+		// inside the foregrounds
 		ellipsoid.contract(vectorIncrement);
 
 		double[][] pointCloud = ellipsoid.getSurfacePoints(500);
-				
+
 		List<Point3f> pointList = new ArrayList<Point3f>();
 		for (int p = 0; p < pointCloud.length; p++) {
 			if (pointCloud[p] == null)
@@ -293,22 +303,48 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Color3f cColour = new Color3f((float) px / w, (float) py / h,
 				(float) pz / d);
 		mesh.setColor(cColour);
+
+		CustomPointMesh contactPointMesh = new CustomPointMesh(contactPointsf);
+		contactPointMesh.setPointSize(2.5f);
+		Color3f invColour = new Color3f(1 - cColour.x, 1 - cColour.y,
+				1 - cColour.z);
+		contactPointMesh.setColor(invColour);
+
 		try {
 			universe.addCustomMesh(mesh,
 					"Point cloud " + px + " " + py + " " + pz).setLocked(true);
+			universe.addCustomMesh(contactPointMesh,
+					"Contact points of " + px + " " + py + " " + pz).setLocked(
+					true);
+
 		} catch (NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 		}
 		return ellipsoid;
 	}
 
-	private double[][] findContactPoints(Ellipsoid ellipsoid, ByteProcessor[] ips) {
-		// TODO Auto-generated method stub
-		return null;
+	private List<double[]> findContactPoints(Ellipsoid ellipsoid,
+			ByteProcessor[] ips, final double pW, final double pH,
+			final double pD, final int w, final int h, final int d) {
+		double[][] points = ellipsoid.getSurfacePoints(nVectors);
+
+		List<double[]> contactPoints = new ArrayList<double[]>();
+
+		for (double[] p : points) {
+			final int x = (int) Math.floor(p[0] / pW);
+			final int y = (int) Math.floor(p[1] / pH);
+			final int z = (int) Math.floor(p[2] / pD);
+			if (isOutOfBounds(x, y, z, w, h, d))
+				continue;
+			if ((byte) ips[z].get(x, y) != foreground)
+				contactPoints.add(p);
+		}
+		return contactPoints;
 	}
 
 	private boolean isContained(Ellipsoid ellipsoid, ByteProcessor[] ips,
-			final double pW, final double pH, final double pD, final int w, final int h, final int d) {
+			final double pW, final double pH, final double pD, final int w,
+			final int h, final int d) {
 		double[][] points = ellipsoid.getSurfacePoints(nVectors);
 		for (double[] p : points) {
 			final int x = (int) Math.floor(p[0] / pW);
