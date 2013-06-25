@@ -240,6 +240,8 @@ public class UsageReporter {
 			String arch = System.getProperty("os.arch");
 			if (arch.contains("x86") || arch.contains("i386"))
 				arch = "Intel";
+			else if (arch.contains("ppc"))
+				arch = arch.toUpperCase();
 			os = "Macintosh; U; " + arch + " "
 					+ System.getProperty("os.name") + " "
 					+ System.getProperty("os.version");			
