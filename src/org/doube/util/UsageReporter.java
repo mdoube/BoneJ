@@ -242,7 +242,7 @@ public class UsageReporter {
 				arch = "Intel";
 			else if (arch.contains("ppc"))
 				arch = arch.toUpperCase();
-			os = "Macintosh; U; " + arch + " "
+			os = "Macintosh; " + arch + " "
 					+ System.getProperty("os.name") + " "
 					+ System.getProperty("os.version");			
 			// Handle Windows using the NT version number
