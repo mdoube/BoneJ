@@ -238,7 +238,7 @@ public class UsageReporter {
 		// Handle Mac OSes on PPC and Intel
 		if (IJ.isMacintosh()) {
 			String arch = System.getProperty("os.arch");
-			if (arch.contains("x86") || arch.contains("i386"));
+			if (arch.contains("x86") || arch.contains("i386"))
 				arch = "Intel";
 			os = "Macintosh; U; " + arch + " "
 					+ System.getProperty("os.name") + " "
