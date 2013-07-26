@@ -74,6 +74,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private double vectorIncrement = 1 / 2.3;
 
+	/**
+	 * Number of skeleton points per ellipsoid. Sets the granularity of the
+	 * ellipsoid fields.
+	 */
+	private int skipRatio = 50;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -93,11 +99,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
+		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
 			vectorIncrement = gd.getNextNumber();
 			nVectors = (int) Math.round(gd.getNextNumber());
+			skipRatio = (int) Math.round(gd.getNextNumber());
 		}
 		if (gd.wasCanceled())
 			return;
@@ -207,7 +215,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 
 		// TODO tweak number of skipped skeleton points
-		for (int i = 0; i < nPoints; i += 20) {
+		for (int i = 0; i < nPoints; i += skipRatio) {
+			IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/" + nPoints);
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
 					unitVectors);
 		}
@@ -284,7 +293,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// contract the ellipsoid by one increment so all points are
 		// inside the foregrounds
-//		ellipsoid.contract(vectorIncrement);
+		// ellipsoid.contract(vectorIncrement);
 
 		double[][] pointCloud = ellipsoid.getSurfacePoints(500);
 
