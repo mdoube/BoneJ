@@ -69,8 +69,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private Image3DUniverse universe = new Image3DUniverse();
 
 	/**
-	 * increment for vector searching in pixel units. Defaults to ~Nyquist
-	 * sampling
+	 * increment for vector searching in real units. Defaults to ~Nyquist
+	 * sampling of a unit pixel
 	 */
 	private double vectorIncrement = 1 / 2.3;
 
@@ -96,6 +96,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
+		vectorIncrement *= Math.min(cal.pixelDepth,
+				Math.min(cal.pixelHeight, cal.pixelWidth));
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
@@ -295,7 +297,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// inside the foregrounds
 		// ellipsoid.contract(vectorIncrement);
 
-		double[][] pointCloud = ellipsoid.getSurfacePoints(500);
+		double[][] pointCloud = ellipsoid.getSurfacePoints(100);
 
 		List<Point3f> pointList = new ArrayList<Point3f>();
 		for (int p = 0; p < pointCloud.length; p++) {
