@@ -65,7 +65,7 @@ import customnode.CustomPointMesh;
  */
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private final byte foreground = (byte) 255;
-	private int nVectors = 1000;
+	private int nVectors = 100;
 	private Image3DUniverse universe = new Image3DUniverse();
 
 	/**
