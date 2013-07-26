@@ -262,9 +262,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int d = ips.length - 1;
 
 		// centre point of vector field
-		final int px = skeletonPoint[0];
-		final int py = skeletonPoint[1];
-		final int pz = skeletonPoint[2];
+		final double px = skeletonPoint[0] * pW;
+		final double py = skeletonPoint[1] * pH;
+		final double pz = skeletonPoint[2] * pD;
 
 		// Instantiate a small spherical ellipsoid
 		final double[][] orthogonalVectors = { { 1, 0, 0 }, { 0, 1, 0 },
@@ -276,6 +276,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
 			ellipsoid.dilate(vectorIncrement);
+			IJ.showStatus("Ellipsoid volume = "+ellipsoid.getVolume());
 		}
 
 		IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
@@ -311,8 +312,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		CustomPointMesh mesh = new CustomPointMesh(pointList);
 		mesh.setPointSize(2.0f);
-		Color3f cColour = new Color3f((float) px / w, (float) py / h,
-				(float) pz / d);
+		Color3f cColour = new Color3f((float) (px / pW) / w, (float) (py / pH) / h,
+				(float) (pz / pD) / d);
 		mesh.setColor(cColour);
 
 		CustomPointMesh contactPointMesh = new CustomPointMesh(contactPointsf);
