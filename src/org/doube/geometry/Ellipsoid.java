@@ -69,7 +69,6 @@ public class Ellipsoid {
 			throw new IllegalArgumentException("Radius is NaN");
 
 		setVolume();
-		IJ.log("ra = " + ra + ", rb =" + rb + ", rc = " + rc);
 
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		setEigenVectors(eigenVectors);
