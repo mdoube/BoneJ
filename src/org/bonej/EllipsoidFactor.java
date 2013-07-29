@@ -215,8 +215,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
+		
+		//make sure array contains null in the non-calculated elements
+		Arrays.fill(ellipsoids, null);
 
-		// TODO tweak number of skipped skeleton points
 		for (int i = 0; i < nPoints; i += skipRatio) {
 			IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/" + nPoints);
 			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
