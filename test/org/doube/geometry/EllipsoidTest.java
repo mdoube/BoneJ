@@ -29,7 +29,13 @@ public class EllipsoidTest {
 
 	@Test
 	public void testGetEquation() {
-		fail("Not yet implemented");
+
+		assertArrayEquals(new double[] { 1, 1, 1, 0, 0, 0, 0, 0, 0 },
+				FitEllipsoid.fitTo(unitSphere.getSurfacePoints(10000))
+						.getEquation(), 1E-9);
+
+		assertArrayEquals(new double[] { -0.5, -0.125, -1.0 / 18.0, 0, 0, 0,
+				0.5, 0.25, 1.0 / 6.0 }, oneTwoThree.getEquation(), 1E-9);
 	}
 
 	@Test
@@ -76,13 +82,13 @@ public class EllipsoidTest {
 		for (double[] p : points) {
 			assertEquals(1.0, e.solve(p[0], p[1], p[2]), 1E-9);
 		}
-		
+
 		points = oneTwoThree.getSurfacePoints(1000);
 		e = FitEllipsoid.fitTo(points);
 		for (double[] p : points) {
 			assertEquals(1.0, e.solve(p[0], p[1], p[2]), 1E-9);
 		}
-		
+
 	}
 
 	@Test
