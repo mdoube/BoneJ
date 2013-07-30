@@ -249,4 +249,21 @@ public class Ellipsoid {
 	public void contract(double increment) {
 		dilate(-increment);
 	}
+
+	/**
+	 * Translate the ellipsoid
+	 * 
+	 * @param dx
+	 *          	shift in x  
+	 * @param dy
+	 *            shift in y
+	 * @param dz
+	 *            shift in z
+	 */
+	public void translate(double dx, double dy, double dz) {
+		this.cx += dx;
+		this.cy += dy;
+		this.cz += dz;
+	}
+
 }
