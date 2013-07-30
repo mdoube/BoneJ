@@ -1,5 +1,7 @@
 package org.doube.geometry;
 
+import org.doube.jama.Matrix;
+
 import ij.IJ;
 
 /**
@@ -38,6 +40,8 @@ public class Ellipsoid {
 	private double volume = -1;
 
 	// eigenvectors of axes
+	private double[][] eigenVectors;
+	// unpacked for convenience
 	private double eV00;
 	private double eV01;
 	private double eV02;
@@ -128,10 +132,44 @@ public class Ellipsoid {
 	}
 
 	public boolean contains(double x, double y, double z) {
-		if (solve(x, y, z) <= 1)
-			return true;
-		else
+
+		// calculate vector between point and centroid
+		double vx = x - cx;
+		double vy = y - cy;
+		double vz = z - cz;
+
+		// calculate distance from centroid
+		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
+
+		// calculate unit vector (normalise)
+		vx /= length;
+		vy /= length;
+		vz /= length;
+
+		// if further from centroid than major semiaxis length
+		// must be outside
+		if (length > ra)
 			return false;
+
+		// get eigenvector matrix
+		Matrix eV = new Matrix(eigenVectors);
+		// invert it
+		double[][] dv = eV.inverse().getArrayCopy();
+		// calculate the derotated unit vector
+		double dx = vx * dv[0][0] + vy * dv[0][1] + vz * dv[0][2];
+		double dy = vx * dv[1][0] + vy * dv[1][1] + vz * dv[1][2];
+		double dz = vx * dv[2][0] + vy * dv[2][1] + vz * dv[2][2];
+
+		// find the size of the ellipsoid in this direction using semiaxis
+		// lengths
+		dx *= ra;
+		dy *= rb;
+		dz *= rc;
+
+		// returns true if the ellipsoid is bigger in this direction
+		// than the test point
+		return (Math.sqrt(dx * dx + dy * dy + dz * dz) > length);
+
 	}
 
 	public double solve(double x, double y, double z) {
@@ -168,20 +206,21 @@ public class Ellipsoid {
 	}
 
 	private void setEigenVectors(double[][] eigenVectors) {
-		this.eV00 = eigenVectors[0][0];
-		this.eV01 = eigenVectors[0][1];
-		this.eV02 = eigenVectors[0][2];
-		this.eV10 = eigenVectors[1][0];
-		this.eV11 = eigenVectors[1][1];
-		this.eV12 = eigenVectors[1][2];
-		this.eV20 = eigenVectors[2][0];
-		this.eV21 = eigenVectors[2][1];
-		this.eV22 = eigenVectors[2][2];
+		this.eigenVectors = eigenVectors;
+		this.eV00 = this.eigenVectors[0][0];
+		this.eV01 = this.eigenVectors[0][1];
+		this.eV02 = this.eigenVectors[0][2];
+		this.eV10 = this.eigenVectors[1][0];
+		this.eV11 = this.eigenVectors[1][1];
+		this.eV12 = this.eigenVectors[1][2];
+		this.eV20 = this.eigenVectors[2][0];
+		this.eV21 = this.eigenVectors[2][1];
+		this.eV22 = this.eigenVectors[2][2];
 	}
 
 	/**
 	 * Dilate all three axes by an increment
-	 *  
+	 * 
 	 * @param increment
 	 */
 	public void dilate(double increment) {
@@ -190,13 +229,13 @@ public class Ellipsoid {
 		rc += increment;
 		setVolume();
 	}
-	
+
 	/**
 	 * Constrict all three axes by an increment
 	 * 
 	 * @param increment
 	 */
-	public void contract(double increment){
+	public void contract(double increment) {
 		dilate(-increment);
 	}
 }
