@@ -44,6 +44,9 @@ public class EllipsoidTest {
 		Ellipsoid e = FitEllipsoid.fitTo(points);
 		double[][] vectors = Vectors.randomVectors(1000);
 
+		// centroid
+		assertTrue(e.contains(0, 0, 0));
+
 		// inside
 		for (double[] v : vectors) {
 			double rand = Math.random();
@@ -64,15 +67,32 @@ public class EllipsoidTest {
 					!e.contains(x, y, z));
 		}
 
-		assertTrue(
-				"Testing centroid (1, 2, 3) with solution = "
-						+ oneTwoThree.solve(1, 2, 3),
-				oneTwoThree.contains(1, 2, 3));
+		assertTrue("Testing centroid (1, 2, 3)", oneTwoThree.contains(1, 2, 3));
 
-		assertTrue("Testing wildly outside value with solution = "
-				+ oneTwoThree.solve(23, 213, 132),
-				!oneTwoThree.contains(23, 213, 132));
-
+		points = oneTwoThree.getSurfacePoints(10000);
+		// outside
+		for (double[] p : points) {
+			// dilate by random fraction
+			final double rand = Math.random();
+			double x = p[0] / rand;
+			double y = p[1] / rand;
+			double z = p[2] / rand;
+			assertTrue("Testing (" + x + ", " + y + ", " + z + ")",
+					!e.contains(x, y, z));
+		}
+		
+		// inside
+		int i = 0;
+		for (double[] p : points) {
+			// contract by random fraction
+			final double rand = Math.random();
+			double x = (p[0] - 1) * rand + 1;
+			double y = (p[1] - 2) * rand + 2;
+			double z = (p[2] - 3) * rand + 3;
+			assertTrue("Testing "+i+"(" + x + ", " + y + ", " + z + ")",
+					e.contains(x, y, z));
+			i++;
+		}		
 	}
 
 	@Test
