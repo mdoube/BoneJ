@@ -150,6 +150,11 @@ public class Ellipsoid {
 		// must be outside
 		if (length > ra)
 			return false;
+		
+		// if length closer than minor semiaxis length
+		// must be inside
+		if (length <= rc)
+			return true;
 
 		// get eigenvector matrix
 		Matrix eV = new Matrix(eigenVectors);
