@@ -1,5 +1,7 @@
 package org.doube.geometry;
 
+import java.util.Arrays;
+
 import org.doube.jama.Matrix;
 
 import ij.IJ;
@@ -91,7 +93,7 @@ public class Ellipsoid {
 
 	/**
 	 * Construct an Ellipsoid from the radii (a,b,c), centroid (cx, cy, cz) and
-	 * Eigenvectors
+	 * Eigenvectors. Assumes that a > b > c and enforces it with a sort().
 	 * 
 	 * @param a
 	 * @param b
@@ -103,9 +105,13 @@ public class Ellipsoid {
 	 */
 	public Ellipsoid(double a, double b, double c, double cx, double cy,
 			double cz, double[][] eigenVectors) {
-		this.ra = a;
-		this.rb = b;
-		this.rc = c;
+
+		double[] radii = { a, b, c };
+		Arrays.sort(radii);
+
+		this.ra = radii[2];
+		this.rb = radii[1];
+		this.rc = radii[0];
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
@@ -150,7 +156,7 @@ public class Ellipsoid {
 		// must be outside
 		if (length > ra)
 			return false;
-		
+
 		// if length closer than minor semiaxis length
 		// must be inside
 		if (length <= rc)
