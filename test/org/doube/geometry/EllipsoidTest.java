@@ -23,6 +23,14 @@ public class EllipsoidTest {
 	Ellipsoid threeFiveSeventeen = FitEllipsoid.fitTo(FitEllipsoid
 			.testEllipsoid(3, 5, 17, 0, 0, 0, 0, 0, 10000, true));
 
+	/** Ellipsoid with radii of 17, 5, 3, centred on (0, 0, 0) */
+	Ellipsoid seventeenFiveThree = FitEllipsoid.fitTo(FitEllipsoid
+			.testEllipsoid(17, 5, 3, 0, 0, 0, 0, 0, 10000, true));
+
+	/** Ellipsoid rotated a bit */
+	Ellipsoid rotated = FitEllipsoid.fitTo(FitEllipsoid.testEllipsoid(7, 13,
+			17, Math.PI / 4, 0, 0, 0, 0, 1000, true));
+
 	@Test
 	public void testGetVolume() {
 		assertEquals(Math.PI * 4 / 3, unitSphere.getVolume(), 1E-9);
@@ -40,6 +48,8 @@ public class EllipsoidTest {
 
 		assertArrayEquals(new double[] { 17, 5, 3 },
 				threeFiveSeventeen.getRadii(), 1E-9);
+
+		assertArrayEquals(new double[] { 17, 13, 7 }, rotated.getRadii(), 1E-9);
 	}
 
 	@Test
@@ -61,6 +71,9 @@ public class EllipsoidTest {
 
 		assertArrayEquals(new double[] { 3, -3, 5, -5, 17, -17 },
 				threeFiveSeventeen.intercepts(), 1E-9);
+
+		assertArrayEquals(new double[] { 17, -17, 5, -5, 3, -3 },
+				seventeenFiveThree.intercepts(), 1E-9);
 	}
 
 	@Test
@@ -128,6 +141,58 @@ public class EllipsoidTest {
 			assertTrue(!unitSphereTrans.contains(x, y, z));
 		}
 
+		double[][] points4 = rotated.getSurfacePoints(1000);
+
+		// inside
+		for (double[] p : points4) {
+			// contract by random fraction
+			final double rand = Math.random();
+			double x = p[0] * rand;
+			double y = p[1] * rand;
+			double z = p[2] * rand;
+			System.out.println("Testing inside (" + x + ", " + y + ", " + z
+					+ ") with random scaling = " + rand);
+			assertTrue(rotated.contains(x, y, z));
+		}
+
+		// outside
+		for (double[] p : points4) {
+			// dilate by random fraction
+			final double rand = Math.random() * 0.5;
+			double x = p[0] / rand;
+			double y = p[1] / rand;
+			double z = p[2] / rand;
+			System.out.println("Testing outside (" + x + ", " + y + ", " + z
+					+ ") with random scaling = " + 1 / rand);
+			assertTrue(!rotated.contains(x, y, z));
+		}
+		
+		double[][] points3 = seventeenFiveThree.getSurfacePoints(1000);
+
+		// inside
+		for (double[] p : points3) {
+			// contract by random fraction
+			final double rand = Math.random();
+			double x = p[0] * rand;
+			double y = p[1] * rand;
+			double z = p[2] * rand;
+			System.out.println("Testing inside (" + x + ", " + y + ", " + z
+					+ ") with random scaling = " + rand);
+			assertTrue(seventeenFiveThree.contains(x, y, z));
+		}
+
+		// outside
+		for (double[] p : points3) {
+			// dilate by random fraction
+			final double rand = Math.random() * 0.1;
+			double x = p[0] / rand;
+			double y = p[1] / rand;
+			double z = p[2] / rand;
+			System.out.println("Testing outside (" + x + ", " + y + ", " + z
+					+ ") with random scaling = " + 1 / rand);
+			assertTrue(!seventeenFiveThree.contains(x, y, z));
+		}
+
 		double[][] points2 = threeFiveSeventeen.getSurfacePoints(1000);
 
 		// inside
@@ -137,14 +202,15 @@ public class EllipsoidTest {
 			double x = p[0] * rand;
 			double y = p[1] * rand;
 			double z = p[2] * rand;
-			System.out.println("Testing (" + x + ", " + y + ", " + z + ")");
+			System.out.println("Testing inside (" + x + ", " + y + ", " + z
+					+ ")");
 			assertTrue(threeFiveSeventeen.contains(x, y, z));
 		}
 
 		// outside
 		for (double[] p : points2) {
 			// dilate by random fraction
-			final double rand = Math.random();
+			final double rand = Math.random()/3;
 			double x = p[0] / rand;
 			double y = p[1] / rand;
 			double z = p[2] / rand;
