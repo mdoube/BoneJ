@@ -2,7 +2,6 @@ package org.doube.geometry;
 
 import static org.junit.Assert.*;
 
-import org.doube.bonej.EllipsoidFitter;
 import org.junit.Test;
 
 public class EllipsoidTest {
