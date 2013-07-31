@@ -25,7 +25,6 @@ import java.util.List;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
-import javax.vecmath.Tuple3f;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -37,7 +36,6 @@ import ij.macro.Interpreter;
 import ij.measure.Calibration;
 import ij3d.Image3DUniverse;
 
-import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
 import org.doube.skeleton.Skeletonize3D;
