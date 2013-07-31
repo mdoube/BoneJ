@@ -29,7 +29,7 @@ public class EllipsoidTest {
 
 	/** Ellipsoid rotated a bit */
 	Ellipsoid rotated = FitEllipsoid.fitTo(FitEllipsoid.testEllipsoid(7, 13,
-			17, Math.PI / 4, 0, 0, 0, 0, 1000, true));
+			17, Math.PI / 4.32, 0, 0, 0, 0, 1000, true));
 
 	@Test
 	public void testGetVolume() {
