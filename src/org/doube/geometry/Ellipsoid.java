@@ -282,12 +282,12 @@ public class Ellipsoid {
 	 * @return array containing 6 intercepts, ordered +x, -x, +y, -y, +z, -z
 	 */
 	public double[] intercepts() {
-		double plusX = -g + Math.sqrt(g * g + 4 * a) / (2 * a);
-		double minusX = -g - Math.sqrt(g * g + 4 * a) / (2 * a);
-		double plusY = -h + Math.sqrt(h * h + 4 * b) / (2 * b);
-		double minusY = -h - Math.sqrt(h * h + 4 * b) / (2 * b);
-		double plusZ = -i + Math.sqrt(i * i + 4 * c) / (2 * c);
-		double minusZ = -i + Math.sqrt(i * i + 4 * c) / (2 * c);
+		double plusX = (-g + Math.sqrt(g * g + 4 * a)) / (2 * a);
+		double minusX = (-g - Math.sqrt(g * g + 4 * a)) / (2 * a);
+		double plusY = (-h + Math.sqrt(h * h + 4 * b)) / (2 * b);
+		double minusY = (-h - Math.sqrt(h * h + 4 * b)) / (2 * b);
+		double plusZ = (-i + Math.sqrt(i * i + 4 * c)) / (2 * c);
+		double minusZ = (-i - Math.sqrt(i * i + 4 * c)) / (2 * c);
 		return new double[] { plusX, minusX, plusY, minusY, plusZ, minusZ };
 	}
 

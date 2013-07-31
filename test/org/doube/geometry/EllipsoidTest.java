@@ -2,6 +2,7 @@ package org.doube.geometry;
 
 import static org.junit.Assert.*;
 
+import org.doube.bonej.EllipsoidFitter;
 import org.junit.Test;
 
 public class EllipsoidTest {
@@ -50,6 +51,13 @@ public class EllipsoidTest {
 
 		assertArrayEquals(new double[] { -0.5, -0.125, -1.0 / 18.0, 0, 0, 0,
 				0.5, 0.25, 1.0 / 6.0 }, oneTwoThree.getEquation(), 1E-9);
+	}
+
+	@Test
+	public void testIntercepts() {
+		Ellipsoid e = FitEllipsoid.fitTo(unitSphere.getSurfacePoints(1000));
+		assertArrayEquals(new double[] { 1, -1, 1, -1, 1, -1 }, e.intercepts(),
+				1E-9);
 	}
 
 	@Test
@@ -118,6 +126,18 @@ public class EllipsoidTest {
 		}
 
 		double[][] points2 = threeFiveSeventeen.getSurfacePoints(1000);
+
+		// inside
+		for (double[] p : points2) {
+			// contract by random fraction
+			final double rand = Math.random();
+			double x = p[0] * rand;
+			double y = p[1] * rand;
+			double z = p[2] * rand;
+			System.out.println("Testing (" + x + ", " + y + ", " + z + ")");
+			assertTrue(threeFiveSeventeen.contains(x, y, z));
+		}
+
 		// outside
 		for (double[] p : points2) {
 			// dilate by random fraction
@@ -127,19 +147,6 @@ public class EllipsoidTest {
 			double z = p[2] / rand;
 			System.out.println("Testing (" + x + ", " + y + ", " + z + ")");
 			assertTrue(!threeFiveSeventeen.contains(x, y, z));
-		}
-
-		// inside
-		int i = 0;
-		for (double[] p : points2) {
-			// contract by random fraction
-			final double rand = Math.random();
-			double x = p[0] * rand;
-			double y = p[1] * rand;
-			double z = p[2] * rand;
-			assertTrue("Testing " + i + "(" + x + ", " + y + ", " + z + ")",
-					threeFiveSeventeen.contains(x, y, z));
-			i++;
 		}
 	}
 
@@ -191,7 +198,7 @@ public class EllipsoidTest {
 		for (double[] p : points) {
 			assertEquals(1, oneTwoThree.solve(p[0], p[1], p[2]), 1E-9);
 		}
-		
+
 		points = threeFiveSeventeen.getSurfacePoints(10000);
 		for (double[] p : points) {
 			assertEquals(1, threeFiveSeventeen.solve(p[0], p[1], p[2]), 1E-9);
