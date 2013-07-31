@@ -58,6 +58,9 @@ public class EllipsoidTest {
 		Ellipsoid e = FitEllipsoid.fitTo(unitSphere.getSurfacePoints(1000));
 		assertArrayEquals(new double[] { 1, -1, 1, -1, 1, -1 }, e.intercepts(),
 				1E-9);
+
+		assertArrayEquals(new double[] { 3, -3, 5, -5, 17, -17 },
+				threeFiveSeventeen.intercepts(), 1E-9);
 	}
 
 	@Test
