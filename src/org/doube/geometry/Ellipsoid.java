@@ -166,8 +166,11 @@ public class Ellipsoid {
 
 		// get eigenvector matrix
 		Matrix eV = new Matrix(eigenVectors);
+		eV.print(8, 5);
 		// invert it
-		double[][] dv = eV.inverse().getArrayCopy();
+		Matrix eVinv = eV.inverse();
+		eVinv.print(8, 5);
+		double[][] dv = eVinv.getArrayCopy();
 		// calculate the derotated unit vector
 		double dx = vx * dv[0][0] + vy * dv[0][1] + vz * dv[0][2];
 		double dy = vx * dv[1][0] + vy * dv[1][1] + vz * dv[1][2];
@@ -177,19 +180,19 @@ public class Ellipsoid {
 
 		// find the size of the ellipsoid in this direction using semiaxis
 		// lengths
-		dx = vz * ra;
-		dy = vy * rc;
-		dz = vx * rb;
+		dx = dx * ra;
+		dy = dy * rb;
+		dz = dz * rc;
 
 		System.out.println("Ellipsoid point is (" + dx + ", " + dy + ", " + dz
 				+ ")");
 
 		// returns true if the ellipsoid is bigger in this direction
 		// than the test point
-
+		double ellipsoidLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
 		System.out.println("Point length = " + length + ", ellipsoid length = "
-				+ Math.sqrt(dx * dx + dy * dy + dz * dz));
-		return (Math.sqrt(dx * dx + dy * dy + dz * dz) > length);
+				+ ellipsoidLength + ", ratio = " + ellipsoidLength / length);
+		return (ellipsoidLength > length);
 
 	}
 
