@@ -147,11 +147,6 @@ public class Ellipsoid {
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		// calculate unit vector (normalise)
-		vx /= length;
-		vy /= length;
-		vz /= length;
-
 		// if further from centroid than major semiaxis length
 		// must be outside
 		if (length > ra)
@@ -162,6 +157,13 @@ public class Ellipsoid {
 		if (length <= rc)
 			return true;
 
+		// calculate unit vector (normalise)
+		vx /= length;
+		vy /= length;
+		vz /= length;
+		System.out.println("Unit vector is [" + vx + ", " + vy + ", " + vz
+				+ "]");
+
 		// get eigenvector matrix
 		Matrix eV = new Matrix(eigenVectors);
 		// invert it
@@ -170,15 +172,23 @@ public class Ellipsoid {
 		double dx = vx * dv[0][0] + vy * dv[0][1] + vz * dv[0][2];
 		double dy = vx * dv[1][0] + vy * dv[1][1] + vz * dv[1][2];
 		double dz = vx * dv[2][0] + vy * dv[2][1] + vz * dv[2][2];
+		System.out.println("Derotated vector is [" + dx + ", " + dy + ", " + dz
+				+ "]");
 
 		// find the size of the ellipsoid in this direction using semiaxis
 		// lengths
-		dx *= ra;
-		dy *= rb;
-		dz *= rc;
+		dx = vx * ra;
+		dy = vy * rc;
+		dz = vz * rb;
+
+		System.out.println("Ellipsoid point is (" + dx + ", " + dy + ", " + dz
+				+ ")");
 
 		// returns true if the ellipsoid is bigger in this direction
 		// than the test point
+
+		System.out.println("Point length = " + length + ", ellipsoid length = "
+				+ Math.sqrt(dx * dx + dy * dy + dz * dz));
 		return (Math.sqrt(dx * dx + dy * dy + dz * dz) > length);
 
 	}
@@ -254,7 +264,7 @@ public class Ellipsoid {
 	 * Translate the ellipsoid
 	 * 
 	 * @param dx
-	 *          	shift in x  
+	 *            shift in x
 	 * @param dy
 	 *            shift in y
 	 * @param dz
