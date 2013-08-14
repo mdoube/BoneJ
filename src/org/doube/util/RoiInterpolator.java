@@ -20,6 +20,8 @@ public class RoiInterpolator implements PlugIn {
 	int w, h;
 
 	public void run(String arg) {
+		if (!ImageCheck.checkEnvironment())
+			return;
 		RoiManager roiman = RoiManager.getInstance();
 		if (roiman == null || roiman.getCount() < 2){
 			IJ.error("Please populate the ROI Manager with multiple ROIs");
