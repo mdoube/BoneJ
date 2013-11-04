@@ -1017,9 +1017,23 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		binaryImp.setCalibration(imp.getCalibration());
 		return binaryImp;
 	}
-	
-	private double filledFraction(double pixel, double background, double foreground){
-		return 0;
+
+	/**
+	 * Calculate the proportion of a pixel that contains foreground, assuming a
+	 * two-phase image (foreground and background) and linear relationship
+	 * between pixel value and physical density
+	 * 
+	 * @param pixel
+	 *            the input pixel value
+	 * @param background
+	 *            pixel value representing background
+	 * @param foreground
+	 *            pixel value representing foreground
+	 * @return fraction of pixel 'size' occupied by foreground
+	 */
+	private double filledFraction(double pixel, double background,
+			double foreground) {
+		return (pixel - background) / (foreground - background);
 	}
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
