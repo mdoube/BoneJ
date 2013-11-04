@@ -1017,6 +1017,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		binaryImp.setCalibration(imp.getCalibration());
 		return binaryImp;
 	}
+	
+	private double filledFraction(double pixel, double background, double foreground){
+		return 0;
+	}
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
 		Roi initialRoi = imp.getRoi();
