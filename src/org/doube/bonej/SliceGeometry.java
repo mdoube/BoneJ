@@ -1036,7 +1036,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/**
 	 * Calculate the proportion of a pixel that contains foreground, assuming a
 	 * two-phase image (foreground and background) and linear relationship
-	 * between pixel value and physical density
+	 * between pixel value and physical density. If the pixel value is greater
+	 * than the foreground value, this method will return 1.
 	 * 
 	 * @param pixel
 	 *            the input pixel value
@@ -1048,7 +1049,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 */
 	private double filledFraction(double pixel, double background,
 			double foreground) {
-		return (pixel - background) / (foreground - background);
+		if (pixel > foreground)
+			return 1;
+		else
+			return (pixel - background) / (foreground - background);
 	}
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
