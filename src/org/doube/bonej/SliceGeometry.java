@@ -182,6 +182,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] secondaryDiameter;
 	/** Flag to clear the results table or concatenate */
 	private boolean clearResults;
+	private double background;
+	private double foreground;
+	private boolean doPartialVolume;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -234,6 +237,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
+		gd.addCheckbox("Partial_volume_compensation", false);
+		gd.addNumericField("Background", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Foreground", max, 1, 6, pixUnits + " ");
 		gd.addHelp("http://bonej.org/slice");
 		gd.addDialogListener(this);
 		gd.showDialog();
@@ -259,12 +265,17 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
+		this.doPartialVolume = gd.getNextBoolean();
+		this.background = gd.getNextNumber();
+		this.foreground = gd.getNextNumber();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
+			this.background = cal.getRawValue(this.background);
+			this.foreground = cal.getRawValue(this.foreground);
 		}
-		this.m = gd.getNextNumber();
-		this.c = gd.getNextNumber();
 		if (gd.wasCanceled())
 			return;
 
@@ -574,6 +585,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double sumX = 0;
 			double sumY = 0;
 			int count = 0;
+			double area = 0;
 			double sumD = 0;
 			double wSumX = 0;
 			double wSumY = 0;
@@ -583,6 +595,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 					final double pixel = (double) ip.get(x, y);
 					if (pixel >= min && pixel <= max) {
 						count++;
+						area += filledFraction(pixel, this.background,
+								this.foreground);
 						sumX += x;
 						sumY += y;
 						final double wP = pixel * this.m + this.c;
@@ -593,7 +607,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				}
 			}
 			this.cslice[s] = count;
-			this.cortArea[s] = count * pixelArea;
+			this.cortArea[s] = doPartialVolume ? area * pixelArea : count
+					* pixelArea;
 			if (count > 0) {
 				this.sliceCentroids[0][s] = sumX * this.vW / count;
 				this.sliceCentroids[1][s] = sumY * this.vH / count;
@@ -1097,17 +1112,25 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boolean isHUCalibrated = calibration.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
+		TextField minP = (TextField) nFields.get(4);
+		TextField maxP = (TextField) nFields.get(5);
 
 		double min = Double.parseDouble(minT.getText());
 		double max = Double.parseDouble(maxT.getText());
+		double pMin = Double.parseDouble(minP.getText());
+		double pMax = Double.parseDouble(maxP.getText());
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));
+			minP.setText("" + cal.getCValue(pMin));
+			maxP.setText("" + cal.getCValue(pMax));
 			fieldUpdated = true;
 		}
 		if (!isHUCalibrated && fieldUpdated) {
 			minT.setText("" + cal.getRawValue(min));
 			maxT.setText("" + cal.getRawValue(max));
+			minP.setText("" + cal.getRawValue(pMin));
+			maxP.setText("" + cal.getRawValue(pMax));
 			fieldUpdated = false;
 		}
 		if (isHUCalibrated)
