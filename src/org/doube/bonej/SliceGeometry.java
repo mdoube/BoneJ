@@ -1051,6 +1051,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double foreground) {
 		if (pixel > foreground)
 			return 1;
+		if (pixel < background)
+			return 0;
 		else
 			return (pixel - background) / (foreground - background);
 	}
