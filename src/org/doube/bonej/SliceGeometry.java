@@ -687,14 +687,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				// this.Syy[s] = syys;
 				// this.Sxy[s] = sxys;
 				//mean should be OK as already corrected for partial pixel area
-				double Myys = sxxs - (sxs * sxs / this.cslice[s])
+				double Myys = sxxs - (sxs * sxs / sumAreaFractions)
 						//here need to adjust for area fraction of each pixel
 						//sumAreaFractions = cslice[s] if !doPartialVolume, see above
 						+ sumAreaFractions * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
-				double Mxxs = syys - (sys * sys / this.cslice[s])
+				double Mxxs = syys - (sys * sys / sumAreaFractions)
 						+ sumAreaFractions * vH * vH / 12;
-				double Mxys = sxys - (sxs * sys / this.cslice[s])
+				double Mxys = sxys - (sxs * sys / sumAreaFractions)
 						+ sumAreaFractions * vH * vW / 12;
 				if (Mxys == 0)
 					this.theta[s] = 0;
@@ -821,12 +821,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				maxRadC[s] = maxRadCentreS;
 				final double pixelMoments = sumAreaFractions * vW * vH
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				//again, don't need to adjust area fraction here because 
-				//that is already taken care of in the summing
-				I1[s] = vW * vH * (sxxs - (sxs * sxs / cS) + pixelMoments);
-				I2[s] = vW * vH * (syys - (sys * sys / cS) + pixelMoments);
-				Ip[s] = sxys - (sys * sxs / cS) + pixelMoments;
-				//this is used for display, leaving without adjustment for now.
+				I1[s] = vW * vH * (sxxs - (sxs * sxs / sumAreaFractions) + pixelMoments);
+				I2[s] = vW * vH * (syys - (sys * sys / sumAreaFractions) + pixelMoments);
+				Ip[s] = sxys - (sys * sxs / sumAreaFractions) + pixelMoments;
 				r1[s] = Math.sqrt(I2[s] / (cS * vW * vH * vW * vH));
 				r2[s] = Math.sqrt(I1[s] / (cS * vW * vH * vW * vH));
 				Z1[s] = I1[s] / maxRad2[s];
