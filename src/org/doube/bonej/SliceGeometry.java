@@ -659,17 +659,24 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			final int roiYEnd = r.y + r.height;
 			if (!this.emptySlices[s]) {
 				ImageProcessor ip = stack.getProcessor(s);
+				double sumAreaFractions = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
 							final double xVw = x * vW;
 							final double yVh = y * vH;
-							sxs += xVw;
-							sys += yVh;
-							sxxs += xVw * xVw;
-							syys += yVh * yVh;
-							sxys += xVw * yVh;
+							final double areaFraction = doPartialVolume ? filledFraction(
+									pixel, this.background, this.foreground)
+									: 1;
+							sumAreaFractions += areaFraction;
+							// sum of distances from axis
+							sxs += xVw * areaFraction;
+							sys += yVh * areaFraction;
+							// sum of squares of distances from axis
+							sxxs += xVw * xVw * areaFraction;
+							syys += yVh * yVh * areaFraction;
+							sxys += xVw * yVh * areaFraction;
 						}
 					}
 				}
@@ -678,13 +685,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				// this.Sxx[s] = sxxs;
 				// this.Syy[s] = syys;
 				// this.Sxy[s] = sxys;
+				//mean should be OK as already corrected for partial pixel area
 				double Myys = sxxs - (sxs * sxs / this.cslice[s])
-						+ this.cslice[s] * vW * vW / 12;
+						//here need to adjust for area fraction of each pixel
+						//sumAreaFractions = cslice[s] if !doPartialVolume, see above
+						+ sumAreaFractions * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
 				double Mxxs = syys - (sys * sys / this.cslice[s])
-						+ this.cslice[s] * vH * vH / 12;
+						+ sumAreaFractions * vH * vH / 12;
 				double Mxys = sxys - (sxs * sys / this.cslice[s])
-						+ this.cslice[s] * vH * vW / 12;
+						+ sumAreaFractions * vH * vW / 12;
 				if (Mxys == 0)
 					this.theta[s] = 0;
 				else {
@@ -768,24 +778,29 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				final double xC = this.sliceCentroids[0][s];
 				final double yC = this.sliceCentroids[1][s];
 				final double cS = this.cslice[s];
+				double sumAreaFractions = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					final double yYc = y * vH - yC;
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = (double) ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
+							final double areaFraction = doPartialVolume ? filledFraction(
+									pixel, this.background, this.foreground)
+									: 1;
+							sumAreaFractions += areaFraction;
 							final double xXc = x * vW - xC;
 							final double xCosTheta = x * vW * cosTheta;
 							final double yCosTheta = y * vH * cosTheta;
 							final double xSinTheta = x * vW * sinTheta;
 							final double ySinTheta = y * vH * sinTheta;
-							sxs += xCosTheta + ySinTheta;
-							sys += yCosTheta - xSinTheta;
-							sxxs += (xCosTheta + ySinTheta)
-									* (xCosTheta + ySinTheta);
-							syys += (yCosTheta - xSinTheta)
-									* (yCosTheta - xSinTheta);
-							sxys += (yCosTheta - xSinTheta)
-									* (xCosTheta + ySinTheta);
+							sxs += areaFraction * (xCosTheta + ySinTheta);
+							sys += areaFraction * (yCosTheta - xSinTheta);
+							sxxs += areaFraction * ((xCosTheta + ySinTheta)
+									* (xCosTheta + ySinTheta));
+							syys += areaFraction * ((yCosTheta - xSinTheta)
+									* (yCosTheta - xSinTheta));
+							sxys += areaFraction * ((yCosTheta - xSinTheta)
+									* (xCosTheta + ySinTheta));
 							maxRadMinS = Math.max(maxRadMinS,
 									Math.abs(xXc * cosTheta + yYc * sinTheta));
 							maxRadMaxS = Math.max(maxRadMaxS,
@@ -803,11 +818,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				maxRad2[s] = maxRadMinS;
 				maxRad1[s] = maxRadMaxS;
 				maxRadC[s] = maxRadCentreS;
-				final double pixelMoments = cS * vW * vH
+				final double pixelMoments = sumAreaFractions * vW * vH
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
+				//again, don't need to adjust area fraction here because 
+				//that is already taken care of in the summing
 				I1[s] = vW * vH * (sxxs - (sxs * sxs / cS) + pixelMoments);
 				I2[s] = vW * vH * (syys - (sys * sys / cS) + pixelMoments);
 				Ip[s] = sxys - (sys * sxs / cS) + pixelMoments;
+				//this is used for display, leaving without adjustment for now.
 				r1[s] = Math.sqrt(I2[s] / (cS * vW * vH * vW * vH));
 				r2[s] = Math.sqrt(I1[s] / (cS * vW * vH * vW * vH));
 				Z1[s] = I1[s] / maxRad2[s];
