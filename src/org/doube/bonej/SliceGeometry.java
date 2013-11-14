@@ -585,7 +585,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double sumX = 0;
 			double sumY = 0;
 			int count = 0;
-			double area = 0;
+			double sumAreaFractions = 0;
 			double sumD = 0;
 			double wSumX = 0;
 			double wSumY = 0;
@@ -595,10 +595,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 					final double pixel = (double) ip.get(x, y);
 					if (pixel >= min && pixel <= max) {
 						count++;
-						area += filledFraction(pixel, this.background,
-								this.foreground);
-						sumX += x;
-						sumY += y;
+						final double areaFraction = doPartialVolume ? filledFraction(pixel, this.background,
+								this.foreground) : 1;
+						sumAreaFractions += areaFraction;
+						sumX += areaFraction * x;
+						sumY += areaFraction * y;
 						final double wP = pixel * this.m + this.c;
 						sumD += wP;
 						wSumX += x * wP;
@@ -608,10 +609,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			this.cslice[s] = count;
 			if (count > 0) {
-				this.sliceCentroids[0][s] = sumX * this.vW / count;
-				this.sliceCentroids[1][s] = sumY * this.vH / count;
-				this.cortArea[s] = doPartialVolume ? area * pixelArea : count
-						* pixelArea;
+				//if !doPatialVolume then sumAreaFractions = count
+				this.sliceCentroids[0][s] = sumX * this.vW / sumAreaFractions;
+				this.sliceCentroids[1][s] = sumY * this.vH / sumAreaFractions;
+				this.cortArea[s] = sumAreaFractions * pixelArea;
 				this.integratedDensity[s] = sumD;
 				this.meanDensity[s] = sumD / count;
 				this.weightedCentroids[0][s] = wSumX * this.vW / sumD;
