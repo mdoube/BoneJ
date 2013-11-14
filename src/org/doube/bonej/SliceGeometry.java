@@ -607,11 +607,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				}
 			}
 			this.cslice[s] = count;
-			this.cortArea[s] = doPartialVolume ? area * pixelArea : count
-					* pixelArea;
 			if (count > 0) {
 				this.sliceCentroids[0][s] = sumX * this.vW / count;
 				this.sliceCentroids[1][s] = sumY * this.vH / count;
+				this.cortArea[s] = doPartialVolume ? area * pixelArea : count
+						* pixelArea;
 				this.integratedDensity[s] = sumD;
 				this.meanDensity[s] = sumD / count;
 				this.weightedCentroids[0][s] = wSumX * this.vW / sumD;
