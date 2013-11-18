@@ -1167,6 +1167,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		} else
 			oriented.setEnabled(true);
 
+		Checkbox partialBox = (Checkbox) checkboxes.get(10);
+		boolean doVolumeCompensation = partialBox.getState();
+		if (doVolumeCompensation){
+			minP.setEnabled(true);
+			maxP.setEnabled(true);
+		} else {
+			minP.setEnabled(false);
+			maxP.setEnabled(false);
+		}
+		
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
