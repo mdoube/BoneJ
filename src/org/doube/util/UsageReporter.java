@@ -251,7 +251,7 @@ public class UsageReporter {
 			// Handle Linux and everything else
 		} else {
 			os = System.getProperty("os.name") + " "
-					+ System.getProperty("os.version")
+					+ System.getProperty("os.version") + " "
 					+ System.getProperty("os.arch");
 		}
 
