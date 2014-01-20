@@ -321,9 +321,15 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					rt.addValue("I1", E.getD().get(2, 2));
 					rt.addValue("I2", E.getD().get(1, 1));
 					rt.addValue("I3", E.getD().get(0, 0));
-					rt.addValue("vX", E.getV().get(0, 0));
-					rt.addValue("vY", E.getV().get(1, 0));
-					rt.addValue("vZ", E.getV().get(2, 0));
+					rt.addValue("Major vX", E.getV().get(0, 0));
+					rt.addValue("Major vY", E.getV().get(1, 0));
+					rt.addValue("Major vZ", E.getV().get(2, 0));
+					rt.addValue("Int vX", E.getV().get(0, 1));
+					rt.addValue("Int vY", E.getV().get(1, 1));
+					rt.addValue("Int vZ", E.getV().get(2, 1));
+					rt.addValue("Minor vX", E.getV().get(0, 2));
+					rt.addValue("Minor vY", E.getV().get(1, 2));
+					rt.addValue("Minor vZ", E.getV().get(2, 2));
 				}
 				if (doEulerCharacters) {
 					rt.addValue("Euler (χ)", eulerCharacters[i][0]);
