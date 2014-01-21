@@ -595,8 +595,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 					final double pixel = (double) ip.get(x, y);
 					if (pixel >= min && pixel <= max) {
 						count++;
-						final double areaFraction = doPartialVolume ? filledFraction(pixel, this.background,
-								this.foreground) : 1;
+						final double areaFraction = doPartialVolume ? filledFraction(
+								pixel, this.background, this.foreground) : 1;
 						sumAreaFractions += areaFraction;
 						sumX += areaFraction * x;
 						sumY += areaFraction * y;
@@ -609,7 +609,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			}
 			this.cslice[s] = count;
 			if (count > 0) {
-				//if !doPatialVolume then sumAreaFractions = count
+				// if !doPatialVolume then sumAreaFractions = count
 				this.sliceCentroids[0][s] = sumX * this.vW / sumAreaFractions;
 				this.sliceCentroids[1][s] = sumY * this.vH / sumAreaFractions;
 				this.cortArea[s] = sumAreaFractions * pixelArea;
@@ -686,10 +686,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				// this.Sxx[s] = sxxs;
 				// this.Syy[s] = syys;
 				// this.Sxy[s] = sxys;
-				//mean should be OK as already corrected for partial pixel area
+				// mean should be OK as already corrected for partial pixel area
 				double Myys = sxxs - (sxs * sxs / sumAreaFractions)
-						//here need to adjust for area fraction of each pixel
-						//sumAreaFractions = cslice[s] if !doPartialVolume, see above
+				// here need to adjust for area fraction of each pixel
+				// sumAreaFractions = cslice[s] if !doPartialVolume, see above
 						+ sumAreaFractions * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
 				double Mxxs = syys - (sys * sys / sumAreaFractions)
@@ -796,12 +796,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 							final double ySinTheta = y * vH * sinTheta;
 							sxs += areaFraction * (xCosTheta + ySinTheta);
 							sys += areaFraction * (yCosTheta - xSinTheta);
-							sxxs += areaFraction * ((xCosTheta + ySinTheta)
-									* (xCosTheta + ySinTheta));
-							syys += areaFraction * ((yCosTheta - xSinTheta)
-									* (yCosTheta - xSinTheta));
-							sxys += areaFraction * ((yCosTheta - xSinTheta)
-									* (xCosTheta + ySinTheta));
+							sxxs += areaFraction
+									* ((xCosTheta + ySinTheta) * (xCosTheta + ySinTheta));
+							syys += areaFraction
+									* ((yCosTheta - xSinTheta) * (yCosTheta - xSinTheta));
+							sxys += areaFraction
+									* ((yCosTheta - xSinTheta) * (xCosTheta + ySinTheta));
 							maxRadMinS = Math.max(maxRadMinS,
 									Math.abs(xXc * cosTheta + yYc * sinTheta));
 							maxRadMaxS = Math.max(maxRadMaxS,
@@ -821,8 +821,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				maxRadC[s] = maxRadCentreS;
 				final double pixelMoments = sumAreaFractions * vW * vH
 						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				I1[s] = vW * vH * (sxxs - (sxs * sxs / sumAreaFractions) + pixelMoments);
-				I2[s] = vW * vH * (syys - (sys * sys / sumAreaFractions) + pixelMoments);
+				I1[s] = vW
+						* vH
+						* (sxxs - (sxs * sxs / sumAreaFractions) + pixelMoments);
+				I2[s] = vW
+						* vH
+						* (syys - (sys * sys / sumAreaFractions) + pixelMoments);
 				Ip[s] = sxys - (sys * sxs / sumAreaFractions) + pixelMoments;
 				r1[s] = Math.sqrt(I2[s] / (cS * vW * vH * vW * vH));
 				r2[s] = Math.sqrt(I1[s] / (cS * vW * vH * vW * vH));
@@ -1053,7 +1057,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * Calculate the proportion of a pixel that contains foreground, assuming a
 	 * two-phase image (foreground and background) and linear relationship
 	 * between pixel value and physical density. If the pixel value is greater
-	 * than the foreground value, this method will return 1.
+	 * than the foreground value, this method will return 1, and if lower than
+	 * the background value, returns 0.
 	 * 
 	 * @param pixel
 	 *            the input pixel value
@@ -1169,14 +1174,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 		Checkbox partialBox = (Checkbox) checkboxes.get(10);
 		boolean doVolumeCompensation = partialBox.getState();
-		if (doVolumeCompensation){
+		if (doVolumeCompensation) {
 			minP.setEnabled(true);
 			maxP.setEnabled(true);
 		} else {
 			minP.setEnabled(false);
 			maxP.setEnabled(false);
 		}
-		
+
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
 	}
