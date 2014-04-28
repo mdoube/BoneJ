@@ -259,12 +259,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
+			this.m = cal.getRawValue(this.m);
+			this.c = cal.getRawValue(this.c);
 		}
-		this.m = gd.getNextNumber();
-		this.c = gd.getNextNumber();
 		if (gd.wasCanceled())
 			return;
 
