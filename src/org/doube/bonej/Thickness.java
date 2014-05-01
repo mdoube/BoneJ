@@ -1320,6 +1320,44 @@ public class Thickness implements PlugIn {
 		distanceMaptoDistanceRidge(imp, s);
 		distanceRidgetoLocalThickness(imp, s);
 		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
+		impLTC = trimOverhang(imp, impLTC, inv);
+		return impLTC;
+	}
+
+	/**
+	 * Reduce error in thickness quantitation by trimming the one pixel overhang
+	 * in the thickness map
+	 * 
+	 * @param imp
+	 *            Binary input image
+	 * @param impLTC
+	 *            Thickness map
+	 * @param inv
+	 *            true if calculating thickness of background, false for
+	 *            foreground
+	 * @return Thickness map with pixels masked by input image
+	 */
+	private ImagePlus trimOverhang(ImagePlus imp, ImagePlus impLTC, boolean inv) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+
+		final ImageStack stack = imp.getImageStack();
+		final ImageStack mapStack = impLTC.getImageStack();
+
+		final int keepValue = inv ? 0 : 255;
+		ImageProcessor ip = new ByteProcessor(w, h);
+		ImageProcessor map = new FloatProcessor(w, h);
+		for (int z = 1; z <= d; z++) {
+			ip = stack.getProcessor(z);
+			map = mapStack.getProcessor(z);
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) {
+					if (ip.get(x, y) != keepValue)
+						map.set(x, y, 0);
+				}
+			}
+		}
 		return impLTC;
 	}
 }
