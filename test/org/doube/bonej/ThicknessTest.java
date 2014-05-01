@@ -16,6 +16,7 @@ public class ThicknessTest {
 			ImagePlus rod = TestDataMaker.rod(d * 100, d);
 			ImagePlus imp = th.getLocalThickness(rod, false);
 			double[] stats = StackStats.meanStdDev(imp);
+			System.out.print(d + ", " + stats[0] + "\n");
 			assertEquals(d, stats[0], 1.5);
 		}
 	}
@@ -28,6 +29,7 @@ public class ThicknessTest {
 			ImagePlus imp = th.getLocalThickness(sphere, false);
 			double[] stats = StackStats.meanStdDev(imp);
 			double regression = r * 1.9441872882 - 1.218936;
+			System.out.print(r*2 + ", " + stats[0] + "\n");
 			assertEquals(regression, stats[0], regression * 0.1);
 		}
 	}
