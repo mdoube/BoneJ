@@ -98,6 +98,7 @@ public class Thickness implements PlugIn {
 		gd.addCheckbox("Spacing", false);
 		gd.addCheckbox("Graphic Result", true);
 		gd.addCheckbox("Use_ROI_Manager", false);
+		gd.addCheckbox("Mask thickness map", true);
 		gd.addHelp("http://bonej.org/thickness");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -107,6 +108,7 @@ public class Thickness implements PlugIn {
 		boolean doSpacing = gd.getNextBoolean();
 		boolean doGraphic = gd.getNextBoolean();
 		boolean doRoi = gd.getNextBoolean();
+		boolean doMask = gd.getNextBoolean();
 
 		long startTime = System.currentTimeMillis();
 		String title = stripExtension(imp.getTitle());
@@ -121,9 +123,9 @@ public class Thickness implements PlugIn {
 						true, 0, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
-				impLTC = getLocalThickness(crop, inverse);
+				impLTC = getLocalThickness(crop, inverse, doMask);
 			} else
-				impLTC = getLocalThickness(imp, inverse);
+				impLTC = getLocalThickness(imp, inverse, doMask);
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			double[] stats = StackStats.meanStdDev(impLTC);
@@ -143,9 +145,9 @@ public class Thickness implements PlugIn {
 						true, 255, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
-				impLTCi = getLocalThickness(crop, inverse);
+				impLTCi = getLocalThickness(crop, inverse, doMask);
 			} else
-				impLTCi = getLocalThickness(imp, inverse);
+				impLTCi = getLocalThickness(imp, inverse, doMask);
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
@@ -1303,8 +1305,39 @@ public class Thickness implements PlugIn {
 	}
 
 	/**
-	 * Get a local thickness map from an ImagePlus
+	 * Get a local thickness map from an ImagePlus with optional masking
+	 * correction
 	 * 
+	 * @param imp
+	 *            Binary ImagePlus
+	 * @param inv
+	 *            false if you want the thickness of the foreground and true if
+	 *            you want the thickness of the background
+	 * @param doMask
+	 *            true to apply a masking operation to enforce the map to
+	 *            contain thickness values only at coordinates where there is a
+	 *            corresponding input pixel
+	 * @return 32-bit ImagePlus containing a local thickness map
+	 */
+	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv,
+			boolean doMask) {
+		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
+			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
+		}
+		float[][] s = geometryToDistanceMap(imp, inv);
+		distanceMaptoDistanceRidge(imp, s);
+		distanceRidgetoLocalThickness(imp, s);
+		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
+		if (doMask)
+			impLTC = trimOverhang(imp, impLTC, inv);
+		return impLTC;
+	}
+
+	/**
+	 * Get a local thickness map from an ImagePlus, without masking correction
+	 * 
+	 * @see getLocalThickness(ImagePlus imp, boolean inv, boolean doMask) :
+	 *      ImagePlus
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @param inv
@@ -1313,15 +1346,7 @@ public class Thickness implements PlugIn {
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
 	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
-		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
-			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
-		}
-		float[][] s = geometryToDistanceMap(imp, inv);
-		distanceMaptoDistanceRidge(imp, s);
-		distanceRidgetoLocalThickness(imp, s);
-		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
-		impLTC = trimOverhang(imp, impLTC, inv);
-		return impLTC;
+		return getLocalThickness(imp, inv, false);
 	}
 
 	/**
@@ -1349,6 +1374,8 @@ public class Thickness implements PlugIn {
 		ImageProcessor ip = new ByteProcessor(w, h);
 		ImageProcessor map = new FloatProcessor(w, h);
 		for (int z = 1; z <= d; z++) {
+			IJ.showStatus("Masking thickness map...");
+			IJ.showProgress(z, d);
 			ip = stack.getProcessor(z);
 			map = mapStack.getProcessor(z);
 			for (int y = 0; y < h; y++) {
