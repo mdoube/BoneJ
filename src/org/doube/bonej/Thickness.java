@@ -595,14 +595,13 @@ public class Thickness implements PlugIn {
 				distSqValues[indDS++] = i;
 			}
 		}
-		// Build template
-		// The first index of the template is the number of nonzero components
-		// in the offest from the test point to the remote point. The second
-		// index is the radii index (of the test point). The value of the
-		// template
-		// is the minimum square radius of the remote point required to cover
-		// the
-		// ball of the test point.
+		/*
+		 * Build template The first index of the template is the number of
+		 * nonzero components in the offest from the test point to the remote
+		 * point. The second index is the radii index (of the test point). The
+		 * value of the template is the minimum square radius of the remote
+		 * point required to cover the ball of the test point.
+		 */
 		IJ.showStatus("Distance Ridge: creating search templates");
 		int[][] rSqTemplate = createTemplate(distSqValues);
 		int numCompZ, numCompY, numCompX, numComp;
@@ -679,14 +678,16 @@ public class Thickness implements PlugIn {
 		s = sNew;
 	}
 
-	// For each offset from the origin, (dx,dy,dz), and each radius-squared,
-	// rSq, find the smallest radius-squared, r1Squared, such that a ball
-	// of radius r1 centered at (dx,dy,dz) includes a ball of radius
-	// rSq centered at the origin. These balls refer to a 3D integer grid.
-	// The set of (dx,dy,dz) points considered is a cube center at the origin.
-	// The size of the computed array could be considerably reduced by symmetry,
-	// but then the time for the calculation using this array would increase
-	// (and more code would be needed).
+	/*
+	 * For each offset from the origin, (dx,dy,dz), and each radius-squared,
+	 * rSq, find the smallest radius-squared, r1Squared, such that a ball of
+	 * radius r1 centered at (dx,dy,dz) includes a ball of radius rSq centered
+	 * at the origin. These balls refer to a 3D integer grid. The set of
+	 * (dx,dy,dz) points considered is a cube center at the origin. The size of
+	 * the computed array could be considerably reduced by symmetry, but then
+	 * the time for the calculation using this array would increase (and more
+	 * code would be needed).
+	 */
 	int[][] createTemplate(int[] distSqValues) {
 		int[][] t = new int[3][];
 		t[0] = scanCube(1, 0, 0, distSqValues);
@@ -695,9 +696,11 @@ public class Thickness implements PlugIn {
 		return t;
 	}
 
-	// For a list of r² values, find the smallest r1² values such
-	// that a "ball" of radius r1 centered at (dx,dy,dz) includes a "ball"
-	// of radius r centered at the origin. "Ball" refers to a 3D integer grid.
+	/*
+	 * For a list of r² values, find the smallest r1² values such that a "ball"
+	 * of radius r1 centered at (dx,dy,dz) includes a "ball" of radius r
+	 * centered at the origin. "Ball" refers to a 3D integer grid.
+	 */
 	int[] scanCube(int dx, int dy, int dz, int[] distSqValues) {
 		final int numRadii = distSqValues.length;
 		int[] r1Sq = new int[numRadii];
@@ -878,9 +881,10 @@ public class Thickness implements PlugIn {
 			final int depth = this.d;
 			final float[][] stack = this.s;
 			float[] sk1;// sk,sk1;
-			// Loop through ridge points. For each one, update the local
-			// thickness for
-			// the points within its sphere.
+			/*
+			 * Loop through ridge points. For each one, update the local
+			 * thickness for the points within its sphere.
+			 */
 			int rInt;
 			int iStart, iStop, jStart, jStop, kStart, kStop;
 			float r1SquaredK, r1SquaredJK, r1Squared, s1;
@@ -932,14 +936,14 @@ public class Thickness implements PlugIn {
 										final int ind1 = i1 + widthJ1;
 										s1 = sk1[ind1];
 										if (rSquared > s1) {
-											// Get a lock on sk1 and check again
-											// to make sure
-											// that another thread has not
-											// increased
-											// sk1[ind1] to something larger
-											// than rSquared.
-											// A test shows that this may not be
-											// required...
+											/*
+											 * Get a lock on sk1 and check again
+											 * to make sure that another thread
+											 * has not increased sk1[ind1] to
+											 * something larger than rSquared. A
+											 * test shows that this may not be
+											 * required...
+											 */
 											synchronized (resources[k1]) {
 												s1 = sk1[ind1];
 												if (rSquared > s1) {
@@ -993,10 +997,11 @@ public class Thickness implements PlugIn {
 			newStack.addSlice(null, ipk);
 			sNew[k] = (float[]) ipk.getPixels();
 		}
-		// First set the output array to flags:
-		// 0 for a background point
-		// -1 for a non-background point that borders a background point
-		// s (input data) for an interior non-background point
+		/*
+		 * First set the output array to flags: 0 for a background point -1 for
+		 * a non-background point that borders a background point s (input data)
+		 * for an interior non-background point
+		 */
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -1005,20 +1010,15 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-			// Process the surface points. Initially set results to negative
-			// values
-			// to be able to avoid including them in averages of for subsequent
-			// points.
-			// During the calculation, positive values in sNew are interior
-			// non-background
-			// local thicknesses. Negative values are surface points. In this
-			// case
-			// the
-			// value might be -1 (not processed yet) or -result, where result is
-			// the
-			// average of the neighboring interior points. Negative values are
-			// excluded from
-			// the averaging.
+		/*
+		 * Process the surface points. Initially set results to negative values
+		 * to be able to avoid including them in averages of for subsequent
+		 * points. During the calculation, positive values in sNew are interior
+		 * non-background local thicknesses. Negative values are surface points.
+		 * In this case the value might be -1 (not processed yet) or -result,
+		 * where result is the average of the neighboring interior points.
+		 * Negative values are excluded from the averaging.
+		 */
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -1031,7 +1031,7 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-			// Fix the negative values and double the results
+		// Fix the negative values and double the results
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
