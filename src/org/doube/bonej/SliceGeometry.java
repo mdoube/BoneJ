@@ -182,6 +182,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] secondaryDiameter;
 	/** Flag to clear the results table or concatenate */
 	private boolean clearResults;
+	/** Use the masked version of thickness, which trims the 1px overhang */
+	private boolean doMask;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -218,6 +220,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 		gd.addCheckbox("2D_Thickness", true);
 		gd.addCheckbox("3D_Thickness", false);
+		gd.addCheckbox("Mask thickness map", false);
 		gd.addCheckbox("Draw_Axes", true);
 		gd.addCheckbox("Draw_Centroids", true);
 		gd.addCheckbox("Annotated_Copy_(2D)", true);
@@ -241,6 +244,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boneID = BoneList.guessBone(bone);
 		this.doThickness2D = gd.getNextBoolean();
 		this.doThickness3D = gd.getNextBoolean();
+		this.doMask = gd.getNextBoolean();
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
 		this.doCopy = gd.getNextBoolean();
@@ -837,7 +841,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// convert to binary
 		ImagePlus binaryImp = convertToBinary(imp, min, max);
 
-		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
+		ImagePlus thickImp = th.getLocalThickness(binaryImp, false, doMask);
 
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			if (this.emptySlices[s]) {
@@ -958,7 +962,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				binaryImp.setCalibration(cal);
 				// calculate thickness
 				Thickness th = new Thickness();
-				ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
+				ImagePlus thickImp = th.getLocalThickness(binaryImp, false, doMask);
 				FloatProcessor thickIp = (FloatProcessor) thickImp
 						.getProcessor();
 				double sumPix = 0;

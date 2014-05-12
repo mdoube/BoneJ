@@ -140,8 +140,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
 		String[] headers = { "Measurement Options", " " };
-		String[] labels = new String[8];
-		boolean[] defaultValues = new boolean[8];
+		String[] labels = new String[9];
+		boolean[] defaultValues = new boolean[9];
 		labels[0] = "Exclude on sides";
 		defaultValues[0] = false;
 		labels[1] = "Surface_area";
@@ -156,8 +156,10 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues[5] = true;
 		labels[6] = "Thickness";
 		defaultValues[6] = true;
-		labels[7] = "Ellipsoids";
-		defaultValues[7] = true;
+		labels[7] = "Mask thickness map";
+		defaultValues[7] = false;
+		labels[8] = "Ellipsoids";
+		defaultValues[8] = true;
 		gd.addCheckboxGroup(4, 2, labels, defaultValues, headers);
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
@@ -206,6 +208,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean doMoments = gd.getNextBoolean();
 		final boolean doEulerCharacters = gd.getNextBoolean();
 		final boolean doThickness = gd.getNextBoolean();
+		final boolean doMask = gd.getNextBoolean();
 		final boolean doEllipsoids = gd.getNextBoolean();
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
@@ -276,7 +279,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		double[][] thick = new double[nParticles][2];
 		if (doThickness) {
 			Thickness th = new Thickness();
-			ImagePlus thickImp = th.getLocalThickness(imp, false);
+			ImagePlus thickImp = th.getLocalThickness(imp, false, doMask);
 			thick = getMeanStdDev(thickImp, particleLabels, particleSizes, 0);
 			if (doThickImage) {
 				double max = 0;
