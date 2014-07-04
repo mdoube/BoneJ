@@ -31,9 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
 
 import org.bonej.Help;
@@ -215,17 +213,7 @@ public class UsageReporter {
 			if (IJ.debugMode)
 				IJ.log(url.toString());
 			URLConnection uc = url.openConnection();
-			uc.setRequestProperty(
-					"User-Agent",
-					"Java/"	+ System.getProperty("java.version") + " ("
-							+ ((IJ.isWindows()) ? "Windows; U; " : "")
-							+ ((IJ.isMacintosh()) ? "Macintosh; " : "")
-							+ ((IJ.isWindows()) ? "Windows NT" : System.getProperty("os.name")) + " "
-							+ System.getProperty("os.version")
-							+ ((!IJ.isWindows() && !IJ.isMacintosh()) ? " " + System.getProperty("os.arch") : "") + "; "
-							+ getLocaleString() + ") "
-							+ System.getProperty("java.vendor"));
-			
+			uc.setRequestProperty("User-Agent", userAgentString());
 			if (IJ.debugMode)
 				IJ.log(uc.getRequestProperty("User-Agent"));
 			BufferedReader in = new BufferedReader(new InputStreamReader(
@@ -244,10 +232,42 @@ public class UsageReporter {
 		}
 	}
 
+	private String userAgentString() {
+		String os = "";
+
+		// Handle Mac OSes on PPC and Intel
+		if (IJ.isMacintosh()) {
+			String arch = System.getProperty("os.arch");
+			if (arch.contains("x86") || arch.contains("i386"))
+				arch = "Intel";
+			else if (arch.contains("ppc"))
+				arch = arch.toUpperCase();
+			os = "Macintosh; " + arch + " "
+					+ System.getProperty("os.name") + " "
+					+ System.getProperty("os.version");			
+			// Handle Windows using the NT version number
+		} else if (IJ.isWindows()) {
+			os = "Windows NT " + System.getProperty("os.version");
+			// Handle Linux and everything else
+		} else {
+			os = System.getProperty("os.name") + " "
+					+ System.getProperty("os.version") + " "
+					+ System.getProperty("os.arch");
+		}
+
+		String browser = "Java/" + System.getProperty("java.version");
+		String vendor = System.getProperty("java.vendor");
+		String locale = getLocaleString();
+
+		String ua = browser + " (" + os + "; " + locale + ") " + vendor;
+
+		return ua;
+	}
+
 	private static String getLocaleString() {
 		String locale = Locale.getDefault().toString();
 		locale = locale.replace("_", "-");
-		locale = locale.toLowerCase();
+		locale = locale.toLowerCase(Locale.ENGLISH);
 		return locale;
 	}
 

@@ -114,20 +114,25 @@ public class MeasureSurface implements PlugIn {
 	 * @param title
 	 */
 	private void renderSurface(List<Point3f> points, String title) {
-		IJ.showStatus("Rendering surface...");
+		IJ.showStatus("Generating mesh...");
 		CustomTriangleMesh mesh = new CustomTriangleMesh(points);
 
-		// Create a universe and show it
+		// Create a universe
 		Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
-
+		
 		// Add the mesh
+		IJ.showStatus("Adding mesh to 3D viewer...");
 		Content c = univ.addCustomMesh(mesh, title);
 		Color3f green = new Color3f(0.0f, 0.5f, 0.0f);
 		c.getColor();
 		c.setColor(green);
 		c.setTransparency((float) 0.33);
 		c.setSelected(true);
+		
+		//show the universe
+		IJ.showStatus("Displaying mesh in 3D viewer...");
+		univ.show();
+		IJ.showStatus("");
 	}
 
 	/**

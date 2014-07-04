@@ -94,20 +94,24 @@ public class SphereFitter implements PlugIn, DialogListener {
 		final boolean clearRois = gd.getNextBoolean();
 
 		final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
+		if (points == null) {
+			IJ.showMessage("Can't fit sphere to points.\n"
+					+ "No usable points in the ROI Manager.");
+			return;
+		}
 		double i = points[0][2];
 		double j = i;
 		for (double[] p : points)
 			if (p[2] != i)
 				j = p[2];
-		if (j == i){
+		if (j == i) {
 			IJ.showMessage("Can't fit sphere to points.\n"
-					+ "All points are on the same slice.\n" +
-					"Check the ROI Manager option More >> Options... >\n" +
-					"Associate ROis with stack positions.\n");
+					+ "All points are on the same slice.\n"
+					+ "Check the ROI Manager option More >> Options... >\n"
+					+ "Associate ROIs with stack positions.\n");
 			return;
 		}
-			
-		
+
 		double[] sphereDim = new double[4];
 		try {
 			sphereDim = FitSphere.fitSphere(points);

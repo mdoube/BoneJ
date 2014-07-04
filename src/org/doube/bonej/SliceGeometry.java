@@ -259,12 +259,17 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
+			
+			//convert HU->density user input into raw->density coefficients
+			//for use in later calculations
+			this.c = this.m * cal.getCoefficients()[0] + this.c;
+			this.m = this.m * cal.getCoefficients()[1];
 		}
-		this.m = gd.getNextNumber();
-		this.c = gd.getNextNumber();
 		if (gd.wasCanceled())
 			return;
 

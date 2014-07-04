@@ -15,9 +15,18 @@ import ij.process.ImageStatistics;
 public class ImageCheck {
 
 	/**
-	 * ImageJ version required by BoneJ
+	 * Minimal ImageJ version required by BoneJ
 	 */
 	public static final String requiredIJVersion = "1.46k";
+
+	/**
+	 * ImageJ releases known to produce errors or bugs with BoneJ. Daily builds
+	 * are not included.
+	 */
+	public static final String[] blacklistedIJVersions = {
+	// introduced bug where ROIs added to the ROI Manager
+	// lost their z-position information
+	"1.48a" };
 
 	/**
 	 * Check if image is binary
@@ -136,23 +145,18 @@ public class ImageCheck {
 
 		String units = cal.getUnits();
 
-		double error = Math.abs((sliceSpacing-vD)/sliceSpacing)*100;
-		
+		double error = Math.abs((sliceSpacing - vD) / sliceSpacing) * 100;
+
 		if (vD != sliceSpacing) {
-			IJ
-					.log(imp.getTitle()
-							+ ":\n"
-							+ "Current voxel depth disagrees by "+error+"% with DICOM header slice spacing.\n"
-							+ "Current voxel depth: " + IJ.d2s(vD, 6) + " "
-							+ units + "\n" + "DICOM slice spacing: "
-							+ IJ.d2s(sliceSpacing, 6) + " " + units + "\n"+
-							"Updating image properties...");
+			IJ.log(imp.getTitle() + ":\n" + "Current voxel depth disagrees by "
+					+ error + "% with DICOM header slice spacing.\n"
+					+ "Current voxel depth: " + IJ.d2s(vD, 6) + " " + units
+					+ "\n" + "DICOM slice spacing: " + IJ.d2s(sliceSpacing, 6)
+					+ " " + units + "\n" + "Updating image properties...");
 			cal.pixelDepth = sliceSpacing;
 			imp.setCalibration(cal);
 		} else
-			IJ
-					.log(imp.getTitle()
-							+ ": Voxel depth agrees with DICOM header.\n");
+			IJ.log(imp.getTitle() + ": Voxel depth agrees with DICOM header.\n");
 		return sliceSpacing;
 	}
 
@@ -197,19 +201,31 @@ public class ImageCheck {
 
 	/**
 	 * Show a message and return false if the version of IJ is too old for BoneJ
+	 * or is a known bad version
 	 * 
-	 * @return false if the IJ version is too old
+	 * @return false if the IJ version is too old or blacklisted
 	 */
 	private static boolean checkIJVersion() {
+		if (isIJVersionBlacklisted()) {
+			IJ.error(
+					"Bad ImageJ version",
+					"The version of ImageJ you are using (v"
+							+ IJ.getVersion()
+							+ ") is known to run BoneJ incorrectly.\n"
+							+ "Please up- or downgrade your ImageJ using Help-Update ImageJ.");
+			return false;
+		}
+
 		if (requiredIJVersion.compareTo(IJ.getVersion()) > 0) {
-			IJ.error("Update ImageJ",
+			IJ.error(
+					"Update ImageJ",
 					"You are using an old version of ImageJ, v"
 							+ IJ.getVersion() + ".\n"
 							+ "Please update to at least ImageJ v"
 							+ requiredIJVersion + " using Help-Update ImageJ.");
 			return false;
-		} else
-			return true;
+		}
+		return true;
 	}
 
 	/**
@@ -298,5 +314,18 @@ public class ImageCheck {
 			return false;
 		} else
 			return true;
+	}
+
+	/**
+	 * Check if the version of IJ has been blacklisted as a known broken release
+	 * 
+	 * @return true if the IJ version is blacklisted, false otherwise
+	 */
+	public static boolean isIJVersionBlacklisted() {
+		for (String version : blacklistedIJVersions) {
+			if (version.equals(IJ.getVersion()))
+				return true;
+		}
+		return false;
 	}
 }

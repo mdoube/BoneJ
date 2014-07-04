@@ -7,7 +7,6 @@ import ij.measure.Calibration;
 import ij.plugin.frame.RoiManager;
 import ij.process.ImageProcessor;
 
-import java.awt.List;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 
@@ -22,7 +21,8 @@ public class RoiMan {
 	 * 
 	 * @param imp
 	 * @param roiMan
-	 * @return double[n][3] containing n (x, y, z) coordinates
+	 * @return double[n][3] containing n (x, y, z) coordinates or null if there
+	 *         are no points
 	 */
 	public static double[][] getRoiManPoints(ImagePlus imp, RoiManager roiMan) {
 		Calibration cal = imp.getCalibration();
@@ -30,7 +30,6 @@ public class RoiMan {
 		double vH = cal.pixelHeight;
 		double vD = cal.pixelDepth;
 		int nPoints = 0;
-		List listRoi = roiMan.getList();
 		Roi[] roiList = roiMan.getRoisAsArray();
 		for (int i = 0; i < roiMan.getCount(); i++) {
 			Roi roi = roiList[i];
@@ -38,16 +37,17 @@ public class RoiMan {
 				nPoints++;
 			}
 		}
+		if (nPoints == 0)
+			return null;
 		double[][] dataPoints = new double[nPoints][3];
 		int j = 0;
 		for (int i = 0; i < roiMan.getCount(); i++) {
 			Roi roi = roiList[i];
 			if (roi.getType() == 10) {
-				String label = listRoi.getItem(i);
 				Rectangle xy = roi.getBounds();
 				dataPoints[j][0] = xy.getX() * vW;
 				dataPoints[j][1] = xy.getY() * vH;
-				dataPoints[j][2] = roiMan.getSliceNumber(label) * vD;
+				dataPoints[j][2] = roi.getPosition() * vD;
 				j++;
 			}
 		}
