@@ -160,7 +160,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues[7] = false;
 		labels[8] = "Ellipsoids";
 		defaultValues[8] = true;
-		gd.addCheckboxGroup(4, 2, labels, defaultValues, headers);
+		gd.addCheckboxGroup(5, 2, labels, defaultValues, headers);
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
 				+ "³");
