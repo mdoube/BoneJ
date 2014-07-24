@@ -237,16 +237,21 @@ public class UsageReporter {
 
 		// Handle Mac OSes on PPC and Intel
 		if (IJ.isMacintosh()) {
-			os = "Macintosh; U; " + System.getProperty("os.arch") + " "
+			String arch = System.getProperty("os.arch");
+			if (arch.contains("x86") || arch.contains("i386"))
+				arch = "Intel";
+			else if (arch.contains("ppc"))
+				arch = arch.toUpperCase();
+			os = "Macintosh; " + arch + " "
 					+ System.getProperty("os.name") + " "
-					+ System.getProperty("os.version");
+					+ System.getProperty("os.version");			
 			// Handle Windows using the NT version number
 		} else if (IJ.isWindows()) {
 			os = "Windows NT " + System.getProperty("os.version");
 			// Handle Linux and everything else
 		} else {
 			os = System.getProperty("os.name") + " "
-					+ System.getProperty("os.version")
+					+ System.getProperty("os.version") + " "
 					+ System.getProperty("os.arch");
 		}
 
