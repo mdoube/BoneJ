@@ -20,17 +20,14 @@ import org.doube.util.UsageReporter;
  */
 public class KontronIMGReader implements PlugIn {
 
-	/** All IMG start with 01 00 47 12 6D B0  (hex view) */
-	private static final byte[] MAGIC = { 1, 0, 71, 18, 109, -80 };
-	
+	/** All IMG start with 01 00 47 12 6D B0 (hex view) */
+	private static final int MAGIC = 306642945;
+
 	/** 128-byte header */
 	private static final int HEADER_LENGTH = 128;
 
-	private int eofErrorCount;
-
 	public void run(String arg) {
 
-		// the IMG-File is selected
 		OpenDialog od = new OpenDialog("Open IMG...", arg);
 		String directory = od.getDirectory();
 		String fileName = od.getFileName();
@@ -64,7 +61,7 @@ public class KontronIMGReader implements PlugIn {
 
 		int[] imageSize = getImageSize(path);
 		int width = imageSize[0];
-		int height = imageSize[1];	
+		int height = imageSize[1];
 
 		// FileInfo
 		FileInfo fi = new FileInfo();
@@ -78,56 +75,10 @@ public class KontronIMGReader implements PlugIn {
 		fi.whiteIsZero = false;
 		fi.fileType = FileInfo.GRAY8;
 
-		byte[] pixels = new byte[width * height];
-		try {
-			FileInputStream is = new FileInputStream(path);
-			pixels = readPixels(is, HEADER_LENGTH, width, height);
-			is.close();
-		} catch (Exception e) {
-			IJ.log("" + e);
-		} catch (OutOfMemoryError e) {
-			IJ.outOfMemory(fi.fileName);
-		}
-		ByteProcessor bp = new ByteProcessor(width, height, pixels);
+		ByteProcessor bp = new ByteProcessor(width, height, readBytes(path,
+				HEADER_LENGTH, width * height));
 		ImagePlus imp = new ImagePlus(fi.fileName, bp);
 		return imp;
-	}
-
-	/** *********************************************************************** **/
-	/**
-	 * from ImageReader.java: Skips the specified number of bytes, then reads an
-	 * image and returns the pixel array (byte, short, int or float). Returns
-	 * null if there was an IO exception. Does not close the InputStream.
-	 */
-	private byte[] readPixels(FileInputStream in, long skipCount, int width,
-			int height) {
-		byte[] pixels = readPixels(in, width, height);
-		if (eofErrorCount > 0)
-			return null;
-		else
-			return pixels;
-	}
-
-	/**
-	 * Reads the image from the InputStream and returns the pixel array (byte,
-	 * short, int or float). Returns null if there was an IO exception. Does not
-	 * close the InputStream.
-	 * 
-	 * @param in
-	 * @param width
-	 * @param height
-	 * @return
-	 */
-	private byte[] readPixels(FileInputStream in, int width, int height) {
-		try {
-			byte[] pixels = new byte[width * height]; 
-			in.read(pixels, HEADER_LENGTH, pixels.length);
-			return pixels;
-			
-		} catch (IOException e) {
-			IJ.log("" + e);
-			return null;
-		}
 	}
 
 	/**
@@ -137,21 +88,20 @@ public class KontronIMGReader implements PlugIn {
 	 * @return true if the file is a Scanco ISQ
 	 */
 	public boolean isKontronIMG(String path) {
-		return getMagic(path).equals(MAGIC);
+		return getMagic(path) == MAGIC;
 	}
 
 	/**
 	 * Get the magic number from a file
 	 * 
+	 * Although the first six bytes appear to be invariant, the first 4 should
+	 * suffice, and pack neatly into a single int
+	 * 
 	 * @param path
-	 * @return an array containing the first six bytes of the file
+	 * @return an int made of the first 4 byes of the file
 	 */
-	public byte[] getMagic(String path) {
-		return readBytes(path, 0, 6);
-	}
-
-	public int getPatientIndex(String path) {
-		return readInt(path, 28);
+	public int getMagic(String path) {
+		return readInt(path, 0);
 	}
 
 	/**
@@ -161,8 +111,41 @@ public class KontronIMGReader implements PlugIn {
 	 * @return {x, y} image size in pixels
 	 */
 	public int[] getImageSize(String path) {
-		int[] sizes = { readInt(path, 6), readInt(path, 8) };
+		int[] sizes = { readShort(path, 6), readShort(path, 8) };
 		return sizes;
+	}
+
+	private byte[] readBytes(String path, int firstByte, int length) {
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(firstByte);
+			byte[] bytes = new byte[length];
+			p.read(bytes, 0, length);
+			p.close();
+			return bytes;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return null;
+	}
+	
+	private int readShort(String path, int firstByte) {
+		if (path == null)
+			throw new IllegalArgumentException();
+		try {
+			File iFile = new File(path);
+			FileInputStream p = new FileInputStream(iFile);
+			p.skip(firstByte);
+			int value = (p.read() + p.read() * 256);
+			p.close();
+			return value;
+		} catch (IOException e) {
+			IJ.handleException(e);
+		}
+		return -1;
 	}
 
 	private int readInt(String path, int firstByte) {
@@ -181,25 +164,4 @@ public class KontronIMGReader implements PlugIn {
 		}
 		return -1;
 	}
-
-
-	private byte[] readBytes(String path, int firstByte, int length) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			p.skip(firstByte);
-			byte[] bytes = new byte[length];
-			for (int kh = 0; kh < length; kh++) {
-				bytes[kh] = (byte) p.read();
-			}
-			p.close();
-			return bytes;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return null;
-	}
-
 }
