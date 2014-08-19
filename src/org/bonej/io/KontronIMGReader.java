@@ -102,6 +102,7 @@ public class KontronIMGReader implements PlugIn {
 		ByteProcessor bp = new ByteProcessor(width, height, readBytes(path,
 				HEADER_LENGTH, width * height));
 		ImagePlus imp = new ImagePlus(fi.fileName, bp);
+		imp.setFileInfo(fi);
 		return imp;
 	}
 
