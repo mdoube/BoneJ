@@ -10,12 +10,13 @@ import ij.process.ByteProcessor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.doube.util.UsageReporter;
 
 /**
  * Kontron IMG reader plugin for ImageJ
- * Copyright 2014 Michael Doube
+ * Copyright 2014 Michael Doube 
  * 
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -44,7 +45,7 @@ import org.doube.util.UsageReporter;
 public class KontronIMGReader implements PlugIn {
 
 	/** All IMG start with 01 00 47 12 6D B0 (hex view) */
-	private static final int MAGIC = 306642945;
+	private static final byte[] MAGIC = { 1, 0, 71, 18, 109, -80 };
 
 	/** 128-byte header */
 	private static final int HEADER_LENGTH = 128;
@@ -108,23 +109,10 @@ public class KontronIMGReader implements PlugIn {
 	 * Check the magic number to determine if a file is a Kontron IMG
 	 * 
 	 * @param path
-	 * @return true if the file is a Scanco ISQ
+	 * @return true if the file is a Kontron IMG
 	 */
 	public boolean isKontronIMG(String path) {
-		return getMagic(path) == MAGIC;
-	}
-
-	/**
-	 * Get the magic number from a file
-	 * 
-	 * Although the first six bytes appear to be invariant, the first 4 should
-	 * suffice, and pack neatly into a single int
-	 * 
-	 * @param path
-	 * @return an int made of the first 4 byes of the file
-	 */
-	public int getMagic(String path) {
-		return readInt(path, 0);
+		return Arrays.equals(readBytes(path, 0, 6), MAGIC);
 	}
 
 	/**
@@ -138,6 +126,17 @@ public class KontronIMGReader implements PlugIn {
 		return sizes;
 	}
 
+	/**
+	 * Read bytes from a file into a byte array
+	 * 
+	 * @param path
+	 *            file to read
+	 * @param firstByte
+	 *            first byte to read from the file
+	 * @param length
+	 *            the number of bytes to read
+	 * @return byte[] array of length 'length'
+	 */
 	private byte[] readBytes(String path, int firstByte, int length) {
 		if (path == null)
 			throw new IllegalArgumentException();
@@ -163,23 +162,6 @@ public class KontronIMGReader implements PlugIn {
 			FileInputStream p = new FileInputStream(iFile);
 			p.skip(firstByte);
 			int value = (p.read() + p.read() * 256);
-			p.close();
-			return value;
-		} catch (IOException e) {
-			IJ.handleException(e);
-		}
-		return -1;
-	}
-
-	private int readInt(String path, int firstByte) {
-		if (path == null)
-			throw new IllegalArgumentException();
-		try {
-			File iFile = new File(path);
-			FileInputStream p = new FileInputStream(iFile);
-			p.skip(firstByte);
-			int value = (p.read() + p.read() * 256 + p.read() * 65536 + p
-					.read() * 256 * 65536);
 			p.close();
 			return value;
 		} catch (IOException e) {
