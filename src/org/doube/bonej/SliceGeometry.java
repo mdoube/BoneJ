@@ -1084,7 +1084,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Checkbox calibration = (Checkbox) checkboxes.get(9);
+		Checkbox calibration = (Checkbox) checkboxes.get(10);
 		boolean isHUCalibrated = calibration.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
@@ -1106,7 +1106,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
 
-		Checkbox oriented = (Checkbox) checkboxes.get(8);
+		Checkbox oriented = (Checkbox) checkboxes.get(9);
 		if (orienteer == null) {
 			oriented.setState(false);
 			oriented.setEnabled(false);
