@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- * ParticleCounter Copyright 2009 2010 2011 Michael Doube
+ * ParticleCounter Copyright 2009 2010 2011 2014 Michael Doube
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -363,9 +363,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					} else {
 						Object[] el = ellipsoids[i];
 						rad = (double[]) el[1];
-						// rad = radii.clone();
-						// reverse ordering from
-						// Arrays.sort(rad);
 						unitV = (double[][]) el[2];
 					}
 					rt.addValue("Major radius (" + units + ")", rad[0]);
