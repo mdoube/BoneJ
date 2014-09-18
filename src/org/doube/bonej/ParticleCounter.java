@@ -160,8 +160,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues[7] = false;
 		labels[8] = "Ellipsoids";
 		defaultValues[8] = true;
-		// option to report unit vectors of best fit ellipsoids
-		labels[9] = "Ellipsoid unit vectors";
+		labels[9] = "Record unit vectors";
 		defaultValues[9] = false;
 		gd.addCheckboxGroup(5, 2, labels, defaultValues, headers);
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
@@ -213,7 +212,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean doThickness = gd.getNextBoolean();
 		final boolean doMask = gd.getNextBoolean();
 		final boolean doEllipsoids = gd.getNextBoolean();
-		final boolean doEllipsoidUnitVectors = gd.getNextBoolean();
+		final boolean doVerboseUnitVectors = gd.getNextBoolean();
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doThickImage = gd.getNextBoolean();
@@ -331,6 +330,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					rt.addValue("vX", E.getV().get(0, 0));
 					rt.addValue("vY", E.getV().get(1, 0));
 					rt.addValue("vZ", E.getV().get(2, 0));
+					if (doVerboseUnitVectors) {
+						rt.addValue("vX1", E.getV().get(0, 1));
+						rt.addValue("vY1", E.getV().get(1, 1));
+						rt.addValue("vZ1", E.getV().get(2, 1));
+						rt.addValue("vX2", E.getV().get(0, 2));
+						rt.addValue("vY2", E.getV().get(1, 2));
+						rt.addValue("vZ2", E.getV().get(2, 2));
+					}
 				}
 				if (doEulerCharacters) {
 					rt.addValue("Euler (χ)", eulerCharacters[i][0]);
@@ -364,7 +371,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					rt.addValue("Major radius (" + units + ")", rad[0]);
 					rt.addValue("Int. radius (" + units + ")", rad[1]);
 					rt.addValue("Minor radius (" + units + ")", rad[2]);
-					if (doEllipsoidUnitVectors) {
+					if (doVerboseUnitVectors) {
 						rt.addValue("V00", unitV[0][0]);
 						rt.addValue("V01", unitV[0][1]);
 						rt.addValue("V02", unitV[0][2]);
@@ -2822,13 +2829,14 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
-		// link ellipsoid choice to unit vector choice
+		// link moments and ellipsoid choice to unit vector choice
+		Checkbox momBox = (Checkbox) checkboxes.get(4);
 		Checkbox elBox = (Checkbox) checkboxes.get(8);
-		Checkbox elVBox = (Checkbox) checkboxes.get(9);
-		if (elBox.getState())
-			elVBox.setEnabled(true);
+		Checkbox vvvBox = (Checkbox) checkboxes.get(9);
+		if (elBox.getState() || momBox.getState())
+			vvvBox.setEnabled(true);
 		else
-			elVBox.setEnabled(false);
+			vvvBox.setEnabled(false);
 
 		// link show stack 3d to volume resampling
 		Checkbox box = (Checkbox) checkboxes.get(16);
