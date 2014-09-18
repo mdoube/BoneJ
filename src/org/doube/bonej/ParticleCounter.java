@@ -140,8 +140,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		String units = cal.getUnits();
 		GenericDialog gd = new GenericDialog("Setup");
 		String[] headers = { "Measurement Options", " " };
-		String[] labels = new String[9];
-		boolean[] defaultValues = new boolean[9];
+		String[] labels = new String[10];
+		boolean[] defaultValues = new boolean[10];
 		labels[0] = "Exclude on sides";
 		defaultValues[0] = false;
 		labels[1] = "Surface_area";
@@ -160,6 +160,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues[7] = false;
 		labels[8] = "Ellipsoids";
 		defaultValues[8] = true;
+		// option to report unit vectors of best fit ellipsoids
+		labels[9] = "Ellipsoid unit vectors";
+		defaultValues[9] = false;
 		gd.addCheckboxGroup(5, 2, labels, defaultValues, headers);
 		gd.addNumericField("Min Volume", 0, 3, 7, units + "³");
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units
@@ -210,6 +213,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean doThickness = gd.getNextBoolean();
 		final boolean doMask = gd.getNextBoolean();
 		final boolean doEllipsoids = gd.getNextBoolean();
+		final boolean doEllipsoidUnitVectors = gd.getNextBoolean();
 		final boolean doParticleImage = gd.getNextBoolean();
 		final boolean doParticleSizeImage = gd.getNextBoolean();
 		final boolean doThickImage = gd.getNextBoolean();
@@ -239,7 +243,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				FORE, doExclude);
 		// calculate particle labelling time in ms
 		final long time = (System.nanoTime() - start) / 1000000;
-		IJ.log("Particle labelling finished in "+time+" ms");
+		IJ.log("Particle labelling finished in " + time + " ms");
 		int[][] particleLabels = (int[][]) result[1];
 		long[] particleSizes = getParticleSizes(particleLabels);
 		final int nParticles = particleSizes.length;
@@ -340,18 +344,37 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				}
 				if (doEllipsoids) {
 					double[] rad = new double[3];
+					double[][] unitV = new double[3][3];
 					if (ellipsoids[i] == null) {
 						double[] r = { Double.NaN, Double.NaN, Double.NaN };
 						rad = r;
+						double[][] u = {
+								{ Double.NaN, Double.NaN, Double.NaN },
+								{ Double.NaN, Double.NaN, Double.NaN },
+								{ Double.NaN, Double.NaN, Double.NaN } };
+						unitV = u;
 					} else {
 						Object[] el = ellipsoids[i];
-						double[] radii = (double[]) el[1];
-						rad = radii.clone();
-						Arrays.sort(rad);
+						rad = (double[]) el[1];
+						// rad = radii.clone();
+						// reverse ordering from
+						// Arrays.sort(rad);
+						unitV = (double[][]) el[2];
 					}
-					rt.addValue("Major radius (" + units + ")", rad[2]);
+					rt.addValue("Major radius (" + units + ")", rad[0]);
 					rt.addValue("Int. radius (" + units + ")", rad[1]);
-					rt.addValue("Minor radius (" + units + ")", rad[0]);
+					rt.addValue("Minor radius (" + units + ")", rad[2]);
+					if (doEllipsoidUnitVectors) {
+						rt.addValue("V00", unitV[0][0]);
+						rt.addValue("V01", unitV[0][1]);
+						rt.addValue("V02", unitV[0][2]);
+						rt.addValue("V10", unitV[1][0]);
+						rt.addValue("V11", unitV[1][1]);
+						rt.addValue("V12", unitV[1][2]);
+						rt.addValue("V20", unitV[2][0]);
+						rt.addValue("V21", unitV[2][1]);
+						rt.addValue("V22", unitV[2][2]);
+					}
 				}
 				rt.updateResults();
 			}
@@ -414,9 +437,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				if (s.equals(Double.NaN))
 					continue ellipsoidLoop;
 			}
-			final double a = radii[0];
-			final double b = radii[1];
-			final double c = radii[2];
+			final double a = radii[0]; // longest
+			final double b = radii[1]; // middle
+			final double c = radii[2]; // shortest
+			if (a < b || b < c || a < c)
+				IJ.log("Error: Bad ellipsoid radius ordering! Surface: " + el);
 			double[][] ellipsoid = FitEllipsoid.testEllipsoid(a, b, c, 0, 0, 0,
 					0, 0, 1000, false);
 			final int nPoints = ellipsoid.length;
@@ -2049,24 +2074,24 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		int[] counter = new int[lut.length];
 
 		// place to map lut values and targets
-		//lutList lists the indexes which point to each transformed lutvalue
-		//for quick updating
+		// lutList lists the indexes which point to each transformed lutvalue
+		// for quick updating
 		ArrayList<HashSet<Integer>> lutList = new ArrayList<HashSet<Integer>>(
 				nParticles);
 
-		//initialise the lutList
-		for (int i = 0; i <= nParticles; i++){
+		// initialise the lutList
+		for (int i = 0; i <= nParticles; i++) {
 			HashSet<Integer> set = new HashSet<Integer>(2);
 			lutList.add(set);
 		}
-		
-		//set it up. ArrayList index is now the transformed value
+
+		// set it up. ArrayList index is now the transformed value
 		// list contains the lut indices that have the transformed value
-		for (int i = 1; i < nParticles; i++){
+		for (int i = 1; i < nParticles; i++) {
 			HashSet<Integer> list = lutList.get(lut[i]);
 			list.add(Integer.valueOf(i));
 		}
-		
+
 		// initialise LUT with minimal label in set
 		updateLUTwithMinPosition(lut, map, lutList);
 
@@ -2206,9 +2231,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					changed = true;
 					Iterator<Integer> iter = set.iterator();
 					HashSet<Integer> target = map.get(lutValue);
-//					if (target.isEmpty())
-//						IJ.log("attempting to merge with empty target"
-//								+ lutValue);
+					// if (target.isEmpty())
+					// IJ.log("attempting to merge with empty target"
+					// + lutValue);
 					while (iter.hasNext()) {
 						Integer val = iter.next();
 						target.add(val);
@@ -2279,7 +2304,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		HashSet<Integer> list = lutlist.get(oldValue);
 		HashSet<Integer> newList = lutlist.get(newValue);
 
-		for (Integer in : list){
+		for (Integer in : list) {
 			lut[in.intValue()] = newValue;
 			newList.add(in);
 		}
@@ -2346,7 +2371,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			final int val = nbh[i];
 			// skip background and self-similar labels
 			// adding them again is a redundant waste of time
-			if (val == 0 || val == centre )
+			if (val == 0 || val == centre)
 				continue;
 			set.add(Integer.valueOf(val));
 		}
@@ -2797,8 +2822,16 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		} else {
 			num.setEnabled(false);
 		}
+		// link ellipsoid choice to unit vector choice
+		Checkbox elBox = (Checkbox) checkboxes.get(8);
+		Checkbox elVBox = (Checkbox) checkboxes.get(9);
+		if (elBox.getState())
+			elVBox.setEnabled(true);
+		else
+			elVBox.setEnabled(false);
+
 		// link show stack 3d to volume resampling
-		Checkbox box = (Checkbox) checkboxes.get(15);
+		Checkbox box = (Checkbox) checkboxes.get(16);
 		TextField numb = (TextField) numbers.get(4);
 		if (box.getState()) {
 			numb.setEnabled(true);
@@ -2806,7 +2839,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			numb.setEnabled(false);
 		}
 		// link show surfaces, gradient choice and split value
-		Checkbox surfbox = (Checkbox) checkboxes.get(11);
+		Checkbox surfbox = (Checkbox) checkboxes.get(12);
 		Choice col = (Choice) choices.get(0);
 		TextField split = (TextField) numbers.get(3);
 		if (!surfbox.getState()) {
