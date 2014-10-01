@@ -139,7 +139,7 @@ public class ISQReader implements PlugIn {
 	private static final String MAGIC = "CTDATA-HEADER_V1";
 
 	private long skipCount;
-	private int bytesPerPixel, bufferSize, byteCount, nPixels;
+	private int bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
 
 	public void run(String arg) {
@@ -469,8 +469,6 @@ public class ISQReader implements PlugIn {
 	 */
 	private short[] readPixels(FileInputStream in, int width, int height) {
 		try {
-
-			bytesPerPixel = 2;
 			skip(in, width, height);
 			return read16bitImage(in);
 
@@ -508,7 +506,8 @@ public class ISQReader implements PlugIn {
 					return pixels;
 				}
 			totalRead += bufferSize;
-			pixelsRead = bufferSize / bytesPerPixel;
+			// divide by two because there are 2 bytes per pixel
+			pixelsRead = bufferSize / 2;
 			for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
 				pixels[i] = (short) ((((buffer[j + 1] & 0xff) << 8) | (buffer[j] & 0xff)) + 32768);
 			base += pixelsRead;
@@ -540,8 +539,8 @@ public class ISQReader implements PlugIn {
 				bytesRead += count;
 
 			}
-		}
-		byteCount = width * height * bytesPerPixel;
+		} 
+		byteCount = width * height * 2; //16-bit images so 2 bytes per pixel
 
 		nPixels = width * height;
 		bufferSize = byteCount / 25;
