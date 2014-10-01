@@ -241,6 +241,7 @@ public class ISQReader implements PlugIn {
 				+ ((IJ.isWindows()) ? "\\" : "/");
 		fi.width = width;
 		fi.height = height;
+		fi.offset = offset;
 
 		if (startZ > 0) {
 			long area = width * height;
@@ -301,6 +302,7 @@ public class ISQReader implements PlugIn {
 		// modified to match the size of the ROI
 		ImageStack stack = new ImageStack(widthStack, heightStack);
 		long skip = fi.longOffset > 0 ? fi.longOffset : fi.offset;
+		skip += startZ * width * height * 2;
 
 		try {
 			FileInputStream is = new FileInputStream(path);
@@ -308,6 +310,7 @@ public class ISQReader implements PlugIn {
 			for (int i = 1; i <= nSlices; i++) {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
 
+				//read the whole slice into an array
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
