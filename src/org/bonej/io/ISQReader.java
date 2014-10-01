@@ -115,12 +115,14 @@ import ij.io.OpenDialog;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.doube.util.UsageReporter;
@@ -493,26 +495,18 @@ public class ISQReader implements PlugIn {
 		int totalRead = 0;
 		int base = 0;
 		int count;
-		int bufferCount;
 
 		while (totalRead < byteCount) {
 			if ((totalRead + bufferSize) > byteCount)
 				bufferSize = byteCount - totalRead;
-			bufferCount = 0;
 
-			while (bufferCount < bufferSize) { // fill the buffer
-				count = in.read(buffer, bufferCount, bufferSize - bufferCount);
+				count = in.read(buffer, 0, bufferSize);
+				
 				if (count == -1) {
 					eofErrorCount++;
-					// fi.fileType was only ever set once, and not based on
-					// anything dynamic, so should always be true
-					// if (fi.fileType == FileInfo.GRAY16_SIGNED)
-					for (int i = base; i < pixels.length; i++)
-						pixels[i] = (short) 32768;
+					Arrays.fill(pixels, Short.MAX_VALUE);
 					return pixels;
 				}
-				bufferCount += count;
-			}
 			totalRead += bufferSize;
 			pixelsRead = bufferSize / bytesPerPixel;
 			for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
