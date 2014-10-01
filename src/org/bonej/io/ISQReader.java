@@ -189,6 +189,7 @@ public class ISQReader implements PlugIn {
 		final boolean downsample = gd.getNextBoolean();
 		// Open the file
 		try {
+			IJ.log("StartZ = "+startZ);
 			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
 
@@ -713,6 +714,12 @@ public class ISQReader implements PlugIn {
 		return readInt(path, 508) * 512 + 512;
 	}
 
+	/**
+	 * Get the pixel spacing in real units (mm)
+	 * 
+	 * @param path location of file in filesystem
+	 * @return {x, y, z} pixel spacing in real units (mm) 
+	 */
 	public double[] getPixelSize(String path) {
 		int[] nPixels = getImageSize(path);
 		double[] realSize = getRealSize(path);
