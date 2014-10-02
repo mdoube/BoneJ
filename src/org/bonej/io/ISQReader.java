@@ -317,15 +317,13 @@ public class ISQReader implements PlugIn {
 				int indexCountPixels = startY * width + startX;
 				int indexCountROI = 0;
 
-				short[] pixelsROI;
-				pixelsROI = new short[widthROI * heightROI];
+				short[] pixelsROI = new short[widthROI * heightROI];
 
 				for (int u = 0; u < heightROI; u++) {
 					System.arraycopy(pixels, indexCountPixels, pixelsROI,
 							indexCountROI, widthROI);
-					indexCountPixels = indexCountPixels + widthROI
-							+ (width - endX) + startX - 1;
-					indexCountROI = indexCountROI + widthROI;
+					indexCountPixels += width;
+					indexCountROI += widthROI;
 				}
 
 				if (pixels == null)
