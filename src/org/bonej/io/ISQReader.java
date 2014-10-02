@@ -287,7 +287,7 @@ public class ISQReader implements PlugIn {
 
 			fi.pixelWidth = fi.pixelWidth * 2;
 			fi.pixelHeight = fi.pixelHeight * 2;
-			fi.pixelDepth = getPixelSize(path)[2] * 2;
+			fi.pixelDepth = fi.pixelDepth * 2;
 			widthStack = widthROI / 2;
 			heightStack = heightROI / 2;
 		} else {
@@ -350,18 +350,16 @@ public class ISQReader implements PlugIn {
 					short[] downsampledPixels_av = new short[(widthROI * heightROI)
 							/ (2 * 2)];
 
-					int index = 0;
 					// here we calculate the average in the x,y plane.
-					for (int h = 0; h < heightROI - 1; h = h + 2) {
-						for (int w = 0; w < widthROI - 1; w = w + 2) {
-							downsampledPixels32[index] = ((pixels32[(h * widthROI)
-									+ w]
-									+ pixels32[(h * widthROI) + w + 1]
-									+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
-									+ w + 1]) / 4);
-							index = index + 1;
-							if (index >= widthStack * heightStack)
-								index = 0;
+					for (int h = 0; h <= heightROI; h += 2) {
+						final int ind = h * widthROI;
+						final int ind1 = (h + 1) * widthROI;
+						for (int w = 0; w <= widthROI; w += 2) {
+							final int index = ind + w;
+							final int index1 = ind1  + w;
+							downsampledPixels32[index] = ((pixels32[index]
+									+ pixels32[index + 1]
+									+ pixels32[index1] + pixels32[index1]) / 4);
 						}
 					}
 					if (i % 2 > 0) {
