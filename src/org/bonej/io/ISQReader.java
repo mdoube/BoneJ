@@ -116,6 +116,7 @@ import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
 
+//import java.awt.Checkbox;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -174,7 +175,7 @@ public class ISQReader implements PlugIn {
 		gd.addNumericField("Lower_right_Y: ", height - 1, 0);
 		gd.addNumericField("First_slice: ", 0, 0);
 		gd.addNumericField("Number_of_slices: ", depth, 0);
-		gd.addCheckbox("Downsample 2x", false);
+//		gd.addCheckbox("Downsample 2x", false);
 
 		gd.showDialog();
 		if (gd.wasCanceled())
@@ -186,7 +187,8 @@ public class ISQReader implements PlugIn {
 		int endY = (int) gd.getNextNumber();
 		int startZ = (int) gd.getNextNumber();
 		int nSlices = (int) gd.getNextNumber();
-		final boolean downsample = gd.getNextBoolean();
+//		final boolean downsample = gd.getNextBoolean();
+		final boolean downsample = false;
 		// Open the file
 		try {
 			IJ.log("StartZ = "+startZ);
@@ -283,21 +285,21 @@ public class ISQReader implements PlugIn {
 		final int widthROI = endX - startX + 1;
 		final int heightROI = endY - startY + 1;
 
-		if (downsample == true) {
-
-			fi.pixelWidth = fi.pixelWidth * 2;
-			fi.pixelHeight = fi.pixelHeight * 2;
-			fi.pixelDepth = fi.pixelDepth * 2;
-			widthStack = widthROI / 2;
-			heightStack = heightROI / 2;
-		} else {
+//		if (downsample == true) {
+//
+//			fi.pixelWidth = fi.pixelWidth * 2;
+//			fi.pixelHeight = fi.pixelHeight * 2;
+//			fi.pixelDepth = fi.pixelDepth * 2;
+//			widthStack = widthROI / 2;
+//			heightStack = heightROI / 2;
+//		} else {
 			widthStack = widthROI;
 			heightStack = heightROI;
-		}
+//		}
 
 		// temp stack, needed later for downsampling
-		float[] downsampledPixels32_temp = new float[(widthROI * heightROI)
-				/ (2 * 2)];
+//		float[] downsampledPixels32_temp = new float[(widthROI * heightROI)
+//				/ (2 * 2)];
 
 		// modified to match the size of the ROI
 		ImageStack stack = new ImageStack(widthStack, heightStack);
@@ -311,6 +313,8 @@ public class ISQReader implements PlugIn {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
 
 				//read the whole slice into an array
+				//this is really inefficient if only a small ROI is needed
+				//as must read all pixels off disk then throw them away
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
@@ -329,59 +333,57 @@ public class ISQReader implements PlugIn {
 				if (pixels == null)
 					break;
 
-				if (downsample == true) {
-					float[] pixels32 = new float[widthROI * heightROI];
-					final int muScaling = getMuScaling(path);
-					for (int s = 0; s < widthROI * heightROI; s++) {
-						float value = (pixelsROI[s] & 0xffff);
-						value -= 32768;
-						value /= muScaling;
-						if (value < 0)
-							value = 0;
-						pixels32[s] = value; 
-					}
-					// System.out.println("Downsample loop ... ");
-					float[] downsampledPixels32 = new float[(widthROI * heightROI)
-							/ (2 * 2)];
-					// float[] downsampledPixels32_temp = new
-					// float[(widthROI*heightROI)/(2*2)];
-					short[] downsampledPixels_av = new short[(widthROI * heightROI)
-							/ (2 * 2)];
-
-					// here we calculate the average in the x,y plane.
-					for (int h = 0; h <= heightROI; h += 2) {
-						final int ind = h * widthROI;
-						final int ind1 = (h + 1) * widthROI;
-						for (int w = 0; w <= widthROI; w += 2) {
-							final int index = ind + w;
-							final int index1 = ind1  + w;
-							downsampledPixels32[index] = ((pixels32[index]
-									+ pixels32[index + 1]
-									+ pixels32[index1] + pixels32[index1]) / 4);
-						}
-					}
-					if (i % 2 > 0) {
-						System.arraycopy(downsampledPixels32, 0,
-								downsampledPixels32_temp, 0,
-								downsampledPixels32.length);
-					} else {
-						float temp1, temp2, temp3;
-						for (int s = 0; s < heightStack * widthStack; s++) {
-							temp1 = downsampledPixels32[s];
-							temp2 = downsampledPixels32_temp[s];
-							temp3 = ((temp1 + temp2) / 2) * 4096;
-							if (temp3 < 0.0)
-								temp3 = 0.0f;
-							if (temp3 > 65535.0)
-								temp3 = 65535.0f;
-							downsampledPixels_av[s] = (short) temp3;
-						}
-
-						stack.addSlice("microCT-Import_by_KH_w_" + widthStack
-								+ "_h_" + heightStack + "_slice." + i,
-								downsampledPixels_av);
-					}
-				} else {
+//				final int roiSize = widthROI * heightROI;
+//				if (downsample == true) {
+//					float[] pixels32 = new float[widthROI * heightROI];
+//					final int muScaling = getMuScaling(path);
+//					for (int s = 0; s < roiSize; s++) {
+//						float value = (pixelsROI[s] & 0xffff);
+//						value -= 32768;
+//						value /= muScaling;
+//						if (value < 0)
+//							value = 0;
+//						pixels32[s] = value; 
+//					}
+//					// System.out.println("Downsample loop ... ");
+//					// divide by 4 because downsampling is 2x2
+//					float[] downsampledPixels32 = new float[roiSize / 4];
+//					// float[] downsampledPixels32_temp = new
+//					// float[(widthROI*heightROI)/(2*2)];
+//					short[] downsampledPixels_av = new short[roiSize / 4];
+//
+//					// here we calculate the average in the x,y plane.
+//					for (int h = 0; h <= heightROI; h += 2) {
+//						final int ind = h * widthROI;
+//						final int ind1 = (h + 1) * widthROI;
+//						for (int w = 0; w <= widthROI; w += 2) {
+//							final int index = ind + w;
+//							final int index1 = ind1  + w;
+//							downsampledPixels32[index] = ((pixels32[index]
+//									+ pixels32[index + 1]
+//									+ pixels32[index1] + pixels32[index1 + 1]) / 4);
+//						}
+//					}
+//					if (i % 2 != 0) {
+//						downsampledPixels32_temp = downsampledPixels32.clone();
+//					} else {
+//						float temp1, temp2, temp3;
+//						for (int s = 0; s < heightStack * widthStack; s++) {
+//							temp1 = downsampledPixels32[s];
+//							temp2 = downsampledPixels32_temp[s];
+//							temp3 = ((temp1 + temp2) / 2) * 4096;
+//							if (temp3 < 0.0)
+//								temp3 = 0.0f;
+//							if (temp3 > 65535.0)
+//								temp3 = 65535.0f;
+//							downsampledPixels_av[s] = (short) temp3;
+//						}
+//
+//						stack.addSlice("microCT-Import_by_KH_w_" + widthStack
+//								+ "_h_" + heightStack + "_slice." + i,
+//								downsampledPixels_av);
+//					}
+//				} else {
 
 					for (int index = 0; index < widthROI * heightROI; index++) {
 						pixelsROI[index] = (short) (pixelsROI[index] - 32768);
@@ -391,7 +393,7 @@ public class ISQReader implements PlugIn {
 
 					stack.addSlice("microCT-Import_by_KHK_w_" + widthROI
 							+ "_h_" + heightROI + "_slice." + i, pixelsROI);
-				}
+//				}
 
 				skip = fi.gapBetweenImages;
 				IJ.showProgress((double) i / nSlices);
