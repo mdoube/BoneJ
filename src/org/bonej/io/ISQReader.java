@@ -192,7 +192,6 @@ public class ISQReader implements PlugIn {
 		final boolean downsample = gd.getNextBoolean();
 		// Open the file
 		try {
-			IJ.log("StartZ = "+startZ);
 			ImagePlus imp = openScancoISQ(path, downsample, startX, startY,
 					endX, endY, startZ, nSlices);
 
