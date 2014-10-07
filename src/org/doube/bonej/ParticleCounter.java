@@ -2786,6 +2786,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				stack);
 		impParticles.setCalibration(imp.getCalibration());
 		impParticles.getProcessor().setMinAndMax(0, max);
+		if (max > Math.pow(2, 23))
+			IJ.error("Warning", "More than 8388608 (2^23) particles./n/n"
+					+ "Particle image labels inaccurate above this number.");
 		return impParticles;
 	}
 
