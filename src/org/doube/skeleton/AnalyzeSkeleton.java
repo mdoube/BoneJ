@@ -1213,21 +1213,21 @@ public class AnalyzeSkeleton implements PlugInFilter
 		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
 		{
 			final Point p = this.listOfEndPoints.get(i);
-			this.endPointsTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.endPointsTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);
 		}
 		
 		// Add junction voxels to the corresponding tree
 		for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
 		{
 			final Point p = this.listOfJunctionVoxels.get(i);			
-			this.junctionVoxelTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.junctionVoxelTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
 		}
 		
 		// Add special slab voxels to the corresponding tree
 		for(int i = 0; i < this.listOfStartingSlabVoxels.size(); i++)
 		{
 			final Point p = this.listOfStartingSlabVoxels.get(i);			
-			this.startingSlabTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.startingSlabTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
 		}
 		
 		// Assign number of end points and junction voxels per tree
@@ -2888,8 +2888,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 			return ((byte[]) image.getPixels(z + 1))[x + y * width];
 		else return 0;		
 	} // end getPixel 
-	
-	
+		
 	/* -----------------------------------------------------------------------*/
 	/**
 	 * Get pixel in 3D image (0 border conditions).
@@ -2900,12 +2899,16 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private short getShortPixel(ImageStack image, int x, int y, int z)
+	private float getFloatPixel(
+			ImageStack image, 
+			int x, 
+			int y, 
+			int z )
 	{
 		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			return ((short[]) image.getPixels(z + 1))[x + y * this.width];
+			return ( (float[]) image.getPixels(z + 1) )[x + y * this.width];
 		else return 0;
-	} /* end getShortPixel */
+	} // end getFloatPixel
 
 	/* -----------------------------------------------------------------------*/
 	/**
@@ -2915,10 +2918,13 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @param point point to be evaluated
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private short getShortPixel(ImageStack image, Point point)
+	private float getFloatPixel(
+			ImageStack image, 
+			Point point )
 	{
-		return getShortPixel(image, point.x, point.y, point.z);
-	} // end getPixel 
+		return getFloatPixel( image, point.x, point.y, point.z );
+	} // end getFloatPixel	
+	
 	
 	/* -----------------------------------------------------------------------*/
 	/**
