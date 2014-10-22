@@ -1,7 +1,12 @@
 package org.doube.util;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.Roi;
+import ij.process.ImageProcessor;
 
 public class StackStats {
 	/**
@@ -52,4 +57,47 @@ public class StackStats {
 		return stats;
 	}
 
+	/**
+	 * Get a histogram of stack's pixel values
+	 * 
+	 * @param imp2
+	 * @return
+	 */
+	public static int[] getStackHistogram(ImagePlus imp) {
+		final int d = imp.getStackSize();
+		final ImageStack stack = imp.getStack();
+		final int[][] sliceHistograms = new int[d + 1][];
+		final Roi roi = imp.getRoi();
+		if (stack.getSize() == 1) {
+			return imp.getProcessor().getHistogram();
+		}
+
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Getting stack histogram...");
+						ImageProcessor ip = stack.getProcessor(z);
+						ip.setRoi(roi);
+						sliceHistograms[z] = ip.getHistogram();
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+
+		final int l = sliceHistograms[1].length;
+		int[] histogram = new int[l];
+
+		for (int z = 1; z <= d; z++) {
+				int[] slice = sliceHistograms[z];
+				for (int i = 0; i < l; i++)
+					histogram[i] += slice[i];
+		}
+		return histogram;
+	}
+	
 }

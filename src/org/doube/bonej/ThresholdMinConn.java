@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
+import org.doube.util.StackStats;
 import org.doube.util.UsageReporter;
 
 import ij.IJ;
@@ -35,7 +36,6 @@ import ij.ImageStack;
 import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
-import ij.gui.Roi;
 import ij.macro.Interpreter;
 import ij.measure.CurveFitter;
 import ij.plugin.PlugIn;
@@ -89,7 +89,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 				IJ.run("Properties...");
 		}
 
-		int[] histogram = getStackHistogram(imp);
+		int[] histogram = StackStats.getStackHistogram(imp);
 		double threshold = (double) ip.getAutoThreshold(histogram);
 
 		if (!thresholdOnly) {
@@ -350,49 +350,6 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		imp.show();
 		if (!imp.isInvertedLut())
 			IJ.run("Invert LUT");
-	}
-
-	/**
-	 * Get a histogram of stack's pixel values
-	 * 
-	 * @param imp2
-	 * @return
-	 */
-	public int[] getStackHistogram(ImagePlus imp) {
-		final int d = imp.getStackSize();
-		final ImageStack stack = imp.getStack();
-		final int[][] sliceHistograms = new int[d + 1][];
-		final Roi roi = imp.getRoi();
-		if (stack.getSize() == 1) {
-			return imp.getProcessor().getHistogram();
-		}
-
-		final AtomicInteger ai = new AtomicInteger(1);
-		Thread[] threads = Multithreader.newThreads();
-		for (int thread = 0; thread < threads.length; thread++) {
-			threads[thread] = new Thread(new Runnable() {
-				public void run() {
-					for (int z = ai.getAndIncrement(); z <= d; z = ai
-							.getAndIncrement()) {
-						IJ.showStatus("Getting stack histogram...");
-						ImageProcessor ip = stack.getProcessor(z);
-						ip.setRoi(roi);
-						sliceHistograms[z] = ip.getHistogram();
-					}
-				}
-			});
-		}
-		Multithreader.startAndJoin(threads);
-
-		final int l = sliceHistograms[1].length;
-		int[] histogram = new int[l];
-
-		for (int z = 1; z <= d; z++) {
-				int[] slice = sliceHistograms[z];
-				for (int i = 0; i < l; i++)
-					histogram[i] += slice[i];
-		}
-		return histogram;
 	}
 
 	private boolean showDialog() {
