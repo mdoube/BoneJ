@@ -6,6 +6,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Roi;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 
 public class StackStats {
@@ -66,6 +67,9 @@ public class StackStats {
 	public static int[] getStackHistogram(ImagePlus imp) {
 		final int d = imp.getStackSize();
 		final ImageStack stack = imp.getStack();
+		if (stack.getProcessor(1) instanceof FloatProcessor)
+			throw new IllegalArgumentException(
+					"32-bit images not supported by this histogram method");
 		final int[][] sliceHistograms = new int[d + 1][];
 		final Roi roi = imp.getRoi();
 		if (stack.getSize() == 1) {
@@ -93,11 +97,11 @@ public class StackStats {
 		int[] histogram = new int[l];
 
 		for (int z = 1; z <= d; z++) {
-				int[] slice = sliceHistograms[z];
-				for (int i = 0; i < l; i++)
-					histogram[i] += slice[i];
+			int[] slice = sliceHistograms[z];
+			for (int i = 0; i < l; i++)
+				histogram[i] += slice[i];
 		}
 		return histogram;
 	}
-	
+
 }
