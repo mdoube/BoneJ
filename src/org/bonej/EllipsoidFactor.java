@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
@@ -31,6 +32,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
+import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
@@ -41,6 +43,7 @@ import org.doube.geometry.Ellipsoid;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
+import org.doube.util.Multithreader;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
@@ -209,25 +212,35 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param unitVectors
 	 * @return
 	 */
-	private Ellipsoid[] findEllipsoids(ImagePlus imp, int[][] skeletonPoints,
-			double[][] unitVectors) {
+	private Ellipsoid[] findEllipsoids(final ImagePlus imp, final int[][] skeletonPoints,
+			final double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
-		Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
+		final Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 		
 		//make sure array contains null in the non-calculated elements
 		Arrays.fill(ellipsoids, null);
 
-		for (int i = 0; i < nPoints; i += skipRatio) {
-			IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/" + nPoints);
-			ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
-					unitVectors);
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
+							.getAndAdd(skipRatio)) {
+						IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/" + nPoints);
+						ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
+								unitVectors);
+					}
+				}
+			});
 		}
+		Multithreader.startAndJoin(threads);
 
-		ellipsoids = ArrayHelper.removeNulls(ellipsoids);
+		Ellipsoid[] sortedEllipsoids = ArrayHelper.removeNulls(ellipsoids);
 
 		// Sort using this class' compare method
-		Arrays.sort(ellipsoids, this);
-		return ellipsoids;
+		Arrays.sort(sortedEllipsoids, this);
+		return sortedEllipsoids;
 	}
 
 	/**
