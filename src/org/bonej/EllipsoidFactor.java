@@ -149,7 +149,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return array containing the indexes of the biggest ellipsoids which
 	 *         contain each point
 	 */
-	private float[][] findBiggestEllipsoid(ImagePlus imp, final Ellipsoid[] ellipsoids) {
+	private float[][] findBiggestEllipsoid(ImagePlus imp,
+			final Ellipsoid[] ellipsoids) {
 
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
@@ -171,7 +172,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					for (int z = ai.getAndIncrement(); z <= d; z = ai
 							.getAndIncrement()) {
 						byte[] slicePixels = (byte[]) stack.getPixels(z);
-						float[] bigSlice = biggest[z];	
+						float[] bigSlice = biggest[z];
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
 						for (int y = 0; y < h; y++) {
@@ -179,12 +180,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							final double yvH = y * vH;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == foreground) {
-									bigSlice[offset + x] = biggestEllipsoid(ellipsoids, x
-											* vW, yvH, zvD);
+									bigSlice[offset + x] = biggestEllipsoid(
+											ellipsoids, x * vW, yvH, zvD);
 								}
 							}
 						}
-						
+
 					}
 				}
 			});
@@ -422,7 +423,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ImagePlus skeleton = sk.getSkeleton(imp);
 		ImageStack skeletonStack = skeleton.getStack();
 
-		skeleton.show();
+		if (IJ.debugMode)
+			skeleton.show();
 
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
