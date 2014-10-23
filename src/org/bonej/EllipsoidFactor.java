@@ -32,7 +32,6 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
-import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
@@ -118,7 +117,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
 
-		universe.show();
+		if (IJ.debugMode)
+			universe.show();
 
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
@@ -212,12 +212,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param unitVectors
 	 * @return
 	 */
-	private Ellipsoid[] findEllipsoids(final ImagePlus imp, final int[][] skeletonPoints,
-			final double[][] unitVectors) {
+	private Ellipsoid[] findEllipsoids(final ImagePlus imp,
+			final int[][] skeletonPoints, final double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		final Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
-		
-		//make sure array contains null in the non-calculated elements
+
+		// make sure array contains null in the non-calculated elements
 		Arrays.fill(ellipsoids, null);
 
 		final AtomicInteger ai = new AtomicInteger(1);
@@ -227,9 +227,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				public void run() {
 					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
 							.getAndAdd(skipRatio)) {
-						IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/" + nPoints);
-						ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i],
-								unitVectors);
+						IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/"
+								+ nPoints);
+						ellipsoids[i] = optimiseEllipsoid(imp,
+								skeletonPoints[i], unitVectors);
 					}
 				}
 			});
@@ -290,7 +291,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
 			ellipsoid.dilate(vectorIncrement);
-			IJ.showStatus("Ellipsoid volume = "+ellipsoid.getVolume());
 		}
 
 		IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
@@ -299,52 +299,55 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		List<double[]> contactPoints = findContactPoints(ellipsoid, ips, pW,
 				pH, pD, w, h, d);
 
-		// add them to the 3D viewer
-		List<Point3f> contactPointsf = new ArrayList<Point3f>(
-				contactPoints.size());
-		for (double[] p : contactPoints) {
-			Point3f point = new Point3f((float) p[0], (float) p[1],
-					(float) p[2]);
-			contactPointsf.add(point);
-		}
-
 		// contract the ellipsoid by one increment so all points are
 		// inside the foregrounds
 		// ellipsoid.contract(vectorIncrement);
 
-		double[][] pointCloud = ellipsoid.getSurfacePoints(100);
+		// add them to the 3D viewer
+		if (IJ.debugMode) {
+			List<Point3f> contactPointsf = new ArrayList<Point3f>(
+					contactPoints.size());
+			for (double[] p : contactPoints) {
+				Point3f point = new Point3f((float) p[0], (float) p[1],
+						(float) p[2]);
+				contactPointsf.add(point);
+			}
+			double[][] pointCloud = ellipsoid.getSurfacePoints(100);
 
-		List<Point3f> pointList = new ArrayList<Point3f>();
-		for (int p = 0; p < pointCloud.length; p++) {
-			if (pointCloud[p] == null)
-				continue;
-			Point3f e = new Point3f();
-			e.x = (float) pointCloud[p][0];
-			e.y = (float) pointCloud[p][1];
-			e.z = (float) pointCloud[p][2];
-			pointList.add(e);
-		}
-		CustomPointMesh mesh = new CustomPointMesh(pointList);
-		mesh.setPointSize(2.0f);
-		Color3f cColour = new Color3f((float) (px / pW) / w, (float) (py / pH) / h,
-				(float) (pz / pD) / d);
-		mesh.setColor(cColour);
+			List<Point3f> pointList = new ArrayList<Point3f>();
+			for (int p = 0; p < pointCloud.length; p++) {
+				if (pointCloud[p] == null)
+					continue;
+				Point3f e = new Point3f();
+				e.x = (float) pointCloud[p][0];
+				e.y = (float) pointCloud[p][1];
+				e.z = (float) pointCloud[p][2];
+				pointList.add(e);
+			}
+			CustomPointMesh mesh = new CustomPointMesh(pointList);
+			mesh.setPointSize(2.0f);
+			Color3f cColour = new Color3f((float) (px / pW) / w,
+					(float) (py / pH) / h, (float) (pz / pD) / d);
+			mesh.setColor(cColour);
 
-		CustomPointMesh contactPointMesh = new CustomPointMesh(contactPointsf);
-		contactPointMesh.setPointSize(2.5f);
-		Color3f invColour = new Color3f(1 - cColour.x, 1 - cColour.y,
-				1 - cColour.z);
-		contactPointMesh.setColor(invColour);
+			CustomPointMesh contactPointMesh = new CustomPointMesh(
+					contactPointsf);
+			contactPointMesh.setPointSize(2.5f);
+			Color3f invColour = new Color3f(1 - cColour.x, 1 - cColour.y,
+					1 - cColour.z);
+			contactPointMesh.setColor(invColour);
 
-		try {
-			universe.addCustomMesh(mesh,
-					"Point cloud " + px + " " + py + " " + pz).setLocked(true);
-			universe.addCustomMesh(contactPointMesh,
-					"Contact points of " + px + " " + py + " " + pz).setLocked(
-					true);
+			try {
+				universe.addCustomMesh(mesh,
+						"Point cloud " + px + " " + py + " " + pz).setLocked(
+						true);
+				universe.addCustomMesh(contactPointMesh,
+						"Contact points of " + px + " " + py + " " + pz)
+						.setLocked(true);
 
-		} catch (NullPointerException npe) {
-			IJ.log("3D Viewer was closed before rendering completed.");
+			} catch (NullPointerException npe) {
+				IJ.log("3D Viewer was closed before rendering completed.");
+			}
 		}
 		return ellipsoid;
 	}
