@@ -149,9 +149,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return array containing the indexes of the biggest ellipsoids which
 	 *         contain each point
 	 */
-	private float[][] findBiggestEllipsoid(ImagePlus imp, Ellipsoid[] ellipsoids) {
+	private float[][] findBiggestEllipsoid(ImagePlus imp, final Ellipsoid[] ellipsoids) {
 
-		ImageStack stack = imp.getImageStack();
+		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
 		final int d = stack.getSize();
@@ -161,23 +161,35 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
 
-		float[][] biggest = new float[d + 1][w * h];
+		final float[][] biggest = new float[d + 1][w * h];
 
-		for (int z = 1; z <= d; z++) {
-			byte[] slicePixels = (byte[]) stack.getPixels(z);
-			float[] bigSlice = biggest[z];
-			// -1 means background, 0 will be the biggest ellipsoid
-			Arrays.fill(bigSlice, -ellipsoids.length);
-			for (int y = 0; y < h; y++) {
-				int offset = y * w;
-				for (int x = 0; x < w; x++) {
-					if (slicePixels[offset + x] == foreground) {
-						bigSlice[offset + x] = biggestEllipsoid(ellipsoids, x
-								* vW, y * vH, z * vD);
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						byte[] slicePixels = (byte[]) stack.getPixels(z);
+						float[] bigSlice = biggest[z];	
+						Arrays.fill(bigSlice, -ellipsoids.length);
+						final double zvD = z * vD;
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							final double yvH = y * vH;
+							for (int x = 0; x < w; x++) {
+								if (slicePixels[offset + x] == foreground) {
+									bigSlice[offset + x] = biggestEllipsoid(ellipsoids, x
+											* vW, yvH, zvD);
+								}
+							}
+						}
+						
 					}
 				}
-			}
+			});
 		}
+		Multithreader.startAndJoin(threads);
 
 		return biggest;
 	}
