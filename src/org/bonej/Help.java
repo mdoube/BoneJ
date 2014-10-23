@@ -21,7 +21,7 @@ public class Help implements PlugIn {
 	/**
 	 * branch
 	 */
-	public static final String branch = "";
+	public static final String branch = "-ellipsoid-factor";
 	
 	/**
 	 * BoneJ version
