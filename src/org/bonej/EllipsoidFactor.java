@@ -263,10 +263,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double pD = cal.pixelDepth;
 
 		ImageStack stack = imp.getImageStack();
+		final int stackSize = stack.getSize();
 
 		// cache slices into an array
-		ByteProcessor[] ips = new ByteProcessor[stack.getSize() + 1];
-		for (int i = 1; i <= stack.getSize(); i++) {
+		ByteProcessor[] ips = new ByteProcessor[stackSize + 1];
+		for (int i = 1; i <= stackSize; i++) {
 			ips[i] = (ByteProcessor) stack.getProcessor(i);
 		}
 
