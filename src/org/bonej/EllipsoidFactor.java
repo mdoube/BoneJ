@@ -307,7 +307,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid.dilate(vectorIncrement);
 		}
 
-		IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
+		if (IJ.debugMode)
+			IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
 
 		// get the points of contact
 		List<double[]> contactPoints = findContactPoints(ellipsoid, ips, pW,
@@ -451,7 +452,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == foreground) {
 									final int[] array = { x, y, z };
-										list.add(array);
+									list.add(array);
 								}
 							}
 						}
@@ -461,7 +462,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		Multithreader.startAndJoin(threads);
 
-		IJ.log("Skeleton point ArrayList contains " + list.size() + " points");
+		if (IJ.debugMode)
+			IJ.log("Skeleton point ArrayList contains " + list.size()
+					+ " points");
 
 		int[][] skeletonPoints = list.toArray(new int[list.size()][]);
 
