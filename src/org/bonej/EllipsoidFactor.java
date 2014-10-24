@@ -44,7 +44,7 @@ import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
-import org.doube.util.ResultInserter;
+//import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
 import customnode.CustomPointMesh;
@@ -136,8 +136,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		bigImp.show();
 
-		ResultInserter ri = ResultInserter.getInstance();
-		ri.updateTable();
+//		ResultInserter ri = ResultInserter.getInstance();
+//		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 	}
 
