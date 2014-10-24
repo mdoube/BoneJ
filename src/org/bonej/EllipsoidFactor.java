@@ -20,6 +20,7 @@ package org.bonej;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -421,7 +422,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int[][] skeletonPoints(ImagePlus imp) {
 		Skeletonize3D sk = new Skeletonize3D();
 		ImagePlus skeleton = sk.getSkeleton(imp);
-		ImageStack skeletonStack = skeleton.getStack();
+		final ImageStack skeletonStack = skeleton.getStack();
 
 		if (IJ.debugMode)
 			skeleton.show();
@@ -432,20 +433,33 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		IJ.log("Skeleton image is " + w + " x " + h + " x " + d);
 
-		ArrayList<int[]> list = new ArrayList<int[]>();
+		// Bare ArrayList is not thread safe for concurrent add() operations.
+		final List<int[]> list = Collections
+				.synchronizedList(new ArrayList<int[]>());
 
-		for (int z = 1; z <= d; z++) {
-			byte[] slicePixels = (byte[]) skeletonStack.getPixels(z);
-			for (int y = 0; y < h; y++) {
-				int offset = y * w;
-				for (int x = 0; x < w; x++) {
-					if (slicePixels[offset + x] == foreground) {
-						int[] array = { x, y, z };
-						list.add(array);
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						byte[] slicePixels = (byte[]) skeletonStack
+								.getPixels(z);
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++) {
+								if (slicePixels[offset + x] == foreground) {
+									final int[] array = { x, y, z };
+										list.add(array);
+								}
+							}
+						}
 					}
 				}
-			}
+			});
 		}
+		Multithreader.startAndJoin(threads);
 
 		IJ.log("Skeleton point ArrayList contains " + list.size() + " points");
 
