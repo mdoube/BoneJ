@@ -2,9 +2,8 @@ package org.doube.geometry;
 
 import java.util.Arrays;
 
+import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
-
-import ij.IJ;
 
 /**
  * <p>
@@ -53,6 +52,11 @@ public class Ellipsoid {
 	private double eV20;
 	private double eV21;
 	private double eV22;
+	
+	//eigenvalues of axes
+	private double eVal0;
+	private double eVal1;
+	private double eVal2;
 
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
@@ -89,6 +93,12 @@ public class Ellipsoid {
 		this.g = equation[6];
 		this.h = equation[7];
 		this.i = equation[8];
+		
+		EigenvalueDecomposition E = (EigenvalueDecomposition) ellipsoid[4];
+		Matrix eVals = E.getD();
+		this.eVal0 = eVals.get(0, 0);
+		this.eVal1 = eVals.get(1, 1);
+		this.eVal2 = eVals.get(2, 2);
 	}
 
 	/**
@@ -116,6 +126,7 @@ public class Ellipsoid {
 		this.cy = cy;
 		this.cz = cz;
 		setEigenVectors(eigenVectors);
+		// TODO update equation variables
 		setVolume();
 	}
 
@@ -292,6 +303,38 @@ public class Ellipsoid {
 		double plusZ = (-i + Math.sqrt(i * i + 4 * c)) / (2 * c);
 		double minusZ = (-i - Math.sqrt(i * i + 4 * c)) / (2 * c);
 		return new double[] { plusX, minusX, plusY, minusY, plusZ, minusZ };
+	}
+
+	/**
+	 * Generate a string of useful information about this Ellipsoid
+	 * 
+	 * @return
+	 */
+	public String debugOutput() {
+		String string = "Ellipsoid variables\n";
+		string = string + "a = "+a+"\n";
+		string = string + "b = "+b+"\n";
+		string = string + "c = "+c+"\n";
+		string = string + "d = "+d+"\n";
+		string = string + "e = "+e+"\n";
+		string = string + "f = "+f+"\n";
+		string = string + "g = "+g+"\n";
+		string = string + "h = "+h+"\n";
+		string = string + "i = "+i+"\n";
+		string = string + "Centre: (" + this.cx + ", " + this.cy + ", "
+				+ this.cz + ")\n";
+		string = string + "Radii: (" + this.ra + ", " + this.rb + ", "
+				+ this.rc + ")\n";
+		string = string + "eV00 = "+eV00+"\n";
+		string = string + "eV01 = "+eV01+"\n";
+		string = string + "eV02 = "+eV02+"\n";
+		string = string + "eV10 = "+eV10+"\n";
+		string = string + "eV11 = "+eV11+"\n";
+		string = string + "eV12 = "+eV12+"\n";
+		string = string + "eV20 = "+eV20+"\n";
+		string = string + "eV21 = "+eV21+"\n";
+		string = string + "eV22 = "+eV22+"\n";
+		return string;
 	}
 
 }
