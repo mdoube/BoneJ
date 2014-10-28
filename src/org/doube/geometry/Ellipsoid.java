@@ -2,7 +2,6 @@ package org.doube.geometry;
 
 import java.util.Arrays;
 
-import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
 /**
@@ -79,7 +78,8 @@ public class Ellipsoid {
 			throw new IllegalArgumentException("Radius is NaN");
 
 		setVolume();
-
+		updateEigenvalues();
+		
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		setEigenVectors(eigenVectors);
 
@@ -93,12 +93,6 @@ public class Ellipsoid {
 		this.g = equation[6];
 		this.h = equation[7];
 		this.i = equation[8];
-
-		EigenvalueDecomposition E = (EigenvalueDecomposition) ellipsoid[4];
-		Matrix eVals = E.getD();
-		this.eVal0 = eVals.get(0, 0);
-		this.eVal1 = eVals.get(1, 1);
-		this.eVal2 = eVals.get(2, 2);
 	}
 
 	/**
@@ -125,6 +119,7 @@ public class Ellipsoid {
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
+		updateEigenvalues();
 		setEigenVectors(eigenVectors);
 		// TODO update equation variables
 		setVolume();
@@ -259,10 +254,22 @@ public class Ellipsoid {
 	 * @param increment
 	 */
 	public void dilate(double increment) {
-		ra += increment;
-		rb += increment;
-		rc += increment;
+		this.ra += increment;
+		this.rb += increment;
+		this.rc += increment;
+		
 		setVolume();
+		
+		updateEigenvalues();
+	}
+
+	/**
+	 * Calculates eigenvalues from current radii
+	 */
+	private void updateEigenvalues() {
+		this.eVal0 = 1/(this.ra * this.ra);
+		this.eVal1 = 1/(this.rb * this.rb);
+		this.eVal2 = 1/(this.rc * this.rc);
 	}
 
 	/**
@@ -323,14 +330,14 @@ public class Ellipsoid {
 		string = string + "i = " + i + "\n";
 		
 		string = string + "\nCentre: \n";
-		string = string + "cx " + this.cx + "\n";
-		string = string + "cy " + this.cy + "\n";
-		string = string + "cz " + this.cz + "\n";
+		string = string + "cx: " + this.cx + "\n";
+		string = string + "cy: " + this.cy + "\n";
+		string = string + "cz: " + this.cz + "\n";
 		
 		string = string + "\nRadii: \n";
-		string = string + "ra " + this.ra + "\n";
-		string = string + "rb " + this.rb + "\n";
-		string = string + "rc " + this.rc + "\n";
+		string = string + "ra: " + this.ra + "\n";
+		string = string + "rb: " + this.rb + "\n";
+		string = string + "rc: " + this.rc + "\n";
 
 		string = string + "\nEigenvalues: \n";
 		string = string + "eVal0 = " + eVal0 + "\n";
