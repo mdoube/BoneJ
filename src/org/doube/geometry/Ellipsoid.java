@@ -52,8 +52,8 @@ public class Ellipsoid {
 	private double eV20;
 	private double eV21;
 	private double eV22;
-	
-	//eigenvalues of axes
+
+	// eigenvalues of axes
 	private double eVal0;
 	private double eVal1;
 	private double eVal2;
@@ -93,7 +93,7 @@ public class Ellipsoid {
 		this.g = equation[6];
 		this.h = equation[7];
 		this.i = equation[8];
-		
+
 		EigenvalueDecomposition E = (EigenvalueDecomposition) ellipsoid[4];
 		Matrix eVals = E.getD();
 		this.eVal0 = eVals.get(0, 0);
@@ -311,29 +311,42 @@ public class Ellipsoid {
 	 * @return
 	 */
 	public String debugOutput() {
-		String string = "Ellipsoid variables\n";
-		string = string + "a = "+a+"\n";
-		string = string + "b = "+b+"\n";
-		string = string + "c = "+c+"\n";
-		string = string + "d = "+d+"\n";
-		string = string + "e = "+e+"\n";
-		string = string + "f = "+f+"\n";
-		string = string + "g = "+g+"\n";
-		string = string + "h = "+h+"\n";
-		string = string + "i = "+i+"\n";
-		string = string + "Centre: (" + this.cx + ", " + this.cy + ", "
-				+ this.cz + ")\n";
-		string = string + "Radii: (" + this.ra + ", " + this.rb + ", "
-				+ this.rc + ")\n";
-		string = string + "eV00 = "+eV00+"\n";
-		string = string + "eV01 = "+eV01+"\n";
-		string = string + "eV02 = "+eV02+"\n";
-		string = string + "eV10 = "+eV10+"\n";
-		string = string + "eV11 = "+eV11+"\n";
-		string = string + "eV12 = "+eV12+"\n";
-		string = string + "eV20 = "+eV20+"\n";
-		string = string + "eV21 = "+eV21+"\n";
-		string = string + "eV22 = "+eV22+"\n";
+		String string = "Ellipsoid variables:\n";
+		string = string + "a = " + a + "\n";
+		string = string + "b = " + b + "\n";
+		string = string + "c = " + c + "\n";
+		string = string + "d = " + d + "\n";
+		string = string + "e = " + e + "\n";
+		string = string + "f = " + f + "\n";
+		string = string + "g = " + g + "\n";
+		string = string + "h = " + h + "\n";
+		string = string + "i = " + i + "\n";
+		
+		string = string + "\nCentre: \n";
+		string = string + "cx " + this.cx + "\n";
+		string = string + "cy " + this.cy + "\n";
+		string = string + "cz " + this.cz + "\n";
+		
+		string = string + "\nRadii: \n";
+		string = string + "ra " + this.ra + "\n";
+		string = string + "rb " + this.rb + "\n";
+		string = string + "rc " + this.rc + "\n";
+
+		string = string + "\nEigenvalues: \n";
+		string = string + "eVal0 = " + eVal0 + "\n";
+		string = string + "eVal1 = " + eVal1 + "\n";
+		string = string + "eVal2 = " + eVal2 + "\n";
+
+		string = string + "\nEigenvectors: \n";
+		string = string + "eV00 = " + eV00 + "\n";
+		string = string + "eV01 = " + eV01 + "\n";
+		string = string + "eV02 = " + eV02 + "\n";
+		string = string + "eV10 = " + eV10 + "\n";
+		string = string + "eV11 = " + eV11 + "\n";
+		string = string + "eV12 = " + eV12 + "\n";
+		string = string + "eV20 = " + eV20 + "\n";
+		string = string + "eV21 = " + eV21 + "\n";
+		string = string + "eV22 = " + eV22 + "\n";
 		return string;
 	}
 
