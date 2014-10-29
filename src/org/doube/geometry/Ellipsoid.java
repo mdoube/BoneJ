@@ -2,6 +2,7 @@ package org.doube.geometry;
 
 import java.util.Arrays;
 
+import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
 /**
@@ -264,15 +265,6 @@ public class Ellipsoid {
 	}
 
 	/**
-	 * Calculates eigenvalues from current radii
-	 */
-	private void updateEigenvalues() {
-		this.eVal0 = 1 / (this.ra * this.ra);
-		this.eVal1 = 1 / (this.rb * this.rb);
-		this.eVal2 = 1 / (this.rc * this.rc);
-	}
-
-	/**
 	 * Constrict all three axes by an increment
 	 * 
 	 * @param increment
@@ -326,6 +318,71 @@ public class Ellipsoid {
 		double plusZ = (-i + Math.sqrt(i * i + 4 * c)) / (2 * c);
 		double minusZ = (-i - Math.sqrt(i * i + 4 * c)) / (2 * c);
 		return new double[] { plusX, minusX, plusY, minusY, plusZ, minusZ };
+	}
+
+	/**
+	 * Calculates eigenvalues from current radii
+	 */
+	private void updateEigenvalues() {
+		this.eVal0 = 1 / (this.ra * this.ra);
+		this.eVal1 = 1 / (this.rb * this.rb);
+		this.eVal2 = 1 / (this.rc * this.rc);
+	}
+
+	/**
+	 * Calculate the matrix representation of the ellipsoid (centre,
+	 * eigenvalues, eigenvectors) from the equation variables
+	 * <i>ax</i><sup>2</sup> + <i>by</i><sup>2</sup> + <i>cz</i><sup>2</sup> +
+	 * 2<i>dxy</i> + 2<i>exz</i> + 2<i>fyz</i> + 2<i>gx</i> + 2<i>hy</i> +
+	 * 2<i>iz</i> = 1 <br />
+	 * 
+	 * @param a
+	 * @param b
+	 * @param c
+	 * @param d
+	 * @param e
+	 * @param f
+	 * @param g
+	 * @param h
+	 * @param i
+	 * @return Object[] array containing centre (double[3]), eigenvalues
+	 *         (double[3][3]), eigenvectors (double[3][3]), and the
+	 *         EigenvalueDecomposition
+	 */
+	public static Object[] matrixFromEquation(double a, double b, double c, double d,
+			double e, double f, double g, double h, double i) {
+		// Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
+		// .times(ones));
+
+		// the fitted equation
+		double[][] v = { { a }, { b }, { c }, { d }, { e }, { f }, { g },
+				{ h }, { i } };
+		Matrix V = new Matrix(v);
+
+		// 4x4 based on equation variables
+		double[][] aa = { { a, d, e, f }, { d, b, f, h }, { e, f, c, i },
+				{ g, h, i, -1 }, };
+		Matrix A = new Matrix(aa);
+
+		// find the centre
+		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
+				.getMatrix(6, 8, 0, 0));
+
+		// using the centre and 4x4 calculate the
+		// eigendecomposition
+		Matrix T = Matrix.eye(4);
+		T.setMatrix(3, 3, 0, 2, C.transpose());
+		Matrix R = T.times(A.times(T.transpose()));
+		double r33 = R.get(3, 3);
+		Matrix R02 = R.getMatrix(0, 2, 0, 2);
+		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
+				/ r33));
+
+		double[] centre = C.getColumnPackedCopy();
+		double[][] eigenVectors = E.getV().getArrayCopy();
+		double[][] eigenValues = E.getD().getArrayCopy();
+		Object[] result = { centre, eigenValues, eigenVectors, E };
+		return result;
 	}
 
 	/**

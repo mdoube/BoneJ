@@ -185,46 +185,29 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
-		//do the fitting
+		// do the fitting
 		Matrix D = new Matrix(d);
 		Matrix ones = Matrix.ones(nPoints, 1);
 		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
 				.times(ones));
-		
-		//the fitted equation
+
+		// the fitted equation
 		double[] v = V.getColumnPackedCopy();
-		
-		//4x4 based on equation variables
-		double[][] a = { { v[0], v[3], v[4], v[6] },
-				{ v[3], v[1], v[5], v[7] }, { v[4], v[5], v[2], v[8] },
-				{ v[6], v[7], v[8], -1 }, };
-		Matrix A = new Matrix(a);
-		
-		//find the centre
-		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
-				.getMatrix(6, 8, 0, 0));
-		
-		//using the centre and 4x4 calculate the
-		//eigendecomposition
-		Matrix T = Matrix.eye(4);
-		T.setMatrix(3, 3, 0, 2, C.transpose());
-		Matrix R = T.times(A.times(T.transpose()));
-		double r33 = R.get(3, 3);
-		Matrix R02 = R.getMatrix(0, 2, 0, 2);
-		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
-				/ r33));
-		
-		//pack data up for returning
+
+		Object[] matrices = Ellipsoid.matrixFromEquation(v[0], v[1], v[2],
+				v[3], v[4], v[5], v[6], v[7], v[8]);
+
+		EigenvalueDecomposition E = (EigenvalueDecomposition) matrices[3];
+		// pack data up for returning
 		Matrix eVal = E.getD();
-		Matrix eVec = E.getV();
 		Matrix diagonal = eVal.diag();
 		final int nEvals = diagonal.getRowDimension();
 		double[] radii = new double[nEvals];
 		for (int i = 0; i < nEvals; i++) {
 			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
 		}
-		double[] centre = C.getColumnPackedCopy();
-		double[][] eigenVectors = eVec.getArrayCopy();
+		double[] centre = (double[]) matrices[0];
+		double[][] eigenVectors = (double[][]) matrices[2];
 		double[] equation = v;
 		Object[] ellipsoid = { centre, radii, eigenVectors, equation, E };
 		return ellipsoid;
@@ -300,8 +283,8 @@ public class FitEllipsoid {
 		double I3 = E.getD().get(0, 0);
 
 		Ellipsoid ellipsoid = new Ellipsoid(1 / Math.sqrt(I1),
-				1 / Math.sqrt(I2), 1 / Math.sqrt(I3), cx, cy, cz, E
-						.getV().getArray());
+				1 / Math.sqrt(I2), 1 / Math.sqrt(I3), cx, cy, cz, E.getV()
+						.getArray());
 
 		return ellipsoid;
 	}
