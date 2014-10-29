@@ -360,10 +360,10 @@ public class Ellipsoid {
 		Matrix V = new Matrix(v);
 
 		// 4x4 based on equation variables
-		double[][] aa = { { a, d, e, f }, { d, b, f, h }, { e, f, c, i },
+		double[][] aa = { { a, d, e, g }, { d, b, f, h }, { e, f, c, i },
 				{ g, h, i, -1 }, };
 		Matrix A = new Matrix(aa);
-
+	
 		// find the centre
 		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
 				.getMatrix(6, 8, 0, 0));
