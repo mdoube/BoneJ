@@ -79,7 +79,7 @@ public class Ellipsoid {
 
 		setVolume();
 		updateEigenvalues();
-		
+
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		setEigenVectors(eigenVectors);
 
@@ -257,9 +257,9 @@ public class Ellipsoid {
 		this.ra += increment;
 		this.rb += increment;
 		this.rc += increment;
-		
+
 		setVolume();
-		
+
 		updateEigenvalues();
 	}
 
@@ -267,9 +267,9 @@ public class Ellipsoid {
 	 * Calculates eigenvalues from current radii
 	 */
 	private void updateEigenvalues() {
-		this.eVal0 = 1/(this.ra * this.ra);
-		this.eVal1 = 1/(this.rb * this.rb);
-		this.eVal2 = 1/(this.rc * this.rc);
+		this.eVal0 = 1 / (this.ra * this.ra);
+		this.eVal1 = 1 / (this.rb * this.rb);
+		this.eVal2 = 1 / (this.rc * this.rc);
 	}
 
 	/**
@@ -295,6 +295,22 @@ public class Ellipsoid {
 		this.cx += dx;
 		this.cy += dy;
 		this.cz += dz;
+	}
+
+	/**
+	 * Translate the ellipsoid to a given new centroid
+	 * 
+	 * @param x
+	 *            new centroid x-coordinate
+	 * @param y
+	 *            new centroid y-coordinate
+	 * @param z
+	 *            new centroid z-coordinate
+	 */
+	public void moveTo(double x, double y, double z) {
+		this.cx = x;
+		this.cy = y;
+		this.cz = z;
 	}
 
 	/**
@@ -328,12 +344,12 @@ public class Ellipsoid {
 		string = string + "g = " + g + "\n";
 		string = string + "h = " + h + "\n";
 		string = string + "i = " + i + "\n";
-		
+
 		string = string + "\nCentre: \n";
 		string = string + "cx: " + this.cx + "\n";
 		string = string + "cy: " + this.cy + "\n";
 		string = string + "cz: " + this.cz + "\n";
-		
+
 		string = string + "\nRadii: \n";
 		string = string + "ra: " + this.ra + "\n";
 		string = string + "rb: " + this.rb + "\n";
