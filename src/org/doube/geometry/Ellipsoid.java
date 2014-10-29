@@ -351,8 +351,6 @@ public class Ellipsoid {
 	 */
 	public static Object[] matrixFromEquation(double a, double b, double c, double d,
 			double e, double f, double g, double h, double i) {
-		// Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
-		// .times(ones));
 
 		// the fitted equation
 		double[][] v = { { a }, { b }, { c }, { d }, { e }, { f }, { g },
