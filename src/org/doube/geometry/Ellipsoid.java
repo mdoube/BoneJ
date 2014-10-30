@@ -81,11 +81,10 @@ public class Ellipsoid {
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
 
-		setVolume();
-		updateEigenvalues();
-
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		setEigenVectors(eigenVectors);
+		updateEigenvalues();
+		setVolume();
 
 		double[] equation = (double[]) ellipsoid[3];
 		this.a = equation[0];
@@ -123,8 +122,8 @@ public class Ellipsoid {
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
-		updateEigenvalues();
 		setEigenVectors(eigenVectors);
+		updateEigenvalues();
 		// TODO update equation variables
 		setVolume();
 	}
@@ -368,7 +367,7 @@ public class Ellipsoid {
 	 */
 	private void update3x3Matrix() {
 		Matrix P = new Matrix(eigenVectors);
-		Matrix D = new Matrix(3,3);
+		Matrix D = new Matrix(3, 3);
 		D.set(0, 0, eVal0);
 		D.set(1, 1, eVal1);
 		D.set(2, 2, eVal2);
@@ -439,25 +438,45 @@ public class Ellipsoid {
 	public static double[] equationFromMatrix(double[] centre,
 			double[][] eigenValues, double[][] eigenVectors) {
 
-		Matrix C = vector3(centre[0], centre[1], centre[2]);
-
-		Matrix T = Matrix.eye(4);
-		T.setMatrix(3, 3, 0, 2, C.transpose());
-
-		// B = P^-1DP
-		// where B is a square matrix, D is eigenvalues, P is eigenvectors
-
 		// orientation of ellipsoid
 		Matrix P = new Matrix(eigenVectors);
 
+		// size of ellipsoid
 		// related to radii by r = sqrt(1/eVal)
 		Matrix D = new Matrix(eigenValues);
 
+		// B = P^-1DP
+		// where B is a square matrix, D is eigenvalues, P is eigenvectors
 		Matrix B = (P.inverse().times(D)).times(P);
 
 		// now B = R02.times(-1/r33) in the above equation
 
-		return null;
+		// make a 4x4 matrix with B in the top left and 1 in the bottom right, 0
+		// elsewhere indicating no translation
+		Matrix E = Matrix.eye(4);
+		E.setMatrix(0, 2, 0, 2, B);
+
+		// now set up a 4x4 translation matrix
+		Matrix C = vector3(centre[0], centre[1], centre[2]);
+		Matrix T = Matrix.eye(4);
+		T.setMatrix(0, 2, 3, 3, C);
+		
+		//above leaves bottom row zeros
+		
+		//work out the translated ellipsoid
+		E = E.times(T);
+
+		//get the negative inverse of the bottom right corner
+		final double e33 = -1/E.get(3, 3);
+		
+		//work out the scaled ellipsoid
+		E = E.times(e33);
+		
+		//pack the matrix into the equation form
+		double[] e = E.getColumnPackedCopy();
+		double[] equation = {e[0], e[5], e[10], e[1], e[2], e[6], e[3], e[7], e[11]};
+		
+		return equation;
 	}
 
 	private static Matrix vector3(double j, double k, double l) {
