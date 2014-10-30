@@ -58,6 +58,9 @@ public class Ellipsoid {
 	private double eVal1;
 	private double eVal2;
 
+	// 3x3 matrix describing shape of ellipsoid
+	private Matrix H;
+
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
 	 * 
@@ -208,7 +211,8 @@ public class Ellipsoid {
 	 * 
 	 * (X-X0)'H(X-X0) <= 1
 	 * 
-	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3 matrix
+	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3
+	 * matrix
 	 * 
 	 * @param x
 	 * @param y
@@ -224,11 +228,11 @@ public class Ellipsoid {
 
 		Matrix X = vector3(x, y, z);
 		Matrix X0 = vector3(cx, cy, cz);
-		
+
 		Matrix XX0 = X.minus(X0);
 		if (XX0.transpose().times(H).times(XX0).get(0, 0) <= 1)
 			return true;
-				
+
 		return false;
 	}
 
@@ -356,6 +360,19 @@ public class Ellipsoid {
 		this.eVal0 = 1 / (this.ra * this.ra);
 		this.eVal1 = 1 / (this.rb * this.rb);
 		this.eVal2 = 1 / (this.rc * this.rc);
+		update3x3Matrix();
+	}
+
+	/**
+	 * Needs to be run any time the eigenvalues or eigenvectors change
+	 */
+	private void update3x3Matrix() {
+		Matrix P = new Matrix(eigenVectors);
+		Matrix D = new Matrix(3,3);
+		D.set(0, 0, eVal0);
+		D.set(1, 1, eVal1);
+		D.set(2, 2, eVal2);
+		this.H = (P.inverse().times(D)).times(P);
 	}
 
 	/**
