@@ -203,6 +203,35 @@ public class Ellipsoid {
 
 	}
 
+	/**
+	 * Alternative contains() method based on the inequality
+	 * 
+	 * (X-X0)'H(X-X0) <= 1
+	 * 
+	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3 matrix
+	 * 
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param cx
+	 * @param cy
+	 * @param cz
+	 * @param H
+	 * @return
+	 */
+	public static boolean contains(double x, double y, double z, double cx,
+			double cy, double cz, Matrix H) {
+
+		Matrix X = vector3(x, y, z);
+		Matrix X0 = vector3(cx, cy, cz);
+		
+		Matrix XX0 = X.minus(X0);
+		if (XX0.transpose().times(H).times(XX0).get(0, 0) <= 1)
+			return true;
+				
+		return false;
+	}
+
 	public double solve(double x, double y, double z) {
 		return a * x * x + b * y * y + c * z * z + 2
 				* (d * x * y + e * x * z + f * y * z + g * x + h * y + i * z);
@@ -349,8 +378,8 @@ public class Ellipsoid {
 	 *         (double[3][3]), eigenvectors (double[3][3]), and the
 	 *         EigenvalueDecomposition
 	 */
-	public static Object[] matrixFromEquation(double a, double b, double c, double d,
-			double e, double f, double g, double h, double i) {
+	public static Object[] matrixFromEquation(double a, double b, double c,
+			double d, double e, double f, double g, double h, double i) {
 
 		// the fitted equation
 		double[][] v = { { a }, { b }, { c }, { d }, { e }, { f }, { g },
@@ -361,7 +390,7 @@ public class Ellipsoid {
 		double[][] aa = { { a, d, e, g }, { d, b, f, h }, { e, f, c, i },
 				{ g, h, i, -1 }, };
 		Matrix A = new Matrix(aa);
-	
+
 		// find the centre
 		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
 				.getMatrix(6, 8, 0, 0));
@@ -381,6 +410,45 @@ public class Ellipsoid {
 		double[][] eigenValues = E.getD().getArrayCopy();
 		Object[] result = { centre, eigenValues, eigenVectors, E };
 		return result;
+	}
+
+	/**
+	 * 
+	 * @param centre
+	 * @param eigenValues
+	 * @param eigenVectors
+	 * @return
+	 */
+	public static double[] equationFromMatrix(double[] centre,
+			double[][] eigenValues, double[][] eigenVectors) {
+
+		Matrix C = vector3(centre[0], centre[1], centre[2]);
+
+		Matrix T = Matrix.eye(4);
+		T.setMatrix(3, 3, 0, 2, C.transpose());
+
+		// B = P^-1DP
+		// where B is a square matrix, D is eigenvalues, P is eigenvectors
+
+		// orientation of ellipsoid
+		Matrix P = new Matrix(eigenVectors);
+
+		// related to radii by r = sqrt(1/eVal)
+		Matrix D = new Matrix(eigenValues);
+
+		Matrix B = (P.inverse().times(D)).times(P);
+
+		// now B = R02.times(-1/r33) in the above equation
+
+		return null;
+	}
+
+	private static Matrix vector3(double j, double k, double l) {
+		Matrix C = new Matrix(3, 1);
+		C.set(0, 0, j);
+		C.set(1, 0, k);
+		C.set(2, 0, l);
+		return C;
 	}
 
 	/**
