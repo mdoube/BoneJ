@@ -38,7 +38,7 @@ public class Ellipsoid {
 	private double i;
 
 	// calculated volume
-	private double volume = -1;
+	private double volume;
 
 	// eigenvectors of axes
 	private double[][] eigenVectors;
@@ -83,6 +83,9 @@ public class Ellipsoid {
 			throw new IllegalArgumentException("Radius is NaN");
 
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
+		this.V = new Matrix(3,3);
+		this.D = new Matrix(3,3);
+		this.H = new Matrix(3,3);
 		setEigenVectors(eigenVectors);
 		setEigenvalues();
 		setVolume();
@@ -123,6 +126,9 @@ public class Ellipsoid {
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
+		this.V = new Matrix(3,3);
+		this.D = new Matrix(3,3);
+		this.H = new Matrix(3,3);
 		setEigenVectors(eigenVectors);
 		setEigenvalues();
 		// TODO update equation variables
