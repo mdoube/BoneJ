@@ -53,12 +53,15 @@ public class Ellipsoid {
 	private double eV21;
 	private double eV22;
 
+	/** Eigenvector matrix */
+	private Matrix V;
+	
 	// eigenvalues of axes
 	private double eVal0;
 	private double eVal1;
 	private double eVal2;
 
-	// 3x3 matrix describing shape of ellipsoid
+	/** 3x3 matrix describing shape of ellipsoid */
 	private Matrix H;
 
 	/**
@@ -83,7 +86,7 @@ public class Ellipsoid {
 
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		setEigenVectors(eigenVectors);
-		updateEigenvalues();
+		setEigenvalues();
 		setVolume();
 
 		double[] equation = (double[]) ellipsoid[3];
@@ -123,7 +126,7 @@ public class Ellipsoid {
 		this.cy = cy;
 		this.cz = cz;
 		setEigenVectors(eigenVectors);
-		updateEigenvalues();
+		setEigenvalues();
 		// TODO update equation variables
 		setVolume();
 	}
@@ -147,7 +150,7 @@ public class Ellipsoid {
 	}
 
 	public boolean contains(double x, double y, double z) {
-
+		
 		// calculate vector between point and centroid
 		double vx = x - cx;
 		double vy = y - cy;
@@ -279,6 +282,16 @@ public class Ellipsoid {
 		this.eV20 = this.eigenVectors[2][0];
 		this.eV21 = this.eigenVectors[2][1];
 		this.eV22 = this.eigenVectors[2][2];
+		this.V.set(0, 0, this.eV00);
+		this.V.set(0, 1, this.eV01);
+		this.V.set(0, 2, this.eV02);
+		this.V.set(1, 0, this.eV10);
+		this.V.set(1, 1, this.eV11);
+		this.V.set(1, 2, this.eV12);
+		this.V.set(2, 0, this.eV20);
+		this.V.set(2, 1, this.eV21);
+		this.V.set(2, 2, this.eV22);
+		update3x3Matrix();
 	}
 
 	/**
@@ -293,7 +306,7 @@ public class Ellipsoid {
 
 		setVolume();
 
-		updateEigenvalues();
+		setEigenvalues();
 	}
 
 	/**
@@ -355,7 +368,7 @@ public class Ellipsoid {
 	/**
 	 * Calculates eigenvalues from current radii
 	 */
-	private void updateEigenvalues() {
+	private void setEigenvalues() {
 		this.eVal0 = 1 / (this.ra * this.ra);
 		this.eVal1 = 1 / (this.rb * this.rb);
 		this.eVal2 = 1 / (this.rc * this.rc);
@@ -366,12 +379,11 @@ public class Ellipsoid {
 	 * Needs to be run any time the eigenvalues or eigenvectors change
 	 */
 	private void update3x3Matrix() {
-		Matrix P = new Matrix(eigenVectors);
 		Matrix D = new Matrix(3, 3);
 		D.set(0, 0, eVal0);
 		D.set(1, 1, eVal1);
 		D.set(2, 2, eVal2);
-		this.H = (P.inverse().times(D)).times(P);
+		this.H = (this.V.inverse().times(D)).times(this.V);
 	}
 
 	/**
@@ -460,22 +472,23 @@ public class Ellipsoid {
 		Matrix C = vector3(centre[0], centre[1], centre[2]);
 		Matrix T = Matrix.eye(4);
 		T.setMatrix(0, 2, 3, 3, C);
-		
-		//above leaves bottom row zeros
-		
-		//work out the translated ellipsoid
+
+		// above leaves bottom row zeros
+
+		// work out the translated ellipsoid
 		E = E.times(T);
 
-		//get the negative inverse of the bottom right corner
-		final double e33 = -1/E.get(3, 3);
-		
-		//work out the scaled ellipsoid
+		// get the negative inverse of the bottom right corner
+		final double e33 = -1 / E.get(3, 3);
+
+		// work out the scaled ellipsoid
 		E = E.times(e33);
-		
-		//pack the matrix into the equation form
+
+		// pack the matrix into the equation form
 		double[] e = E.getColumnPackedCopy();
-		double[] equation = {e[0], e[5], e[10], e[1], e[2], e[6], e[3], e[7], e[11]};
-		
+		double[] equation = { e[0], e[5], e[10], e[1], e[2], e[6], e[3], e[7],
+				e[11] };
+
 		return equation;
 	}
 
