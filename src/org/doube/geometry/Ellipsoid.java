@@ -55,11 +55,9 @@ public class Ellipsoid {
 
 	/** Eigenvector matrix */
 	private Matrix V;
-	
-	// eigenvalues of axes
-	private double eVal0;
-	private double eVal1;
-	private double eVal2;
+
+	/** Eigenvalue matrix */
+	private Matrix D;
 
 	/** 3x3 matrix describing shape of ellipsoid */
 	private Matrix H;
@@ -150,7 +148,7 @@ public class Ellipsoid {
 	}
 
 	public boolean contains(double x, double y, double z) {
-		
+
 		// calculate vector between point and centroid
 		double vx = x - cx;
 		double vy = y - cy;
@@ -369,9 +367,9 @@ public class Ellipsoid {
 	 * Calculates eigenvalues from current radii
 	 */
 	private void setEigenvalues() {
-		this.eVal0 = 1 / (this.ra * this.ra);
-		this.eVal1 = 1 / (this.rb * this.rb);
-		this.eVal2 = 1 / (this.rc * this.rc);
+		this.D.set(0, 0, 1 / (this.ra * this.ra));
+		this.D.set(1, 1, 1 / (this.rb * this.rb));
+		this.D.set(2, 2, 1 / (this.rc * this.rc));
 		update3x3Matrix();
 	}
 
@@ -379,11 +377,7 @@ public class Ellipsoid {
 	 * Needs to be run any time the eigenvalues or eigenvectors change
 	 */
 	private void update3x3Matrix() {
-		Matrix D = new Matrix(3, 3);
-		D.set(0, 0, eVal0);
-		D.set(1, 1, eVal1);
-		D.set(2, 2, eVal2);
-		this.H = (this.V.inverse().times(D)).times(this.V);
+		this.H = (this.V.inverse().times(this.D)).times(this.V);
 	}
 
 	/**
@@ -528,9 +522,9 @@ public class Ellipsoid {
 		string = string + "rc: " + this.rc + "\n";
 
 		string = string + "\nEigenvalues: \n";
-		string = string + "eVal0 = " + eVal0 + "\n";
-		string = string + "eVal1 = " + eVal1 + "\n";
-		string = string + "eVal2 = " + eVal2 + "\n";
+		string = string + "eVal0 = " + D.get(0, 0) + "\n";
+		string = string + "eVal1 = " + D.get(1, 1) + "\n";
+		string = string + "eVal2 = " + D.get(2, 2) + "\n";
 
 		string = string + "\nEigenvectors: \n";
 		string = string + "eV00 = " + eV00 + "\n";
