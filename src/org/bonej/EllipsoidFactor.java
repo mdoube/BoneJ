@@ -38,6 +38,7 @@ import ij.macro.Interpreter;
 import ij.measure.Calibration;
 import ij3d.Image3DUniverse;
 
+import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
 import org.doube.skeleton.Skeletonize3D;
@@ -136,8 +137,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		bigImp.show();
 
-//		ResultInserter ri = ResultInserter.getInstance();
-//		ri.updateTable();
+		// ResultInserter ri = ResultInserter.getInstance();
+		// ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 	}
 
@@ -311,16 +312,33 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
 
 		// get the points of contact
-		List<double[]> contactPoints = findContactPoints(ellipsoid, ips, pW,
-				pH, pD, w, h, d);
+		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
+				pW, pH, pD, w, h, d);
 
 		// contract the ellipsoid by one increment so all points are
 		// inside the foregrounds
 		// ellipsoid.contract(vectorIncrement);
 
+		// find the mean unit vector pointing to the points of contact from the
+		// centre
+		double[] summedVector = new double[3];
+		final double[] c = ellipsoid.getCentre();
+		for (double[] p : contactPoints) {
+			final double l = Trig.distance3D(p, c);
+			double[] unitVector = { (p[0] - c[0]) / l, (p[1] - c[1]) / l,
+					(p[2] - c[2]) / l };
+			summedVector[0] += unitVector[0];
+			summedVector[1] += unitVector[1];
+			summedVector[2] += unitVector[2];
+		}
+		double[] meanContactVector = new double[3];
+		meanContactVector[0] = summedVector[0] / contactPoints.size();
+		meanContactVector[1] = summedVector[1] / contactPoints.size();
+		meanContactVector[2] = summedVector[2] / contactPoints.size();
+
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
-			List<Point3f> contactPointsf = new ArrayList<Point3f>(
+			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
 					contactPoints.size());
 			for (double[] p : contactPoints) {
 				Point3f point = new Point3f((float) p[0], (float) p[1],
@@ -367,12 +385,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return ellipsoid;
 	}
 
-	private List<double[]> findContactPoints(Ellipsoid ellipsoid,
+	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
 			ByteProcessor[] ips, final double pW, final double pH,
 			final double pD, final int w, final int h, final int d) {
 		double[][] points = ellipsoid.getSurfacePoints(nVectors);
 
-		List<double[]> contactPoints = new ArrayList<double[]>();
+		ArrayList<double[]> contactPoints = new ArrayList<double[]>();
 
 		for (double[] p : points) {
 			final int x = (int) Math.floor(p[0] / pW);
