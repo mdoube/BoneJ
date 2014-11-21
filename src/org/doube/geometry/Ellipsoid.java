@@ -286,7 +286,6 @@ public class Ellipsoid {
 		this.eV20 = this.eigenVectors[2][0];
 		this.eV21 = this.eigenVectors[2][1];
 		this.eV22 = this.eigenVectors[2][2];
-		Matrix A = new Matrix(eigenVectors);
 		this.V.set(0, 0, this.eV00);
 		this.V.set(0, 1, this.eV01);
 		this.V.set(0, 2, this.eV02);
@@ -364,12 +363,7 @@ public class Ellipsoid {
 	public void rotate(Matrix rotation) {
 		if (!is3x3Matrix(rotation))
 			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
-		this.V = this.V.times(rotation);
-	}
-
-	private boolean is3x3Matrix(Matrix rotation) {
-		return (rotation.getRowDimension() == 3 && rotation
-				.getColumnDimension() == 3);
+		setRotation(this.V.times(rotation));
 	}
 
 	/**
@@ -414,6 +408,12 @@ public class Ellipsoid {
 	 */
 	private void update3x3Matrix() {
 		this.H = (this.V.inverse().times(this.D)).times(this.V);
+	}
+
+
+	private boolean is3x3Matrix(Matrix rotation) {
+		return (rotation.getRowDimension() == 3 && rotation
+				.getColumnDimension() == 3);
 	}
 
 	/**
