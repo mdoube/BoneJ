@@ -83,9 +83,9 @@ public class Ellipsoid {
 			throw new IllegalArgumentException("Radius is NaN");
 
 		double[][] eigenVectors = (double[][]) ellipsoid[2];
-		this.V = new Matrix(3,3);
-		this.D = new Matrix(3,3);
-		this.H = new Matrix(3,3);
+		this.V = new Matrix(3, 3);
+		this.D = new Matrix(3, 3);
+		this.H = new Matrix(3, 3);
 		setEigenVectors(eigenVectors);
 		setEigenvalues();
 		setVolume();
@@ -126,9 +126,9 @@ public class Ellipsoid {
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
-		this.V = new Matrix(3,3);
-		this.D = new Matrix(3,3);
-		this.H = new Matrix(3,3);
+		this.V = new Matrix(3, 3);
+		this.D = new Matrix(3, 3);
+		this.H = new Matrix(3, 3);
 		setEigenVectors(eigenVectors);
 		setEigenvalues();
 		// TODO update equation variables
@@ -286,6 +286,7 @@ public class Ellipsoid {
 		this.eV20 = this.eigenVectors[2][0];
 		this.eV21 = this.eigenVectors[2][1];
 		this.eV22 = this.eigenVectors[2][2];
+		Matrix A = new Matrix(eigenVectors);
 		this.V.set(0, 0, this.eV00);
 		this.V.set(0, 1, this.eV01);
 		this.V.set(0, 2, this.eV02);
@@ -348,10 +349,39 @@ public class Ellipsoid {
 	 * @param z
 	 *            new centroid z-coordinate
 	 */
-	public void moveTo(double x, double y, double z) {
+	public void setCentroid(double x, double y, double z) {
 		this.cx = x;
 		this.cy = y;
 		this.cz = z;
+	}
+
+	/**
+	 * Rotate the ellipsoid by the given 3x3 Matrix
+	 * 
+	 * @param rotation
+	 *            a 3x3 rotation matrix
+	 */
+	public void rotate(Matrix rotation) {
+		if (!is3x3Matrix(rotation))
+			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
+		this.V = this.V.times(rotation);
+	}
+
+	private boolean is3x3Matrix(Matrix rotation) {
+		return (rotation.getRowDimension() == 3 && rotation
+				.getColumnDimension() == 3);
+	}
+
+	/**
+	 * Set the rotation to the supplied eigenvector matrix
+	 * 
+	 * @param rotation
+	 *            3x3 eigenvector matrix
+	 */
+	public void setRotation(Matrix rotation) {
+		if (!is3x3Matrix(rotation))
+			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
+		setEigenVectors(rotation.getArray());
 	}
 
 	/**
