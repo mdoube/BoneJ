@@ -82,6 +82,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * ellipsoid fields.
 	 */
 	private int skipRatio = 50;
+	private int contactSensitivity = 5;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -105,12 +106,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
+		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
 			vectorIncrement = gd.getNextNumber();
 			nVectors = (int) Math.round(gd.getNextNumber());
 			skipRatio = (int) Math.round(gd.getNextNumber());
+			contactSensitivity = (int) Math.round(gd.getNextNumber());
 		}
 		if (gd.wasCanceled())
 			return;
@@ -354,7 +357,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ellipsoid.setRotation(R);
 		
 		//dilate other two axes until number of contact points increases
-		ellipsoid.dilate(0, 20*vectorIncrement, 20*vectorIncrement);
+		//by contactSensitivity number of contacts
+		
+		final int maxContacts = contactPoints.size() + contactSensitivity ;
+		while (contactPoints.size() < maxContacts){
+			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h, d);
+		}
 			
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
