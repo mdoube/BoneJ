@@ -1,5 +1,7 @@
 package org.doube.geometry;
 
+import ij.IJ;
+
 import java.util.Arrays;
 
 import org.doube.jama.EigenvalueDecomposition;
@@ -79,6 +81,7 @@ public class Ellipsoid {
 		this.ra = radii[0];
 		this.rb = radii[1];
 		this.rc = radii[2];
+
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
 
@@ -104,7 +107,7 @@ public class Ellipsoid {
 
 	/**
 	 * Construct an Ellipsoid from the radii (a,b,c), centroid (cx, cy, cz) and
-	 * Eigenvectors. Assumes that a > b > c and enforces it with a sort().
+	 * Eigenvectors.
 	 * 
 	 * @param a
 	 * @param b
@@ -117,12 +120,9 @@ public class Ellipsoid {
 	public Ellipsoid(double a, double b, double c, double cx, double cy,
 			double cz, double[][] eigenVectors) {
 
-		double[] radii = { a, b, c };
-		Arrays.sort(radii);
-
-		this.ra = radii[2];
-		this.rb = radii[1];
-		this.rc = radii[0];
+		this.ra = a;
+		this.rb = b;
+		this.rc = c;
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
@@ -304,13 +304,7 @@ public class Ellipsoid {
 	 * @param increment
 	 */
 	public void dilate(double increment) {
-		this.ra += increment;
-		this.rb += increment;
-		this.rc += increment;
-
-		setVolume();
-
-		setEigenvalues();
+		dilate(increment, increment, increment);
 	}
 
 	/**
@@ -320,6 +314,27 @@ public class Ellipsoid {
 	 */
 	public void contract(double increment) {
 		dilate(-increment);
+	}
+
+	/**
+	 * Dilate the ellipsoid semiaxes by independent amounts
+	 * 
+	 * @param da
+	 * @param db
+	 * @param dc
+	 */
+	public void dilate(double da, double db, double dc) {
+		if (this.ra + da <= 0 || this.rb + db <= 0 || this.rc + dc <= 0) {
+			throw new IllegalArgumentException(
+					"Ellipsoid cannot have semiaxis <= 0");
+		}
+		this.ra += da;
+		this.rb += db;
+		this.rc += dc;
+
+		setVolume();
+
+		setEigenvalues();
 	}
 
 	/**
@@ -409,7 +424,6 @@ public class Ellipsoid {
 	private void update3x3Matrix() {
 		this.H = (this.V.inverse().times(this.D)).times(this.V);
 	}
-
 
 	private boolean is3x3Matrix(Matrix rotation) {
 		return (rotation.getRowDimension() == 3 && rotation
