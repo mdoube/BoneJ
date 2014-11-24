@@ -41,6 +41,7 @@ import ij3d.Image3DUniverse;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
+import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
@@ -331,11 +332,30 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			summedVector[1] += unitVector[1];
 			summedVector[2] += unitVector[2];
 		}
-		double[] meanContactVector = new double[3];
-		meanContactVector[0] = summedVector[0] / contactPoints.size();
-		meanContactVector[1] = summedVector[1] / contactPoints.size();
-		meanContactVector[2] = summedVector[2] / contactPoints.size();
-
+		//put the short axis on the mean contact vector
+		double[] shortAxis = new double[3];
+		shortAxis[0] = summedVector[0] / contactPoints.size();
+		shortAxis[1] = summedVector[1] / contactPoints.size();
+		shortAxis[2] = summedVector[2] / contactPoints.size();
+		
+		//find an orthogonal axis
+		double[] middleAxis = {-1 * shortAxis[1], shortAxis[0], shortAxis[2]};
+		
+		//find a mutually orthogonal axis by forming the cross product
+		double[] longAxis = Vectors.crossProduct(shortAxis, middleAxis);
+		
+		//construct a rotation matrix
+		double[][] rotation = {shortAxis, middleAxis, longAxis};
+		
+		//needs transpose because each vector is put in as row to begin with
+		Matrix R = new Matrix(rotation).transpose();
+		
+		//rotate ellipsoid to point this way...
+		ellipsoid.setRotation(R);
+		
+		//dilate other two axes until number of contact points increases
+		ellipsoid.dilate(0, 20*vectorIncrement, 20*vectorIncrement);
+			
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
