@@ -110,6 +110,26 @@ public class Vectors {
 	}
 
 	/**
+	 * Normalise a vector to have a length of 1 and the same orientation as the
+	 * input vector a
+	 * 
+	 * @param a
+	 * @return Unit vector in direction of a
+	 */
+	public static double[] norm(double[] a) {
+		final double a0 = a[0];
+		final double a1 = a[1];
+		final double a2 = a[2];
+		final double length = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
+
+		double[] normed = new double[3];
+		normed[0] = a0 / length;
+		normed[1] = a1 / length;
+		normed[2] = a2 / length;
+		return normed;
+	}
+
+	/**
 	 * Generate an array of randomly-oriented 3D unit vectors
 	 * 
 	 * @param nVectors
