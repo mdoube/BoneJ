@@ -342,16 +342,28 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		shortAxis[2] = summedVector[2] / contactPoints.size();
 		
 		//find an orthogonal axis
-		double[] middleAxis = {-1 * shortAxis[1], shortAxis[0], shortAxis[2]};
+		final double[] xAxis = {1,0,0};
+		double[] middleAxis = Vectors.crossProduct(shortAxis, xAxis);
+		
+		final double middleAxisLength = Trig.distance3D(middleAxis);
+		middleAxis[0] /= middleAxisLength;
+		middleAxis[1] /= middleAxisLength;
+		middleAxis[2] /= middleAxisLength;
 		
 		//find a mutually orthogonal axis by forming the cross product
 		double[] longAxis = Vectors.crossProduct(shortAxis, middleAxis);
+		final double longAxisLength = Trig.distance3D(longAxis);
+		longAxis[0] /= longAxisLength;
+		longAxis[1] /= longAxisLength;
+		longAxis[2] /= longAxisLength;
 		
 		//construct a rotation matrix
 		double[][] rotation = {shortAxis, middleAxis, longAxis};
 		
 		//needs transpose because each vector is put in as row to begin with
 		Matrix R = new Matrix(rotation).transpose();
+		
+		R.printToIJLog("Rotation Matrix: det() = "+R.det());
 		
 		//rotate ellipsoid to point this way...
 		ellipsoid.setRotation(R);
