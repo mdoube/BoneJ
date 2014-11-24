@@ -388,7 +388,8 @@ public class Ellipsoid {
 	 *            3x3 eigenvector matrix
 	 */
 	public void setRotation(Matrix rotation) {
-		if (!is3x3Matrix(rotation))
+		final double detDiff = Math.abs(1 - rotation.det());
+		if (!is3x3Matrix(rotation) || detDiff > 1E-10)
 			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
 		setEigenVectors(rotation.getArray());
 	}
