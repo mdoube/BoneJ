@@ -472,10 +472,17 @@ public class Ellipsoid {
 		return result;
 	}
 
-	public Ellipsoid clone(){
-		return this.clone();
+	/**
+	 * Perform a deep copy of this Ellipsoid
+	 * 
+	 * @return
+	 */
+	public Ellipsoid copy() {
+		Ellipsoid copy = new Ellipsoid(this.ra, this.rb, this.rc, this.cx,
+				this.cy, this.cz, this.V.getArrayCopy());
+		return copy;
 	}
-	
+
 	/**
 	 * 
 	 * @param centre
