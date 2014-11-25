@@ -335,48 +335,79 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			summedVector[1] += unitVector[1];
 			summedVector[2] += unitVector[2];
 		}
-		//put the short axis on the mean contact vector
+		// put the short axis on the mean contact vector
 		double[] shortAxis = new double[3];
 		shortAxis[0] = summedVector[0] / contactPoints.size();
 		shortAxis[1] = summedVector[1] / contactPoints.size();
 		shortAxis[2] = summedVector[2] / contactPoints.size();
-		
-		//find an orthogonal axis
-		final double[] xAxis = {1,0,0};
+
+		shortAxis = Vectors.norm(shortAxis);
+
+		// find an orthogonal axis
+		final double[] xAxis = { 1, 0, 0 };
 		double[] middleAxis = Vectors.crossProduct(shortAxis, xAxis);
-		
-		final double middleAxisLength = Trig.distance3D(middleAxis);
-		middleAxis[0] /= middleAxisLength;
-		middleAxis[1] /= middleAxisLength;
-		middleAxis[2] /= middleAxisLength;
-		
-		//find a mutually orthogonal axis by forming the cross product
+		middleAxis = Vectors.norm(middleAxis);
+
+		// find a mutually orthogonal axis by forming the cross product
 		double[] longAxis = Vectors.crossProduct(shortAxis, middleAxis);
-		final double longAxisLength = Trig.distance3D(longAxis);
-		longAxis[0] /= longAxisLength;
-		longAxis[1] /= longAxisLength;
-		longAxis[2] /= longAxisLength;
-		
-		//construct a rotation matrix
-		double[][] rotation = {shortAxis, middleAxis, longAxis};
-		
-		//needs transpose because each vector is put in as row to begin with
+		longAxis = Vectors.norm(longAxis);
+
+		// construct a rotation matrix
+		double[][] rotation = { shortAxis, middleAxis, longAxis };
+
+		// needs transpose because each vector is put in as row to begin with
 		Matrix R = new Matrix(rotation).transpose();
-		
-		R.printToIJLog("Rotation Matrix: det() = "+R.det());
-		
-		//rotate ellipsoid to point this way...
+
+//		R.printToIJLog("Rotation Matrix: det() = " + R.det());
+
+		// rotate ellipsoid to point this way...
 		ellipsoid.setRotation(R);
-		
-		//dilate other two axes until number of contact points increases
-		//by contactSensitivity number of contacts
-		
-		final int maxContacts = contactPoints.size() + contactSensitivity ;
-		while (contactPoints.size() < maxContacts){
+
+		// dilate other two axes until number of contact points increases
+		// by contactSensitivity number of contacts
+
+		int maxContacts = contactPoints.size() + contactSensitivity;
+		while (contactPoints.size() < maxContacts) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h, d);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
 		}
-			
+
+		//contract until no contact
+		while (contactPoints.size() > 0){
+			ellipsoid.contract(vectorIncrement);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+		}
+		
+		//rotate a little bit
+		wiggle(ellipsoid);
+		
+		//dilate a
+		maxContacts = contactPoints.size() + contactSensitivity;
+		while (contactPoints.size() < maxContacts) {
+			ellipsoid.dilate(vectorIncrement, 0, 0);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+		}
+
+		
+		//dilate b
+		maxContacts = contactPoints.size() + contactSensitivity;
+		while (contactPoints.size() < maxContacts) {
+			ellipsoid.dilate(0, vectorIncrement, 0);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+		}
+		
+		//dilate c
+		maxContacts = contactPoints.size() + contactSensitivity;
+		while (contactPoints.size() < maxContacts) {
+			ellipsoid.dilate(0, vectorIncrement, 0);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+		}
+		
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
@@ -424,6 +455,50 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 		}
 		return ellipsoid;
+	}
+
+	/**
+	 * Rotate the ellipsoid by a small random amount
+	 * 
+	 * @param ellipsoid
+	 */
+	private void wiggle(Ellipsoid ellipsoid) {
+
+		double b = nudge(0.05);
+		double c = nudge(0.05);
+		double a = Math.sqrt(1 - b * b - c * c);
+
+		// zeroth column, should be very close to [1, 0, 0]^T (mostly x)
+		double[] zerothColumn = { a, b, c };
+
+		// form triangle in nearly xy plane
+   	    double[] vector = {0, 1 , 0};
+
+		// first column, should be very close to [0, 1, 0]^T
+		double[] firstColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
+				vector));
+
+		// second column, should be very close to [0, 0, 1]^T
+		double[] secondColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
+				firstColumn));
+
+		double[][] rotation = { zerothColumn, firstColumn, secondColumn };
+
+		// rotation has vectors as rows, to need to transpose
+		Matrix N = new Matrix(rotation).transpose();
+
+//		N.printToIJLog("Wiggle rotation matrix");
+		ellipsoid.rotate(N);
+	}
+
+	/**
+	 * generate a random number between -a and +a
+	 * 
+	 * @param a
+	 * @return
+	 */
+	private double nudge(double a) {
+		return Math.random() * (a + a) - a;
 	}
 
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
