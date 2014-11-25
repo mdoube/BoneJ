@@ -309,11 +309,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
-			ellipsoid.dilate(vectorIncrement);
+			ellipsoid.dilate(vectorIncrement, vectorIncrement, vectorIncrement);
 		}
-
-		if (IJ.debugMode)
-			IJ.log("Sphere fit with radius " + ellipsoid.getMajorRadius());
 
 		// get the points of contact
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
