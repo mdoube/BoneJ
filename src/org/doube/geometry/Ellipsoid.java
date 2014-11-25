@@ -265,16 +265,16 @@ public class Ellipsoid {
 	}
 
 	/**
-	 * Dilate all three axes by an increment
+	 * Dilate all three axes by a fractional increment
 	 * 
 	 * @param increment
 	 */
 	public void dilate(double increment) {
-		dilate(increment, increment, increment);
+		dilate(ra * increment, rb * increment, rc * increment);
 	}
 
 	/**
-	 * Constrict all three axes by an increment
+	 * Constrict all three axes by a fractional increment
 	 * 
 	 * @param increment
 	 */
@@ -283,7 +283,18 @@ public class Ellipsoid {
 	}
 
 	/**
-	 * Dilate the ellipsoid semiaxes by independent amounts
+	 * Contract the semiaxes by independent absolute amounts
+	 * 
+	 * @param ca
+	 * @param cb
+	 * @param cd
+	 */
+	public void contract(double ca, double cb, double cd) {
+		dilate(-ca, -cb, -cd);
+	}
+
+	/**
+	 * Dilate the ellipsoid semiaxes by independent absolute amounts
 	 * 
 	 * @param da
 	 * @param db
@@ -565,5 +576,4 @@ public class Ellipsoid {
 		string = string + "eV22 = " + V.get(2, 2) + "\n";
 		return string;
 	}
-
 }
