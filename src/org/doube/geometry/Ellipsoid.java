@@ -129,6 +129,11 @@ public class Ellipsoid {
 		volume = Math.PI * ra * rb * rc * 4 / 3;
 	}
 
+	/**
+	 * @return the semiaxis lengths a, b and c. Note these are not ordered by
+	 *         size, but the order does relate to the 0th, 1st and 2nd columns of the
+	 *         rotation matrix respectively.
+	 */
 	public double[] getRadii() {
 		double[] radii = { ra, rb, rc };
 		return radii.clone();
@@ -149,14 +154,17 @@ public class Ellipsoid {
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
+		double[] radii = getRadii();
+		Arrays.sort(radii);
+
 		// if further from centroid than major semiaxis length
 		// must be outside
-		if (length > ra)
+		if (length > radii[2])
 			return false;
 
 		// if length closer than minor semiaxis length
 		// must be inside
-		if (length <= rc)
+		if (length <= radii[0])
 			return true;
 
 		// calculate unit vector (normalise)
@@ -231,11 +239,6 @@ public class Ellipsoid {
 	public double solve(double x, double y, double z) {
 		return a * x * x + b * y * y + c * z * z + 2
 				* (d * x * y + e * x * z + f * y * z + g * x + h * y + i * z);
-	}
-
-	public double getMajorRadius() {
-		double val = ra;
-		return val;
 	}
 
 	public double[] getCentre() {
