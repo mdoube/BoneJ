@@ -290,17 +290,7 @@ public class Ellipsoid {
 	 * @param dc
 	 */
 	public void dilate(double da, double db, double dc) {
-		if (this.ra + da <= 0 || this.rb + db <= 0 || this.rc + dc <= 0) {
-			throw new IllegalArgumentException(
-					"Ellipsoid cannot have semiaxis <= 0");
-		}
-		this.ra += da;
-		this.rb += db;
-		this.rc += dc;
-
-		setVolume();
-
-		setEigenvalues();
+		setRadii(this.ra + da, this.rb + db, this.rc + dc);
 	}
 
 	/**
@@ -358,7 +348,7 @@ public class Ellipsoid {
 		this.V = R.copy();
 		update3x3Matrix();
 	}
-	
+
 	/**
 	 * Calculate the intercepts of the x, y and z axes
 	 * 
@@ -372,6 +362,27 @@ public class Ellipsoid {
 		double plusZ = (-i + Math.sqrt(i * i + 4 * c)) / (2 * c);
 		double minusZ = (-i - Math.sqrt(i * i + 4 * c)) / (2 * c);
 		return new double[] { plusX, minusX, plusY, minusY, plusZ, minusZ };
+	}
+
+	/**
+	 * Set the radii (semiaxes). No ordering is assumed, except with regard to
+	 * the columns of the eigenvector rotation matrix (i.e. a relates to the 0th
+	 * eigenvector column, b to the 1st and c to the 2nd)
+	 * 
+	 * @param a
+	 * @param b
+	 * @param c
+	 */
+	public void setRadii(double a, double b, double c) {
+		if (a <= 0 || b <= 0 || c <= 0) {
+			throw new IllegalArgumentException(
+					"Ellipsoid cannot have semiaxis <= 0");
+		}
+		this.ra = a;
+		this.rb = b;
+		this.rc = c;
+		setEigenvalues();
+		setVolume();
 	}
 
 	/**
