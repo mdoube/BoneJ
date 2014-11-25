@@ -270,7 +270,7 @@ public class Ellipsoid {
 	 * @param increment
 	 */
 	public void dilate(double increment) {
-		dilate(ra * increment, rb * increment, rc * increment);
+		dilate(this.ra * increment, this.rb * increment, this.rc * increment);
 	}
 
 	/**
