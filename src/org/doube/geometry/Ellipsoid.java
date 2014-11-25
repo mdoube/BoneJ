@@ -42,19 +42,6 @@ public class Ellipsoid {
 	// calculated volume
 	private double volume;
 
-	// eigenvectors of axes
-	private double[][] eigenVectors;
-	// unpacked for convenience
-	private double eV00;
-	private double eV01;
-	private double eV02;
-	private double eV10;
-	private double eV11;
-	private double eV12;
-	private double eV20;
-	private double eV21;
-	private double eV22;
-
 	/** Eigenvector matrix */
 	private Matrix V;
 
@@ -85,11 +72,10 @@ public class Ellipsoid {
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
 
-		double[][] eigenVectors = (double[][]) ellipsoid[2];
 		this.V = new Matrix(3, 3);
 		this.D = new Matrix(3, 3);
 		this.H = new Matrix(3, 3);
-		setEigenVectors(eigenVectors);
+		setRotation(new Matrix((double[][]) ellipsoid[2]));
 		setEigenvalues();
 		setVolume();
 
@@ -129,7 +115,7 @@ public class Ellipsoid {
 		this.V = new Matrix(3, 3);
 		this.D = new Matrix(3, 3);
 		this.H = new Matrix(3, 3);
-		setEigenVectors(eigenVectors);
+		setRotation(new Matrix(eigenVectors));
 		setEigenvalues();
 		// TODO update equation variables
 		setVolume();
@@ -181,7 +167,7 @@ public class Ellipsoid {
 				+ "]");
 
 		// get eigenvector matrix
-		Matrix eV = new Matrix(eigenVectors);
+		Matrix eV = this.V.copy();
 		eV.print(8, 5);
 		// invert it
 		Matrix eVinv = eV.inverse();
@@ -268,34 +254,14 @@ public class Ellipsoid {
 			final double y = rb * points[p][1];
 			final double z = rc * points[p][2];
 			// rotate and translate the ellipsoid into position
-			points[p][0] = x * eV00 + y * eV01 + z * eV02 + cx;
-			points[p][1] = x * eV10 + y * eV11 + z * eV12 + cy;
-			points[p][2] = x * eV20 + y * eV21 + z * eV22 + cz;
+			points[p][0] = x * V.get(0, 0) + y * V.get(0, 1) + z * V.get(0, 2)
+					+ cx;
+			points[p][1] = x * V.get(1, 0) + y * V.get(1, 1) + z * V.get(1, 2)
+					+ cy;
+			points[p][2] = x * V.get(2, 0) + y * V.get(2, 1) + z * V.get(2, 2)
+					+ cz;
 		}
 		return points;
-	}
-
-	private void setEigenVectors(double[][] eigenVectors) {
-		this.eigenVectors = eigenVectors;
-		this.eV00 = this.eigenVectors[0][0];
-		this.eV01 = this.eigenVectors[0][1];
-		this.eV02 = this.eigenVectors[0][2];
-		this.eV10 = this.eigenVectors[1][0];
-		this.eV11 = this.eigenVectors[1][1];
-		this.eV12 = this.eigenVectors[1][2];
-		this.eV20 = this.eigenVectors[2][0];
-		this.eV21 = this.eigenVectors[2][1];
-		this.eV22 = this.eigenVectors[2][2];
-		this.V.set(0, 0, this.eV00);
-		this.V.set(0, 1, this.eV01);
-		this.V.set(0, 2, this.eV02);
-		this.V.set(1, 0, this.eV10);
-		this.V.set(1, 1, this.eV11);
-		this.V.set(1, 2, this.eV12);
-		this.V.set(2, 0, this.eV20);
-		this.V.set(2, 1, this.eV21);
-		this.V.set(2, 2, this.eV22);
-		update3x3Matrix();
 	}
 
 	/**
@@ -372,26 +338,27 @@ public class Ellipsoid {
 	/**
 	 * Rotate the ellipsoid by the given 3x3 Matrix
 	 * 
-	 * @param rotation
+	 * @param R
 	 *            a 3x3 rotation matrix
 	 */
-	public void rotate(Matrix rotation) {
-		if (!is3x3Matrix(rotation))
+	public void rotate(Matrix R) {
+		if (!is3x3Matrix(R))
 			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
-		setRotation(this.V.times(rotation));
+		setRotation(this.V.times(R));
 	}
 
 	/**
 	 * Set the rotation to the supplied eigenvector matrix
 	 * 
-	 * @param rotation
+	 * @param R
 	 *            3x3 eigenvector matrix
 	 */
-	public void setRotation(Matrix rotation) {
-		final double detDiff = Math.abs(1 - rotation.det());
-		if (!is3x3Matrix(rotation) || detDiff > 1E-10)
+	public void setRotation(Matrix R) {
+		final double detDiff = Math.abs(1 - R.det());
+		if (!is3x3Matrix(R) || detDiff > 1E-10)
 			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
-		setEigenVectors(rotation.getArray());
+		this.V = R.copy();
+		update3x3Matrix();
 	}
 
 	/**
@@ -578,15 +545,15 @@ public class Ellipsoid {
 		string = string + "eVal2 = " + D.get(2, 2) + "\n";
 
 		string = string + "\nEigenvectors: \n";
-		string = string + "eV00 = " + eV00 + "\n";
-		string = string + "eV01 = " + eV01 + "\n";
-		string = string + "eV02 = " + eV02 + "\n";
-		string = string + "eV10 = " + eV10 + "\n";
-		string = string + "eV11 = " + eV11 + "\n";
-		string = string + "eV12 = " + eV12 + "\n";
-		string = string + "eV20 = " + eV20 + "\n";
-		string = string + "eV21 = " + eV21 + "\n";
-		string = string + "eV22 = " + eV22 + "\n";
+		string = string + "eV00 = " + V.get(0, 0) + "\n";
+		string = string + "eV01 = " + V.get(0, 1) + "\n";
+		string = string + "eV02 = " + V.get(0, 2) + "\n";
+		string = string + "eV10 = " + V.get(1, 0) + "\n";
+		string = string + "eV11 = " + V.get(1, 1) + "\n";
+		string = string + "eV12 = " + V.get(1, 2) + "\n";
+		string = string + "eV20 = " + V.get(2, 0) + "\n";
+		string = string + "eV21 = " + V.get(2, 1) + "\n";
+		string = string + "eV22 = " + V.get(2, 2) + "\n";
 		return string;
 	}
 
