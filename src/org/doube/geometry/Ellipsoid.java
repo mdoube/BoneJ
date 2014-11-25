@@ -472,6 +472,10 @@ public class Ellipsoid {
 		return result;
 	}
 
+	public Ellipsoid clone(){
+		return this.clone();
+	}
+	
 	/**
 	 * 
 	 * @param centre
