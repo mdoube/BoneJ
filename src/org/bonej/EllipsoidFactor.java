@@ -358,7 +358,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// needs transpose because each vector is put in as row to begin with
 		Matrix R = new Matrix(rotation).transpose();
 
-//		R.printToIJLog("Rotation Matrix: det() = " + R.det());
+		// R.printToIJLog("Rotation Matrix: det() = " + R.det());
 
 		// rotate ellipsoid to point this way...
 		ellipsoid.setRotation(R);
@@ -373,41 +373,63 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					d);
 		}
 
-		//contract until no contact
-		while (contactPoints.size() > 0){
-			ellipsoid.contract(vectorIncrement);
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-		}
-		
-		//rotate a little bit
-		wiggle(ellipsoid);
-		
-		//dilate a
-		maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts) {
-			ellipsoid.dilate(vectorIncrement, 0, 0);
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-		}
+		// until ellipsoid is totally jammed within the structure, go through
+		// cycles of contraction, wiggling, dilation
+		// goal is maximal inscribed ellipsoid, maximal being defined by volume
 
-		
-		//dilate b
-		maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts) {
-			ellipsoid.dilate(0, vectorIncrement, 0);
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-		}
-		
-		//dilate c
-		maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts) {
-			ellipsoid.dilate(0, vectorIncrement, 0);
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-		}
-		
+//		double maxVolumeSoFar = ellipsoid.getVolume();
+//
+//		// maybe store a copy of the 'best ellipsoid so far'?
+//		// needs TODO copy method in Ellipsoid.
+//		double volumeThisTime = 0;
+//		int noImprovementCount = 0;
+//		// number of times to cycle without improvement before quitting
+//		final int triedEnoughTimes = 5;
+//		int totalIterations = 0;
+//		while (noImprovementCount < triedEnoughTimes && totalIterations < 100) {
+//
+//			// contract until no contact
+//			while (contactPoints.size() > 0) {
+//				ellipsoid.contract(0.01);
+//				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+//						w, h, d);
+//			}
+//
+//			// rotate a little bit
+//			wiggle(ellipsoid);
+//
+//			// dilate a
+//			while (contactPoints.size() < contactSensitivity) {
+//				ellipsoid.dilate(vectorIncrement, 0, 0);
+//				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+//						w, h, d);
+//			}
+//
+////			shrink(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+//
+//			// dilate b
+//			while (contactPoints.size() < contactSensitivity) {
+//				ellipsoid.dilate(0, vectorIncrement, 0);
+//				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+//						w, h, d);
+//			}
+//
+////			shrink(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+//
+//			// dilate c
+//			while (contactPoints.size() < contactSensitivity) {
+//				ellipsoid.dilate(0, vectorIncrement, 0);
+//				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+//						w, h, d);
+//			}
+//
+//			volumeThisTime = ellipsoid.getVolume();
+//			if (volumeThisTime <= maxVolumeSoFar)
+//				noImprovementCount++;
+//			else
+//				maxVolumeSoFar = volumeThisTime;
+//			totalIterations++;
+//		}
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
@@ -457,6 +479,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return ellipsoid;
 	}
 
+	private void shrink(Ellipsoid ellipsoid, ArrayList<double[]> contactPoints,
+			ByteProcessor[] ips, double pW, double pH, double pD, int w, int h,
+			int d) {
+
+		// contract until no contact
+		while (contactPoints.size() > 0) {
+			ellipsoid.contract(0.001);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+		}
+	}
+
 	/**
 	 * Rotate the ellipsoid by a small random amount
 	 * 
@@ -464,15 +498,15 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private void wiggle(Ellipsoid ellipsoid) {
 
-		double b = nudge(0.05);
-		double c = nudge(0.05);
+		double b = nudge(0.1);
+		double c = nudge(0.1);
 		double a = Math.sqrt(1 - b * b - c * c);
 
 		// zeroth column, should be very close to [1, 0, 0]^T (mostly x)
 		double[] zerothColumn = { a, b, c };
 
 		// form triangle in nearly xy plane
-   	    double[] vector = {0, 1 , 0};
+		double[] vector = { 0, 1, 0 };
 
 		// first column, should be very close to [0, 1, 0]^T
 		double[] firstColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
@@ -487,7 +521,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// rotation has vectors as rows, to need to transpose
 		Matrix N = new Matrix(rotation).transpose();
 
-//		N.printToIJLog("Wiggle rotation matrix");
+		// N.printToIJLog("Wiggle rotation matrix");
 		ellipsoid.rotate(N);
 	}
 
