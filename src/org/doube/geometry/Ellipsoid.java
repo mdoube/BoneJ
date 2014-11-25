@@ -342,8 +342,6 @@ public class Ellipsoid {
 	 *            a 3x3 rotation matrix
 	 */
 	public void rotate(Matrix R) {
-		if (!is3x3Matrix(R))
-			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
 		setRotation(this.V.times(R));
 	}
 
@@ -360,7 +358,7 @@ public class Ellipsoid {
 		this.V = R.copy();
 		update3x3Matrix();
 	}
-
+	
 	/**
 	 * Calculate the intercepts of the x, y and z axes
 	 * 
