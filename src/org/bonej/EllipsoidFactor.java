@@ -83,6 +83,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private int skipRatio = 50;
 	private int contactSensitivity = 1;
+	/** Safety value to prevent while() running forever */
+	private int maxIterations = 100;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -107,6 +109,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
 		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
+		gd.addNumericField("Maximum iterations", maxIterations, 0);
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
@@ -114,6 +117,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			nVectors = (int) Math.round(gd.getNextNumber());
 			skipRatio = (int) Math.round(gd.getNextNumber());
 			contactSensitivity = (int) Math.round(gd.getNextNumber());
+			maxIterations = (int) Math.round(gd.getNextNumber());
 		}
 		if (gd.wasCanceled())
 			return;
@@ -382,7 +386,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// number of times to cycle without improvement before quitting
 		final int triedEnoughTimes = 2;
 		int totalIterations = 0;
-		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
+		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations ) {
 			IJ.showStatus("Optimising 2-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
 
@@ -458,7 +462,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// do it again but with weighted axes
 		totalIterations = 0;
 		final double halfIncrement = vectorIncrement*0.5;
-		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 5) {
+		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations) {
 			IJ.showStatus("Optimising 1-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
 
