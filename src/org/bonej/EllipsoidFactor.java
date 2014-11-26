@@ -363,9 +363,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
 
-		final double stackVolume = w * h * d * pW * pH * pD;
 		int maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts && ellipsoid.getVolume() < stackVolume) {
+		while (contactPoints.size() < maxContacts) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
