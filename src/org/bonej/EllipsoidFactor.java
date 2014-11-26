@@ -384,7 +384,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// number of times to cycle without improvement before quitting
 		final int triedEnoughTimes = 2;
 		int totalIterations = 0;
-		while (/*noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
+		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
 			final double maximalVolStart = ellipsoid.getVolume();
 
 			// contract until no contact
@@ -413,7 +413,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
 						w, h, d);
 			}
-			
+
 			// rotate a little bit
 			wiggle(ellipsoid);
 
@@ -447,14 +447,90 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			final double maximalVolEnd = maximal.getVolume();
-			
+
 			if (maximalVolStart <= maximalVolEnd)
-				noImprovementCount++;				
-			
-			//keep the maximal ellipsoid found
+				noImprovementCount++;
+
+			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
 			totalIterations++;
 		}
+
+		// do it again but one axis at a time
+		totalIterations = 0;
+		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
+			final double maximalVolStart = ellipsoid.getVolume();
+
+			// contract until no contact
+			while (contactPoints.size() > 0) {
+				ellipsoid.contract(0.01);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+
+			// rotate a little bit
+			wiggle(ellipsoid);
+
+			// dilate a
+			while (contactPoints.size() < contactSensitivity) {
+				ellipsoid.dilate(vectorIncrement, 0, 0);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			// contract
+			while (contactPoints.size() > 0) {
+				ellipsoid.contract(0.01);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+
+			// rotate a little bit
+			wiggle(ellipsoid);
+
+			// dilate b
+			while (contactPoints.size() < contactSensitivity) {
+				ellipsoid.dilate(0, vectorIncrement, 0);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			// contract until no contact
+			while (contactPoints.size() > 0) {
+				ellipsoid.contract(0.01);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+			// rotate a little bit
+			wiggle(ellipsoid);
+
+			// dilate c
+			while (contactPoints.size() < contactSensitivity) {
+				ellipsoid.dilate(0, 0, vectorIncrement);
+				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
+						w, h, d);
+			}
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			final double maximalVolEnd = maximal.getVolume();
+
+			if (maximalVolStart <= maximalVolEnd)
+				noImprovementCount++;
+
+			// keep the maximal ellipsoid found
+			ellipsoid = maximal.copy();
+			totalIterations++;
+		}
+		contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h, d);
+
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
