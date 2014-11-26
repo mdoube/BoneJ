@@ -145,6 +145,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
 		UsageReporter.reportEvent(this).send();
+		IJ.showStatus("Ellipsoid Factor completed");
 	}
 
 	/**
@@ -178,6 +179,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				public void run() {
 					for (int z = ai.getAndIncrement(); z <= d; z = ai
 							.getAndIncrement()) {
+						IJ.showStatus("Finding biggest ellipsoid");
+						IJ.showProgress(z, d);
 						byte[] slicePixels = (byte[]) stack.getPixels(z);
 						float[] bigSlice = biggest[z];
 						Arrays.fill(bigSlice, -ellipsoids.length);
@@ -198,7 +201,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			});
 		}
 		Multithreader.startAndJoin(threads);
-
 		return biggest;
 	}
 
