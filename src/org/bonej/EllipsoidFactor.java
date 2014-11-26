@@ -591,8 +591,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ImagePlus skeleton = sk.getSkeleton(imp);
 		final ImageStack skeletonStack = skeleton.getStack();
 
-		if (IJ.debugMode)
-			skeleton.show();
+//		if (IJ.debugMode)
+//			skeleton.show();
 
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
