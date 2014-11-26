@@ -82,7 +82,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * ellipsoid fields.
 	 */
 	private int skipRatio = 50;
-	private int contactSensitivity = 5;
+	private int contactSensitivity = 1;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -249,8 +249,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				public void run() {
 					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
 							.getAndAdd(skipRatio)) {
-						IJ.showStatus("Optimising ellipsoid " + (i + 1) + "/"
-								+ nPoints);
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors);
 					}
@@ -385,6 +383,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int triedEnoughTimes = 2;
 		int totalIterations = 0;
 		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
+			IJ.showStatus("Optimising 2-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
 
 			// contract until no contact
@@ -456,9 +455,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			totalIterations++;
 		}
 
-		// do it again but one axis at a time
+		// do it again but with weighted axes
 		totalIterations = 0;
-		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 10) {
+		final double halfIncrement = vectorIncrement*0.5;
+		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < 5) {
+			IJ.showStatus("Optimising 1-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
 
 			// contract until no contact
@@ -471,9 +472,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			wiggle(ellipsoid);
 
-			// dilate a
+			// dilate a & b
 			while (contactPoints.size() < contactSensitivity) {
-				ellipsoid.dilate(vectorIncrement, 0, 0);
+				ellipsoid.dilate(vectorIncrement, halfIncrement, 0);
 				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
 						w, h, d);
 			}
@@ -491,9 +492,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			wiggle(ellipsoid);
 
-			// dilate b
+			// dilate b & c
 			while (contactPoints.size() < contactSensitivity) {
-				ellipsoid.dilate(0, vectorIncrement, 0);
+				ellipsoid.dilate(0, vectorIncrement, halfIncrement);
 				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
 						w, h, d);
 			}
@@ -510,9 +511,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			wiggle(ellipsoid);
 
-			// dilate c
+			// dilate c and a
 			while (contactPoints.size() < contactSensitivity) {
-				ellipsoid.dilate(0, 0, vectorIncrement);
+				ellipsoid.dilate(vectorIncrement*0.5, 0, vectorIncrement);
 				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
 						w, h, d);
 			}
