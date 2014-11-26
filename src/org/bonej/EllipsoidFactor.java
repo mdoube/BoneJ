@@ -138,6 +138,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			bigStack.addSlice("" + i, biggestEllipsoid[i]);
 
 		ImagePlus bigImp = new ImagePlus("", bigStack);
+		bigImp.setCalibration(imp.getCalibration());
 		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		bigImp.show();
 
@@ -363,8 +364,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
 
+		final double stackVolume = w * h * d * pW * pH * pD;
 		int maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts) {
+		while (contactPoints.size() < maxContacts && ellipsoid.getVolume() < stackVolume) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
