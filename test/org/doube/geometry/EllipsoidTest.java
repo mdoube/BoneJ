@@ -239,13 +239,6 @@ public class EllipsoidTest {
 	}
 
 	@Test
-	public void testGetMajorRadius() {
-		assertEquals(1, unitSphere.getMajorRadius(), 1E-9);
-		assertEquals(3, oneTwoThree.getMajorRadius(), 1E-9);
-		assertEquals(17, threeFiveSeventeen.getMajorRadius(), 1E-9);
-	}
-
-	@Test
 	public void testGetCentre() {
 		assertArrayEquals(new double[] { 0, 0, 0 }, unitSphere.getCentre(),
 				1E-9);
