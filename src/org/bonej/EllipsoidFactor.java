@@ -138,7 +138,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			bigStack.addSlice("" + i, biggestEllipsoid[i]);
 
 		ImagePlus bigImp = new ImagePlus("", bigStack);
-		bigImp.setCalibration(imp.getCalibration());
 		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		bigImp.show();
 
