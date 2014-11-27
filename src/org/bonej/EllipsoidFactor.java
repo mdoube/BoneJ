@@ -627,8 +627,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		double[][] rotation = { zerothColumn, firstColumn, secondColumn };
 
-		// rotation has vectors as rows, to need to transpose
-		Matrix N = new Matrix(rotation).transpose();
+		//array has subarrays as rows, need them as columns
+		rotation = ArrayHelper.transpose(rotation);
+
+		Matrix N = new Matrix(rotation);
 
 		// N.printToIJLog("Wiggle rotation matrix");
 		ellipsoid.rotate(N);
