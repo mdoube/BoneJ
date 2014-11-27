@@ -391,6 +391,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			IJ.showStatus("Optimising 2-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
 
+			
+			
 			// contract until no contact
 			while (contactPoints.size() > 0) {
 				ellipsoid.contract(0.01);
