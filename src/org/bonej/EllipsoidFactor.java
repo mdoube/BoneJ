@@ -390,8 +390,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations ) {
 			IJ.showStatus("Optimising 2-axis phase...");
 			final double maximalVolStart = ellipsoid.getVolume();
-
-			
 			
 			// contract until no contact
 			while (contactPoints.size() > 0) {
@@ -401,7 +399,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate a & b
 			while (contactPoints.size() < contactSensitivity) {
@@ -421,7 +419,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate b & c
 			while (contactPoints.size() < contactSensitivity) {
@@ -440,7 +438,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						w, h, d);
 			}
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate a & c
 			while (contactPoints.size() < contactSensitivity) {
@@ -477,7 +475,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate a & b
 			while (contactPoints.size() < contactSensitivity) {
@@ -497,7 +495,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate b & c
 			while (contactPoints.size() < contactSensitivity) {
@@ -516,7 +514,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						w, h, d);
 			}
 			// rotate a little bit
-			wiggle(ellipsoid);
+			ellipsoid = wiggle(ellipsoid);
 
 			// dilate c and a
 			while (contactPoints.size() < contactSensitivity) {
@@ -605,7 +603,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * 
 	 * @param ellipsoid
 	 */
-	private void wiggle(Ellipsoid ellipsoid) {
+	private Ellipsoid wiggle(Ellipsoid ellipsoid) {
 
 		double b = nudge(0.1);
 		double c = nudge(0.1);
@@ -634,6 +632,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// N.printToIJLog("Wiggle rotation matrix");
 		ellipsoid.rotate(N);
+		
+		return ellipsoid;
 	}
 
 	/**
