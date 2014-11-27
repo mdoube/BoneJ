@@ -72,7 +72,7 @@ public class ArrayHelper {
 
 	/**
 	 * Transpose a square (rows and columns all the same length) double array so
-	 * that row values become calumn values and vice versa
+	 * that row values become column values and vice versa
 	 * 
 	 * @param d
 	 * @return
@@ -84,10 +84,11 @@ public class ArrayHelper {
 
 		double[][] t = new double[l][l];
 		for (int i = 0; i < l; i++) {
-			if (d[i].length != l)
+			final double[] di = d[i];
+			if (di.length != l)
 				throw new IllegalArgumentException();
 			for (int j = 0; j < l; j++)
-				t[i][j] = d[j][i];
+				t[j][i] = di[j];
 		}
 		return t;
 	}
