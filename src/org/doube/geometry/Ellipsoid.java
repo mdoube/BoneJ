@@ -172,6 +172,17 @@ public class Ellipsoid {
 		vy /= length;
 		vz /= length;
 
+		//unit vector pointing to point
+		final double[][] unitVector = {{ vx, vy, vz }};
+		double[][] surfacePoint = getSurfacePoints(unitVector);
+		
+		final double radius = Trig.distance3D(getCentre(), surfacePoint[0]);
+		
+		if (radius > length)
+			return true;
+		else
+			return false;
+		/*
 		// get eigenvector matrix
 		Matrix eV = this.V.copy();
 		// invert it
@@ -192,7 +203,7 @@ public class Ellipsoid {
 		// than the test point
 		double ellipsoidLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
 		return (ellipsoidLength > length);
-
+	*/
 	}
 
 	/**
@@ -212,9 +223,28 @@ public class Ellipsoid {
 	 * @param H
 	 * @return
 	 */
-	public static boolean contains(double x, double y, double z, double cx,
-			double cy, double cz, Matrix H) {
+	public boolean contains(double x, double y, double z, boolean matrixVersion) {
+		// calculate vector between point and centroid
+		double vx = x - cx;
+		double vy = y - cy;
+		double vz = z - cz;
 
+		// calculate distance from centroid
+		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
+
+		double[] radii = getRadii();
+		Arrays.sort(radii);
+
+		// if further from centroid than major semiaxis length
+		// must be outside
+		if (length > radii[2])
+			return false;
+
+		// if length closer than minor semiaxis length
+		// must be inside
+		if (length <= radii[0])
+			return true;
+		
 		Matrix X = vector3(x, y, z);
 		Matrix X0 = vector3(cx, cy, cz);
 
@@ -224,6 +254,7 @@ public class Ellipsoid {
 
 		return false;
 	}
+	
 
 	public double solve(double x, double y, double z) {
 		return a * x * x + b * y * y + c * z * z + 2
