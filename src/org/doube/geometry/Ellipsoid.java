@@ -131,8 +131,8 @@ public class Ellipsoid {
 
 	/**
 	 * @return the semiaxis lengths a, b and c. Note these are not ordered by
-	 *         size, but the order does relate to the 0th, 1st and 2nd columns of the
-	 *         rotation matrix respectively.
+	 *         size, but the order does relate to the 0th, 1st and 2nd columns
+	 *         of the rotation matrix respectively.
 	 */
 	public double[] getRadii() {
 		double[] radii = { ra, rb, rc };
@@ -239,21 +239,26 @@ public class Ellipsoid {
 
 		// get regularly-spaced points on the unit sphere
 		double[][] points = Vectors.regularVectors(nPoints);
+		return getSurfacePoints(points);
 
+	}
+
+	public double[][] getSurfacePoints(final double[][] vectors) {
+		final int nPoints = vectors.length;
 		for (int p = 0; p < nPoints; p++) {
 			// stretch the unit sphere into an ellipsoid
-			final double x = ra * points[p][0];
-			final double y = rb * points[p][1];
-			final double z = rc * points[p][2];
+			final double x = ra * vectors[p][0];
+			final double y = rb * vectors[p][1];
+			final double z = rc * vectors[p][2];
 			// rotate and translate the ellipsoid into position
-			points[p][0] = x * V.get(0, 0) + y * V.get(0, 1) + z * V.get(0, 2)
+			vectors[p][0] = x * V.get(0, 0) + y * V.get(0, 1) + z * V.get(0, 2)
 					+ cx;
-			points[p][1] = x * V.get(1, 0) + y * V.get(1, 1) + z * V.get(1, 2)
+			vectors[p][1] = x * V.get(1, 0) + y * V.get(1, 1) + z * V.get(1, 2)
 					+ cy;
-			points[p][2] = x * V.get(2, 0) + y * V.get(2, 1) + z * V.get(2, 2)
+			vectors[p][2] = x * V.get(2, 0) + y * V.get(2, 1) + z * V.get(2, 2)
 					+ cz;
 		}
-		return points;
+		return vectors;
 	}
 
 	/**
