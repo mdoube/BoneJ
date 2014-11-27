@@ -356,9 +356,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// construct a rotation matrix
 		double[][] rotation = { shortAxis, middleAxis, longAxis };
-
+		rotation = ArrayHelper.transpose(rotation);
+		
 		// needs transpose because each vector is put in as row to begin with
-		Matrix R = new Matrix(rotation).transpose();
+		Matrix R = new Matrix(rotation);
 
 		// R.printToIJLog("Rotation Matrix: det() = " + R.det());
 

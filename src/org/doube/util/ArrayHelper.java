@@ -69,4 +69,27 @@ public class ArrayHelper {
 		}
 		return array;
 	}
+
+	/**
+	 * Transpose a square (rows and columns all the same length) double array so
+	 * that row values become calumn values and vice versa
+	 * 
+	 * @param d
+	 * @return
+	 * @throws IllegalArgumentException
+	 *             if arrays are not all of the same length
+	 */
+	public static double[][] transpose(double[][] d) {
+		final int l = d.length;
+
+		double[][] t = new double[l][l];
+		for (int i = 0; i < l; i++) {
+			if (d[i].length != l)
+				throw new IllegalArgumentException();
+			for (int j = 0; j < l; j++)
+				t[i][j] = d[j][i];
+		}
+		return t;
+	}
+
 }
