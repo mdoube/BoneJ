@@ -261,7 +261,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		Multithreader.startAndJoin(threads);
 
-		Ellipsoid[] sortedEllipsoids = (Ellipsoid[]) ArrayHelper.removeNulls(ellipsoids);
+		Ellipsoid[] sortedEllipsoids = ArrayHelper.removeNulls(ellipsoids);
 
 		// Sort using this class' compare method
 		Arrays.sort(sortedEllipsoids, this);
@@ -382,7 +382,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// store a copy of the 'best ellipsoid so far'
 		Ellipsoid maximal = ellipsoid.copy();
+		int noImprovementCount = 0;
 
+		// number of times to cycle without improvement before quitting
+		final int triedEnoughTimes = 2;
 		int totalIterations = 0;
 		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations ) {
 			IJ.showStatus("Optimising 2-axis phase...");
@@ -448,6 +451,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			final double maximalVolEnd = maximal.getVolume();
+
+			if (maximalVolStart <= maximalVolEnd)
+				noImprovementCount++;
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
@@ -519,6 +525,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
+
+			final double maximalVolEnd = maximal.getVolume();
+
+			if (maximalVolStart <= maximalVolEnd)
+				noImprovementCount++;
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
@@ -613,8 +624,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				firstColumn));
 
 		double[][] rotation = { zerothColumn, firstColumn, secondColumn };
-	
-		
 
 		// rotation has vectors as rows, to need to transpose
 		Matrix N = new Matrix(rotation).transpose();
