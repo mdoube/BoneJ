@@ -382,14 +382,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// store a copy of the 'best ellipsoid so far'
 		Ellipsoid maximal = ellipsoid.copy();
-		int noImprovementCount = 0;
 
-		// number of times to cycle without improvement before quitting
-		final int triedEnoughTimes = 2;
 		int totalIterations = 0;
-		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations ) {
+		while (totalIterations < maxIterations ) {
 			IJ.showStatus("Optimising 2-axis phase...");
-			final double maximalVolStart = ellipsoid.getVolume();
 			
 			// contract until no contact
 			while (contactPoints.size() > 0) {
@@ -450,11 +446,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
-			final double maximalVolEnd = maximal.getVolume();
-
-			if (maximalVolStart <= maximalVolEnd)
-				noImprovementCount++;
-
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
 			totalIterations++;
@@ -463,9 +454,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// do it again but with weighted axes
 		totalIterations = 0;
 		final double halfIncrement = vectorIncrement*0.5;
-		while (/* noImprovementCount < triedEnoughTimes && */totalIterations < maxIterations) {
+		while (totalIterations < maxIterations) {
 			IJ.showStatus("Optimising 1-axis phase...");
-			final double maximalVolStart = ellipsoid.getVolume();
 
 			// contract until no contact
 			while (contactPoints.size() > 0) {
@@ -525,11 +515,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
-
-			final double maximalVolEnd = maximal.getVolume();
-
-			if (maximalVolStart <= maximalVolEnd)
-				noImprovementCount++;
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
