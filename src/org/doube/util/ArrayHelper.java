@@ -40,9 +40,16 @@ public class ArrayHelper {
 
 		return array;
 	}
-	
-	
-	public static Ellipsoid[] removeNulls(Ellipsoid[] o){
+
+	/**
+	 * Remove null values from an array of Objects
+	 * 
+	 * @param o
+	 *            1D Object[] array
+	 * @return Array containing same elements in same order but without null
+	 *         values, with length = o.length() - number of null values
+	 */
+	public static Object[] removeNulls(Object[] o) {
 		final int l = o.length;
 		int nullCount = 0;
 		for (int i = 0; i < l; i++)
@@ -51,7 +58,7 @@ public class ArrayHelper {
 		if (nullCount == 0)
 			return o;
 		final int nonNulls = l - nullCount;
-		Ellipsoid[] array = new Ellipsoid[nonNulls];
+		Object[] array = new Object[nonNulls];
 
 		int j = 0;
 		for (int i = 0; i < l; i++) {
