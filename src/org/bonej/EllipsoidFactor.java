@@ -391,11 +391,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
 
 			// dilate a & b
 			while (contactPoints.size() < contactSensitivity) {
@@ -411,12 +408,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
-
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
+			
 			// dilate b & c
 			while (contactPoints.size() < contactSensitivity) {
 				ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
@@ -431,11 +425,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
 
 			// dilate a & c
 			while (contactPoints.size() < contactSensitivity) {
@@ -462,12 +453,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
-
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
+			
 			// dilate a & b
 			while (contactPoints.size() < contactSensitivity) {
 				ellipsoid.dilate(vectorIncrement, halfIncrement, 0);
@@ -482,12 +470,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
-
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
+			
 			// dilate b & c
 			while (contactPoints.size() < contactSensitivity) {
 				ellipsoid.dilate(0, vectorIncrement, halfIncrement);
@@ -502,12 +487,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
-			while (contactPoints.size() > 0) {
-				ellipsoid.contract(0.01);
-				contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD,
-						w, h, d);
-			}
-
+			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d);
+			contactPoints.clear();
+			
 			// dilate c and a
 			while (contactPoints.size() < contactSensitivity) {
 				ellipsoid.dilate(vectorIncrement*0.5, 0, vectorIncrement);
@@ -573,16 +555,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return ellipsoid;
 	}
 
-	private void shrink(Ellipsoid ellipsoid, ArrayList<double[]> contactPoints,
+	private Ellipsoid shrinkToFit(Ellipsoid ellipsoid, ArrayList<double[]> contactPoints,
 			ByteProcessor[] ips, double pW, double pH, double pD, int w, int h,
 			int d) {
 
 		// contract until no contact
 		while (contactPoints.size() > 0) {
-			ellipsoid.contract(0.001);
+			ellipsoid.contract(0.01);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
 		}
+		
+		return ellipsoid;
 	}
 
 	/**
