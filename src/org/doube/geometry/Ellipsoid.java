@@ -207,8 +207,8 @@ public class Ellipsoid {
 	public double[][] getSurfacePoints(final int nPoints) {
 
 		// get regularly-spaced points on the unit sphere
-		double[][] points = Vectors.regularVectors(nPoints);
-		return getSurfacePoints(points);
+		double[][] vectors = Vectors.regularVectors(nPoints);
+		return getSurfacePoints(vectors);
 
 	}
 
