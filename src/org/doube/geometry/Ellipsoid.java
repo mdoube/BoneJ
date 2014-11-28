@@ -438,7 +438,7 @@ public class Ellipsoid {
 	 * Needs to be run any time the eigenvalues or eigenvectors change
 	 */
 	private void update3x3Matrix() {
-		this.H = (this.V.inverse().times(this.D)).times(this.V);
+		this.H = (this.V.times(this.D)).times(this.V.transpose());
 	}
 
 	private boolean is3x3Matrix(Matrix rotation) {
