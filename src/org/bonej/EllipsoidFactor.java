@@ -69,8 +69,6 @@ import customnode.CustomPointMesh;
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private final byte foreground = (byte) 255;
 	private int nVectors = 100;
-	/** regular vectors on a sphere */
-	private double[][] unitVectors;
 	private Image3DUniverse universe = new Image3DUniverse();
 
 	/**
@@ -124,8 +122,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (gd.wasCanceled())
 			return;
 
-		unitVectors = Vectors.regularVectors(nVectors);
-
+		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
@@ -133,7 +130,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (IJ.debugMode)
 			universe.show();
 
-		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints);
+		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
+				unitVectors);
 
 		IJ.log("Found " + ellipsoids.length + " ellipsoids");
 
@@ -238,10 +236,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * 
 	 * @param imp
 	 * @param skeletonPoints
+	 * @param unitVectors
 	 * @return
 	 */
 	private Ellipsoid[] findEllipsoids(final ImagePlus imp,
-			final int[][] skeletonPoints) {
+			final int[][] skeletonPoints, final double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		final Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
 
@@ -256,7 +255,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
-								skeletonPoints[i]);
+								skeletonPoints[i], unitVectors);
 					}
 				}
 			});
@@ -276,11 +275,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * 
 	 * @param imp
 	 * @param is
+	 * @param unitVectors
 	 * @return ellipsoid fitting the point cloud of boundaries lying at the end
 	 *         of vectors surrounding the seed point. If ellipsoid fitting
 	 *         fails, returns null
 	 */
-	private Ellipsoid optimiseEllipsoid(final ImagePlus imp, int[] skeletonPoint) {
+	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
+			int[] skeletonPoint, double[][] unitVectors) {
 
 		Calibration cal = imp.getCalibration();
 		final double pW = cal.pixelWidth;
@@ -649,8 +650,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
 			ByteProcessor[] ips, final double pW, final double pH,
 			final double pD, final int w, final int h, final int d) {
-
-		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
+		double[][] points = ellipsoid.getSurfacePoints(nVectors);
 
 		ArrayList<double[]> contactPoints = new ArrayList<double[]>();
 
@@ -669,9 +669,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private boolean isContained(Ellipsoid ellipsoid, ByteProcessor[] ips,
 			final double pW, final double pH, final double pD, final int w,
 			final int h, final int d) {
-
-		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
-
+		double[][] points = ellipsoid.getSurfacePoints(nVectors);
 		for (double[] p : points) {
 			final int x = (int) Math.floor(p[0] / pW);
 			final int y = (int) Math.floor(p[1] / pH);
