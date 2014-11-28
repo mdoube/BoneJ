@@ -40,9 +40,8 @@ public class ArrayHelper {
 
 		return array;
 	}
-	
-	
-	public static Ellipsoid[] removeNulls(Ellipsoid[] o){
+
+	public static Ellipsoid[] removeNulls(Ellipsoid[] o) {
 		final int l = o.length;
 		int nullCount = 0;
 		for (int i = 0; i < l; i++)
@@ -86,4 +85,39 @@ public class ArrayHelper {
 		return t;
 	}
 
+	/**
+	 * Matrix-free version of Matrix.times
+	 * 
+	 * Multiplies a by b in the matrix multiplication scheme c = ab
+	 * 
+	 * @param a
+	 * @param b
+	 * @return c
+	 */
+	public static double[][] times(double[][] a, double[][] b) {
+		final int am = a.length;
+		final int an = a[0].length;
+		final int bm = b.length;
+		final int bn = b[0].length;
+		if (bm != an) {
+			throw new IllegalArgumentException(
+					"Matrix inner dimensions must agree.");
+		}
+		double[][] c = new double[am][bn];
+		double[] bcolj = new double[an];
+		for (int j = 0; j < bn; j++) {
+			for (int k = 0; k < an; k++) {
+				bcolj[k] = b[k][j];
+			}
+			for (int i = 0; i < am; i++) {
+				double[] arowi = a[i];
+				double s = 0;
+				for (int k = 0; k < an; k++) {
+					s += arowi[k] * bcolj[k];
+				}
+				c[i][j] = s;
+			}
+		}
+		return c;
+	}
 }
