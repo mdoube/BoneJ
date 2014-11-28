@@ -360,12 +360,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		rotation = ArrayHelper.transpose(rotation);
 
 		// needs transpose because each vector is put in as row to begin with
-		Matrix R = new Matrix(rotation);
+//		Matrix R = new Matrix(rotation);
 
 		// R.printToIJLog("Rotation Matrix: det() = " + R.det());
 
 		// rotate ellipsoid to point this way...
-		ellipsoid.setRotation(R);
+		ellipsoid.setRotation(rotation);
 
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
@@ -629,10 +629,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// array has subarrays as rows, need them as columns
 		rotation = ArrayHelper.transpose(rotation);
 
-		Matrix N = new Matrix(rotation);
+//		Matrix N = new Matrix(rotation);
 
 		// N.printToIJLog("Wiggle rotation matrix");
-		ellipsoid.rotate(N);
+		ellipsoid.rotate(rotation);
 
 		return ellipsoid;
 	}
