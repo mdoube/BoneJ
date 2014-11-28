@@ -283,6 +283,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
 			int[] skeletonPoint, double[][] unitVectors) {
 
+		IJ.showStatus("Optimising ellipsoids...");
 		Calibration cal = imp.getCalibration();
 		final double pW = cal.pixelWidth;
 		final double pH = cal.pixelHeight;
@@ -386,7 +387,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		int totalIterations = 0;
 		while (totalIterations < maxIterations) {
-			IJ.showStatus("Optimising 2-axis phase...");
+//			IJ.showStatus("Optimising 2-axis phase...");
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -435,7 +436,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		totalIterations = 0;
 		// final double halfIncrement = vectorIncrement * 0.5;
 		while (totalIterations < maxIterations) {
-			IJ.showStatus("Optimising 1.5-axis phase...");
+//			IJ.showStatus("Optimising 1.5-axis phase...");
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
