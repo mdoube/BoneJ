@@ -209,7 +209,7 @@ public class Ellipsoid {
 	/**
 	 * Alternative contains() method based on the inequality
 	 * 
-	 * (X-X0)'H(X-X0) <= 1
+	 * (X-X0)H(X-X0)^T <= 1
 	 * 
 	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3
 	 * matrix
@@ -217,22 +217,19 @@ public class Ellipsoid {
 	 * @param x
 	 * @param y
 	 * @param z
-	 * @param cx
-	 * @param cy
-	 * @param cz
 	 * @param H
 	 * @return
 	 */
 	public boolean contains(double x, double y, double z, boolean matrixVersion) {
 		// calculate vector between point and centroid
-		double vx = x - cx;
-		double vy = y - cy;
-		double vz = z - cz;
+		final double vx = x - cx;
+		final double vy = y - cy;
+		final double vz = z - cz;
 
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		double[] radii = getRadii();
+		double[] radii = {ra, rb, rc};
 		Arrays.sort(radii);
 
 		// if further from centroid than major semiaxis length
@@ -244,14 +241,18 @@ public class Ellipsoid {
 		// must be inside
 		if (length <= radii[0])
 			return true;
+
+		final double[][] h = H.getArray();
 		
-		Matrix X = vector3(x, y, z);
-		Matrix X0 = vector3(cx, cy, cz);
-
-		Matrix XX0 = X.minus(X0);
-		if (XX0.transpose().times(H).times(XX0).get(0, 0) <= 1)
+		final double dot0 = vx * h[0][0] + vy * h[1][0] + vz * h[2][0];
+		final double dot1 = vx * h[0][1] + vy * h[1][1] + vz * h[2][1];
+		final double dot2 = vx * h[0][2] + vy * h[1][2] + vz * h[2][2];
+		
+		final double dot = dot0 * vx + dot1 * vy + dot2 * vz;
+		
+		if (dot <= 1)
 			return true;
-
+		
 		return false;
 	}
 	
