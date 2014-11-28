@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
+import org.doube.util.ArrayHelper;
 
 /**
  * <p>
@@ -43,13 +44,16 @@ public class Ellipsoid {
 	private double volume;
 
 	/** Eigenvector matrix */
-	private Matrix V;
+	// private Matrix V;
+	private double[][] ev;
 
 	/** Eigenvalue matrix */
-	private Matrix D;
+	// private Matrix D;
+	private double[][] ed;
 
 	/** 3x3 matrix describing shape of ellipsoid */
-	private Matrix H;
+	// private Matrix H;
+	private double[][] eh;
 
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
@@ -72,10 +76,13 @@ public class Ellipsoid {
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
 
-		this.V = new Matrix(3, 3);
-		this.D = new Matrix(3, 3);
-		this.H = new Matrix(3, 3);
-		setRotation(new Matrix((double[][]) ellipsoid[2]));
+		// this.V = new Matrix(3, 3);
+		this.ev = new double[3][3];
+		// this.D = new Matrix(3, 3);
+		this.ed = new double[3][3];
+		// this.H = new Matrix(3, 3);
+		this.eh = new double[3][3];
+		setRotation((double[][]) ellipsoid[2]);
 		setEigenvalues();
 		setVolume();
 
@@ -112,10 +119,13 @@ public class Ellipsoid {
 		this.cx = cx;
 		this.cy = cy;
 		this.cz = cz;
-		this.V = new Matrix(3, 3);
-		this.D = new Matrix(3, 3);
-		this.H = new Matrix(3, 3);
-		setRotation(new Matrix(eigenVectors));
+		// this.V = new Matrix(3, 3);
+		this.ev = new double[3][3];
+		// this.D = new Matrix(3, 3);
+		this.ed = new double[3][3];
+		// this.H = new Matrix(3, 3);
+		this.eh = new double[3][3];
+		setRotation(eigenVectors);
 		setEigenvalues();
 		// TODO update equation variables
 		setVolume();
@@ -180,7 +190,8 @@ public class Ellipsoid {
 		if (length <= radii[0])
 			return true;
 
-		final double[][] h = H.getArray();
+		// final double[][] h = H.getArray();
+		final double[][] h = eh;
 
 		final double dot0 = vx * h[0][0] + vy * h[1][0] + vz * h[2][0];
 		final double dot1 = vx * h[0][1] + vy * h[1][1] + vz * h[2][1];
@@ -220,12 +231,9 @@ public class Ellipsoid {
 			final double y = rb * vectors[p][1];
 			final double z = rc * vectors[p][2];
 			// rotate and translate the ellipsoid into position
-			vectors[p][0] = x * V.get(0, 0) + y * V.get(0, 1) + z * V.get(0, 2)
-					+ cx;
-			vectors[p][1] = x * V.get(1, 0) + y * V.get(1, 1) + z * V.get(1, 2)
-					+ cy;
-			vectors[p][2] = x * V.get(2, 0) + y * V.get(2, 1) + z * V.get(2, 2)
-					+ cz;
+			vectors[p][0] = x * ev[0][0] + y * ev[0][1] + z * ev[0][2] + cx;
+			vectors[p][1] = x * ev[1][0] + y * ev[1][1] + z * ev[1][2] + cy;
+			vectors[p][2] = x * ev[2][0] + y * ev[2][1] + z * ev[2][2] + cz;
 		}
 		return vectors;
 	}
@@ -308,8 +316,18 @@ public class Ellipsoid {
 	 * @param R
 	 *            a 3x3 rotation matrix
 	 */
-	public void rotate(Matrix R) {
-		setRotation(this.V.times(R));
+	// public void rotate(Matrix R) {
+	// setRotation(this.V.times(R));
+	// }
+
+	/**
+	 * Rotate the ellipsoid by the given 3x3 Matrix
+	 * 
+	 * @param R
+	 *            a 3x3 rotation matrix
+	 */
+	public void rotate(double[][] rotation) {
+		setRotation(ArrayHelper.times(this.ev, rotation));
 	}
 
 	/**
@@ -318,11 +336,20 @@ public class Ellipsoid {
 	 * @param R
 	 *            3x3 eigenvector matrix
 	 */
-	public void setRotation(Matrix R) {
-		final double detDiff = Math.abs(1 - R.det());
-		if (!is3x3Matrix(R) || detDiff > 1E-10)
-			throw new IllegalArgumentException("Not a 3x3 rotation matrix");
-		this.V = R.copy();
+	// public void setRotation(Matrix R) {
+	// final double detDiff = Math.abs(1 - R.det());
+	// if (!is3x3Matrix(R) || detDiff > 1E-10)
+	// throw new IllegalArgumentException("Not a 3x3 rotation matrix");
+	// this.V = R.copy();
+	// update3x3Matrix();
+	// }
+
+	/**
+	 * Faster version which avoids Matrix instantiation and which does no error
+	 * checking
+	 */
+	public void setRotation(double[][] rotation) {
+		this.ev = rotation.clone();
 		update3x3Matrix();
 	}
 
@@ -366,9 +393,12 @@ public class Ellipsoid {
 	 * Calculates eigenvalues from current radii
 	 */
 	private void setEigenvalues() {
-		this.D.set(0, 0, 1 / (this.ra * this.ra));
-		this.D.set(1, 1, 1 / (this.rb * this.rb));
-		this.D.set(2, 2, 1 / (this.rc * this.rc));
+		// this.D.set(0, 0, 1 / (this.ra * this.ra));
+		// this.D.set(1, 1, 1 / (this.rb * this.rb));
+		// this.D.set(2, 2, 1 / (this.rc * this.rc));
+		this.ed[0][0] = 1 / (this.ra * this.ra);
+		this.ed[1][1] = 1 / (this.rb * this.rb);
+		this.ed[2][2] = 1 / (this.rc * this.rc);
 		update3x3Matrix();
 	}
 
@@ -376,13 +406,15 @@ public class Ellipsoid {
 	 * Needs to be run any time the eigenvalues or eigenvectors change
 	 */
 	private void update3x3Matrix() {
-		this.H = (this.V.times(this.D)).times(this.V.transpose());
+		// this.H = (this.V.times(this.D)).times(this.V.transpose());
+		this.eh = ArrayHelper.times(ArrayHelper.times(ev, ed),
+				ArrayHelper.transpose(ev));
 	}
 
-	private boolean is3x3Matrix(Matrix rotation) {
-		return (rotation.getRowDimension() == 3 && rotation
-				.getColumnDimension() == 3);
-	}
+	// private boolean is3x3Matrix(Matrix rotation) {
+	// return (rotation.getRowDimension() == 3 && rotation
+	// .getColumnDimension() == 3);
+	// }
 
 	/**
 	 * Calculate the matrix representation of the ellipsoid (centre,
@@ -445,7 +477,7 @@ public class Ellipsoid {
 	 */
 	public Ellipsoid copy() {
 		Ellipsoid copy = new Ellipsoid(this.ra, this.rb, this.rc, this.cx,
-				this.cy, this.cz, this.V.getArrayCopy());
+				this.cy, this.cz, this.ev);
 		return copy;
 	}
 
@@ -478,7 +510,10 @@ public class Ellipsoid {
 		E.setMatrix(0, 2, 0, 2, B);
 
 		// now set up a 4x4 translation matrix
-		Matrix C = vector3(centre[0], centre[1], centre[2]);
+		Matrix C = new Matrix(3, 1);
+		C.set(0, 0, centre[0]);
+		C.set(1, 0, centre[1]);
+		C.set(2, 0, centre[2]);
 		Matrix T = Matrix.eye(4);
 		T.setMatrix(0, 2, 3, 3, C);
 
@@ -499,14 +534,6 @@ public class Ellipsoid {
 				e[11] };
 
 		return equation;
-	}
-
-	private static Matrix vector3(double j, double k, double l) {
-		Matrix C = new Matrix(3, 1);
-		C.set(0, 0, j);
-		C.set(1, 0, k);
-		C.set(2, 0, l);
-		return C;
 	}
 
 	/**
@@ -537,20 +564,20 @@ public class Ellipsoid {
 		string = string + "rc: " + this.rc + "\n";
 
 		string = string + "\nEigenvalues: \n";
-		string = string + "eVal0 = " + D.get(0, 0) + "\n";
-		string = string + "eVal1 = " + D.get(1, 1) + "\n";
-		string = string + "eVal2 = " + D.get(2, 2) + "\n";
+		string = string + "eVal0 = " + ed[0][0] + "\n";
+		string = string + "eVal1 = " + ed[1][1] + "\n";
+		string = string + "eVal2 = " + ed[2][2] + "\n";
 
 		string = string + "\nEigenvectors: \n";
-		string = string + "eV00 = " + V.get(0, 0) + "\n";
-		string = string + "eV01 = " + V.get(0, 1) + "\n";
-		string = string + "eV02 = " + V.get(0, 2) + "\n";
-		string = string + "eV10 = " + V.get(1, 0) + "\n";
-		string = string + "eV11 = " + V.get(1, 1) + "\n";
-		string = string + "eV12 = " + V.get(1, 2) + "\n";
-		string = string + "eV20 = " + V.get(2, 0) + "\n";
-		string = string + "eV21 = " + V.get(2, 1) + "\n";
-		string = string + "eV22 = " + V.get(2, 2) + "\n";
+		string = string + "eV00 = " + ev[0][0] + "\n";
+		string = string + "eV01 = " + ev[0][1] + "\n";
+		string = string + "eV02 = " + ev[0][2] + "\n";
+		string = string + "eV10 = " + ev[1][0] + "\n";
+		string = string + "eV11 = " + ev[1][1] + "\n";
+		string = string + "eV12 = " + ev[1][2] + "\n";
+		string = string + "eV20 = " + ev[2][0] + "\n";
+		string = string + "eV21 = " + ev[2][1] + "\n";
+		string = string + "eV22 = " + ev[2][2] + "\n";
 		return string;
 	}
 }
