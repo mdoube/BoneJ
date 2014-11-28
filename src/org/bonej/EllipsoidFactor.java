@@ -41,7 +41,6 @@ import ij3d.Image3DUniverse;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
-import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
@@ -358,7 +357,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// construct a rotation matrix
 		double[][] rotation = { shortAxis, middleAxis, longAxis };
-		rotation = ArrayHelper.transpose(rotation);
+		rotation = ellipsoid.transpose(rotation);
 
 		// needs transpose because each vector is put in as row to begin with
 //		Matrix R = new Matrix(rotation);
@@ -628,7 +627,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double[][] rotation = { zerothColumn, firstColumn, secondColumn };
 
 		// array has subarrays as rows, need them as columns
-		rotation = ArrayHelper.transpose(rotation);
+		rotation = ellipsoid.transpose(rotation);
 
 //		Matrix N = new Matrix(rotation);
 
@@ -647,7 +646,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private double nudge(double a) {
 		return Math.random() * (a + a) - a;
 	}
-
+	
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
 			ByteProcessor[] ips, final double pW, final double pH,
 			final double pD, final int w, final int h, final int d) {
