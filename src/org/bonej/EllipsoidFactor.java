@@ -551,10 +551,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				pW, pH, pD, w, h, d);
 
 		// contract until no contact
-		while (contactPoints.size() > 0) {
+		int safety = 0;
+		while (contactPoints.size() > 0 && safety < maxIterations) {
 			ellipsoid.contract(0.01);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
+			safety++;
 		}
 
 		return ellipsoid;
@@ -586,10 +588,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double bv = b * vectorIncrement;
 		final double cv = c * vectorIncrement;
 
-		while (contactPoints.size() < contactSensitivity) {
+		int safety = 0;
+		while (contactPoints.size() < contactSensitivity
+				&& safety < maxIterations) {
 			ellipsoid.dilate(av, bv, cv);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
+			safety++;
 		}
 		return ellipsoid;
 	}
