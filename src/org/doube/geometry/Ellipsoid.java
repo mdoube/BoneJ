@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
-import org.doube.util.ArrayHelper;
+//import org.doube.util.ArrayHelper;
 
 /**
  * <p>
@@ -327,7 +327,7 @@ public class Ellipsoid {
 	 *            a 3x3 rotation matrix
 	 */
 	public void rotate(double[][] rotation) {
-		setRotation(ArrayHelper.times(this.ev, rotation));
+		setRotation(times(this.ev, rotation));
 	}
 
 	/**
@@ -407,8 +407,64 @@ public class Ellipsoid {
 	 */
 	private void update3x3Matrix() {
 		// this.H = (this.V.times(this.D)).times(this.V.transpose());
-		this.eh = ArrayHelper.times(ArrayHelper.times(ev, ed),
-				ArrayHelper.transpose(ev));
+		this.eh = times(times(ev, ed), transpose(ev));
+	}
+
+	/**
+	 * High performance 3x3 matrix multiplier with no bounds or error checking
+	 * 
+	 * @param a
+	 * @param b
+	 * @return result of matrix multiplication, c = ab
+	 */
+	private double[][] times(double[][] a, double[][] b) {
+		final double a00 = a[0][0];
+		final double a01 = a[0][1];
+		final double a02 = a[0][2];
+		final double a10 = a[1][0];
+		final double a11 = a[1][1];
+		final double a12 = a[1][2];
+		final double a20 = a[2][0];
+		final double a21 = a[2][1];
+		final double a22 = a[2][2];
+		final double b00 = b[0][0];
+		final double b01 = b[0][1];
+		final double b02 = b[0][2];
+		final double b10 = b[1][0];
+		final double b11 = b[1][1];
+		final double b12 = b[1][2];
+		final double b20 = b[2][0];
+		final double b21 = b[2][1];
+		final double b22 = b[2][2];
+		double[][] c = {
+				{ a00 * b00 + a01 * b10 + a02 * b20,
+						a00 * b01 + a01 * b11 + a02 * b21,
+						a00 * b02 + a01 * b12 + a02 * b22 },
+				{ a10 * b00 + a11 * b10 + a12 * b20,
+						a10 * b01 + a11 * b11 + a12 * b21,
+						a10 * b02 + a11 * b12 + a12 * b22 },
+				{ a20 * b00 + a21 * b10 + a22 * b20,
+						a20 * b01 + a21 * b11 + a22 * b21,
+						a20 * b02 + a21 * b12 + a22 * b22 }, };
+		return c;
+	}
+	
+	/**
+	 * Transpose a 3x3 matrix in double[][] format
+	 * Does no error checking.
+	 */
+	public double[][] transpose(double[][] a){
+		double[][] t = new double[3][3];
+		t[0][0] = a[0][0];
+		t[0][1] = a[1][0];
+		t[0][2] = a[2][0];
+		t[1][0] = a[0][1];
+		t[1][1] = a[1][1];
+		t[1][2] = a[2][1];
+		t[2][0] = a[0][2];
+		t[2][1] = a[1][2];
+		t[2][2] = a[2][2];
+		return t;
 	}
 
 	// private boolean is3x3Matrix(Matrix rotation) {
