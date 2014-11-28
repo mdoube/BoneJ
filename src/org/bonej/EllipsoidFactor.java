@@ -650,11 +650,15 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
 			ByteProcessor[] ips, final double pW, final double pH,
 			final double pD, final int w, final int h, final int d) {
-		double[][] points = ellipsoid.getSurfacePoints(nVectors);
+		final double[][] unitVectors = Vectors.regularVectors(nVectors);
+		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
 
 		ArrayList<double[]> contactPoints = new ArrayList<double[]>();
 
-		for (double[] p : points) {
+		final int nPoints = points.length;
+		double[] p = new double[3];
+		for (int i = 0; i < nPoints; i++) {
+			p = points[i];
 			final int x = (int) Math.floor(p[0] / pW);
 			final int y = (int) Math.floor(p[1] / pH);
 			final int z = (int) Math.floor(p[2] / pD);
