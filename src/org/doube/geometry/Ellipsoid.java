@@ -144,70 +144,8 @@ public class Ellipsoid {
 		return equation.clone();
 	}
 
-	public boolean contains(double x, double y, double z) {
-
-		// calculate vector between point and centroid
-		double vx = x - cx;
-		double vy = y - cy;
-		double vz = z - cz;
-
-		// calculate distance from centroid
-		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
-
-		double[] radii = getRadii();
-		Arrays.sort(radii);
-
-		// if further from centroid than major semiaxis length
-		// must be outside
-		if (length > radii[2])
-			return false;
-
-		// if length closer than minor semiaxis length
-		// must be inside
-		if (length <= radii[0])
-			return true;
-
-		// calculate unit vector (normalise)
-		vx /= length;
-		vy /= length;
-		vz /= length;
-
-		//unit vector pointing to point
-		final double[][] unitVector = {{ vx, vy, vz }};
-		double[][] surfacePoint = getSurfacePoints(unitVector);
-		
-		final double radius = Trig.distance3D(getCentre(), surfacePoint[0]);
-		
-		if (radius > length)
-			return true;
-		else
-			return false;
-		/*
-		// get eigenvector matrix
-		Matrix eV = this.V.copy();
-		// invert it
-		Matrix eVinv = eV.inverse();
-		double[][] dv = eVinv.getArrayCopy();
-		// calculate the derotated unit vector
-		double dx = vx * dv[0][0] + vy * dv[0][1] + vz * dv[0][2];
-		double dy = vx * dv[1][0] + vy * dv[1][1] + vz * dv[1][2];
-		double dz = vx * dv[2][0] + vy * dv[2][1] + vz * dv[2][2];
-
-		// find the size of the ellipsoid in this direction using semiaxis
-		// lengths
-		dx = dx * ra;
-		dy = dy * rb;
-		dz = dz * rc;
-
-		// returns true if the ellipsoid is bigger in this direction
-		// than the test point
-		double ellipsoidLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
-		return (ellipsoidLength > length);
-	*/
-	}
-
 	/**
-	 * Alternative contains() method based on the inequality
+	 * Method based on the inequality
 	 * 
 	 * (X-X0)H(X-X0)^T <= 1
 	 * 
@@ -217,10 +155,10 @@ public class Ellipsoid {
 	 * @param x
 	 * @param y
 	 * @param z
-	 * @param H
-	 * @return
+	 * @return true if the point (x,y,z) lies inside or on the ellipsoid, false
+	 *         otherwise
 	 */
-	public boolean contains(double x, double y, double z, boolean matrixVersion) {
+	public boolean contains(double x, double y, double z) {
 		// calculate vector between point and centroid
 		final double vx = x - cx;
 		final double vy = y - cy;
@@ -229,7 +167,7 @@ public class Ellipsoid {
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		double[] radii = {ra, rb, rc};
+		double[] radii = { ra, rb, rc };
 		Arrays.sort(radii);
 
 		// if further from centroid than major semiaxis length
@@ -243,19 +181,18 @@ public class Ellipsoid {
 			return true;
 
 		final double[][] h = H.getArray();
-		
+
 		final double dot0 = vx * h[0][0] + vy * h[1][0] + vz * h[2][0];
 		final double dot1 = vx * h[0][1] + vy * h[1][1] + vz * h[2][1];
 		final double dot2 = vx * h[0][2] + vy * h[1][2] + vz * h[2][2];
-		
+
 		final double dot = dot0 * vx + dot1 * vy + dot2 * vz;
-		
+
 		if (dot <= 1)
 			return true;
-		
+
 		return false;
 	}
-	
 
 	public double solve(double x, double y, double z) {
 		return a * x * x + b * y * y + c * z * z + 2
