@@ -453,7 +453,7 @@ public class Ellipsoid {
 	 * Transpose a 3x3 matrix in double[][] format
 	 * Does no error checking.
 	 */
-	public double[][] transpose(double[][] a){
+	public static double[][] transpose(double[][] a){
 		double[][] t = new double[3][3];
 		t[0][0] = a[0][0];
 		t[0][1] = a[1][0];

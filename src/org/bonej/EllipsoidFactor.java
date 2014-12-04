@@ -357,7 +357,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// construct a rotation matrix
 		double[][] rotation = { shortAxis, middleAxis, longAxis };
-		rotation = ellipsoid.transpose(rotation);
+		rotation = Ellipsoid.transpose(rotation);
 
 		// needs transpose because each vector is put in as row to begin with
 //		Matrix R = new Matrix(rotation);
@@ -627,7 +627,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double[][] rotation = { zerothColumn, firstColumn, secondColumn };
 
 		// array has subarrays as rows, need them as columns
-		rotation = ellipsoid.transpose(rotation);
+		rotation = Ellipsoid.transpose(rotation);
 
 //		Matrix N = new Matrix(rotation);
 
