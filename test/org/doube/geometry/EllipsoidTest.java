@@ -51,29 +51,6 @@ public class EllipsoidTest {
 		assertArrayEquals(new double[] { 17, 13, 7 }, rotated.getRadii(), 1E-9);
 	}
 
-	@Test
-	public void testGetEquation() {
-
-		assertArrayEquals(new double[] { 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-				FitEllipsoid.fitTo(unitSphere.getSurfacePoints(10000))
-						.getEquation(), 1E-9);
-
-		assertArrayEquals(new double[] { -0.5, -0.125, -1.0 / 18.0, 0, 0, 0,
-				0.5, 0.25, 1.0 / 6.0 }, oneTwoThree.getEquation(), 1E-9);
-	}
-
-	@Test
-	public void testIntercepts() {
-		Ellipsoid e = FitEllipsoid.fitTo(unitSphere.getSurfacePoints(1000));
-		assertArrayEquals(new double[] { 1, -1, 1, -1, 1, -1 }, e.intercepts(),
-				1E-9);
-
-		assertArrayEquals(new double[] { 3, -3, 5, -5, 17, -17 },
-				threeFiveSeventeen.intercepts(), 1E-9);
-
-		assertArrayEquals(new double[] { 17, -17, 5, -5, 3, -3 },
-				seventeenFiveThree.intercepts(), 1E-9);
-	}
 
 	@Test
 	public void testContains() {
@@ -219,26 +196,6 @@ public class EllipsoidTest {
 	}
 
 	@Test
-	public void testSolve() {
-		double[][] points = unitSphere.getSurfacePoints(1000);
-		Ellipsoid e = FitEllipsoid.fitTo(points);
-		for (double[] p : points) {
-			assertEquals(1.0, e.solve(p[0], p[1], p[2]), 1E-9);
-		}
-
-		points = oneTwoThree.getSurfacePoints(1000);
-		for (double[] p : points) {
-			assertEquals(1.0, oneTwoThree.solve(p[0], p[1], p[2]), 1E-9);
-		}
-
-		points = threeFiveSeventeen.getSurfacePoints(1000);
-		for (double[] p : points) {
-			assertEquals(1.0, threeFiveSeventeen.solve(p[0], p[1], p[2]), 1E-9);
-		}
-
-	}
-
-	@Test
 	public void testGetCentre() {
 		assertArrayEquals(new double[] { 0, 0, 0 }, unitSphere.getCentre(),
 				1E-9);
@@ -254,17 +211,6 @@ public class EllipsoidTest {
 		for (double[] p : points) {
 			assertEquals(1, Trig.distance3D(p), 1E-9);
 		}
-
-		points = oneTwoThree.getSurfacePoints(10000);
-		for (double[] p : points) {
-			assertEquals(1, oneTwoThree.solve(p[0], p[1], p[2]), 1E-9);
-		}
-
-		points = threeFiveSeventeen.getSurfacePoints(10000);
-		for (double[] p : points) {
-			assertEquals(1, threeFiveSeventeen.solve(p[0], p[1], p[2]), 1E-9);
-		}
-
 	}
 
 	@Test

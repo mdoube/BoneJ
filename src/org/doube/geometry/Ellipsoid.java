@@ -29,17 +29,6 @@ public class Ellipsoid {
 	private double rb;
 	private double rc;
 
-	// ellipsoid equation coefficients
-	private double a;
-	private double b;
-	private double c;
-	private double d;
-	private double e;
-	private double f;
-	private double g;
-	private double h;
-	private double i;
-
 	// calculated volume
 	private double volume;
 
@@ -85,17 +74,6 @@ public class Ellipsoid {
 		setRotation((double[][]) ellipsoid[2]);
 		setEigenvalues();
 		setVolume();
-
-		double[] equation = (double[]) ellipsoid[3];
-		this.a = equation[0];
-		this.b = equation[1];
-		this.c = equation[2];
-		this.d = equation[3];
-		this.e = equation[4];
-		this.f = equation[5];
-		this.g = equation[6];
-		this.h = equation[7];
-		this.i = equation[8];
 	}
 
 	/**
@@ -149,11 +127,6 @@ public class Ellipsoid {
 		return radii.clone();
 	}
 
-	public double[] getEquation() {
-		double[] equation = { a, b, c, d, e, f, g, h, i };
-		return equation.clone();
-	}
-
 	/**
 	 * Method based on the inequality
 	 * 
@@ -203,11 +176,6 @@ public class Ellipsoid {
 			return true;
 
 		return false;
-	}
-
-	public double solve(double x, double y, double z) {
-		return a * x * x + b * y * y + c * z * z + 2
-				* (d * x * y + e * x * z + f * y * z + g * x + h * y + i * z);
 	}
 
 	public double[] getCentre() {
@@ -351,21 +319,6 @@ public class Ellipsoid {
 	public void setRotation(double[][] rotation) {
 		this.ev = rotation.clone();
 		update3x3Matrix();
-	}
-
-	/**
-	 * Calculate the intercepts of the x, y and z axes
-	 * 
-	 * @return array containing 6 intercepts, ordered +x, -x, +y, -y, +z, -z
-	 */
-	public double[] intercepts() {
-		double plusX = (-g + Math.sqrt(g * g + 4 * a)) / (2 * a);
-		double minusX = (-g - Math.sqrt(g * g + 4 * a)) / (2 * a);
-		double plusY = (-h + Math.sqrt(h * h + 4 * b)) / (2 * b);
-		double minusY = (-h - Math.sqrt(h * h + 4 * b)) / (2 * b);
-		double plusZ = (-i + Math.sqrt(i * i + 4 * c)) / (2 * c);
-		double minusZ = (-i - Math.sqrt(i * i + 4 * c)) / (2 * c);
-		return new double[] { plusX, minusX, plusY, minusY, plusZ, minusZ };
 	}
 
 	/**
@@ -537,60 +490,6 @@ public class Ellipsoid {
 		return copy;
 	}
 
-	/**
-	 * 
-	 * @param centre
-	 * @param eigenValues
-	 * @param eigenVectors
-	 * @return
-	 */
-	public static double[] equationFromMatrix(double[] centre,
-			double[][] eigenValues, double[][] eigenVectors) {
-
-		// orientation of ellipsoid
-		Matrix P = new Matrix(eigenVectors);
-
-		// size of ellipsoid
-		// related to radii by r = sqrt(1/eVal)
-		Matrix D = new Matrix(eigenValues);
-
-		// B = P^-1DP
-		// where B is a square matrix, D is eigenvalues, P is eigenvectors
-		Matrix B = (P.inverse().times(D)).times(P);
-
-		// now B = R02.times(-1/r33) in the above equation
-
-		// make a 4x4 matrix with B in the top left and 1 in the bottom right, 0
-		// elsewhere indicating no translation
-		Matrix E = Matrix.eye(4);
-		E.setMatrix(0, 2, 0, 2, B);
-
-		// now set up a 4x4 translation matrix
-		Matrix C = new Matrix(3, 1);
-		C.set(0, 0, centre[0]);
-		C.set(1, 0, centre[1]);
-		C.set(2, 0, centre[2]);
-		Matrix T = Matrix.eye(4);
-		T.setMatrix(0, 2, 3, 3, C);
-
-		// above leaves bottom row zeros
-
-		// work out the translated ellipsoid
-		E = E.times(T);
-
-		// get the negative inverse of the bottom right corner
-		final double e33 = -1 / E.get(3, 3);
-
-		// work out the scaled ellipsoid
-		E = E.times(e33);
-
-		// pack the matrix into the equation form
-		double[] e = E.getColumnPackedCopy();
-		double[] equation = { e[0], e[5], e[10], e[1], e[2], e[6], e[3], e[7],
-				e[11] };
-
-		return equation;
-	}
 
 	/**
 	 * Generate a string of useful information about this Ellipsoid
@@ -599,15 +498,6 @@ public class Ellipsoid {
 	 */
 	public String debugOutput() {
 		String string = "Ellipsoid variables:\n";
-		string = string + "a = " + a + "\n";
-		string = string + "b = " + b + "\n";
-		string = string + "c = " + c + "\n";
-		string = string + "d = " + d + "\n";
-		string = string + "e = " + e + "\n";
-		string = string + "f = " + f + "\n";
-		string = string + "g = " + g + "\n";
-		string = string + "h = " + h + "\n";
-		string = string + "i = " + i + "\n";
 
 		string = string + "\nCentre: \n";
 		string = string + "cx: " + this.cx + "\n";
