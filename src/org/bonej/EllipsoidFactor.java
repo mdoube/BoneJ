@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Color3f;
@@ -36,6 +37,7 @@ import ij.process.ByteProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
+import ij.measure.ResultsTable;
 import ij3d.Image3DUniverse;
 
 import org.doube.geometry.Trig;
@@ -84,6 +86,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int contactSensitivity = 1;
 	/** Safety value to prevent while() running forever */
 	private int maxIterations = 100;
+	private ResultsTable rt;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -129,6 +132,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (IJ.debugMode)
 			universe.show();
 
+		rt = new ResultsTable();
+		
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
 
@@ -147,6 +152,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
+		rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
@@ -254,7 +260,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
-								skeletonPoints[i], unitVectors);
+								skeletonPoints[i], unitVectors, i);
 					}
 				}
 			});
@@ -280,7 +286,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 *         fails, returns null
 	 */
 	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
-			int[] skeletonPoint, double[][] unitVectors) {
+			int[] skeletonPoint, double[][] unitVectors, final int index) {
 
 		IJ.showStatus("Optimising ellipsoids...");
 		Calibration cal = imp.getCalibration();
@@ -313,11 +319,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Ellipsoid ellipsoid = new Ellipsoid(vectorIncrement, vectorIncrement,
 				vectorIncrement, px, py, pz, orthogonalVectors);
 
+		Vector<Double> volumeHistory = new Vector<Double>();
+		volumeHistory.add(ellipsoid.getVolume());
+		
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
 			ellipsoid.dilate(vectorIncrement, vectorIncrement, vectorIncrement);
 		}
 
+		volumeHistory.add(ellipsoid.getVolume());
+		
 		// get the points of contact
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
 				pW, pH, pD, w, h, d);
@@ -377,6 +388,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					d);
 		}
 
+		volumeHistory.add(ellipsoid.getVolume());
+		
 		// until ellipsoid is totally jammed within the structure, go through
 		// cycles of contraction, wiggling, dilation
 		// goal is maximal inscribed ellipsoid, maximal being defined by volume
@@ -428,6 +441,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
+			//log its volume
+			volumeHistory.add(ellipsoid.getVolume());
 			totalIterations++;
 		}
 
@@ -478,6 +493,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
+			//log its volume
+			volumeHistory.add(ellipsoid.getVolume());
 			totalIterations++;
 		}
 
@@ -526,9 +543,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
+			//log its volume
+			volumeHistory.add(ellipsoid.getVolume());
 			totalIterations++;
 		}
 
+		//add history to the ResultsTable
+		for (int i = 0; i < volumeHistory.size(); i++){
+			rt.setValue(""+index, i, volumeHistory.get(i));
+		}
+		
+		
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
