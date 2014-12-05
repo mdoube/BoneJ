@@ -224,10 +224,10 @@ public class EllipsoidTest {
 
 	@Test
 	public void testContract() {
-		unitSphere.contract(1.5);
+		unitSphere.contract(0.015);
 		double[][] points = unitSphere.getSurfacePoints(10000);
 		for (double[] p : points) {
-			assertEquals(0.5, Trig.distance3D(p), 1E-9);
+			assertEquals(0.985, Trig.distance3D(p), 1E-9);
 		}
 	}
 
