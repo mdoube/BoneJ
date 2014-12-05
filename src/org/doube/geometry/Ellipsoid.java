@@ -6,42 +6,40 @@ import java.util.Arrays;
 
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
+
 //import org.doube.util.ArrayHelper;
 
 /**
  * <p>
- * Represents an ellipsoid defined as <i>ax</i><sup>2</sup> +
- * <i>by</i><sup>2</sup> + <i>cz</i><sup>2</sup> + 2<i>dxy</i> + 2<i>exz</i> +
- * 2<i>fyz</i> + 2<i>gx</i> + 2<i>hy</i> + 2<i>iz</i> = 1 <br />
+ * Represents an ellipsoid defined by its centroid, eigenvalues and 3x3
+ * eigenvector matrix. Semiaxis lengths (radii) are calculated as the inverse
+ * square root of the eigenvalues.
  * </p>
  * 
  * @author Michael Doube
  */
 public class Ellipsoid {
 
-	// centre
-	private double cx;
-	private double cy;
-	private double cz;
+	/** Centroid of ellipsoid (cx, cy, cz) */
+	private double cx, cy, cz;
 
-	// radii
-	private double ra;
-	private double rb;
-	private double rc;
+	/**
+	 * Radii (semiaxis lengths) of ellipsoid. Size-based ordering (e.g. a > b >
+	 * c) is not performed. They are in the same order as the eigenvalues and
+	 * eigenvectors.
+	 */
+	private double ra, rb, rc;
 
-	// calculated volume
+	/** Volume of ellipsoid, calculated as 4 * PI * ra * rb * rc / 3 */
 	private double volume;
 
 	/** Eigenvector matrix */
-	// private Matrix V;
 	private double[][] ev;
 
 	/** Eigenvalue matrix */
-	// private Matrix D;
 	private double[][] ed;
 
 	/** 3x3 matrix describing shape of ellipsoid */
-	// private Matrix H;
 	private double[][] eh;
 
 	/**
@@ -401,12 +399,11 @@ public class Ellipsoid {
 						a20 * b02 + a21 * b12 + a22 * b22 }, };
 		return c;
 	}
-	
+
 	/**
-	 * Transpose a 3x3 matrix in double[][] format
-	 * Does no error checking.
+	 * Transpose a 3x3 matrix in double[][] format Does no error checking.
 	 */
-	public static double[][] transpose(double[][] a){
+	public static double[][] transpose(double[][] a) {
 		double[][] t = new double[3][3];
 		t[0][0] = a[0][0];
 		t[0][1] = a[1][0];
@@ -489,7 +486,6 @@ public class Ellipsoid {
 				this.cy, this.cz, this.ev);
 		return copy;
 	}
-
 
 	/**
 	 * Generate a string of useful information about this Ellipsoid
