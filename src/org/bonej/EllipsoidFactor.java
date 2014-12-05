@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.naming.NoInitialContextException;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
@@ -399,7 +400,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// alternately try each axis
 		int totalIterations = 0;
-		while (totalIterations < maxIterations) {
+		int noImprovementCount = 0;
+		while (totalIterations < maxIterations * 5 && noImprovementCount < maxIterations) {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -444,6 +446,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = maximal.copy();
 			//log its volume
 			volumeHistory.add(ellipsoid.getVolume());
+			
+			//if the last value is bigger than the second-to-last value
+			//reset the noImprovementCount
+			//otherwise, increment it by 1.
+			//if noImprovementCount exceeds a preset value the while() is broken
+			final int i = volumeHistory.size() - 1;
+			if (volumeHistory.get(i) > volumeHistory.get(i-1))
+				noImprovementCount = 0;
+			else
+				noImprovementCount++;
+			
 			totalIterations++;
 		}
 
