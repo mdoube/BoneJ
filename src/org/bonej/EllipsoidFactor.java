@@ -310,8 +310,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double[][] orthogonalVectors = { { 1, 0, 0 }, { 0, 1, 0 },
 				{ 0, 0, 1 } };
 
-		Ellipsoid ellipsoid = new Ellipsoid(0, 0, 0, px, py, pz,
-				orthogonalVectors);
+		Ellipsoid ellipsoid = new Ellipsoid(vectorIncrement, vectorIncrement,
+				vectorIncrement, px, py, pz, orthogonalVectors);
 
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
@@ -360,7 +360,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		rotation = Ellipsoid.transpose(rotation);
 
 		// needs transpose because each vector is put in as row to begin with
-//		Matrix R = new Matrix(rotation);
+		// Matrix R = new Matrix(rotation);
 
 		// R.printToIJLog("Rotation Matrix: det() = " + R.det());
 
@@ -386,7 +386,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		int totalIterations = 0;
 		while (totalIterations < maxIterations) {
-//			IJ.showStatus("Optimising 2-axis phase...");
+			// IJ.showStatus("Optimising 2-axis phase...");
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -435,7 +435,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		totalIterations = 0;
 		// final double halfIncrement = vectorIncrement * 0.5;
 		while (totalIterations < maxIterations) {
-//			IJ.showStatus("Optimising 1.5-axis phase...");
+			// IJ.showStatus("Optimising 1.5-axis phase...");
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -472,6 +472,54 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// dilate c and a
 			ellipsoid = inflateToFit(ellipsoid, 0.5, 0, 1, ips, pW, pH, pD, w,
 					h, d);
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			// keep the maximal ellipsoid found
+			ellipsoid = maximal.copy();
+			totalIterations++;
+		}
+
+		// do it again but with single axis
+		totalIterations = 0;
+		while (totalIterations < maxIterations) {
+
+			// rotate a little bit
+			ellipsoid = wiggle(ellipsoid);
+
+			// contract until no contact
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
+
+			// dilate a
+			ellipsoid = inflateToFit(ellipsoid, 1, 0, 0, ips, pW, pH, pD, w, h,
+					d);
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			// rotate a little bit
+			ellipsoid = wiggle(ellipsoid);
+
+			// contract
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
+
+			// dilate b
+			ellipsoid = inflateToFit(ellipsoid, 0, 1, 0, ips, pW, pH, pD, w, h,
+					d);
+
+			if (ellipsoid.getVolume() > maximal.getVolume())
+				maximal = ellipsoid.copy();
+
+			// rotate a little bit
+			ellipsoid = wiggle(ellipsoid);
+
+			// contract until no contact
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
+
+			// dilate c
+			ellipsoid = inflateToFit(ellipsoid, 0, 0, 1, ips, pW, pH, pD, w, h,
+					d);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
@@ -629,7 +677,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// array has subarrays as rows, need them as columns
 		rotation = Ellipsoid.transpose(rotation);
 
-//		Matrix N = new Matrix(rotation);
+		// Matrix N = new Matrix(rotation);
 
 		// N.printToIJLog("Wiggle rotation matrix");
 		ellipsoid.rotate(rotation);
@@ -646,7 +694,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private double nudge(double a) {
 		return Math.random() * (a + a) - a;
 	}
-	
+
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
 			ByteProcessor[] ips, final double pW, final double pH,
 			final double pD, final int w, final int h, final int d) {

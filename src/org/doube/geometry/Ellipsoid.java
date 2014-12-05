@@ -62,6 +62,9 @@ public class Ellipsoid {
 
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
+		
+		if (ra <= 0 || rb <= 0 || rc <= 0)
+			throw new IllegalArgumentException("Radius cannot be <= 0");
 
 		this.ev = new double[3][3];
 		this.ed = new double[3][3];
