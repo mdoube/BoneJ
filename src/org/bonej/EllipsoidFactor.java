@@ -86,7 +86,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int skipRatio = 50;
 	private int contactSensitivity = 1;
 	/** Safety value to prevent while() running forever */
-	private int maxIterations = 100;
+	private int maxIterations = 100	;
 
 	/**
 	 * maximum distance ellipsoid may drift from seed point. Defaults to voxel
@@ -408,7 +408,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// dilate a
 			ellipsoid = inflateToFit(ellipsoid, 1, 0, 0, ips, pW, pH, pD, w, h,
 					d, px, py, pz);
-			
+
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
@@ -588,9 +588,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param w
 	 * @param h
 	 * @param d
-	 * @param pz 
-	 * @param py 
-	 * @param px 
+	 * @param pz
+	 * @param py
+	 * @param px
 	 * @return
 	 */
 	private Ellipsoid inflateToFit(Ellipsoid ellipsoid, double a, double b,
@@ -610,11 +610,42 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid.dilate(av, bv, cv);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
+			// try shifting the centroid a little bit once it starts touching
+			// the sides
+			if (contactPoints.size() > 0)
+				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
 			safety++;
 		}
-		
-		double[] contactVector = contactPointUnitVector(ellipsoid, contactPoints);
-		
+
+		return ellipsoid;
+	}
+
+	/**
+	 * 
+	 * @param ellipsoid
+	 * @param ips
+	 * @param pW
+	 * @param pH
+	 * @param pD
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @param px
+	 * @param py
+	 * @param pz
+	 * @return
+	 */
+	private Ellipsoid bump(Ellipsoid ellipsoid,
+			ArrayList<double[]> contactPoints, double px, double py, double pz) {
+
+		final double[] c = ellipsoid.getCentre();
+		final double[] vector = contactPointUnitVector(ellipsoid, contactPoints);
+		final double x = c[0] + vector[0] * 2 * vectorIncrement;
+		final double y = c[1] + vector[1] * 2 * vectorIncrement;
+		final double z = c[2] + vector[2] * 2 * vectorIncrement;
+		if (Trig.distance3D(px, py, pz, x, y, z) < maxDrift)
+			ellipsoid.setCentroid(x, y, z);
+
 		return ellipsoid;
 	}
 
