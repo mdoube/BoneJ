@@ -87,6 +87,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int contactSensitivity = 1;
 	/** Safety value to prevent while() running forever */
 	private int maxIterations = 100;
+
+	/**
+	 * maximum distance ellipsoid may drift from seed point. Defaults to voxel
+	 * diagonal length
+	 */
+	private double maxDrift = Math.sqrt(3);
 	private ResultsTable rt;
 
 	public void run(String arg) {
@@ -105,14 +111,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
-		vectorIncrement *= Math.min(cal.pixelDepth,
-				Math.min(cal.pixelHeight, cal.pixelWidth));
+		final double pW = cal.pixelWidth;
+		final double pH = cal.pixelHeight;
+		final double pD = cal.pixelDepth;
+		vectorIncrement *= Math.min(pD, Math.min(pH, pW));
+		maxDrift = Math.sqrt(pW * pW + pH * pH + pD * pD);
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
 		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
 		gd.addNumericField("Maximum iterations", maxIterations, 0);
+		gd.addNumericField("Maximum drift", maxDrift, 5, 8, units);
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
@@ -121,6 +131,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			skipRatio = (int) Math.round(gd.getNextNumber());
 			contactSensitivity = (int) Math.round(gd.getNextNumber());
 			maxIterations = (int) Math.round(gd.getNextNumber());
+			maxDrift = gd.getNextNumber();
 		}
 		if (gd.wasCanceled())
 			return;
@@ -134,7 +145,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			universe.show();
 
 		rt = new ResultsTable();
-		
+
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
 
@@ -322,14 +333,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		Vector<Double> volumeHistory = new Vector<Double>();
 		volumeHistory.add(ellipsoid.getVolume());
-		
+
 		// dilate the sphere until it hits the background
 		while (isContained(ellipsoid, ips, pW, pH, pD, w, h, d)) {
 			ellipsoid.dilate(vectorIncrement, vectorIncrement, vectorIncrement);
 		}
 
 		volumeHistory.add(ellipsoid.getVolume());
-		
+
 		// get the points of contact
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
 				pW, pH, pD, w, h, d);
@@ -340,23 +351,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// find the mean unit vector pointing to the points of contact from the
 		// centre
-		double[] summedVector = new double[3];
-		final double[] c = ellipsoid.getCentre();
-		for (double[] p : contactPoints) {
-			final double l = Trig.distance3D(p, c);
-			double[] unitVector = { (p[0] - c[0]) / l, (p[1] - c[1]) / l,
-					(p[2] - c[2]) / l };
-			summedVector[0] += unitVector[0];
-			summedVector[1] += unitVector[1];
-			summedVector[2] += unitVector[2];
-		}
-		// put the short axis on the mean contact vector
-		double[] shortAxis = new double[3];
-		shortAxis[0] = summedVector[0] / contactPoints.size();
-		shortAxis[1] = summedVector[1] / contactPoints.size();
-		shortAxis[2] = summedVector[2] / contactPoints.size();
-
-		shortAxis = Vectors.norm(shortAxis);
+		double[] shortAxis = contactPointUnitVector(ellipsoid, contactPoints);
 
 		// find an orthogonal axis
 		final double[] xAxis = { 1, 0, 0 };
@@ -390,7 +385,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 
 		volumeHistory.add(ellipsoid.getVolume());
-		
+
 		// until ellipsoid is totally jammed within the structure, go through
 		// cycles of contraction, wiggling, dilation
 		// goal is maximal inscribed ellipsoid, maximal being defined by volume
@@ -401,7 +396,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// alternately try each axis
 		int totalIterations = 0;
 		int noImprovementCount = 0;
-		while (totalIterations < maxIterations * 5 && noImprovementCount < maxIterations) {
+		while (totalIterations < maxIterations * 5
+				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -411,8 +407,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate a
 			ellipsoid = inflateToFit(ellipsoid, 1, 0, 0, ips, pW, pH, pD, w, h,
-					d);
-
+					d, px, py, pz);
+			
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
@@ -424,7 +420,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate b
 			ellipsoid = inflateToFit(ellipsoid, 0, 1, 0, ips, pW, pH, pD, w, h,
-					d);
+					d, px, py, pz);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
@@ -437,35 +433,35 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate c
 			ellipsoid = inflateToFit(ellipsoid, 0, 0, 1, ips, pW, pH, pD, w, h,
-					d);
+					d, px, py, pz);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
-			//log its volume
+			// log its volume
 			volumeHistory.add(ellipsoid.getVolume());
-			
-			//if the last value is bigger than the second-to-last value
-			//reset the noImprovementCount
-			//otherwise, increment it by 1.
-			//if noImprovementCount exceeds a preset value the while() is broken
+
+			// if the last value is bigger than the second-to-last value
+			// reset the noImprovementCount
+			// otherwise, increment it by 1.
+			// if noImprovementCount exceeds a preset value the while() is
+			// broken
 			final int i = volumeHistory.size() - 1;
-			if (volumeHistory.get(i) > volumeHistory.get(i-1))
+			if (volumeHistory.get(i) > volumeHistory.get(i - 1))
 				noImprovementCount = 0;
 			else
 				noImprovementCount++;
-			
+
 			totalIterations++;
 		}
 
-		//add history to the ResultsTable
-		for (int i = 0; i < volumeHistory.size(); i++){
-			rt.setValue(""+index, i, volumeHistory.get(i));
+		// add history to the ResultsTable
+		for (int i = 0; i < volumeHistory.size(); i++) {
+			rt.setValue("" + index, i, volumeHistory.get(i));
 		}
-		
-		
+
 		// add them to the 3D viewer
 		if (IJ.debugMode) {
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
@@ -518,6 +514,38 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	/**
+	 * Calculate the mean unit vector between the ellipsoid's centroid and
+	 * contact points
+	 * 
+	 * @param ellipsoid
+	 * @param contactPoints
+	 * @return
+	 */
+	private double[] contactPointUnitVector(Ellipsoid ellipsoid,
+			ArrayList<double[]> contactPoints) {
+		if (contactPoints.size() < 1)
+			throw new IllegalArgumentException(
+					"Need at least one contact point");
+		double[] summedVector = new double[3];
+		final double[] c = ellipsoid.getCentre();
+		for (double[] p : contactPoints) {
+			final double l = Trig.distance3D(p, c);
+			double[] unitVector = { (p[0] - c[0]) / l, (p[1] - c[1]) / l,
+					(p[2] - c[2]) / l };
+			summedVector[0] += unitVector[0];
+			summedVector[1] += unitVector[1];
+			summedVector[2] += unitVector[2];
+		}
+		double[] unitVector = new double[3];
+		unitVector[0] = summedVector[0] / contactPoints.size();
+		unitVector[1] = summedVector[1] / contactPoints.size();
+		unitVector[2] = summedVector[2] / contactPoints.size();
+
+		unitVector = Vectors.norm(unitVector);
+		return unitVector;
+	}
+
+	/**
 	 * 
 	 * @param ellipsoid
 	 * @param ips
@@ -560,11 +588,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param w
 	 * @param h
 	 * @param d
+	 * @param pz 
+	 * @param py 
+	 * @param px 
 	 * @return
 	 */
 	private Ellipsoid inflateToFit(Ellipsoid ellipsoid, double a, double b,
 			double c, ByteProcessor[] ips, double pW, double pH, double pD,
-			int w, int h, int d) {
+			int w, int h, int d, double px, double py, double pz) {
 
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
 				pW, pH, pD, w, h, d);
@@ -581,6 +612,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					d);
 			safety++;
 		}
+		
+		double[] contactVector = contactPointUnitVector(ellipsoid, contactPoints);
+		
 		return ellipsoid;
 	}
 
