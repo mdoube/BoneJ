@@ -51,6 +51,7 @@ import org.doube.util.Multithreader;
 //import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
+import customnode.CustomLineMesh;
 import customnode.CustomPointMesh;
 
 /**
@@ -516,12 +517,27 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					1 - cColour.z);
 			contactPointMesh.setColor(invColour);
 
+			final double[] torque = calculateTorque(ellipsoid, contactPoints);
+			final double[] c = ellipsoid.getCentre();
+
+			List<Point3f> torqueList = new ArrayList<Point3f>();
+			torqueList
+					.add(new Point3f((float) c[0], (float) c[1], (float) c[2]));
+			torqueList.add(new Point3f((float) (torque[0] + c[0]),
+					(float) (torque[1] + c[1]), (float) (torque[2] + c[2])));
+			CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
+			Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
+			torqueLine.setColor(blue);
+
 			try {
 				universe.addCustomMesh(mesh,
 						"Point cloud " + px + " " + py + " " + pz).setLocked(
 						true);
 				universe.addCustomMesh(contactPointMesh,
 						"Contact points of " + px + " " + py + " " + pz)
+						.setLocked(true);
+				universe.addCustomMesh(torqueLine,
+						"Torque of " + px + " " + py + " " + pz)
 						.setLocked(true);
 
 			} catch (NullPointerException npe) {
@@ -574,10 +590,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ArrayList<double[]> contactPoints) {
 
 		final double[] pc = ellipsoid.getCentre();
-		final double  cx = pc[0];
-		final double  cy = pc[1];
-		final double  cz = pc[2];
-		
+		final double cx = pc[0];
+		final double cy = pc[1];
+		final double cz = pc[2];
+
 		final double[] r = ellipsoid.getRadii();
 		final double a = r[0];
 		final double b = r[1];
@@ -586,26 +602,26 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double s = 2 / (a * a);
 		final double t = 2 / (b * b);
 		final double u = 2 / (c * c);
-		
+
 		final double[][] rot = ellipsoid.getRotation();
 		final double[][] inv = (new Matrix(rot)).inverse().getArrayCopy();
-		
+
 		double t0 = 0;
 		double t1 = 0;
 		double t2 = 0;
-		
+
 		for (double[] p : contactPoints) {
-			//translate point to centre on origin
+			// translate point to centre on origin
 			final double px = p[0] - cx;
 			final double py = p[1] - cy;
 			final double pz = p[2] - cz;
-			
-			//derotate the point
+
+			// derotate the point
 			final double x = inv[0][0] * px + inv[0][1] * py + inv[0][2] * pz;
 			final double y = inv[1][0] * px + inv[1][1] * py + inv[1][2] * pz;
 			final double z = inv[2][0] * px + inv[2][1] * py + inv[2][2] * pz;
-			
-			//calculate the unit normal on the centred and derotated ellipsoid
+
+			// calculate the unit normal on the centred and derotated ellipsoid
 			final double nx = s * x;
 			final double ny = t * y;
 			final double nz = u * z;
@@ -613,21 +629,63 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			final double unx = nx / length;
 			final double uny = ny / length;
 			final double unz = nz / length;
-			
-			//rotate the normal back to the original ellipsoid
-			final double ex = rot[0][0] * unx + rot[0][1] * uny + rot[0][2] * unz;
-			final double ey = rot[1][0] * unx + rot[1][1] * uny + rot[1][2] * unz;
-			final double ez = rot[2][0] * unx + rot[2][1] * uny + rot[2][2] * unz;
-			
-			final double[] torqueVector = Vectors.crossProduct(px, py, pz, ex, ey, ez);
-			
+
+			// rotate the normal back to the original ellipsoid
+			final double ex = rot[0][0] * unx + rot[0][1] * uny + rot[0][2]
+					* unz;
+			final double ey = rot[1][0] * unx + rot[1][1] * uny + rot[1][2]
+					* unz;
+			final double ez = rot[2][0] * unx + rot[2][1] * uny + rot[2][2]
+					* unz;
+
+			final double[] torqueVector = Vectors.crossProduct(px, py, pz, ex,
+					ey, ez);
+
 			t0 += torqueVector[0];
 			t1 += torqueVector[1];
 			t2 += torqueVector[2];
-			
+
 		}
-		double[] torque = {t0, t1, t2}; 
+		double[] torque = { t0, t1, t2 };
 		return torque;
+	}
+
+	/**
+	 * Rotate the ellipsoid theta radians around an arbitrary unit vector
+	 * 
+	 * @param ellipsoid
+	 * @param axis
+	 * @param theta
+	 * @see http://en.wikipedia.org/wiki/Rotation_matrix#
+	 *      Rotation_matrix_from_axis_and_angle
+	 * @return
+	 */
+	private Ellipsoid rotateAboutAxis(Ellipsoid ellipsoid, double[] axis,
+			final double theta) {
+
+		final double sin = Math.sin(theta);
+		final double cos = Math.cos(theta);
+		final double cos1 = 1 - cos;
+		final double x = axis[0];
+		final double y = axis[1];
+		final double z = axis[2];
+		final double xy = x * y;
+		final double xz = x * z;
+		final double yz = y * z;
+		final double xsin = x * sin;
+		final double ysin = y * sin;
+		final double zsin = z * sin;
+		final double xycos1 = xy * cos1;
+		final double xzcos1 = xz * cos1;
+		final double yzcos1 = yz * cos1;
+		double[][] rotation = {
+				{ cos + x * x * cos1, xycos1 - zsin, xzcos1 + ysin },
+				{ xycos1 + zsin, cos + y * y * cos1, yzcos1 - xsin },
+				{ xzcos1 - ysin, yzcos1 + xsin, cos + z * z * cos1 }, };
+		
+		ellipsoid.rotate(rotation);
+		
+		return ellipsoid;
 	}
 
 	/**
