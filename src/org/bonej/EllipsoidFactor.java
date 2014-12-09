@@ -401,7 +401,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
+			ellipsoid = turn(ellipsoid, 0.5, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
@@ -415,7 +415,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
+			ellipsoid = turn(ellipsoid, 0.5, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract
@@ -429,7 +429,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
+			ellipsoid = turn(ellipsoid, 0.05, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
 			
 			// contract until no contact
