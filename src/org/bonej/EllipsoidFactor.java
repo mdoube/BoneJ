@@ -86,7 +86,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int skipRatio = 50;
 	private int contactSensitivity = 1;
 	/** Safety value to prevent while() running forever */
-	private int maxIterations = 100	;
+	private int maxIterations = 100;
 
 	/**
 	 * maximum distance ellipsoid may drift from seed point. Defaults to voxel
@@ -402,6 +402,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
 
+			// shift the centroid a little bit away from the contact points
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+			if (contactPoints.size() > 0)
+				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
+
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -415,6 +421,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
 
+			// shift the centroid a little bit away from the contact points
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+			if (contactPoints.size() > 0)
+				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
+
 			// contract
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -427,6 +439,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
+
+			// shift the centroid a little bit away from the contact points
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
+			if (contactPoints.size() > 0)
+				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
 
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
@@ -610,10 +628,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid.dilate(av, bv, cv);
 			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
 					d);
-			// try shifting the centroid a little bit once it starts touching
-			// the sides
-			if (contactPoints.size() > 0)
-				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
 			safety++;
 		}
 
@@ -623,13 +637,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	/**
 	 * 
 	 * @param ellipsoid
-	 * @param ips
-	 * @param pW
-	 * @param pH
-	 * @param pD
-	 * @param w
-	 * @param h
-	 * @param d
+	 * @param contactPoints
 	 * @param px
 	 * @param py
 	 * @param pz
