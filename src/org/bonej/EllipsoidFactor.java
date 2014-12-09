@@ -44,6 +44,7 @@ import ij3d.Image3DUniverse;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
+import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
@@ -561,6 +562,73 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		unitVector = Vectors.norm(unitVector);
 		return unitVector;
+	}
+
+	/**
+	 * Calculate the torque of unit normals acting at the contact points
+	 * 
+	 * @param ellipsoid
+	 * @param contactPoints
+	 * @return
+	 */
+	private double[] calculateTorque(Ellipsoid ellipsoid,
+			ArrayList<double[]> contactPoints) {
+
+		final double[] pc = ellipsoid.getCentre();
+		final double  cx = pc[0];
+		final double  cy = pc[1];
+		final double  cz = pc[2];
+		
+		final double[] r = ellipsoid.getRadii();
+		final double a = r[0];
+		final double b = r[1];
+		final double c = r[2];
+
+		final double s = 2 / (a * a);
+		final double t = 2 / (b * b);
+		final double u = 2 / (c * c);
+		
+		final double[][] rot = ellipsoid.getRotation();
+		final double[][] inv = (new Matrix(rot)).inverse().getArrayCopy();
+		
+		double t0 = 0;
+		double t1 = 0;
+		double t2 = 0;
+		
+		for (double[] p : contactPoints) {
+			//translate point to centre on origin
+			final double px = p[0] - cx;
+			final double py = p[1] - cy;
+			final double pz = p[2] - cz;
+			
+			//derotate the point
+			final double x = inv[0][0] * px + inv[0][1] * py + inv[0][2] * pz;
+			final double y = inv[1][0] * px + inv[1][1] * py + inv[1][2] * pz;
+			final double z = inv[2][0] * px + inv[2][1] * py + inv[2][2] * pz;
+			
+			//calculate the unit normal on the centred and derotated ellipsoid
+			final double nx = s * x;
+			final double ny = t * y;
+			final double nz = u * z;
+			final double length = Trig.distance3D(nx, ny, nz);
+			final double unx = nx / length;
+			final double uny = ny / length;
+			final double unz = nz / length;
+			
+			//rotate the normal back to the original ellipsoid
+			final double ex = rot[0][0] * unx + rot[0][1] * uny + rot[0][2] * unz;
+			final double ey = rot[1][0] * unx + rot[1][1] * uny + rot[1][2] * unz;
+			final double ez = rot[2][0] * unx + rot[2][1] * uny + rot[2][2] * unz;
+			
+			final double[] torqueVector = Vectors.crossProduct(px, py, pz, ex, ey, ez);
+			
+			t0 += torqueVector[0];
+			t1 += torqueVector[1];
+			t2 += torqueVector[2];
+			
+		}
+		double[] torque = {t0, t1, t2}; 
+		return torque;
 	}
 
 	/**
