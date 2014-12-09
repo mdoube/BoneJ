@@ -658,7 +658,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			t2 += torqueVector[2];
 
 		}
-		double[] torque = { -t0, -t1, -t2 };
+		double[] torque = { t0, t1, t2 };
 		return torque;
 	}
 
