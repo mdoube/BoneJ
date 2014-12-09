@@ -525,8 +525,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						"Torque of " + px + " " + py + " " + pz)
 						.setLocked(true);
 
-			} catch (NullPointerException npe) {
-				IJ.log("3D Viewer was closed before rendering completed.");
+			} catch (Exception e) {
+				IJ.log("Something went wrong adding meshes to 3D viewer:\n"+e.getMessage());
 			}
 		}
 		return ellipsoid;
