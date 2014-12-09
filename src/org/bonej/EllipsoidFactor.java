@@ -403,12 +403,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
 
-			// shift the centroid a little bit away from the contact points
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-			if (contactPoints.size() > 0)
-				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
-
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -422,12 +416,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
 
-			// shift the centroid a little bit away from the contact points
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-			if (contactPoints.size() > 0)
-				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
-
 			// contract
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -440,12 +428,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
-
-			// shift the centroid a little bit away from the contact points
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-			if (contactPoints.size() > 0)
-				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
 
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
