@@ -289,6 +289,14 @@ public class Ellipsoid {
 		this.ev = rotation.clone();
 		update3x3Matrix();
 	}
+	
+	/**
+	 * Return a copy of the ellipsoid's eigenvector matrix
+	 * @return
+	 */
+	public double[][] getRotation(){
+		return ev.clone();
+	}
 
 	/**
 	 * Set the radii (semiaxes). No ordering is assumed, except with regard to
