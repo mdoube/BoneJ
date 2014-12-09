@@ -438,7 +438,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
-			
+
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
 			// log its volume
@@ -458,76 +458,95 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			totalIterations++;
 		}
 
-		// add history to the ResultsTable
-		for (int i = 0; i < volumeHistory.size(); i++) {
-			rt.setValue("" + index, i, volumeHistory.get(i));
-		}
-
-		// add them to the 3D viewer
-		if (IJ.debugMode) {
-			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
-					d);
-			ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
-					contactPoints.size());
-			for (double[] p : contactPoints) {
-				Point3f point = new Point3f((float) p[0], (float) p[1],
-						(float) p[2]);
-				contactPointsf.add(point);
-			}
-			double[][] pointCloud = ellipsoid.getSurfacePoints(100);
-
-			List<Point3f> pointList = new ArrayList<Point3f>();
-			for (int p = 0; p < pointCloud.length; p++) {
-				if (pointCloud[p] == null)
-					continue;
-				Point3f e = new Point3f();
-				e.x = (float) pointCloud[p][0];
-				e.y = (float) pointCloud[p][1];
-				e.z = (float) pointCloud[p][2];
-				pointList.add(e);
-			}
-			CustomPointMesh mesh = new CustomPointMesh(pointList);
-			mesh.setPointSize(2.0f);
-			Color3f cColour = new Color3f((float) (px / pW) / w,
-					(float) (py / pH) / h, (float) (pz / pD) / d);
-			mesh.setColor(cColour);
-
-			CustomPointMesh contactPointMesh = new CustomPointMesh(
-					contactPointsf);
-			contactPointMesh.setPointSize(2.5f);
-			Color3f invColour = new Color3f(1 - cColour.x, 1 - cColour.y,
-					1 - cColour.z);
-			contactPointMesh.setColor(invColour);
-
-			final double[] torque = calculateTorque(ellipsoid, contactPoints);
-			final double[] c = ellipsoid.getCentre();
-
-			List<Point3f> torqueList = new ArrayList<Point3f>();
-			torqueList
-					.add(new Point3f((float) c[0], (float) c[1], (float) c[2]));
-			torqueList.add(new Point3f((float) (torque[0] + c[0]),
-					(float) (torque[1] + c[1]), (float) (torque[2] + c[2])));
-			CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
-			Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
-			torqueLine.setColor(blue);
-
-			try {
-				universe.addCustomMesh(mesh,
-						"Point cloud " + px + " " + py + " " + pz).setLocked(
-						true);
-				universe.addCustomMesh(contactPointMesh,
-						"Contact points of " + px + " " + py + " " + pz)
-						.setLocked(true);
-				universe.addCustomMesh(torqueLine,
-						"Torque of " + px + " " + py + " " + pz)
-						.setLocked(true);
-
-			} catch (Exception e) {
-				IJ.log("Something went wrong adding meshes to 3D viewer:\n"
-						+ e.getMessage());
+		//debug output for this ellipsoid
+		if (IJ.debugMode){
+			// show in the 3D viewer
+			display3D(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz);
+			
+			// add history to the ResultsTable
+			for (int i = 0; i < volumeHistory.size(); i++) {
+				rt.setValue("" + index, i, volumeHistory.get(i));
 			}
 		}
+
 		return ellipsoid;
+	}
+
+	/**
+	 * Display an ellipsoid in the 3D viewer
+	 * 
+	 * @param ellipsoid
+	 * @param ips
+	 * @param pW
+	 * @param pH
+	 * @param pD
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @param px
+	 * @param py
+	 * @param pz
+	 */
+	private void display3D(Ellipsoid ellipsoid, ByteProcessor[] ips, double pW,
+			double pH, double pD, int w, int h, int d, double px, double py,
+			double pz) {
+		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
+				pW, pH, pD, w, h, d);
+		ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
+				contactPoints.size());
+		for (double[] p : contactPoints) {
+			Point3f point = new Point3f((float) p[0], (float) p[1],
+					(float) p[2]);
+			contactPointsf.add(point);
+		}
+		double[][] pointCloud = ellipsoid.getSurfacePoints(100);
+
+		List<Point3f> pointList = new ArrayList<Point3f>();
+		for (int p = 0; p < pointCloud.length; p++) {
+			if (pointCloud[p] == null)
+				continue;
+			Point3f e = new Point3f();
+			e.x = (float) pointCloud[p][0];
+			e.y = (float) pointCloud[p][1];
+			e.z = (float) pointCloud[p][2];
+			pointList.add(e);
+		}
+		CustomPointMesh mesh = new CustomPointMesh(pointList);
+		mesh.setPointSize(2.0f);
+		Color3f cColour = new Color3f((float) (px / pW) / w, (float) (py / pH)
+				/ h, (float) (pz / pD) / d);
+		mesh.setColor(cColour);
+
+		CustomPointMesh contactPointMesh = new CustomPointMesh(contactPointsf);
+		contactPointMesh.setPointSize(2.5f);
+		Color3f invColour = new Color3f(1 - cColour.x, 1 - cColour.y,
+				1 - cColour.z);
+		contactPointMesh.setColor(invColour);
+
+		final double[] torque = calculateTorque(ellipsoid, contactPoints);
+		final double[] c = ellipsoid.getCentre();
+
+		List<Point3f> torqueList = new ArrayList<Point3f>();
+		torqueList.add(new Point3f((float) c[0], (float) c[1], (float) c[2]));
+		torqueList.add(new Point3f((float) (torque[0] + c[0]),
+				(float) (torque[1] + c[1]), (float) (torque[2] + c[2])));
+		CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
+		Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
+		torqueLine.setColor(blue);
+
+		try {
+			universe.addCustomMesh(mesh,
+					"Point cloud " + px + " " + py + " " + pz).setLocked(true);
+			universe.addCustomMesh(contactPointMesh,
+					"Contact points of " + px + " " + py + " " + pz).setLocked(
+					true);
+			universe.addCustomMesh(torqueLine,
+					"Torque of " + px + " " + py + " " + pz).setLocked(true);
+
+		} catch (Exception e) {
+			IJ.log("Something went wrong adding meshes to 3D viewer:\n"
+					+ e.getMessage());
+		}
 	}
 
 	/**
