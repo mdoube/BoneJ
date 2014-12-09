@@ -401,9 +401,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.5, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
-			
+
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -415,9 +414,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.5, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
-			
+
 			// contract
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -429,9 +427,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.05, ips, pW, pH, pD, w, h, d);
-			ellipsoid = wiggle(ellipsoid);
-			
+			ellipsoid = turn(ellipsoid, 0.03, ips, pW, pH, pD, w, h, d);
+
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -441,7 +438,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
-
+			
 			// keep the maximal ellipsoid found
 			ellipsoid = maximal.copy();
 			// log its volume
@@ -526,7 +523,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						.setLocked(true);
 
 			} catch (Exception e) {
-				IJ.log("Something went wrong adding meshes to 3D viewer:\n"+e.getMessage());
+				IJ.log("Something went wrong adding meshes to 3D viewer:\n"
+						+ e.getMessage());
 			}
 		}
 		return ellipsoid;
@@ -534,7 +532,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 	/**
 	 * Rotate the ellipsoid theta radians around the unit vector formed by the
-	 * sum of torques effected by unit normals acting on the surface of the ellipsoid
+	 * sum of torques effected by unit normals acting on the surface of the
+	 * ellipsoid
 	 * 
 	 * @param ellipsoid
 	 * @param theta
@@ -553,9 +552,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
 				pW, pH, pD, w, h, d);
-		double[] torque = calculateTorque(ellipsoid, contactPoints);
-		ellipsoid = rotateAboutAxis(ellipsoid, Vectors.norm(torque), theta);
-
+		if (contactPoints.size() > 0) {
+			double[] torque = calculateTorque(ellipsoid, contactPoints);
+			ellipsoid = rotateAboutAxis(ellipsoid, Vectors.norm(torque), theta);
+		}
 		return ellipsoid;
 	}
 
@@ -658,7 +658,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			t2 += torqueVector[2];
 
 		}
-		double[] torque = { t0, t1, t2 };
+		double[] torque = { -t0, -t1, -t2 };
 		return torque;
 	}
 
