@@ -401,8 +401,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
+			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
-
+			
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -414,8 +415,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
+			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
-
+			
 			// contract
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -427,8 +429,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
+			ellipsoid = turn(ellipsoid, 0.02, ips, pW, pH, pD, w, h, d);
 			ellipsoid = wiggle(ellipsoid);
-
+			
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
@@ -526,6 +529,33 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				IJ.log("3D Viewer was closed before rendering completed.");
 			}
 		}
+		return ellipsoid;
+	}
+
+	/**
+	 * Rotate the ellipsoid theta radians around the unit vector formed by the
+	 * sum of torques effected by unit normals acting on the surface of the ellipsoid
+	 * 
+	 * @param ellipsoid
+	 * @param theta
+	 * @param ips
+	 * @param pW
+	 * @param pH
+	 * @param pD
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return
+	 */
+	private Ellipsoid turn(Ellipsoid ellipsoid, double theta,
+			ByteProcessor[] ips, double pW, double pH, double pD, int w, int h,
+			int d) {
+
+		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
+				pW, pH, pD, w, h, d);
+		double[] torque = calculateTorque(ellipsoid, contactPoints);
+		ellipsoid = rotateAboutAxis(ellipsoid, Vectors.norm(torque), theta);
+
 		return ellipsoid;
 	}
 
@@ -628,7 +658,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			t2 += torqueVector[2];
 
 		}
-		double[] torque = { t0, t1, t2 };
+		double[] torque = { -t0, -t1, -t2 };
 		return torque;
 	}
 
@@ -664,9 +694,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				{ cos + x * x * cos1, xycos1 - zsin, xzcos1 + ysin },
 				{ xycos1 + zsin, cos + y * y * cos1, yzcos1 - xsin },
 				{ xzcos1 - ysin, yzcos1 + xsin, cos + z * z * cos1 }, };
-		
+
 		ellipsoid.rotate(rotation);
-		
+
 		return ellipsoid;
 	}
 
