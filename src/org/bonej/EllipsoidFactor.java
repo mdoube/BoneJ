@@ -469,10 +469,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
+			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "pre"+px + " " + py + " " + pz+" "+totalIterations);
+			
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, contactPoints, 0.03, ips, pW, pH, pD,
+			ellipsoid = turn(ellipsoid, contactPoints, 0.1, ips, pW, pH, pD,
 					w, h, d);
 
+			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "post"+px + " " + py + " " + pz+" "+totalIterations);
+			
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
 					w, h, d);
@@ -513,7 +517,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (IJ.debugMode) {
 			// show in the 3D viewer
 			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px,
-					py, pz);
+					py, pz, px + " " + py + " " + pz);
 
 			// add history to the ResultsTable
 			for (int i = 0; i < volumeHistory.size(); i++) {
@@ -573,7 +577,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private void display3D(Ellipsoid ellipsoid,
 			ArrayList<double[]> contactPoints, ByteProcessor[] ips, double pW,
 			double pH, double pD, int w, int h, int d, double px, double py,
-			double pz) {
+			double pz, String name) {
 		contactPoints = findContactPoints(ellipsoid, contactPoints, ips, pW,
 				pH, pD, w, h, d);
 		ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
@@ -620,12 +624,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		try {
 			universe.addCustomMesh(mesh,
-					"Point cloud " + px + " " + py + " " + pz).setLocked(true);
+					"Point cloud " + name).setLocked(true);
 			universe.addCustomMesh(contactPointMesh,
-					"Contact points of " + px + " " + py + " " + pz).setLocked(
+					"Contact points of " + name).setLocked(
 					true);
 			universe.addCustomMesh(torqueLine,
-					"Torque of " + px + " " + py + " " + pz).setLocked(true);
+					"Torque of " +name).setLocked(true);
 
 		} catch (Exception e) {
 			IJ.log("Something went wrong adding meshes to 3D viewer:\n"
