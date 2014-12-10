@@ -469,13 +469,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
-			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "pre"+px + " " + py + " " + pz+" "+totalIterations);
+//			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "pre"+px + " " + py + " " + pz+" "+totalIterations);
 			
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, contactPoints, 0.1, ips, pW, pH, pD,
+			ellipsoid = turn(ellipsoid, contactPoints, 0.05, ips, pW, pH, pD,
 					w, h, d);
 
-			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "post"+px + " " + py + " " + pz+" "+totalIterations);
+//			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "post"+px + " " + py + " " + pz+" "+totalIterations);
 			
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
@@ -836,6 +836,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			safety++;
 		}
 
+		ellipsoid.contract(0.1);
+		
 		return ellipsoid;
 	}
 
