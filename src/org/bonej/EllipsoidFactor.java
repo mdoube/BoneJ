@@ -421,7 +421,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// alternately try each axis
 		int totalIterations = 0;
 		int noImprovementCount = 0;
-		while (noImprovementCount < maxIterations) {
+		while (totalIterations < maxIterations * 10
+				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
@@ -431,8 +432,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					w, h, d);
 
 			// dilate a
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 1, 0, 0, ips, pW, pH, pD, w, h,
-					d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, 1, 0, 0, ips,
+					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
@@ -451,8 +452,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					w, h, d);
 
 			// dilate b
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 1, 0, ips, pW, pH, pD, w, h,
-					d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 1, 0, ips,
+					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
@@ -472,8 +473,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					w, h, d);
 
 			// dilate c
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 0, 1, ips, pW, pH, pD, w, h,
-					d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 0, 1, ips,
+					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
