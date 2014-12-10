@@ -421,8 +421,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// alternately try each axis
 		int totalIterations = 0;
 		int noImprovementCount = 0;
-		while (totalIterations < maxIterations * 5
-				&& noImprovementCount < maxIterations) {
+		while (noImprovementCount < maxIterations) {
 
 			// rotate a little bit
 			ellipsoid = wiggle(ellipsoid);
