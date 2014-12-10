@@ -407,6 +407,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
 			contactPoints = findContactPoints(ellipsoid, contactPoints, ips,
 					pW, pH, pD, w, h, d);
+			if(isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)){
+				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
+						+ ") is invalid, nullifying");
+				return null;	
+			}
 		}
 
 		volumeHistory.add(ellipsoid.getVolume());
