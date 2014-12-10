@@ -2,7 +2,7 @@ package org.bonej;
 
 /**
  * EllipsoidFactor plugin for ImageJ
- * Copyright 2013 Michael Doube
+ * Copyright 2013 2014 Michael Doube
  * 
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -56,7 +56,7 @@ import customnode.CustomPointMesh;
 
 /**
  * <p>
- * <b>Plate_Rod</b>
+ * <b>Ellipsoid Factor</b>
  * </p>
  * <p>
  * ImageJ plugin to describe the local geometry of a binary image in an
@@ -288,27 +288,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	/**
-	 * Overloaded version which instantiates a new ArrayList
-	 * 
-	 * @param ellipsoid
-	 * @param ips
-	 * @param pW
-	 * @param pH
-	 * @param pD
-	 * @param w
-	 * @param h
-	 * @param d
-	 * @return
-	 */
-	// private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
-	// ByteProcessor[] ips, double pW, double pH, double pD, int w, int h,
-	// int d) {
-	// ArrayList<double[]> contactPoints = new ArrayList<double[]>();
-	// return findContactPoints(ellipsoid, contactPoints, ips, pW, pH, pD, w,
-	// h, d);
-	// }
-
-	/**
 	 * given a seed point, find the ellipsoid which best fits the binarised
 	 * structure
 	 * 
@@ -370,10 +349,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		contactPoints = findContactPoints(ellipsoid, contactPoints, ips, pW,
 				pH, pD, w, h, d);
 
-		// contract the ellipsoid by one increment so all points are
-		// inside the foregrounds
-		// ellipsoid.contract(vectorIncrement);
-
 		// find the mean unit vector pointing to the points of contact from the
 		// centre
 		double[] shortAxis = contactPointUnitVector(ellipsoid, contactPoints);
@@ -390,11 +365,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// construct a rotation matrix
 		double[][] rotation = { shortAxis, middleAxis, longAxis };
 		rotation = Ellipsoid.transpose(rotation);
-
-		// needs transpose because each vector is put in as row to begin with
-		// Matrix R = new Matrix(rotation);
-
-		// R.printToIJLog("Rotation Matrix: det() = " + R.det());
 
 		// rotate ellipsoid to point this way...
 		ellipsoid.setRotation(rotation);
@@ -468,14 +438,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
-
-//			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "pre"+px + " " + py + " " + pz+" "+totalIterations);
 			
 			// rotate a little bit
 			ellipsoid = turn(ellipsoid, contactPoints, 0.05, ips, pW, pH, pD,
 					w, h, d);
-
-//			display3D(ellipsoid, contactPoints, ips, pW, pH, pD, w, h, d, px, py, pz, "post"+px + " " + py + " " + pz+" "+totalIterations);
 			
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
@@ -936,9 +902,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// array has subarrays as rows, need them as columns
 		rotation = Ellipsoid.transpose(rotation);
 
-		// Matrix N = new Matrix(rotation);
-
-		// N.printToIJLog("Wiggle rotation matrix");
 		ellipsoid.rotate(rotation);
 
 		return ellipsoid;
@@ -1017,14 +980,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ImagePlus skeleton = sk.getSkeleton(imp);
 		final ImageStack skeletonStack = skeleton.getStack();
 
-		// if (IJ.debugMode)
-		// skeleton.show();
-
 		final int d = imp.getStackSize();
 		final int h = imp.getHeight();
 		final int w = imp.getWidth();
-
-		IJ.log("Skeleton image is " + w + " x " + h + " x " + d);
 
 		// Bare ArrayList is not thread safe for concurrent add() operations.
 		final List<int[]> list = Collections
