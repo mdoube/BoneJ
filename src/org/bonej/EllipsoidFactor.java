@@ -369,11 +369,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// rotate ellipsoid to point this way...
 		ellipsoid.setRotation(rotation);
 
+		//shrink the ellipsoid slightly
+		ellipsoid.contract(0.1);
+		
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
 
-		int maxContacts = contactPoints.size() + contactSensitivity;
-		while (contactPoints.size() < maxContacts) {
+//		int maxContacts = contactPoints.size() + contactSensitivity;
+		while (contactPoints.size() < contactSensitivity) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
 			contactPoints = findContactPoints(ellipsoid, contactPoints, ips,
 					pW, pH, pD, w, h, d);
@@ -440,7 +443,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				maximal = ellipsoid.copy();
 			
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, contactPoints, 0.05, ips, pW, pH, pD,
+			ellipsoid = turn(ellipsoid, contactPoints, 0.1, ips, pW, pH, pD,
 					w, h, d);
 			
 			// contract until no contact
