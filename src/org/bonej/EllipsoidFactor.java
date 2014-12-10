@@ -369,21 +369,21 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// rotate ellipsoid to point this way...
 		ellipsoid.setRotation(rotation);
 
-		//shrink the ellipsoid slightly
+		// shrink the ellipsoid slightly
 		ellipsoid.contract(0.1);
-		
+
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
 
-//		int maxContacts = contactPoints.size() + contactSensitivity;
+		// int maxContacts = contactPoints.size() + contactSensitivity;
 		while (contactPoints.size() < contactSensitivity) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
 			contactPoints = findContactPoints(ellipsoid, contactPoints, ips,
 					pW, pH, pD, w, h, d);
-			if(isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)){
+			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
 						+ ") is invalid, nullifying");
-				return null;	
+				return null;
 			}
 		}
 
@@ -409,8 +409,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
 					w, h, d);
 
-			// dilate a
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 1, 0, 0, ips,
+			// dilate an axis
+			double[] abc = threeWayShuffle();
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
 					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
@@ -429,8 +430,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
 					w, h, d);
 
-			// dilate b
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 1, 0, ips,
+			// dilate an axis
+			abc = threeWayShuffle();
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
 					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
@@ -441,17 +443,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
-			
+
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, contactPoints, 0.1, ips, pW, pH, pD,
-					w, h, d);
-			
+			ellipsoid = turn(ellipsoid, contactPoints, 0.1, ips, pW, pH, pD, w,
+					h, d);
+
 			// contract until no contact
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
 					w, h, d);
 
-			// dilate c
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, 0, 0, 1, ips,
+			// dilate an axis
+			abc = threeWayShuffle();
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
 					pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
@@ -495,6 +498,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 
 		return ellipsoid;
+	}
+
+	private double[] threeWayShuffle() {
+		double[] a = { 0, 0, 0 };
+		double rand = Math.random();
+		if (rand < 1.0 / 3.0)
+			a[0] = 1;
+		else if (rand >= 2.0 / 3.0)
+			a[2] = 1;
+		else
+			a[1] = 1;
+		return a;
 	}
 
 	/**
@@ -592,13 +607,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		torqueLine.setColor(blue);
 
 		try {
-			universe.addCustomMesh(mesh,
-					"Point cloud " + name).setLocked(true);
+			universe.addCustomMesh(mesh, "Point cloud " + name).setLocked(true);
 			universe.addCustomMesh(contactPointMesh,
-					"Contact points of " + name).setLocked(
+					"Contact points of " + name).setLocked(true);
+			universe.addCustomMesh(torqueLine, "Torque of " + name).setLocked(
 					true);
-			universe.addCustomMesh(torqueLine,
-					"Torque of " +name).setLocked(true);
 
 		} catch (Exception e) {
 			IJ.log("Something went wrong adding meshes to 3D viewer:\n"
@@ -806,7 +819,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 
 		ellipsoid.contract(0.1);
-		
+
 		return ellipsoid;
 	}
 
