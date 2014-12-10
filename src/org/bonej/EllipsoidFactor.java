@@ -51,7 +51,6 @@ import org.doube.util.Multithreader;
 //import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
-import sun.management.counter.Units;
 import customnode.CustomLineMesh;
 import customnode.CustomPointMesh;
 
@@ -345,7 +344,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// get the points of contact
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
-				unitVectors, pW, pH, pD, w, h, d);
+				pW, pH, pD, w, h, d);
 
 		// contract the ellipsoid by one increment so all points are
 		// inside the foregrounds
@@ -382,8 +381,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		int maxContacts = contactPoints.size() + contactSensitivity;
 		while (contactPoints.size() < maxContacts) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
-			contactPoints = findContactPoints(ellipsoid, ips, unitVectors, pW,
-					pH, pD, w, h, d);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
 		}
 
 		volumeHistory.add(ellipsoid.getVolume());
@@ -405,42 +404,37 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ellipsoid = wiggle(ellipsoid);
 
 			// contract until no contact
-			ellipsoid = shrinkToFit(ellipsoid, ips, unitVectors, pW, pH, pD, w,
-					h, d);
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
 			// dilate a
-			ellipsoid = inflateToFit(ellipsoid, 1, 0, 0, ips, unitVectors, pW,
-					pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, 1, 0, 0, ips, pW, pH, pD, w, h,
+					d, px, py, pz);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			// ellipsoid = wiggle(ellipsoid);
-			ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
+			ellipsoid = wiggle(ellipsoid);
 
 			// contract
-			ellipsoid = shrinkToFit(ellipsoid, ips, unitVectors, pW, pH, pD, w,
-					h, d);
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
 			// dilate b
-			ellipsoid = inflateToFit(ellipsoid, 0, 1, 0, ips, unitVectors, pW,
-					pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, 0, 1, 0, ips, pW, pH, pD, w, h,
+					d, px, py, pz);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
 			// rotate a little bit
-			ellipsoid = turn(ellipsoid, 0.03, ips, unitVectors, pW, pH, pD, w,
-					h, d);
+			ellipsoid = turn(ellipsoid, 0.03, ips, pW, pH, pD, w, h, d);
 
 			// contract until no contact
-			ellipsoid = shrinkToFit(ellipsoid, ips, unitVectors, pW, pH, pD, w,
-					h, d);
+			ellipsoid = shrinkToFit(ellipsoid, ips, pW, pH, pD, w, h, d);
 
 			// dilate c
-			ellipsoid = inflateToFit(ellipsoid, 0, 0, 1, ips, unitVectors, pW,
-					pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, 0, 0, 1, ips, pW, pH, pD, w, h,
+					d, px, py, pz);
 
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
@@ -464,12 +458,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			totalIterations++;
 		}
 
-		// debug output for this ellipsoid
-		if (IJ.debugMode) {
+		//debug output for this ellipsoid
+		if (IJ.debugMode){
 			// show in the 3D viewer
-			display3D(ellipsoid, ips, unitVectors, pW, pH, pD, w, h, d, px, py,
-					pz);
-
+			display3D(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz);
+			
 			// add history to the ResultsTable
 			for (int i = 0; i < volumeHistory.size(); i++) {
 				rt.setValue("" + index, i, volumeHistory.get(i));
@@ -494,11 +487,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param py
 	 * @param pz
 	 */
-	private void display3D(Ellipsoid ellipsoid, ByteProcessor[] ips,
-			double[][] unitVectors, double pW, double pH, double pD, int w,
-			int h, int d, double px, double py, double pz) {
+	private void display3D(Ellipsoid ellipsoid, ByteProcessor[] ips, double pW,
+			double pH, double pD, int w, int h, int d, double px, double py,
+			double pz) {
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
-				unitVectors, pW, pH, pD, w, h, d);
+				pW, pH, pD, w, h, d);
 		ArrayList<Point3f> contactPointsf = new ArrayList<Point3f>(
 				contactPoints.size());
 		for (double[] p : contactPoints) {
@@ -573,11 +566,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return
 	 */
 	private Ellipsoid turn(Ellipsoid ellipsoid, double theta,
-			ByteProcessor[] ips, double[][] unitVectors, double pW, double pH,
-			double pD, int w, int h, int d) {
+			ByteProcessor[] ips, double pW, double pH, double pD, int w, int h,
+			int d) {
 
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
-				unitVectors, pW, pH, pD, w, h, d);
+				pW, pH, pD, w, h, d);
 		if (contactPoints.size() > 0) {
 			double[] torque = calculateTorque(ellipsoid, contactPoints);
 			ellipsoid = rotateAboutAxis(ellipsoid, Vectors.norm(torque), theta);
@@ -739,18 +732,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return
 	 */
 	private Ellipsoid shrinkToFit(Ellipsoid ellipsoid, ByteProcessor[] ips,
-			double[][] unitVectors, double pW, double pH, double pD, int w,
-			int h, int d) {
+			double pW, double pH, double pD, int w, int h, int d) {
 
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
-				unitVectors, pW, pH, pD, w, h, d);
+				pW, pH, pD, w, h, d);
 
 		// contract until no contact
 		int safety = 0;
 		while (contactPoints.size() > 0 && safety < maxIterations) {
 			ellipsoid.contract(0.01);
-			contactPoints = findContactPoints(ellipsoid, ips, unitVectors, pW,
-					pH, pD, w, h, d);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
 			safety++;
 		}
 
@@ -776,12 +768,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return
 	 */
 	private Ellipsoid inflateToFit(Ellipsoid ellipsoid, double a, double b,
-			double c, ByteProcessor[] ips, final double[][] unitVectors,
-			double pW, double pH, double pD, int w, int h, int d, double px,
-			double py, double pz) {
+			double c, ByteProcessor[] ips, double pW, double pH, double pD,
+			int w, int h, int d, double px, double py, double pz) {
 
 		ArrayList<double[]> contactPoints = findContactPoints(ellipsoid, ips,
-				unitVectors, pW, pH, pD, w, h, d);
+				pW, pH, pD, w, h, d);
 
 		final double av = a * vectorIncrement;
 		final double bv = b * vectorIncrement;
@@ -791,8 +782,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		while (contactPoints.size() < contactSensitivity
 				&& safety < maxIterations) {
 			ellipsoid.dilate(av, bv, cv);
-			contactPoints = findContactPoints(ellipsoid, ips, unitVectors, pW,
-					pH, pD, w, h, d);
+			contactPoints = findContactPoints(ellipsoid, ips, pW, pH, pD, w, h,
+					d);
 			safety++;
 		}
 
@@ -871,10 +862,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
-			ByteProcessor[] ips, final double[][] unitVectors, final double pW,
-			final double pH, final double pD, final int w, final int h,
-			final int d) {
-		// final double[][] unitVectors = Vectors.regularVectors(nVectors);
+			ByteProcessor[] ips, final double pW, final double pH,
+			final double pD, final int w, final int h, final int d) {
+		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
 
 		ArrayList<double[]> contactPoints = new ArrayList<double[]>();
