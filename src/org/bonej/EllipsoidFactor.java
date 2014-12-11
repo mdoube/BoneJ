@@ -911,8 +911,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// zeroth column, should be very close to [1, 0, 0]^T (mostly x)
 		double[] zerothColumn = { a, b, c };
 
-		// form triangle in nearly xy plane
-		double[] vector = { 0, 1, 0 };
+		// form triangle in random plane
+		double[] vector = Vectors.randomVectors(1)[0];
 
 		// first column, should be very close to [0, 1, 0]^T
 		double[] firstColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
