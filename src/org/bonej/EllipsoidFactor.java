@@ -147,10 +147,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			rt = new ResultsTable();
 		}
 
+		long start = System.currentTimeMillis();
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
+		long stop = System.currentTimeMillis();
 
-		IJ.log("Found " + ellipsoids.length + " ellipsoids");
+		IJ.log("Found " + ellipsoids.length + " ellipsoids in "
+				+ (stop - start) + " ms");
 
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
 
@@ -160,16 +163,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				ellipsoids[(int) (0.05 * ellipsoids.length)].getVolume());
 		IJ.run("Fire");
 
-		ImagePlus middleOverLong = displayMiddleOverLong(imp, maxIDs, ellipsoids);
+		ImagePlus middleOverLong = displayMiddleOverLong(imp, maxIDs,
+				ellipsoids);
 		middleOverLong.show();
 		middleOverLong.setDisplayRange(0, 1);
 		IJ.run("Fire");
-		
-		ImagePlus shortOverMiddle = displayShortOverMiddle(imp, maxIDs, ellipsoids);
+
+		ImagePlus shortOverMiddle = displayShortOverMiddle(imp, maxIDs,
+				ellipsoids);
 		shortOverMiddle.show();
 		shortOverMiddle.setDisplayRange(0, 1);
-		IJ.run("Fire");		
-		
+		IJ.run("Fire");
+
 		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
 		maxID.show();
 		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
@@ -182,8 +187,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
 
-	private ImagePlus displayShortOverMiddle(ImagePlus imp, final int[][] maxIDs,
-			final Ellipsoid[] ellipsoids) {
+	private ImagePlus displayShortOverMiddle(ImagePlus imp,
+			final int[][] maxIDs, final Ellipsoid[] ellipsoids) {
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
@@ -227,13 +232,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		for (int z = 1; z <= d; z++)
 			smStack.addSlice("" + z, stackPixels[z]);
 
-		ImagePlus shortmid = new ImagePlus("Short_Mid-" + imp.getTitle(), smStack);
+		ImagePlus shortmid = new ImagePlus("Short_Mid-" + imp.getTitle(),
+				smStack);
 		shortmid.setCalibration(imp.getCalibration());
 		return shortmid;
 	}
 
-	private ImagePlus displayMiddleOverLong(ImagePlus imp, final int[][] maxIDs,
-			final Ellipsoid[] ellipsoids) {
+	private ImagePlus displayMiddleOverLong(ImagePlus imp,
+			final int[][] maxIDs, final Ellipsoid[] ellipsoids) {
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
@@ -479,6 +485,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			int[] skeletonPoint, double[][] unitVectors, final int index) {
 
 		IJ.showStatus("Optimising ellipsoids...");
+
+		long start = System.currentTimeMillis();
+
 		Calibration cal = imp.getCalibration();
 		final double pW = cal.pixelWidth;
 		final double pH = cal.pixelHeight;
@@ -679,6 +688,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				rt.setValue("" + index, i, volumeHistory.get(i));
 			}
 		}
+
+		long stop = System.currentTimeMillis();
+		
+		IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
+				+ totalIterations + " iterations ("
+				+ IJ.d2s((double)(stop - start) / totalIterations, 3)
+				+ " ms/iteration)");
 
 		return ellipsoid;
 	}
