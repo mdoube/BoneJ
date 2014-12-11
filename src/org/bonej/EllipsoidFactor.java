@@ -411,8 +411,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate an axis
 			double[] abc = threeWayShuffle();
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
-					pW, pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1],
+					abc[2], ips, pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
@@ -423,8 +423,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			if (ellipsoid.getVolume() > maximal.getVolume())
 				maximal = ellipsoid.copy();
 
-			// rotate a little bit
-			ellipsoid = wiggle(ellipsoid);
+			// bump a little away from the sides
+			contactPoints = findContactPoints(ellipsoid, contactPoints, ips,
+					pW, pH, pD, w, h, d);
+			if (contactPoints.size() > 0)
+				ellipsoid = bump(ellipsoid, contactPoints, px, py, pz);
+			//if can't bump then do a wiggle
+			else
+				ellipsoid = wiggle(ellipsoid);
 
 			// contract
 			ellipsoid = shrinkToFit(ellipsoid, contactPoints, ips, pW, pH, pD,
@@ -432,8 +438,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate an axis
 			abc = threeWayShuffle();
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
-					pW, pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1],
+					abc[2], ips, pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
@@ -454,8 +460,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			// dilate an axis
 			abc = threeWayShuffle();
-			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1], abc[2], ips,
-					pW, pH, pD, w, h, d, px, py, pz);
+			ellipsoid = inflateToFit(ellipsoid, contactPoints, abc[0], abc[1],
+					abc[2], ips, pW, pH, pD, w, h, d, px, py, pz);
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
@@ -877,11 +883,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private Ellipsoid bump(Ellipsoid ellipsoid,
 			ArrayList<double[]> contactPoints, double px, double py, double pz) {
 
+		final double displacement = vectorIncrement / 2;
+
 		final double[] c = ellipsoid.getCentre();
 		final double[] vector = contactPointUnitVector(ellipsoid, contactPoints);
-		final double x = c[0] + vector[0] * 2 * vectorIncrement;
-		final double y = c[1] + vector[1] * 2 * vectorIncrement;
-		final double z = c[2] + vector[2] * 2 * vectorIncrement;
+		final double x = c[0] + vector[0] * displacement;
+		final double y = c[1] + vector[1] * displacement;
+		final double z = c[2] + vector[2] * displacement;
+
 		if (Trig.distance3D(px, py, pz, x, y, z) < maxDrift)
 			ellipsoid.setCentroid(x, y, z);
 
