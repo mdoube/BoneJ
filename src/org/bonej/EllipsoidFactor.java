@@ -177,7 +177,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		ImagePlus eF = displayEllipsoidFactor(imp, maxIDs, ellipsoids);
 		eF.show();
-		eF.setDisplayRange(0, 2);
+		eF.setDisplayRange(-1, 1);
 		IJ.run("Fire");
 
 		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
@@ -220,9 +220,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							for (int x = 0; x < w; x++) {
 								final int i = offset + x;
 								final int id = idSlice[i];
-								if (id >= 0) {
+								if (id >= 0)
 									pixels[i] = (float) ellipsoidFactor(ellipsoids[id]);
-								}
+								else
+									pixels[i] = Float.NaN;
 							}
 						}
 					}
@@ -1292,9 +1293,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	/**
-	 * Calculate the ellipsoid factor of this ellipsoid as 1 + a / b - b / c
-	 * where a < b < c and a, b and c are the ellipsoid semi axis lengths
-	 * (radii)
+	 * Calculate the ellipsoid factor of this ellipsoid as a / b - b / c where a
+	 * < b < c and a, b and c are the ellipsoid semi axis lengths (radii). This
+	 * formulation places more rod-like ellipsoids towards 1 and plate-like
+	 * ellipsoids towards -1. Ellipsoids of EF = 0 have equal a:b and b:c ratios
+	 * so are midway between plate and rod. Spheres are a special case of EF =
+	 * 0.
 	 * 
 	 * @param ellipsoid
 	 * @return the ellipsoid factor
@@ -1305,7 +1309,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double a = radii[0];
 		final double b = radii[1];
 		final double c = radii[2];
-		double ef = 1 + a / b - b / c;
+		double ef = a / b - b / c;
 		return ef;
 	}
 
