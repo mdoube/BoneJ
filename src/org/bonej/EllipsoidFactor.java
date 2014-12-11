@@ -34,6 +34,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
+import ij.process.FloatProcessor;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
@@ -155,6 +156,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		float[][] maxIDs = findMaxID(imp, ellipsoids);
 
 		Ellipsoid[][] biggestEllipsoids = findBiggestEllipsoids(imp, ellipsoids, maxIDs);
+		
+		ImagePlus volumes = displayVolumes(imp, biggestEllipsoids, ellipsoids);
+		volumes.show();
+		
 
 		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
 		maxID.show();
@@ -164,6 +169,53 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
+	}
+
+	private ImagePlus displayVolumes(ImagePlus imp,
+			final Ellipsoid[][] biggestEllipsoids, final Ellipsoid[] ellipsoids) {
+		final ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+
+		final ImageStack volStack = new ImageStack(imp.getWidth(), imp.getHeight());
+
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Generating volume image");
+						IJ.showProgress(z, d);
+						FloatProcessor fSlice = new FloatProcessor(w, h);
+						float[] pixels = (float[]) fSlice.getPixels();
+						Ellipsoid[] elSlice = biggestEllipsoids[z];
+						Ellipsoid ellipsoid = ellipsoids[0];
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++) {
+								final int i = offset + x;
+								ellipsoid = elSlice[i];
+								if ( ellipsoid != null ) {
+									pixels[i] = (float) ellipsoid.getVolume();
+								}
+							}
+						}
+						volStack.addSlice(""+z, fSlice);
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+		
+		
+		ImagePlus volImp = new ImagePlus("Volume-" + imp.getTitle(), volStack);
+		volImp.setCalibration(imp.getCalibration());
+		volImp.setDisplayRange(0, ellipsoids[0].getVolume());
+		
+		return volImp;
 	}
 
 	private Ellipsoid[][] findBiggestEllipsoids(ImagePlus imp,
