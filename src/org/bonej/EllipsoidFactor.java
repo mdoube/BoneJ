@@ -155,9 +155,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
 
-		Ellipsoid[][] biggestEllipsoids = findBiggestEllipsoids(imp,
-				ellipsoids, maxIDs);
-
 		ImagePlus volumes = displayVolumes(imp, maxIDs, ellipsoids);
 		volumes.show();
 		volumes.setDisplayRange(0,
@@ -222,45 +219,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ImagePlus volImp = new ImagePlus("Volume-" + imp.getTitle(), volStack);
 		volImp.setCalibration(imp.getCalibration());
 		return volImp;
-	}
-
-	private Ellipsoid[][] findBiggestEllipsoids(ImagePlus imp,
-			final Ellipsoid[] ellipsoids, final int[][] maxIDs) {
-		final ImageStack stack = imp.getImageStack();
-		final int w = stack.getWidth();
-		final int h = stack.getHeight();
-		final int d = stack.getSize();
-
-		final Ellipsoid[][] maxEllipsoids = new Ellipsoid[d + 1][w * h];
-
-		final AtomicInteger ai = new AtomicInteger(1);
-		Thread[] threads = Multithreader.newThreads();
-		for (int thread = 0; thread < threads.length; thread++) {
-			threads[thread] = new Thread(new Runnable() {
-				public void run() {
-					for (int z = ai.getAndIncrement(); z <= d; z = ai
-							.getAndIncrement()) {
-						IJ.showStatus("Generating maximal ellipsoid array");
-						IJ.showProgress(z, d);
-						Ellipsoid[] bigSlice = maxEllipsoids[z];
-						int[] maxIDSlice = maxIDs[z];
-						for (int y = 0; y < h; y++) {
-							final int offset = y * w;
-							for (int x = 0; x < w; x++) {
-								int maxID = maxIDSlice[offset + x];
-								if (maxID >= 0) {
-									bigSlice[offset + x] = ellipsoids[maxID];
-								}
-							}
-						}
-
-					}
-				}
-			});
-		}
-		Multithreader.startAndJoin(threads);
-
-		return maxEllipsoids;
 	}
 
 	private ImagePlus displayMaximumIDs(int[][] biggestEllipsoid,
