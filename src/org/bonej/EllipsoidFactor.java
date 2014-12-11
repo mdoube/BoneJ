@@ -143,10 +143,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
 
-		if (IJ.debugMode)
+		if (IJ.debugMode) {
 			universe.show();
-
-		rt = new ResultsTable();
+			rt = new ResultsTable();
+		}
 
 		Ellipsoid[] ellipsoids = findEllipsoids(imp, skeletonPoints,
 				unitVectors);
@@ -158,21 +158,26 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Ellipsoid[][] biggestEllipsoids = findBiggestEllipsoids(imp,
 				ellipsoids, maxIDs);
 
-		ImagePlus volumes = displayVolumes(imp, biggestEllipsoids, ellipsoids);
+		ImagePlus volumes = displayVolumes(imp, maxIDs, ellipsoids);
 		volumes.show();
+		volumes.setDisplayRange(0,
+				ellipsoids[(int) (0.05 * ellipsoids.length)].getVolume());
+		IJ.run("Fire");
 
 		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
 		maxID.show();
+		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
-		rt.show("Ellipsoid volumes");
+		if (IJ.debugMode)
+			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
 
-	private ImagePlus displayVolumes(ImagePlus imp,
-			final Ellipsoid[][] biggestEllipsoids, final Ellipsoid[] ellipsoids) {
+	private ImagePlus displayVolumes(ImagePlus imp, final int[][] maxIDs,
+			final Ellipsoid[] ellipsoids) {
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
@@ -180,6 +185,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		final ImageStack volStack = new ImageStack(imp.getWidth(),
 				imp.getHeight());
+
+		final float[][] stackPixels = new float[d + 1][w * h];
 
 		final AtomicInteger ai = new AtomicInteger(1);
 		Thread[] threads = Multithreader.newThreads();
@@ -190,31 +197,30 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							.getAndIncrement()) {
 						IJ.showStatus("Generating volume image");
 						IJ.showProgress(z, d);
-						FloatProcessor fSlice = new FloatProcessor(w, h);
-						float[] pixels = (float[]) fSlice.getPixels();
-						Ellipsoid[] elSlice = biggestEllipsoids[z];
-						Ellipsoid ellipsoid = ellipsoids[0];
+						int[] idSlice = maxIDs[z];
+						float[] pixels = stackPixels[z];
 						for (int y = 0; y < h; y++) {
 							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
 								final int i = offset + x;
-								ellipsoid = elSlice[i];
-								if (ellipsoid != null) {
-									pixels[i] = (float) ellipsoid.getVolume();
+								final int id = idSlice[i];
+								if (id >= 0) {
+									pixels[i] = (float) ellipsoids[id]
+											.getVolume();
 								}
 							}
 						}
-						volStack.addSlice("" + z, fSlice);
 					}
 				}
 			});
 		}
 		Multithreader.startAndJoin(threads);
 
+		for (int z = 1; z <= d; z++)
+			volStack.addSlice("" + z, stackPixels[z]);
+
 		ImagePlus volImp = new ImagePlus("Volume-" + imp.getTitle(), volStack);
 		volImp.setCalibration(imp.getCalibration());
-		volImp.setDisplayRange(0, ellipsoids[0].getVolume());
-
 		return volImp;
 	}
 
@@ -272,7 +278,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 		ImagePlus bigImp = new ImagePlus("Max-ID-" + imp.getTitle(), bigStack);
 		bigImp.setCalibration(imp.getCalibration());
-		bigImp.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 		return bigImp;
 	}
 
