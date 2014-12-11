@@ -160,6 +160,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 				ellipsoids[(int) (0.05 * ellipsoids.length)].getVolume());
 		IJ.run("Fire");
 
+		ImagePlus middleOverLong = displayMiddleOverLong(imp, maxIDs, ellipsoids);
+		middleOverLong.show();
+		middleOverLong.setDisplayRange(0, 1);
+		IJ.run("Fire");
+		
+		ImagePlus shortOverMiddle = displayShortOverMiddle(imp, maxIDs, ellipsoids);
+		shortOverMiddle.show();
+		shortOverMiddle.setDisplayRange(0, 1);
+		IJ.run("Fire");		
+		
 		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
 		maxID.show();
 		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
@@ -170,6 +180,106 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
+	}
+
+	private ImagePlus displayShortOverMiddle(ImagePlus imp, final int[][] maxIDs,
+			final Ellipsoid[] ellipsoids) {
+		final ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+
+		final ImageStack smStack = new ImageStack(imp.getWidth(),
+				imp.getHeight());
+
+		final float[][] stackPixels = new float[d + 1][w * h];
+
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Generating short/middle axis image");
+						IJ.showProgress(z, d);
+						int[] idSlice = maxIDs[z];
+						float[] pixels = stackPixels[z];
+						double[] radii = new double[3];
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++) {
+								final int i = offset + x;
+								final int id = idSlice[i];
+								if (id >= 0) {
+									radii = ellipsoids[id].getRadii();
+									Arrays.sort(radii);
+									pixels[i] = (float) (radii[0] / radii[1]);
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+
+		for (int z = 1; z <= d; z++)
+			smStack.addSlice("" + z, stackPixels[z]);
+
+		ImagePlus shortmid = new ImagePlus("Short_Mid-" + imp.getTitle(), smStack);
+		shortmid.setCalibration(imp.getCalibration());
+		return shortmid;
+	}
+
+	private ImagePlus displayMiddleOverLong(ImagePlus imp, final int[][] maxIDs,
+			final Ellipsoid[] ellipsoids) {
+		final ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+
+		final ImageStack mlStack = new ImageStack(imp.getWidth(),
+				imp.getHeight());
+
+		final float[][] stackPixels = new float[d + 1][w * h];
+
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Generating volume image");
+						IJ.showProgress(z, d);
+						int[] idSlice = maxIDs[z];
+						float[] pixels = stackPixels[z];
+						double[] radii = new double[3];
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++) {
+								final int i = offset + x;
+								final int id = idSlice[i];
+								if (id >= 0) {
+									radii = ellipsoids[id].getRadii();
+									Arrays.sort(radii);
+									pixels[i] = (float) (radii[1] / radii[2]);
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+
+		for (int z = 1; z <= d; z++)
+			mlStack.addSlice("" + z, stackPixels[z]);
+
+		ImagePlus midLong = new ImagePlus("Mid_Long-" + imp.getTitle(), mlStack);
+		midLong.setCalibration(imp.getCalibration());
+		return midLong;
 	}
 
 	private ImagePlus displayVolumes(ImagePlus imp, final int[][] maxIDs,
