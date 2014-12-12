@@ -872,21 +872,24 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param px
 	 * @param py
 	 * @param pz
-	 * @return true if none of the surface points are inside the stack, false if
-	 *         at least one surface point is inside the stack
+	 * @return true if half or more of the surface points are outside the image
+	 *         stack
 	 */
 	private boolean isInvalid(Ellipsoid ellipsoid, ByteProcessor[] ips,
 			double pW, double pH, double pD, int w, int h, int d, double px,
 			double py, double pz) {
 
 		double[][] surfacePoints = ellipsoid.getSurfacePoints(nVectors);
+		int outOfBoundsCount = 0;
+		final int half = nVectors / 2;
 		for (double[] p : surfacePoints) {
-			if (!isOutOfBounds((int) (p[0] / pW), (int) (p[1] / pD),
+			if (isOutOfBounds((int) (p[0] / pW), (int) (p[1] / pD),
 					(int) (p[2] / pH), w, h, d))
-				return false;
+				outOfBoundsCount++;
+			if (outOfBoundsCount > half)
+				return true;
 		}
-
-		return true;
+		return false;
 	}
 
 	/**
