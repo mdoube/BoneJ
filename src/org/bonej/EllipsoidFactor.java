@@ -75,7 +75,6 @@ import customnode.CustomPointMesh;
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private final byte foreground = (byte) 255;
 	private int nVectors = 100;
-	private Image3DUniverse universe = new Image3DUniverse();
 
 	/**
 	 * increment for vector searching in real units. Defaults to ~Nyquist
@@ -98,6 +97,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private double maxDrift = Math.sqrt(3);
 	private ResultsTable rt;
+	private Image3DUniverse universe;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -146,6 +146,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
 
 		if (IJ.debugMode) {
+			universe = new Image3DUniverse();
 			universe.show();
 			rt = new ResultsTable();
 		}
@@ -998,7 +999,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
 		Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
 		torqueLine.setColor(blue);
-
 		try {
 			universe.addCustomMesh(mesh, "Point cloud " + name).setLocked(true);
 			universe.addCustomMesh(contactPointMesh,
