@@ -34,6 +34,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
@@ -186,10 +187,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		maxID.show();
 		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 
-		ImagePlus flinnPlot = drawFlinnPlot(imp.getTitle(), imp, maxIDs,
-				ellipsoids);
-
+		ImagePlus flinnPlot = drawFlinnPlot(imp.getTitle(), ellipsoids);
 		flinnPlot.show();
+
+		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
+				ellipsoids);
+		flinnPeaks.show();
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
@@ -199,7 +202,36 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
 
-	private ImagePlus drawFlinnPlot(String title, ImagePlus imp,
+	/**
+	 * Display each ellipsoid's axis ratios in a scatter plot
+	 * 
+	 * @param title
+	 * @param ellipsoids
+	 * @return
+	 */
+	private ImagePlus drawFlinnPlot(String title, Ellipsoid[] ellipsoids) {
+
+		final int l = ellipsoids.length;
+		double[] aOverB = new double[l];
+		double[] bOverC = new double[l];
+
+		for (int i = 0; i < l; i++) {
+			double[] radii = ellipsoids[i].getRadii();
+			Arrays.sort(radii);
+			aOverB[i] = radii[0] / radii[1];
+			bOverC[i] = radii[1] / radii[2];
+		}
+
+		Plot plot = new Plot("Flinn Diagram of " + title, "b/c", "a/b");
+		plot.setLimits(0, 1, 0, 1);
+		plot.setSize(1024, 1024);
+		plot.addPoints(bOverC, aOverB, Plot.CIRCLE);
+		ImageProcessor plotIp = plot.getProcessor();
+		ImagePlus plotImage = new ImagePlus("Flinn Diagram of " + title, plotIp);
+		return plotImage;
+	}
+
+	private ImagePlus drawFlinnPeakPlot(String title, ImagePlus imp,
 			final int[][] maxIDs, final Ellipsoid[] ellipsoids) {
 
 		final ImageStack stack = imp.getImageStack();
@@ -276,13 +308,25 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 		}
 
-		Plot plot = new Plot("Flinn Diagram of " + title, "b/c", "a/b");
-		plot.setLimits(0, 1, 0, 1);
-		plot.setSize(1024, 1024);
-		plot.addPoints(bOverC, aOverB, Plot.CIRCLE);
-		ImageProcessor plotIp = plot.getProcessor();
-		ImagePlus plotImage = new ImagePlus("Flinn Diagram", plotIp);
-		return plotImage;
+		float[][] pixels = new float[256][256];
+
+		for (int j = 0; j < l; j++) {
+			final int x = (int) Math.floor(255 * bOverC[j]);
+			final int y = (int) Math.floor(255 * (1 - aOverB[j]));
+			pixels[x][y] += 1;
+		}
+
+		FloatProcessor fp = new FloatProcessor(pixels);
+		fp.blurGaussian(3);
+
+		Calibration cal = new Calibration();
+		cal.setXUnit("b/c");
+		cal.setYUnit("a/b");
+		cal.pixelWidth = 1.0 / 256.0;
+		cal.pixelHeight = 1.0 / 256.0;
+		ImagePlus plot = new ImagePlus(title, fp);
+		plot.setCalibration(cal);
+		return plot;
 	}
 
 	private ImagePlus displayEllipsoidFactor(ImagePlus imp,
