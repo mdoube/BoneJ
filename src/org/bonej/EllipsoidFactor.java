@@ -258,28 +258,28 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		for (float[] f : ab)
 			l += f.length;
 
-		float[] x = new float[l];
-		float[] y = new float[l];
+		float[] aOverB = new float[l];
+		float[] bOverC = new float[l];
 
 		int i = 0;
 		for (float[] fl : ab) {
 			for (float f : fl) {
-				x[i] = f;
+				aOverB[i] = f;
 				i++;
 			}
 		}
 		i = 0;
 		for (float[] fl : bc) {
 			for (float f : fl) {
-				y[i] = f;
+				bOverC[i] = f;
 				i++;
 			}
 		}
 
-		Plot plot = new Plot("Flinn Diagram of " + title, "a/b", "b/c");
+		Plot plot = new Plot("Flinn Diagram of " + title, "b/c", "a/b");
 		plot.setLimits(0, 1, 0, 1);
 		plot.setSize(1024, 1024);
-		plot.addPoints(x, y, Plot.CIRCLE);
+		plot.addPoints(bOverC, aOverB, Plot.CIRCLE);
 		ImageProcessor plotIp = plot.getProcessor();
 		ImagePlus plotImage = new ImagePlus("Flinn Diagram", plotIp);
 		return plotImage;
