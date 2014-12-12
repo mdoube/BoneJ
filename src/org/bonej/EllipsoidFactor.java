@@ -34,7 +34,9 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
+import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
+import ij.gui.Plot;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -184,12 +186,103 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		maxID.show();
 		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 
+		ImagePlus flinnPlot = drawFlinnPlot(imp.getTitle(), imp, maxIDs,
+				ellipsoids);
+
+		flinnPlot.show();
+
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
 		if (IJ.debugMode)
 			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
+	}
+
+	private ImagePlus drawFlinnPlot(String title, ImagePlus imp,
+			final int[][] maxIDs, final Ellipsoid[] ellipsoids) {
+
+		final ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+
+		final float[][] ab = new float[d][];
+		final float[][] bc = new float[d][];
+
+		final AtomicInteger ai = new AtomicInteger(1);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+
+					for (int z = ai.getAndIncrement(); z <= d; z = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Generating Flinn Diagram");
+						IJ.showProgress(z, d);
+						int[] idSlice = maxIDs[z];
+						int l = 0;
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++)
+								if (idSlice[offset + x] >= 0)
+									l++;
+						}
+						float[] abl = new float[l];
+						float[] bcl = new float[l];
+						int j = 0;
+						for (int y = 0; y < h; y++) {
+							final int offset = y * w;
+							for (int x = 0; x < w; x++) {
+								final int i = offset + x;
+								final int id = idSlice[i];
+								double[] radii = new double[3];
+								if (id >= 0) {
+									radii = ellipsoids[id].getRadii();
+									Arrays.sort(radii);
+									abl[j] = (float) (radii[0] / radii[1]);
+									bcl[j] = (float) (radii[1] / radii[2]);
+									j++;
+								}
+							}
+						}
+						ab[z - 1] = abl;
+						bc[z - 1] = bcl;
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+
+		int l = 0;
+		for (float[] f : ab)
+			l += f.length;
+
+		float[] x = new float[l];
+		float[] y = new float[l];
+
+		int i = 0;
+		for (float[] fl : ab) {
+			for (float f : fl) {
+				x[i] = f;
+				i++;
+			}
+		}
+		i = 0;
+		for (float[] fl : bc) {
+			for (float f : fl) {
+				y[i] = f;
+				i++;
+			}
+		}
+
+		Plot plot = new Plot("Flinn Diagram of " + title, "a/b", "b/c");
+		plot.setLimits(0, 1, 0, 1);
+		plot.setSize(1024, 1024);
+		plot.addPoints(x, y, Plot.CIRCLE);
+		ImageProcessor plotIp = plot.getProcessor();
+		ImagePlus plotImage = new ImagePlus("Flinn Diagram", plotIp);
+		return plotImage;
 	}
 
 	private ImagePlus displayEllipsoidFactor(ImagePlus imp,
@@ -215,6 +308,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						IJ.showProgress(z, d);
 						int[] idSlice = maxIDs[z];
 						float[] pixels = stackPixels[z];
+
 						for (int y = 0; y < h; y++) {
 							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
