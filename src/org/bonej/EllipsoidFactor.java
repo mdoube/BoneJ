@@ -192,7 +192,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		flinnPlot.show();
 
 		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
-				ellipsoids);
+				ellipsoids, 2);
 		flinnPeaks.show();
 
 		// ResultInserter ri = ResultInserter.getInstance();
@@ -233,7 +233,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	}
 
 	private ImagePlus drawFlinnPeakPlot(String title, ImagePlus imp,
-			final int[][] maxIDs, final Ellipsoid[] ellipsoids) {
+			final int[][] maxIDs, final Ellipsoid[] ellipsoids, double sigma) {
 
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
@@ -318,7 +318,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 
 		FloatProcessor fp = new FloatProcessor(pixels);
-		fp.blurGaussian(3);
+		if (sigma > 0)
+			fp.blurGaussian(sigma);
 
 		Calibration cal = new Calibration();
 		cal.setXUnit("b/c");
