@@ -161,6 +161,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
 
+		double fractionFilled = calculateFillingEfficiency(maxIDs);
+		IJ.log(IJ.d2s((fractionFilled * 100), 3)
+				+ "% of foreground volume filled with ellipsoids");
+
 		ImagePlus volumes = displayVolumes(imp, maxIDs, ellipsoids);
 		volumes.show();
 		volumes.setDisplayRange(0,
@@ -201,6 +205,51 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
+	}
+
+	private double calculateFillingEfficiency(final int[][] maxIDs) {
+		final int l = maxIDs.length;
+		final long[] foregroundCount = new long[l];
+		final long[] filledCount = new long[l];
+
+		final AtomicInteger ai = new AtomicInteger(0);
+		Thread[] threads = Multithreader.newThreads();
+		for (int thread = 0; thread < threads.length; thread++) {
+			threads[thread] = new Thread(new Runnable() {
+				public void run() {
+
+					for (int i = ai.getAndIncrement(); i < l; i = ai
+							.getAndIncrement()) {
+						IJ.showStatus("Calculating filling effiency...");
+						IJ.showProgress(i, l);
+						int[] idSlice = maxIDs[i];
+						final int len = idSlice.length;
+						for (int j = 0; j < len; j++) {
+							final int val = idSlice[j];
+							if (val >= -1)
+								foregroundCount[i]++;
+							if (val >= 0)
+								filledCount[i]++;
+						}
+					}
+				}
+			});
+		}
+		Multithreader.startAndJoin(threads);
+
+		long sumForegroundCount = 0;
+		long sumFilledCount = 0;
+
+		for (int i = 0; i < l; i++) {
+			sumForegroundCount += foregroundCount[i];
+			sumFilledCount += filledCount[i];
+		}
+
+		long unfilled = sumForegroundCount - sumFilledCount;
+		IJ.log(unfilled + " pixels unfilled with ellipsoids out of "
+				+ sumForegroundCount + " total foreground pixels");
+
+		return (double) sumFilledCount / (double) sumForegroundCount;
 	}
 
 	/**
