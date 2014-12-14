@@ -824,7 +824,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					pW, pH, pD, w, h, d);
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
-						+ ") is invalid, nullifying");
+						+ ") is invalid, nullifying at initial oblation");
 				return null;
 			}
 		}
@@ -858,7 +858,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
-						+ ") is invalid, nullifying");
+						+ ") is invalid, nullifying after " + totalIterations
+						+ " iterations");
 				return null;
 			}
 
@@ -885,7 +886,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
-						+ ") is invalid, nullifying");
+						+ ") is invalid, nullifying after " + totalIterations
+						+ " iterations");
 				return null;
 			}
 
@@ -907,7 +909,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 			if (isInvalid(ellipsoid, ips, pW, pH, pD, w, h, d, px, py, pz)) {
 				IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
-						+ ") is invalid, nullifying");
+						+ ") is invalid, nullifying after " + totalIterations
+						+ " iterations");
 				return null;
 			}
 
