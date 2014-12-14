@@ -196,7 +196,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		flinnPlot.show();
 
 		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
-				ellipsoids, 2);
+				ellipsoids, 2, 256);
 		flinnPeaks.show();
 
 		// ResultInserter ri = ResultInserter.getInstance();
@@ -281,8 +281,22 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		return plotImage;
 	}
 
+	/**
+	 * Draw a Flinn diagram with each point given an intensity proportional to
+	 * the volume of the structure with that axis ratio
+	 * 
+	 * @param title
+	 * @param imp
+	 * @param maxIDs
+	 * @param ellipsoids
+	 * @param sigma
+	 * @param size
+	 * 
+	 * @return
+	 */
 	private ImagePlus drawFlinnPeakPlot(String title, ImagePlus imp,
-			final int[][] maxIDs, final Ellipsoid[] ellipsoids, double sigma) {
+			final int[][] maxIDs, final Ellipsoid[] ellipsoids, double sigma,
+			int size) {
 
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
@@ -358,11 +372,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			}
 		}
 
-		float[][] pixels = new float[256][256];
+		float[][] pixels = new float[size][size];
 
 		for (int j = 0; j < l; j++) {
-			final int x = (int) Math.floor(255 * bOverC[j]);
-			final int y = (int) Math.floor(255 * (1 - aOverB[j]));
+			final int x = (int) Math.floor((size - 1) * bOverC[j]);
+			final int y = (int) Math.floor((size - 1) * (1 - aOverB[j]));
 			pixels[x][y] += 1;
 		}
 
@@ -373,8 +387,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Calibration cal = new Calibration();
 		cal.setXUnit("b/c");
 		cal.setYUnit("a/b");
-		cal.pixelWidth = 1.0 / 256.0;
-		cal.pixelHeight = 1.0 / 256.0;
+		cal.pixelWidth = 1.0 / (double) size;
+		cal.pixelHeight = 1.0 / (double) size;
 		ImagePlus plot = new ImagePlus(title, fp);
 		plot.setCalibration(cal);
 		return plot;
