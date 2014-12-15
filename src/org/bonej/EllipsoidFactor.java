@@ -266,8 +266,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double[] bOverC = new double[l];
 
 		for (int i = 0; i < l; i++) {
-			double[] radii = ellipsoids[i].getRadii();
-			Arrays.sort(radii);
+			double[] radii = ellipsoids[i].getSortedRadii();
 			aOverB[i] = radii[0] / radii[1];
 			bOverC[i] = radii[1] / radii[2];
 		}
@@ -334,8 +333,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								final int id = idSlice[i];
 								double[] radii = new double[3];
 								if (id >= 0) {
-									radii = ellipsoids[id].getRadii();
-									Arrays.sort(radii);
+									radii = ellipsoids[id].getSortedRadii();
 									abl[j] = (float) (radii[0] / radii[1]);
 									bcl[j] = (float) (radii[1] / radii[2]);
 									j++;
@@ -473,8 +471,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								final int i = offset + x;
 								final int id = idSlice[i];
 								if (id >= 0) {
-									radii = ellipsoids[id].getRadii();
-									Arrays.sort(radii);
+									radii = ellipsoids[id].getSortedRadii();
 									pixels[i] = (float) (radii[0] / radii[1]);
 								}
 							}
@@ -524,8 +521,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								final int i = offset + x;
 								final int id = idSlice[i];
 								if (id >= 0) {
-									radii = ellipsoids[id].getRadii();
-									Arrays.sort(radii);
+									radii = ellipsoids[id].getSortedRadii();
 									pixels[i] = (float) (radii[1] / radii[2]);
 								}
 							}
@@ -1512,8 +1508,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return the ellipsoid factor
 	 */
 	private double ellipsoidFactor(Ellipsoid ellipsoid) {
-		double[] radii = ellipsoid.getRadii();
-		Arrays.sort(radii);
+		double[] radii = ellipsoid.getSortedRadii();
 		final double a = radii[0];
 		final double b = radii[1];
 		final double c = radii[2];
