@@ -1,7 +1,5 @@
 package org.doube.geometry;
 
-import java.util.Arrays;
-
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
 
@@ -62,7 +60,7 @@ public class Ellipsoid {
 
 		if (Double.isNaN(ra) || Double.isNaN(rb) || Double.isNaN(rc))
 			throw new IllegalArgumentException("Radius is NaN");
-		
+
 		if (ra <= 0 || rb <= 0 || rc <= 0)
 			throw new IllegalArgumentException("Radius cannot be <= 0");
 
@@ -144,8 +142,9 @@ public class Ellipsoid {
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		double[] radii = { ra, rb, rc };
-		Arrays.sort(radii);
+		// double[] radii = { ra, rb, rc };
+		// Arrays.sort(radii);
+		double[] radii = getSortedRadii();
 
 		// if further from centroid than major semiaxis length
 		// must be outside
@@ -169,6 +168,26 @@ public class Ellipsoid {
 			return true;
 
 		return false;
+	}
+
+	/**
+	 * Get the radii sorted in ascending order. Note that there is no guarantee
+	 * that this ordering relates at all to the eigenvectors or eigenvalues.
+	 * 
+	 * @return radii in ascending order
+	 */
+	public double[] getSortedRadii() {
+		final double minab = Math.min(this.ra, this.rb);
+		final double minbc = Math.min(this.rb, this.rc);
+		final double maxab = Math.max(this.ra, this.rb);
+		final double maxbc = Math.max(this.rb, this.rc);
+		final double s = Math.min(minab, minbc);
+		final double m = Math.min(maxab, maxbc);
+		final double l = Math.max(maxab, maxbc);
+
+		double[] sortedRadii = { s, m, l };
+
+		return sortedRadii;
 	}
 
 	public double[] getCentre() {
@@ -282,19 +301,19 @@ public class Ellipsoid {
 	}
 
 	/**
-	 * Set rotation to the supplied rotation matrix. Does no error
-	 * checking.
+	 * Set rotation to the supplied rotation matrix. Does no error checking.
 	 */
 	public void setRotation(double[][] rotation) {
 		this.ev = rotation.clone();
 		update3x3Matrix();
 	}
-	
+
 	/**
 	 * Return a copy of the ellipsoid's eigenvector matrix
+	 * 
 	 * @return
 	 */
-	public double[][] getRotation(){
+	public double[][] getRotation() {
 		return ev.clone();
 	}
 
