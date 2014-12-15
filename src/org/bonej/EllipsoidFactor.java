@@ -72,7 +72,6 @@ import customnode.CustomPointMesh;
  * 
  */
 public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
-	private final byte foreground = (byte) 255;
 	private int nVectors = 100;
 
 	/**
@@ -645,7 +644,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							final int offset = y * w;
 							final double yvH = y * vH;
 							for (int x = 0; x < w; x++) {
-								if (slicePixels[offset + x] == foreground) {
+								if (slicePixels[offset + x] == -1) {
 									bigSlice[offset + x] = biggestEllipsoid(
 											ellipsoids, x * vW, yvH, zvD);
 								}
@@ -1410,7 +1409,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			final int z = (int) Math.floor(p[2] / pD);
 			if (isOutOfBounds(x, y, z, w, h, d))
 				continue;
-			if ((byte) pixels[z][y * w + x] != foreground)
+			if ( pixels[z][y * w + x] != -1)
 				contactPoints.add(p);
 		}
 		return contactPoints;
@@ -1426,7 +1425,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			final int z = (int) Math.floor(p[2] / pD);
 			if (isOutOfBounds(x, y, z, w, h, d))
 				continue;
-			if ((byte) pixels[z][y * w + x] != foreground)
+			if (pixels[z][y * w + x] != -1)
 				return false;
 		}
 		return true;
@@ -1475,7 +1474,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						for (int y = 0; y < h; y++) {
 							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
-								if (slicePixels[offset + x] == foreground) {
+								if (slicePixels[offset + x] == -1) {
 									final int[] array = { x, y, z };
 									list.add(array);
 								}
