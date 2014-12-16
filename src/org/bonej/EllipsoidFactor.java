@@ -698,12 +698,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// make sure array contains null in the non-calculated elements
 		Arrays.fill(ellipsoids, null);
 
-		final AtomicInteger ai = new AtomicInteger(1);
+		final AtomicInteger ai = new AtomicInteger(0);
 		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int i = ai.getAndAdd(skipRatio); i <= nPoints; i = ai
+					for (int i = ai.getAndAdd(skipRatio); i < nPoints; i = ai
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors, i);
@@ -1443,7 +1443,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @return
 	 */
 	private boolean isOutOfBounds(int x, int y, int z, int w, int h, int d) {
-		if (x < 0 || x >= w || y < 0 || y >= h || z < 1 || z > d)
+		if (x < 0 || x >= w || y < 0 || y >= h || z < 0 || z >= d)
 			return true;
 		else
 			return false;
@@ -1475,7 +1475,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == -1) {
-									final int[] array = { x, y, z };
+									final int[] array = { x, y, z - 1 };
 									list.add(array);
 								}
 							}
