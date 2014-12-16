@@ -194,7 +194,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		flinnPlot.show();
 
 		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
-				ellipsoids, 2, 256);
+				ellipsoids, 2, 512);
 		flinnPeaks.show();
 
 		// ResultInserter ri = ResultInserter.getInstance();
@@ -383,8 +383,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Calibration cal = new Calibration();
 		cal.setXUnit("b/c");
 		cal.setYUnit("a/b");
+		cal.yOrigin = size;
 		cal.pixelWidth = 1.0 / (double) size;
-		cal.pixelHeight = 1.0 / (double) size;
+		cal.pixelHeight = -1.0 / (double) size;
 		ImagePlus plot = new ImagePlus(title, fp);
 		plot.setCalibration(cal);
 		return plot;
@@ -717,6 +718,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// Sort using this class' compare method
 		Arrays.sort(sortedEllipsoids, this);
+		
 		return sortedEllipsoids;
 	}
 
