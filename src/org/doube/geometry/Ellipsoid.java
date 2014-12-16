@@ -177,19 +177,33 @@ public class Ellipsoid {
 	 * @return radii in ascending order
 	 */
 	public double[] getSortedRadii() {
-		final double minab = Math.min(this.ra, this.rb);
-		final double minbc = Math.min(this.rb, this.rc);
-		final double maxab = Math.max(this.ra, this.rb);
-		final double maxbc = Math.max(this.rb, this.rc);
-		final double s = Math.min(minab, minbc);
-		final double m = Math.min(maxab, maxbc);
-		final double l = Math.max(maxab, maxbc);
-
-		double[] sortedRadii = { s, m, l };
+		
+		double a = this.ra;
+		double b = this.rb;
+		double c = this.rc;
+		double temp = 0;
+		
+		if (a > b){
+			temp = a;
+			a = b;
+			b = temp;
+		}
+		if (b > c){
+			temp = b;
+			b = c;
+			c = temp;
+		}
+		if (a > b){
+			temp = a;
+			a = b;
+			b = temp;
+		}
+			
+		double[] sortedRadii = { a, b, c };
 
 		return sortedRadii;
 	}
-
+	
 	public double[] getCentre() {
 		double[] centre = { cx, cy, cz };
 		return centre.clone();
