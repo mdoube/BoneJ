@@ -107,8 +107,14 @@ public class Ellipsoid {
 		setVolume();
 	}
 
+	/**
+	 * Gets the volume of this ellipsoid, calculated as PI * a * b * c * 4 / 3
+	 * 
+	 * @return
+	 */
 	public double getVolume() {
-		return (new Double(volume)).doubleValue();
+		final double d = this.volume;
+		return d;
 	}
 
 	private void setVolume() {
