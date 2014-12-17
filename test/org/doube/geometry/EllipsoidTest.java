@@ -231,4 +231,16 @@ public class EllipsoidTest {
 		}
 	}
 
+	@Test
+	public void testGetSortedRadii(){
+		final int t = 1000;
+		Ellipsoid e = unitSphere.copy();
+		double[] r = new double[3];
+		for (int i = 0; i < t; i++){
+			e.dilate(Math.random(), Math.random(), Math.random());
+			r = e.getSortedRadii();
+			assertTrue(r[0] < r[1]);
+			assertTrue(r[1] < r[2]);
+		}
+	}
 }
