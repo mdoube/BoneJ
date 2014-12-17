@@ -24,12 +24,6 @@ public class Ellipsoid {
 	 */
 	private double ra, rb, rc;
 
-	/**
-	 * Cache of sorted radii values. Set to null if out of sync with radii.
-	 * Updated when getSortedRadii is called.
-	 */
-	private double[] sortedRadii = null;
-
 	/** Volume of ellipsoid, calculated as 4 * PI * ra * rb * rc / 3 */
 	private double volume;
 
@@ -189,38 +183,33 @@ public class Ellipsoid {
 	 * @return radii in ascending order
 	 */
 	public double[] getSortedRadii() {
-
-		if (this.sortedRadii != null)
-			return this.sortedRadii.clone();
-
+		
 		double a = this.ra;
 		double b = this.rb;
 		double c = this.rc;
 		double temp = 0;
-
-		if (a > b) {
+		
+		if (a > b){
 			temp = a;
 			a = b;
 			b = temp;
 		}
-		if (b > c) {
+		if (b > c){
 			temp = b;
 			b = c;
 			c = temp;
 		}
-		if (a > b) {
+		if (a > b){
 			temp = a;
 			a = b;
 			b = temp;
 		}
+			
+		double[] sortedRadii = { a, b, c };
 
-		double[] sorted = { a, b, c };
-
-		this.sortedRadii = sorted.clone();
-
-		return sorted;
+		return sortedRadii;
 	}
-
+	
 	public double[] getCentre() {
 		double[] centre = { cx, cy, cz };
 		return centre.clone();
@@ -365,7 +354,6 @@ public class Ellipsoid {
 		this.ra = a;
 		this.rb = b;
 		this.rc = c;
-		this.sortedRadii = null;
 		setEigenvalues();
 		setVolume();
 	}
