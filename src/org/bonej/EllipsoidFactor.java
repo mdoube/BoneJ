@@ -190,7 +190,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		maxID.show();
 		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
 
-		ImagePlus flinnPlot = drawFlinnPlot(imp.getTitle(), ellipsoids);
+		ImagePlus flinnPlot = drawFlinnPlot("Weighted-flinn-plot-"+imp.getTitle(), ellipsoids);
 		flinnPlot.show();
 
 		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
