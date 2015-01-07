@@ -1278,7 +1278,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			safety++;
 		}
 
-		ellipsoid.contract(0.1);
+		ellipsoid.contract(0.05);
 
 		return ellipsoid;
 	}
