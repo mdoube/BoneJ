@@ -472,7 +472,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								if (id >= 0) {
 									radii = ellipsoids[id].getSortedRadii();
 									pixels[i] = (float) (radii[0] / radii[1]);
-								}
+								} else
+									pixels[i] = Float.NaN;
 							}
 						}
 					}
@@ -522,7 +523,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								if (id >= 0) {
 									radii = ellipsoids[id].getSortedRadii();
 									pixels[i] = (float) (radii[1] / radii[2]);
-								}
+								} else
+									pixels[i] = Float.NaN;
 							}
 						}
 					}
@@ -570,7 +572,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 								if (id >= 0) {
 									pixels[i] = (float) ellipsoids[id]
 											.getVolume();
-								}
+								} else 
+									pixels[i] = Float.NaN;
 							}
 						}
 					}
