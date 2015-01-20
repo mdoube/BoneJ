@@ -97,6 +97,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private ResultsTable rt;
 	private Image3DUniverse universe;
 
+	private double stackVolume;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -118,6 +120,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double pD = cal.pixelDepth;
 		vectorIncrement *= Math.min(pD, Math.min(pH, pW));
 		maxDrift = Math.sqrt(pW * pW + pH * pH + pD * pD);
+		stackVolume = pW * pH * pD * imp.getWidth() * imp.getHeight()
+				* imp.getStackSize();
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
@@ -997,7 +1001,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * @param py
 	 * @param pz
 	 * @return true if half or more of the surface points are outside the image
-	 *         stack
+	 *         stack, or if the volume of the ellipsoid exceeds that of the
+	 *         image stack
 	 */
 	private boolean isInvalid(Ellipsoid ellipsoid, double pW, double pH,
 			double pD, int w, int h, int d, double px, double py, double pz) {
@@ -1012,6 +1017,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			if (outOfBoundsCount > half)
 				return true;
 		}
+
+		double volume = ellipsoid.getVolume();
+		if (volume > stackVolume)
+			return true;
+
 		return false;
 	}
 
