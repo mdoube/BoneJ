@@ -844,7 +844,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// alternately try each axis
 		int totalIterations = 0;
 		int noImprovementCount = 0;
-		while (totalIterations < maxIterations * 10
+		final int absoluteMaxIterations = maxIterations * 10;
+		while (totalIterations < absoluteMaxIterations
 				&& noImprovementCount < maxIterations) {
 
 			// rotate a little bit
@@ -939,6 +940,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			totalIterations++;
 		}
 
+		// this usually indicates that the ellipsoid
+		// grew out of control for some reason
+		if (totalIterations == absoluteMaxIterations) {
+			IJ.log("Ellipsoid at (" + px + ", " + py + ", " + pz
+					+ ") seems to be out of control, nullifying after "
+					+ totalIterations + " iterations");
+			return null;
+		}
 		// debug output for this ellipsoid
 		if (IJ.debugMode) {
 			// show in the 3D viewer
