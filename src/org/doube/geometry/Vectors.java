@@ -110,6 +110,26 @@ public class Vectors {
 	}
 
 	/**
+	 * Normalise a vector to have a length of 1 and the same orientation as the
+	 * input vector a
+	 * 
+	 * @param a
+	 * @return Unit vector in direction of a
+	 */
+	public static double[] norm(double[] a) {
+		final double a0 = a[0];
+		final double a1 = a[1];
+		final double a2 = a[2];
+		final double length = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
+
+		double[] normed = new double[3];
+		normed[0] = a0 / length;
+		normed[1] = a1 / length;
+		normed[2] = a2 / length;
+		return normed;
+	}
+
+	/**
 	 * Generate an array of randomly-oriented 3D unit vectors
 	 * 
 	 * @param nVectors
@@ -139,19 +159,19 @@ public class Vectors {
 	 * 
 	 * @return 2D array (nVectors x 3) containing unit vectors
 	 */
-	public static double[][] regularVectors(int nVectors) {
+	public static double[][] regularVectors(final int nVectors) {
 
 		double[][] vectors = new double[nVectors][];
-		double inc = Math.PI * (3 - Math.sqrt(5));
-		double off = 2 / (double) nVectors;
+		final double inc = Math.PI * (3 - Math.sqrt(5));
+		final double off = 2 / (double) nVectors;
 
 		for (int k = 0; k < nVectors; k++) {
-			double y = k * off - 1 + (off / 2);
-			double r = Math.sqrt(1 - y * y);
-			double phi = k * inc;
-			double x = Math.cos(phi) * r;
-			double z = Math.sin(phi) * r;
-			double[] vector = { x, y, z };
+			final double y = k * off - 1 + (off / 2);
+			final double r = Math.sqrt(1 - y * y);
+			final double phi = k * inc;
+			final double x = Math.cos(phi) * r;
+			final double z = Math.sin(phi) * r;
+			final double[] vector = { x, y, z };
 			vectors[k] = vector;
 		}
 		return vectors;
