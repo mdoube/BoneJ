@@ -129,6 +129,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
 		gd.addNumericField("Maximum iterations", maxIterations, 0);
 		gd.addNumericField("Maximum drift", maxDrift, 5, 8, units);
+
+		gd.addMessage("Ellipsoid Factor is beta software.\n"
+				+ "Please report your experiences to the user group:\n"
+				+ "http://bit.ly/bonej-group");
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
 		if (!Interpreter.isBatchMode()) {
