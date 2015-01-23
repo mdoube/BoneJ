@@ -37,7 +37,6 @@ import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
-import ij.macro.Interpreter;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij3d.Image3DUniverse;
@@ -175,7 +174,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		if (IJ.debugMode) {
 			universe = new Image3DUniverse();
 			universe.show();
-			rt = new ResultsTable();
 		}
 
 		long start = System.currentTimeMillis();
