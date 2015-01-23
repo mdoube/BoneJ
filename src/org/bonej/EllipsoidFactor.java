@@ -123,6 +123,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		stackVolume = pW * pH * pD * imp.getWidth() * imp.getHeight()
 				* imp.getStackSize();
 		GenericDialog gd = new GenericDialog("Setup");
+		gd.addMessage("Sampling options");
 		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
@@ -130,21 +131,41 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		gd.addNumericField("Maximum iterations", maxIterations, 0);
 		gd.addNumericField("Maximum drift", maxDrift, 5, 8, units);
 
+		gd.addMessage("\nOutput options");
+		gd.addCheckbox("EF image", true);
+		gd.addCheckbox("Ellipsoid ID image", false);
+		gd.addCheckbox("Volume image", false);
+		gd.addCheckbox("Axis ratio images", false);
+		gd.addCheckbox("Flinn peak plot", true);
+		gd.addNumericField("Gaussian sigma", 2, 0, 4, "px");
+		gd.addCheckbox("Flinn plot", false);
+
 		gd.addMessage("Ellipsoid Factor is beta software.\n"
 				+ "Please report your experiences to the user group:\n"
 				+ "http://bit.ly/bonej-group");
 		gd.addHelp("http://bonej.org/ef");
 		gd.showDialog();
-		if (!Interpreter.isBatchMode()) {
-			vectorIncrement = gd.getNextNumber();
-			nVectors = (int) Math.round(gd.getNextNumber());
-			skipRatio = (int) Math.round(gd.getNextNumber());
-			contactSensitivity = (int) Math.round(gd.getNextNumber());
-			maxIterations = (int) Math.round(gd.getNextNumber());
-			maxDrift = gd.getNextNumber();
-		}
+
 		if (gd.wasCanceled())
 			return;
+
+		// if (!Interpreter.isBatchMode()) {
+		vectorIncrement = gd.getNextNumber();
+		nVectors = (int) Math.round(gd.getNextNumber());
+		skipRatio = (int) Math.round(gd.getNextNumber());
+		contactSensitivity = (int) Math.round(gd.getNextNumber());
+		maxIterations = (int) Math.round(gd.getNextNumber());
+		maxDrift = gd.getNextNumber();
+
+		boolean doEFImage = gd.getNextBoolean();
+		boolean doEllipsoidIDImage = gd.getNextBoolean();
+		boolean doVolumeImage = gd.getNextBoolean();
+		boolean doAxisRatioImages = gd.getNextBoolean();
+		boolean doFlinnPeakPlot = gd.getNextBoolean();
+		double gaussianSigma = gd.getNextNumber();
+		boolean doFlinnPlot = gd.getNextBoolean();
+
+		// }
 
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
 		int[][] skeletonPoints = skeletonPoints(imp);
@@ -171,40 +192,52 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log(IJ.d2s((fractionFilled * 100), 3)
 				+ "% of foreground volume filled with ellipsoids");
 
-		ImagePlus volumes = displayVolumes(imp, maxIDs, ellipsoids);
-		volumes.show();
-		volumes.setDisplayRange(0,
-				ellipsoids[(int) (0.05 * ellipsoids.length)].getVolume());
-		IJ.run("Fire");
+		if (doVolumeImage) {
+			ImagePlus volumes = displayVolumes(imp, maxIDs, ellipsoids);
+			volumes.show();
+			volumes.setDisplayRange(0,
+					ellipsoids[(int) (0.05 * ellipsoids.length)].getVolume());
+			IJ.run("Fire");
+		}
 
-		ImagePlus middleOverLong = displayMiddleOverLong(imp, maxIDs,
-				ellipsoids);
-		middleOverLong.show();
-		middleOverLong.setDisplayRange(0, 1);
-		IJ.run("Fire");
+		if (doAxisRatioImages) {
+			ImagePlus middleOverLong = displayMiddleOverLong(imp, maxIDs,
+					ellipsoids);
+			middleOverLong.show();
+			middleOverLong.setDisplayRange(0, 1);
+			IJ.run("Fire");
 
-		ImagePlus shortOverMiddle = displayShortOverMiddle(imp, maxIDs,
-				ellipsoids);
-		shortOverMiddle.show();
-		shortOverMiddle.setDisplayRange(0, 1);
-		IJ.run("Fire");
+			ImagePlus shortOverMiddle = displayShortOverMiddle(imp, maxIDs,
+					ellipsoids);
+			shortOverMiddle.show();
+			shortOverMiddle.setDisplayRange(0, 1);
+			IJ.run("Fire");
+		}
 
-		ImagePlus eF = displayEllipsoidFactor(imp, maxIDs, ellipsoids);
-		eF.show();
-		eF.setDisplayRange(-1, 1);
-		IJ.run("Fire");
+		if (doEFImage) {
+			ImagePlus eF = displayEllipsoidFactor(imp, maxIDs, ellipsoids);
+			eF.show();
+			eF.setDisplayRange(-1, 1);
+			IJ.run("Fire");
+		}
 
-		ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
-		maxID.show();
-		maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
+		if (doEllipsoidIDImage) {
+			ImagePlus maxID = displayMaximumIDs(maxIDs, ellipsoids, imp);
+			maxID.show();
+			maxID.setDisplayRange(-ellipsoids.length / 2, ellipsoids.length);
+		}
 
-		ImagePlus flinnPlot = drawFlinnPlot(
-				"Weighted-flinn-plot-" + imp.getTitle(), ellipsoids);
-		flinnPlot.show();
+		if (doFlinnPlot) {
+			ImagePlus flinnPlot = drawFlinnPlot(
+					"Weighted-flinn-plot-" + imp.getTitle(), ellipsoids);
+			flinnPlot.show();
+		}
 
-		ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp, maxIDs,
-				ellipsoids, 2, 512);
-		flinnPeaks.show();
+		if (doFlinnPeakPlot) {
+			ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp,
+					maxIDs, ellipsoids, gaussianSigma, 512);
+			flinnPeaks.show();
+		}
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
