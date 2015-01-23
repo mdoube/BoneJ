@@ -2,7 +2,7 @@ package org.bonej;
 
 /**
  * EllipsoidFactor plugin for ImageJ
- * Copyright 2013 2014 Michael Doube
+ * Copyright 2013 2014 2015 Michael Doube
  * 
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
