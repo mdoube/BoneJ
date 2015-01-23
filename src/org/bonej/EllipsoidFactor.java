@@ -25,7 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1502,11 +1504,22 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
 		final int nPoints = points.length;
 		double[] p = new double[3];
+		
+		HashSet<int[]> uniquePixels = new HashSet<int[]>(nPoints); 
 		for (int i = 0; i < nPoints; i++) {
 			p = points[i];
 			final int x = (int) Math.floor(p[0] / pW);
 			final int y = (int) Math.floor(p[1] / pH);
 			final int z = (int) Math.floor(p[2] / pD);
+			int[] pixel = {x, y, z};
+			uniquePixels.add(pixel);
+		}
+		
+		for (int[] pixel : uniquePixels){
+			final int x = pixel[0];
+			final int y = pixel[1];
+			final int z = pixel[2];
+			
 			if (isOutOfBounds(x, y, z, w, h, d))
 				continue;
 			if (pixels[z][y * w + x] != -1)
