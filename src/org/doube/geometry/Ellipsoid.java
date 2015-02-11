@@ -128,7 +128,7 @@ public class Ellipsoid {
 	/**
 	 * Method based on the inequality
 	 * 
-	 * (X-X0)H(X-X0)^T <= 1
+	 * (X-X0)^T H (X-X0) <= 1
 	 * 
 	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3
 	 * matrix
