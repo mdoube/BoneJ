@@ -184,8 +184,13 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		IJ.log("Found " + ellipsoids.length + " ellipsoids in "
 				+ (stop - start) + " ms");
 
+		start = System.currentTimeMillis();
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
-
+		stop = System.currentTimeMillis();
+		
+		IJ.log("Found maximal ellipsoids in "
+				+ (stop - start) + " ms");
+		
 		double fractionFilled = calculateFillingEfficiency(maxIDs);
 		IJ.log(IJ.d2s((fractionFilled * 100), 3)
 				+ "% of foreground volume filled with ellipsoids");
@@ -684,13 +689,27 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						int[] bigSlice = biggest[z];
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
+						
+						//find the subset of ellipsoids which are less than
+						//their maximal radius from slice z
+						ArrayList<Ellipsoid> nearEllipsoids = new ArrayList<Ellipsoid>();
+						for (Ellipsoid e : ellipsoids){
+							double[] c = e.getCentre();
+							double[] d = {c[0], c[1], zvD};
+							double[] r = e.getSortedRadii();
+							if (Trig.distance3D(c, d) <= r[2])
+								nearEllipsoids.add(e);
+						}
+						Ellipsoid[] ellipsoidSubSet = (Ellipsoid[]) nearEllipsoids.toArray();  
+//						Arrays.sort(ellipsoidSubSet, new EllipsoidFactor());
+						
 						for (int y = 0; y < h; y++) {
 							final int offset = y * w;
 							final double yvH = y * vH;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == -1) {
 									bigSlice[offset + x] = biggestEllipsoid(
-											ellipsoids, x * vW, yvH, zvD);
+											ellipsoidSubSet, x * vW, yvH, zvD);
 								}
 							}
 						}
