@@ -187,10 +187,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		start = System.currentTimeMillis();
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
 		stop = System.currentTimeMillis();
-		
-		IJ.log("Found maximal ellipsoids in "
-				+ (stop - start) + " ms");
-		
+
+		IJ.log("Found maximal ellipsoids in " + (stop - start) + " ms");
+
 		double fractionFilled = calculateFillingEfficiency(maxIDs);
 		IJ.log(IJ.d2s((fractionFilled * 100), 3)
 				+ "% of foreground volume filled with ellipsoids");
@@ -237,8 +236,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		}
 
 		if (doFlinnPeakPlot) {
-			ImagePlus flinnPeaks = drawFlinnPeakPlot("FlinnPeaks_"+imp.getTitle(), imp,
-					maxIDs, ellipsoids, gaussianSigma, 512);
+			ImagePlus flinnPeaks = drawFlinnPeakPlot(
+					"FlinnPeaks_" + imp.getTitle(), imp, maxIDs, ellipsoids,
+					gaussianSigma, 512);
 			flinnPeaks.show();
 		}
 
@@ -689,20 +689,27 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						int[] bigSlice = biggest[z];
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
-						
-						//find the subset of ellipsoids which are less than
-						//their maximal radius from slice z
+
+						// find the subset of ellipsoids which are less than
+						// their maximal radius from slice z
 						ArrayList<Ellipsoid> nearEllipsoids = new ArrayList<Ellipsoid>();
-						for (Ellipsoid e : ellipsoids){
+						final int n = ellipsoids.length;
+						for (int i = 0; i < n; i++) {
+							Ellipsoid e = ellipsoids[i];
 							double[] c = e.getCentre();
-							double[] d = {c[0], c[1], zvD};
 							double[] r = e.getSortedRadii();
-							if (Trig.distance3D(c, d) <= r[2])
-								nearEllipsoids.add(e);
+							if (Math.abs(zvD - c[2]) <= r[2]) {
+								Ellipsoid f = e.copy();
+								f.id = i;
+								nearEllipsoids.add(f);
+							}
 						}
-						Ellipsoid[] ellipsoidSubSet = (Ellipsoid[]) nearEllipsoids.toArray();  
-//						Arrays.sort(ellipsoidSubSet, new EllipsoidFactor());
-						
+						final int o = nearEllipsoids.size();
+						Ellipsoid[] ellipsoidSubSet = new Ellipsoid[o];
+						for (int i = 0; i < o; i++) {
+							ellipsoidSubSet[i] = nearEllipsoids.get(i);
+						}
+
 						for (int y = 0; y < h; y++) {
 							final int offset = y * w;
 							final double yvH = y * vH;
@@ -727,6 +734,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * ellipsoid which contains the point x, y, z
 	 * 
 	 * @param ellipsoids
+	 *            sorted in order of descending size and with id set to the sort
+	 *            position of the whole set. This means that subsets may be
+	 *            searched in sorted order and the ID which is returned is the
+	 *            index of the ellipsoid in the full array of ellipsoids rather
+	 *            than its index in the subset. The advantage is much faster searching.
 	 * @param x
 	 * @param y
 	 * @param z
@@ -738,7 +750,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final int l = ellipsoids.length;
 		for (int i = 0; i < l; i++) {
 			if (ellipsoids[i].contains(x, y, z))
-				return i;
+				return ellipsoids[i].id;
 		}
 		return -1;
 	}
