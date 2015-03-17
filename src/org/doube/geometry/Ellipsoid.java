@@ -41,6 +41,9 @@ public class Ellipsoid {
 
 	/** 3x3 matrix describing shape of ellipsoid */
 	private double[][] eh;
+	
+	/** ID field for tracking this particular ellipsoid */
+	public int id;
 
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
