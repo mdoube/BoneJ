@@ -18,9 +18,6 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.awt.AWTEvent;
-import java.awt.Checkbox;
-import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,7 +35,6 @@ import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.Calibration;
@@ -74,7 +70,7 @@ import customnode.CustomPointMesh;
  * @author Michael Doube
  * 
  */
-public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogListener {
+public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int nVectors = 100;
 
 	/**
@@ -147,7 +143,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 				+ "Please report your experiences to the user group:\n"
 				+ "http://bit.ly/bonej-group");
 		gd.addHelp("http://bonej.org/ef");
-		gd.addDialogListener(this);
 		gd.showDialog();
 
 		if (gd.wasCanceled())
@@ -1624,18 +1619,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 */
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
 		return Double.compare(o2.getVolume(), o1.getVolume());
-	}
-
-	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
-		Vector<?> checkboxes = gd.getCheckboxes();
-		Vector<?> nFields = gd.getNumericFields();
-		Checkbox flinnPeakPlot = (Checkbox) checkboxes.get(4);
-		TextField sigma = (TextField) nFields.get(6);
-		if (flinnPeakPlot.getState())
-			sigma.setEnabled(true);
-		else
-			sigma.setEnabled(false);
-		return true;
 	}
 
 }
