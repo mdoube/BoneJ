@@ -237,7 +237,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		}
 
 		if (doFlinnPeakPlot) {
-			ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp,
+			ImagePlus flinnPeaks = drawFlinnPeakPlot("FlinnPeaks_"+imp.getTitle(), imp,
 					maxIDs, ellipsoids, gaussianSigma, 512);
 			flinnPeaks.show();
 		}
