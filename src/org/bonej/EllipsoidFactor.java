@@ -126,22 +126,22 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		stackVolume = pW * pH * pD * imp.getWidth() * imp.getHeight()
 				* imp.getStackSize();
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addMessage("Sampling options");
-		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
+		gd.addMessage("Sampling_options");
+		gd.addNumericField("Sampling_increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
-		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
+		gd.addNumericField("Skeleton_points per ellipsoid", skipRatio, 0);
 		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
-		gd.addNumericField("Maximum iterations", maxIterations, 0);
-		gd.addNumericField("Maximum drift", maxDrift, 5, 8, units);
+		gd.addNumericField("Maximum_iterations", maxIterations, 0);
+		gd.addNumericField("Maximum_drift", maxDrift, 5, 8, units);
 
 		gd.addMessage("\nOutput options");
-		gd.addCheckbox("EF image", true);
-		gd.addCheckbox("Ellipsoid ID image", false);
-		gd.addCheckbox("Volume image", false);
-		gd.addCheckbox("Axis ratio images", false);
-		gd.addCheckbox("Flinn peak plot", true);
-		gd.addNumericField("Gaussian sigma", 2, 0, 4, "px");
-		gd.addCheckbox("Flinn plot", false);
+		gd.addCheckbox("EF_image", true);
+		gd.addCheckbox("Ellipsoid_ID_image", false);
+		gd.addCheckbox("Volume_image", false);
+		gd.addCheckbox("Axis_ratio_images", false);
+		gd.addCheckbox("Flinn_peak_plot", true);
+		gd.addNumericField("Gaussian_sigma", 2, 0, 4, "px");
+		gd.addCheckbox("Flinn_plot", false);
 
 		gd.addMessage("Ellipsoid Factor is beta software.\n"
 				+ "Please report your experiences to the user group:\n"
