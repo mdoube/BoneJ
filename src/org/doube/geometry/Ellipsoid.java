@@ -41,7 +41,7 @@ public class Ellipsoid {
 
 	/** 3x3 matrix describing shape of ellipsoid */
 	private double[][] eh;
-	
+
 	/** ID field for tracking this particular ellipsoid */
 	public int id;
 
@@ -148,16 +148,20 @@ public class Ellipsoid {
 		final double vy = y - cy;
 		final double vz = z - cz;
 
+		double[] radii = getSortedRadii();
+		final double maxRadius = radii[2];
+
+		// if further than maximal sphere's bounding box, must be outside
+		if (Math.abs(vx) > maxRadius || Math.abs(vy) > maxRadius
+				|| Math.abs(vz) > maxRadius)
+			return false;
+
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		// double[] radii = { ra, rb, rc };
-		// Arrays.sort(radii);
-		double[] radii = getSortedRadii();
-
 		// if further from centroid than major semiaxis length
 		// must be outside
-		if (length > radii[2])
+		if (length > maxRadius)
 			return false;
 
 		// if length closer than minor semiaxis length
@@ -186,33 +190,33 @@ public class Ellipsoid {
 	 * @return radii in ascending order
 	 */
 	public double[] getSortedRadii() {
-		
+
 		double a = this.ra;
 		double b = this.rb;
 		double c = this.rc;
 		double temp = 0;
-		
-		if (a > b){
+
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-		if (b > c){
+		if (b > c) {
 			temp = b;
 			b = c;
 			c = temp;
 		}
-		if (a > b){
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-			
+
 		double[] sortedRadii = { a, b, c };
 
 		return sortedRadii;
 	}
-	
+
 	public double[] getCentre() {
 		double[] centre = { cx, cy, cz };
 		return centre.clone();
