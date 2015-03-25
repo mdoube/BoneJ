@@ -690,16 +690,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
 
-						// find the subset of ellipsoids which are less than
-						// their maximal radius from slice z
+						// find the subset of ellipsoids whose bounding box intersects with z
 						ArrayList<Ellipsoid> nearEllipsoids = new ArrayList<Ellipsoid>();
 						final int n = ellipsoids.length;
 						for (int i = 0; i < n; i++) {
 							Ellipsoid e = ellipsoids[i];
-//							double[] c = e.getCentre();
-//							double[] r = e.getSortedRadii();
 							double[] zMinMax = e.getZMinAndMax();
-//							if (Math.abs(zvD - c[2]) <= r[2]) {
 							if (zvD >= zMinMax[0] && zvD <= zMinMax[1]){
 								Ellipsoid f = e.copy();
 								f.id = i;
@@ -711,14 +707,31 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						for (int i = 0; i < o; i++) {
 							ellipsoidSubSet[i] = nearEllipsoids.get(i);
 						}
-
+						
+						final int q = ellipsoidSubSet.length;
 						for (int y = 0; y < h; y++) {
-							final int offset = y * w;
 							final double yvH = y * vH;
+							// find the subset of ellipsoids whose bounding box intersects with y
+							ArrayList<Ellipsoid> yEllipsoids = new ArrayList<Ellipsoid>();
+							for (int i = 0; i < q; i++) {
+								Ellipsoid e = ellipsoidSubSet[i];
+								double[] yMinMax = e.getYMinAndMax();
+								if (yvH >= yMinMax[0] && yvH <= yMinMax[1]){
+									yEllipsoids.add(e);
+								}
+							}
+							
+							final int r = yEllipsoids.size();
+							Ellipsoid[] ellipsoidSubSubSet = new Ellipsoid[r];
+							for (int i = 0; i < r; i++) {
+								ellipsoidSubSubSet[i] = yEllipsoids.get(i);
+							}
+							
+							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == -1) {
 									bigSlice[offset + x] = biggestEllipsoid(
-											ellipsoidSubSet, x * vW, yvH, zvD);
+											ellipsoidSubSubSet, x * vW, yvH, zvD);
 								}
 							}
 						}
