@@ -784,6 +784,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors, i);
+						IJ.showProgress(i, nPoints);
 					}
 				}
 			});
