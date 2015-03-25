@@ -428,9 +428,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Calibration cal = new Calibration();
 		cal.setXUnit("b/c");
 		cal.setYUnit("a/b");
-		cal.yOrigin = size;
 		cal.pixelWidth = 1.0 / (double) size;
-		cal.pixelHeight = -1.0 / (double) size;
+		cal.pixelHeight = 1.0 / (double) size;
+		cal.setInvertY(true);
 		ImagePlus plot = new ImagePlus(title, fp);
 		plot.setCalibration(cal);
 		return plot;
