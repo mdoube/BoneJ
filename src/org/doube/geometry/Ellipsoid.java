@@ -382,6 +382,46 @@ public class Ellipsoid {
 		this.eh = times(times(ev, ed), transpose(ev));
 	}
 
+	public double[] getXMinAndMax() {
+		final double m11 = ev[0][0] * ra;
+		final double m12 = ev[0][1] * rb;
+		final double m13 = ev[0][2] * rc;
+		final double d = Math.sqrt(m11 * m11 + m12 * m12 + m13 * m13);
+		double[] minMax = { cx - d, cx + d };
+		return minMax;
+	}
+
+	public double[] getYMinAndMax() {
+		final double m21 = ev[1][0] * ra;
+		final double m22 = ev[1][1] * rb;
+		final double m23 = ev[1][2] * rc;
+		final double d = Math.sqrt(m21 * m21 + m22 * m22 + m23 * m23);
+		double[] minMax = { cy - d, cy + d };
+		return minMax;
+	}
+
+	public double[] getZMinAndMax() {
+		final double m31 = ev[2][0] * ra;
+		final double m32 = ev[2][1] * rb;
+		final double m33 = ev[2][2] * rc;
+		final double d = Math.sqrt(m31 * m31 + m32 * m32 + m33 * m33);
+		double[] minMax = { cz - d, cz + d };
+		return minMax;
+	}
+
+	/**
+	 * http://tavianator.com/2014/06/exact-bounding-boxes-for-spheres-ellipsoids/
+	 * 
+	 * @return
+	 */
+	public double[] getAxisAlignedBoundingBox() {
+		final double[] x = getXMinAndMax();
+		final double[] y = getYMinAndMax();
+		final double[] z = getZMinAndMax();
+		final double[] boundingBox = { x[0], x[1], y[0], y[1], z[0], z[1] };
+		return boundingBox;
+	}
+
 	/**
 	 * High performance 3x3 matrix multiplier with no bounds or error checking
 	 * 
