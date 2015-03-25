@@ -382,6 +382,11 @@ public class Ellipsoid {
 		this.eh = times(times(ev, ed), transpose(ev));
 	}
 
+	/**
+	 * Calculate the minimal and maximal x values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal x values
+	 */
 	public double[] getXMinAndMax() {
 		final double m11 = ev[0][0] * ra;
 		final double m12 = ev[0][1] * rb;
@@ -391,6 +396,11 @@ public class Ellipsoid {
 		return minMax;
 	}
 
+	/**
+	 * Calculate the minimal and maximal y values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal y values
+	 */
 	public double[] getYMinAndMax() {
 		final double m21 = ev[1][0] * ra;
 		final double m22 = ev[1][1] * rb;
@@ -400,6 +410,11 @@ public class Ellipsoid {
 		return minMax;
 	}
 
+	/**
+	 * Calculate the minimal and maximal z values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal z values
+	 */
 	public double[] getZMinAndMax() {
 		final double m31 = ev[2][0] * ra;
 		final double m32 = ev[2][1] * rb;
@@ -410,9 +425,14 @@ public class Ellipsoid {
 	}
 
 	/**
-	 * http://tavianator.com/2014/06/exact-bounding-boxes-for-spheres-ellipsoids/
+	 * Calculate the minimal axis-aligned bounding box of this ellipsoid
 	 * 
-	 * @return
+	 * Thanks to Tavian Barnes for the simplification of the maths
+	 * http://tavianator.com/2014/06/exact-bounding-boxes-for-spheres-ellipsoids
+	 * 
+	 * 
+	 * @return 6-element array containing x min, x max, y min, y max, z min, z
+	 *         max
 	 */
 	public double[] getAxisAlignedBoundingBox() {
 		final double[] x = getXMinAndMax();
