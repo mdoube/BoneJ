@@ -696,9 +696,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						final int n = ellipsoids.length;
 						for (int i = 0; i < n; i++) {
 							Ellipsoid e = ellipsoids[i];
-							double[] c = e.getCentre();
-							double[] r = e.getSortedRadii();
-							if (Math.abs(zvD - c[2]) <= r[2]) {
+//							double[] c = e.getCentre();
+//							double[] r = e.getSortedRadii();
+							double[] zMinMax = e.getZMinAndMax();
+//							if (Math.abs(zvD - c[2]) <= r[2]) {
+							if (zvD >= zMinMax[0] && zvD <= zMinMax[1]){
 								Ellipsoid f = e.copy();
 								f.id = i;
 								nearEllipsoids.add(f);
