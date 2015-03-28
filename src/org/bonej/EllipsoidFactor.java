@@ -122,7 +122,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		stackVolume = pW * pH * pD * imp.getWidth() * imp.getHeight()
 				* imp.getStackSize();
 		GenericDialog gd = new GenericDialog("Setup");
-		gd.addMessage("Sampling_options");
+		gd.addMessage("Sampling options");
 		gd.addNumericField("Sampling_increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
 		gd.addNumericField("Skeleton_points per ellipsoid", skipRatio, 0);
