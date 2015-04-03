@@ -251,9 +251,12 @@ public class EllipsoidTest {
 			final double a = q;
 			final double b = Math.pow(q, 1.1);
 			final double c = Math.pow(q, 1.5);
+			final double x = i;
+			final double y = i * 0.1;
+			final double z = i;
 
 			Object[] fit = FitEllipsoid.yuryPetrov(FitEllipsoid.testEllipsoid(
-					a, b, c, Math.PI / 4.32, 0, 0, 0, 0, 1000, true));
+					a, b, c, Math.PI / 4.32, x, y, z, 0, 1000, true));
 			Ellipsoid ellipsoid = new Ellipsoid(fit);
 			double[] eq = ellipsoid.getEquation();
 			double[] fitEq = (double[]) fit[3];
