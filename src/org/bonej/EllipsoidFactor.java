@@ -38,7 +38,7 @@ import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij3d.Image3DUniverse;
 
 import org.doube.geometry.Trig;
@@ -93,7 +93,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * diagonal length
 	 */
 	private double maxDrift = Math.sqrt(3);
-	private ResultsTable rt;
+//	private ResultsTable rt;
 	private Image3DUniverse universe;
 
 	private double stackVolume;
@@ -244,8 +244,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
-		if (IJ.debugMode)
-			rt.show("Ellipsoid volumes");
+//		if (IJ.debugMode)
+//			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
@@ -1045,9 +1045,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					px, py, pz, px + " " + py + " " + pz);
 
 			// add history to the ResultsTable
-			for (int i = 0; i < volumeHistory.size(); i++) {
-				rt.setValue("" + index, i, volumeHistory.get(i));
-			}
+//			for (int i = 0; i < volumeHistory.size(); i++) {
+//				rt.setValue("" + index, i, volumeHistory.get(i));
+//			}
 		}
 
 		long stop = System.currentTimeMillis();
