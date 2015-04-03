@@ -469,8 +469,8 @@ public class Ellipsoid {
 		final double h11 = eh[0][0];
 		final double h22 = eh[1][1];
 		final double h33 = eh[2][2];
-		final double p = -2 * cx * h11 + cx * cy * h2112 + cx * cz * h3113 - 2
-				* cy * h22 + cy * cz * h3223 - 2 * cz * h33;
+		final double p = h11 * cx * cx + h22 * cy * cy + h33 * cz * cz + h2112
+				* cx * cy + h3113 * cx * cz + h3223 * cy * cz;
 		final double q = 1 - p;
 		final double twoQ = 2 * q;
 
@@ -480,9 +480,9 @@ public class Ellipsoid {
 		final double d = h2112 / twoQ;
 		final double f = h3113 / twoQ;
 		final double g = h3223 / twoQ;
-		final double h = (-cy * h2112 - cz * h3113) / twoQ;
-		final double j = (-cx * h2112 - cz * h3223) / twoQ;
-		final double k = (-cx * h3113 - cy * h3223) / twoQ;
+		final double h = (-2 * cx * h11 - cy * h2112 - cz * h3113) / twoQ;
+		final double j = (-2 * cy * h22 - cx * h2112 - cz * h3223) / twoQ;
+		final double k = (-2 * cz * h33 - cx * h3113 - cy * h3223) / twoQ;
 
 		double[] equation = { a, b, c, d, f, g, h, j, k };
 
