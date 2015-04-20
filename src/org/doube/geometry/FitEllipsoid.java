@@ -17,7 +17,7 @@ package org.doube.geometry;
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import ij.IJ;
+//import ij.IJ;
 
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
@@ -33,6 +33,18 @@ import org.doube.jama.Matrix;
  * 
  */
 public class FitEllipsoid {
+
+	/**
+	 * Find the best-fit ellipsoid using the default method (yuryPetrov)
+	 * 
+	 * @param coordinates
+	 *            in double[n][3] format
+	 * @return Object representing the best-fit ellipsoid
+	 */
+	public static Ellipsoid fitTo(double[][] coordinates) {
+		return new Ellipsoid(yuryPetrov(coordinates));
+	}
+
 	/**
 	 * Calculate the best-fit ellipsoid by least squares. Currently broken;
 	 * doesn't handle large numbers of points and often returns a singular
@@ -56,7 +68,6 @@ public class FitEllipsoid {
 	 */
 	public static double[] liGriffiths(double[][] coOrdinates, int maxPoints) {
 		final int nPoints = coOrdinates.length;
-		IJ.showStatus("Fitting ellipsoid");
 		double[][] coOrd = new double[maxPoints][3];
 		if (nPoints > maxPoints) {
 			// randomly subsample
@@ -125,11 +136,6 @@ public class FitEllipsoid {
 		v.setMatrix(0, 5, c, v1);
 		v.setMatrix(6, 9, c, v2);
 		double[] ellipsoid = v.getColumnPackedCopy();
-		IJ.log("Ellipsoid equation: " + ellipsoid[0] + " x² + " + ellipsoid[1]
-				+ " y² + " + ellipsoid[2] + " z² + " + ellipsoid[3] + " 2yz + "
-				+ ellipsoid[4] + " 2xz + " + ellipsoid[5] + " 2xy + "
-				+ ellipsoid[6] + " 2x + " + ellipsoid[7] + " 2y + "
-				+ ellipsoid[8] + " 2z + " + ellipsoid[9] + " = 0");
 		return ellipsoid;
 	}
 
@@ -155,9 +161,9 @@ public class FitEllipsoid {
 	 * @throws IllegalArgumentException
 	 *             if number of coordinates is less than 9
 	 */
-	public static Object[] yuryPetrov(double[][] coOrdinates) {
+	public static Object[] yuryPetrov(double[][] points) {
 
-		final int nPoints = coOrdinates.length;
+		final int nPoints = points.length;
 		if (nPoints < 9) {
 			throw new IllegalArgumentException(
 					"Too few points; need at least 9 to calculate a unique ellipsoid");
@@ -165,9 +171,9 @@ public class FitEllipsoid {
 
 		double[][] d = new double[nPoints][9];
 		for (int i = 0; i < nPoints; i++) {
-			final double x = coOrdinates[i][0];
-			final double y = coOrdinates[i][1];
-			final double z = coOrdinates[i][2];
+			final double x = points[i][0];
+			final double y = points[i][1];
+			final double z = points[i][2];
 			d[i][0] = x * x;
 			d[i][1] = y * y;
 			d[i][2] = z * z;
@@ -179,37 +185,107 @@ public class FitEllipsoid {
 			d[i][8] = 2 * z;
 		}
 
+		// do the fitting
 		Matrix D = new Matrix(d);
 		Matrix ones = Matrix.ones(nPoints, 1);
 		Matrix V = ((D.transpose().times(D)).inverse()).times(D.transpose()
 				.times(ones));
+
+		// the fitted equation
 		double[] v = V.getColumnPackedCopy();
 
-		double[][] a = { { v[0], v[3], v[4], v[6] },
-				{ v[3], v[1], v[5], v[7] }, { v[4], v[5], v[2], v[8] },
-				{ v[6], v[7], v[8], -1 }, };
-		Matrix A = new Matrix(a);
-		Matrix C = (A.getMatrix(0, 2, 0, 2).times(-1).inverse()).times(V
-				.getMatrix(6, 8, 0, 0));
-		Matrix T = Matrix.eye(4);
-		T.setMatrix(3, 3, 0, 2, C.transpose());
-		Matrix R = T.times(A.times(T.transpose()));
-		double r33 = R.get(3, 3);
-		Matrix R02 = R.getMatrix(0, 2, 0, 2);
-		EigenvalueDecomposition E = new EigenvalueDecomposition(R02.times(-1
-				/ r33));
+		Object[] matrices = Ellipsoid.matrixFromEquation(v[0], v[1], v[2],
+				v[3], v[4], v[5], v[6], v[7], v[8]);
+
+		// pack data up for returning
+		EigenvalueDecomposition E = (EigenvalueDecomposition) matrices[3];
 		Matrix eVal = E.getD();
-		Matrix eVec = E.getV();
 		Matrix diagonal = eVal.diag();
 		final int nEvals = diagonal.getRowDimension();
 		double[] radii = new double[nEvals];
 		for (int i = 0; i < nEvals; i++) {
 			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
 		}
-		double[] centre = C.getColumnPackedCopy();
-		double[][] eigenVectors = eVec.getArrayCopy();
+		double[] centre = (double[]) matrices[0];
+		double[][] eigenVectors = (double[][]) matrices[2];
 		double[] equation = v;
 		Object[] ellipsoid = { centre, radii, eigenVectors, equation, E };
+		return ellipsoid;
+	}
+
+	/**
+	 * Estimate an ellipsoid using the inertia tensor of the input points
+	 * 
+	 * @param points
+	 * @return
+	 */
+	public static Ellipsoid inertia(double[][] points) {
+
+		final int nPoints = points.length;
+
+		// calculate centroid
+		double sx = 0;
+		double sy = 0;
+		double sz = 0;
+		for (double[] p : points) {
+			sx += p[0];
+			sy += p[1];
+			sz += p[2];
+		}
+		final double cx = sx / nPoints;
+		final double cy = sy / nPoints;
+		final double cz = sz / nPoints;
+
+		double Icxx = 0;
+		double Icyy = 0;
+		double Iczz = 0;
+		double Icxy = 0;
+		double Icxz = 0;
+		double Icyz = 0;
+
+		// sum moments
+		for (double[] p : points) {
+			final double x = p[0] - cx;
+			final double y = p[1] - cy;
+			final double z = p[2] - cz;
+			final double xx = x * x;
+			final double yy = y * y;
+			final double zz = z * z;
+			Icxx += yy + zz;
+			Icyy += xx + zz;
+			Iczz += xx + yy;
+			Icxy += x * y;
+			Icxz += x * z;
+			Icyz += y * z;
+		}
+		// create the inertia tensor matrix
+		double[][] inertiaTensor = new double[3][3];
+		inertiaTensor[0][0] = Icxx / nPoints;
+		inertiaTensor[1][1] = Icyy / nPoints;
+		inertiaTensor[2][2] = Iczz / nPoints;
+		inertiaTensor[0][1] = -Icxy / nPoints;
+		inertiaTensor[0][2] = -Icxz / nPoints;
+		inertiaTensor[1][0] = -Icxy / nPoints;
+		inertiaTensor[1][2] = -Icyz / nPoints;
+		inertiaTensor[2][0] = -Icxz / nPoints;
+		inertiaTensor[2][1] = -Icyz / nPoints;
+		Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
+		inertiaTensorMatrix.printToIJLog("Inertia tensor");
+
+		// do the Eigenvalue decomposition
+		EigenvalueDecomposition E = new EigenvalueDecomposition(
+				inertiaTensorMatrix);
+
+		E.getD().printToIJLog("Eigenvalues");
+		E.getV().printToIJLog("Eigenvectors");
+		double I1 = E.getD().get(2, 2);
+		double I2 = E.getD().get(1, 1);
+		double I3 = E.getD().get(0, 0);
+
+		Ellipsoid ellipsoid = new Ellipsoid(1 / Math.sqrt(I1),
+				1 / Math.sqrt(I2), 1 / Math.sqrt(I3), cx, cy, cz, E.getV()
+						.getArray());
+
 		return ellipsoid;
 	}
 
@@ -326,6 +402,21 @@ public class FitEllipsoid {
 			}
 		}
 		return ellipsoidPoints;
+	}
+
+	/**
+	 * Return points on an ellipsoid with radii a, b, c and centred on (0,0,0),
+	 * axes aligned with Cartesian axes
+	 * 
+	 * @param a
+	 * @param b
+	 * @param c
+	 * @param nPoints
+	 * @return
+	 */
+	public static double[][] testEllipsoid(double a, double b, double c,
+			int nPoints) {
+		return testEllipsoid(a, b, c, 0, 0, 0, 0, 0, nPoints, false);
 	}
 
 	/**

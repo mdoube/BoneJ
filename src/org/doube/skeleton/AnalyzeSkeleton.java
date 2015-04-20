@@ -18,8 +18,8 @@ import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ByteProcessor;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.process.ShortProcessor;
 
 /**
  * AnalyzeSkeleton plugin for ImageJ and Fiji.
@@ -1213,21 +1213,21 @@ public class AnalyzeSkeleton implements PlugInFilter
 		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
 		{
 			final Point p = this.listOfEndPoints.get(i);
-			this.endPointsTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.endPointsTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);
 		}
 		
 		// Add junction voxels to the corresponding tree
 		for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
 		{
 			final Point p = this.listOfJunctionVoxels.get(i);			
-			this.junctionVoxelTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.junctionVoxelTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
 		}
 		
 		// Add special slab voxels to the corresponding tree
 		for(int i = 0; i < this.listOfStartingSlabVoxels.size(); i++)
 		{
 			final Point p = this.listOfStartingSlabVoxels.get(i);			
-			this.startingSlabTree[getShortPixel(treeIS, p) - 1].add(p);
+			this.startingSlabTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
 		}
 		
 		// Assign number of end points and junction voxels per tree
@@ -1681,6 +1681,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 						// Create graph edge
 						this.slabList = new ArrayList<Point>();
 						this.slabList.add(nextPoint);
+						this.numberOfSlabs[iTree]++;
 
 						// Calculate distance from junction to that point
 						double length = calculateDistance(junctionCoord, nextPoint);	
@@ -1847,15 +1848,15 @@ public class AnalyzeSkeleton implements PlugInFilter
 		if(debug)
 			IJ.log("=== Mark Trees ===");
 		// Create output image
-		ImageStack outputImage = new ImageStack(this.width, this.height, taggedImage.getColorModel());	
+		ImageStack outputImage = new ImageStack( this.width, this.height );	
 		for (int z = 0; z < depth; z++)
 		{
-			outputImage.addSlice(taggedImage.getSliceLabel(z+1), new ShortProcessor(this.width, this.height));	
+			outputImage.addSlice(taggedImage.getSliceLabel(z+1), new FloatProcessor(this.width, this.height));	
 		}
 	
 		this.numOfTrees = 0;
 				
-		short color = 0;
+		int color = 0;
 	
 		// Visit trees starting at end points
 		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
@@ -1867,10 +1868,10 @@ public class AnalyzeSkeleton implements PlugInFilter
 			
 			color++;
 			
-			if(color == Short.MAX_VALUE)
+			if(color == Integer.MAX_VALUE)
 			{
-				IJ.error("More than " + (Short.MAX_VALUE-1) +
-						" skeletons in the image. AnalyzeSkeleton can only process up to "+ (Short.MAX_VALUE-1));
+				IJ.error("More than " + (Integer.MAX_VALUE-1) +
+						" skeletons in the image. AnalyzeSkeleton can only process up to "+ (Integer.MAX_VALUE-1));
 				return null;
 			}
 		
@@ -1992,7 +1993,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @return number of voxels in the tree
 	 */
 	private int visitTree(Point startingPoint, ImageStack outputImage,
-			short color) 
+			int color) 
 	{					
 		int numOfVoxels = 0;
 		
@@ -2887,8 +2888,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 			return ((byte[]) image.getPixels(z + 1))[x + y * width];
 		else return 0;		
 	} // end getPixel 
-	
-	
+		
 	/* -----------------------------------------------------------------------*/
 	/**
 	 * Get pixel in 3D image (0 border conditions).
@@ -2899,12 +2899,16 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private short getShortPixel(ImageStack image, int x, int y, int z)
+	private float getFloatPixel(
+			ImageStack image, 
+			int x, 
+			int y, 
+			int z )
 	{
 		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			return ((short[]) image.getPixels(z + 1))[x + y * this.width];
+			return ( (float[]) image.getPixels(z + 1) )[x + y * this.width];
 		else return 0;
-	} /* end getShortPixel */
+	} // end getFloatPixel
 
 	/* -----------------------------------------------------------------------*/
 	/**
@@ -2914,10 +2918,13 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @param point point to be evaluated
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private short getShortPixel(ImageStack image, Point point)
+	private float getFloatPixel(
+			ImageStack image, 
+			Point point )
 	{
-		return getShortPixel(image, point.x, point.y, point.z);
-	} // end getPixel 
+		return getFloatPixel( image, point.x, point.y, point.z );
+	} // end getFloatPixel	
+	
 	
 	/* -----------------------------------------------------------------------*/
 	/**
@@ -2972,10 +2979,10 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 * @param z z- coordinate (in image stacks the indexes start at 1)
 	 * @param value pixel value
 	 */
-	private void setPixel(ImageStack image, int x, int y, int z, short value)
+	private void setPixel(ImageStack image, int x, int y, int z, float value)
 	{
 		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			((short[]) image.getPixels(z + 1))[x + y * this.width] = value;
+			((float[]) image.getPixels(z + 1))[x + y * this.width] = value;
 	} // end setPixel 	
 	
 

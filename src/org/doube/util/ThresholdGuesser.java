@@ -3,8 +3,6 @@ package org.doube.util;
 import ij.ImagePlus;
 import ij.measure.Calibration;
 
-import org.doube.bonej.ThresholdMinConn;
-
 public class ThresholdGuesser {
 	private static final double airHU = -1000;
 
@@ -21,8 +19,7 @@ public class ThresholdGuesser {
 		double max = 0;
 		if (!ImageCheck.huCalibrated(imp)) {
 			// set some sensible thresholding defaults
-			ThresholdMinConn tmc = new ThresholdMinConn();
-			int[] histogram = tmc.getStackHistogram(imp);
+			int[] histogram = StackStats.getStackHistogram(imp);
 			final int histoLength = histogram.length;
 			int histoMax = histoLength - 1;
 			for (int i = histoLength - 1; i >= 0; i--) {

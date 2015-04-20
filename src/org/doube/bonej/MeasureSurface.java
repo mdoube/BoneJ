@@ -33,6 +33,7 @@ import javax.vecmath.Point3f;
 import org.doube.geometry.Vectors;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
+import org.doube.util.StackStats;
 import org.doube.util.UsageReporter;
 
 import ij.IJ;
@@ -42,7 +43,6 @@ import ij.plugin.PlugIn;
 import ij3d.Content;
 import ij3d.Executer;
 import ij3d.Image3DUniverse;
-
 import marchingcubes.MCTriangulator;
 import customnode.CustomTriangleMesh;
 
@@ -69,9 +69,8 @@ public class MeasureSurface implements PlugIn {
 		if (ic.isBinary(imp)) {
 			threshold = 128;
 		} else if (imp.getBitDepth() == 8) {
-			ThresholdMinConn tmc = new ThresholdMinConn();
 			threshold = imp.getProcessor().getAutoThreshold(
-					tmc.getStackHistogram(imp));
+					StackStats.getStackHistogram(imp));
 		} else {
 			IJ.error("Isosurface", "Image type not supported");
 			return;
