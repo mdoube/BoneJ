@@ -62,11 +62,19 @@ import customnode.CustomPointMesh;
  * <p>
  * ImageJ plugin to describe the local geometry of a binary image in an
  * oblate/prolate spheroid space. Uses Skeletonize3D to generate a 3D skeleton,
- * the points of which are used as centres for star volumes. Local geometry is
- * determined by the ratio between the first and second eigenvalues and first
- * and third eigenvalues of each star volume.
+ * the points of which are used as centres for maximally inscribed ellipsoids.
+ * The ellipsoid factor (EF) is a method for the local determination of the rod-
+ * or plate-like nature of porous or spongy continua. EF at a point within a 3D
+ * structure is defined as the difference in axis ratios of the greatest
+ * ellipsoid that fits inside the structure and that contains the point of
+ * interest, and ranges from −1 for strongly oblate (discus-shaped) ellipsoids,
+ * to +1 for strongly prolate (javelin-shaped) ellipsoids. For an ellipsoid with
+ * axes a ≤ b ≤ c, EF = a/b − b/c.
  * </p>
  * 
+ * @see http://dx.doi.org/10.3389/fendo.2015.00015
+ *      "The ellipsoid factor for quantification of rods, plates, and intermediate forms in 3D geometries"
+ *      Frontiers in Endocrinology (2015)
  * @author Michael Doube
  * 
  */
@@ -93,7 +101,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * diagonal length
 	 */
 	private double maxDrift = Math.sqrt(3);
-//	private ResultsTable rt;
+	// private ResultsTable rt;
 	private Image3DUniverse universe;
 
 	private double stackVolume;
@@ -244,8 +252,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
-//		if (IJ.debugMode)
-//			rt.show("Ellipsoid volumes");
+		// if (IJ.debugMode)
+		// rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
@@ -1045,9 +1053,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					px, py, pz, px + " " + py + " " + pz);
 
 			// add history to the ResultsTable
-//			for (int i = 0; i < volumeHistory.size(); i++) {
-//				rt.setValue("" + index, i, volumeHistory.get(i));
-//			}
+			// for (int i = 0; i < volumeHistory.size(); i++) {
+			// rt.setValue("" + index, i, volumeHistory.get(i));
+			// }
 		}
 
 		long stop = System.currentTimeMillis();
