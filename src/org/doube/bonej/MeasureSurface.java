@@ -115,6 +115,8 @@ public class MeasureSurface implements PlugIn {
 
 		if (doBinarySTL)
 			writeBinarySTL(points);
+		
+		IJ.showStatus("Isosurface completed");		
 
 		UsageReporter.reportEvent(this).send();
 		return;
@@ -177,13 +179,11 @@ public class MeasureSurface implements PlugIn {
 	}
 
 	public static void writeBinarySTL(List<Point3f> vertices) {
-		File stl_file = Executer.promptForFile("Save as binary STL",
-				"untitled", ".stl");
-		if (stl_file == null)
-			return;
-		// OutputStreamWriter dos = null;
-		DataOutputStream out = null;
 		try {
+			File stl_file = Executer.promptForFile("Save as binary STL",
+					"untitled", ".stl");
+			// OutputStreamWriter dos = null;
+			DataOutputStream out = null;
 			out = new DataOutputStream(new BufferedOutputStream(
 					new FileOutputStream(stl_file)));
 
@@ -221,10 +221,16 @@ public class MeasureSurface implements PlugIn {
 				out.write(bb.array());
 			}
 			out.flush();
+			out.close();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (NullPointerException e) {
+			return;
+		} catch (Exception e) {
+			IJ.showMessage("STL error",
+					"Something went wrong writing your STL file."
+							+ "\nTry updating your 3D Viewer.");
 		}
-
 	}
 
 	private static Point3f unitNormal(Point3f p0, Point3f p1, Point3f p2) {
