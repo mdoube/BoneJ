@@ -112,10 +112,10 @@ public class MeasureSurface implements PlugIn {
 		if (doSurfaceRendering) {
 			renderSurface(points, "Surface of " + imp.getTitle());
 		}
-		
+
 		if (doBinarySTL)
 			writeBinarySTL(points);
-		
+
 		UsageReporter.reportEvent(this).send();
 		return;
 	}
@@ -181,18 +181,18 @@ public class MeasureSurface implements PlugIn {
 				"untitled", ".stl");
 		if (stl_file == null)
 			return;
-//		OutputStreamWriter dos = null;
+		// OutputStreamWriter dos = null;
 		DataOutputStream out = null;
 		try {
-		out = new DataOutputStream(new BufferedOutputStream(
-				new FileOutputStream(stl_file)));
+			out = new DataOutputStream(new BufferedOutputStream(
+					new FileOutputStream(stl_file)));
 
-		String header = "Binary STL created by BoneJ.";
-		for (int i = header.length(); i < 80; i++) {
-			header = header + ".";
-		}
-		int triangles = vertices.size() / 3;
-		
+			String header = "Binary STL created by BoneJ.";
+			for (int i = header.length(); i < 80; i++) {
+				header = header + ".";
+			}
+			int triangles = vertices.size() / 3;
+
 			out.writeBytes(header);
 			out.writeByte(triangles & 0xFF);
 			out.writeByte((triangles >> 8) & 0xFF);
@@ -220,19 +220,22 @@ public class MeasureSurface implements PlugIn {
 				bb.putShort((short) 0);
 				out.write(bb.array());
 			}
-			out.flush();	
+			out.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	private static Point3f unitNormal(Point3f p0, Point3f p1, Point3f p2) {
-		float nx = (p1.y-p0.y) * (p2.z-p0.z) - (p1.z-p0.z) * (p2.y-p0.y);
-		float ny = (p1.z-p0.z) * (p2.x-p0.x) - (p1.x-p0.x) * (p2.z-p0.z);
-		float nz = (p1.x-p0.x) * (p2.y-p0.y) - (p1.y-p0.y) * (p2.x-p0.x);
-		
-		float length = (float)Math.sqrt(nx * nx + ny * ny + nz* nz);
+		float nx = (p1.y - p0.y) * (p2.z - p0.z) - (p1.z - p0.z)
+				* (p2.y - p0.y);
+		float ny = (p1.z - p0.z) * (p2.x - p0.x) - (p1.x - p0.x)
+				* (p2.z - p0.z);
+		float nz = (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y)
+				* (p2.x - p0.x);
+
+		float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
 		nx /= length;
 		ny /= length;
 		nz /= length;
