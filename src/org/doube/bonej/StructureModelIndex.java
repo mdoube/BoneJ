@@ -336,6 +336,11 @@ public class StructureModelIndex implements PlugIn {
 		double concaveSMI = 6 * sRconcave * v / (s1 * s1);
 		IJ.log("Convex SMI = " + convexSMI);
 		IJ.log("Concave SMI = " + concaveSMI);
+		
+		ResultInserter ri = ResultInserter.getInstance();
+		ri.setResultInRow(imp, "Concave", concaveFraction);
+		ri.setResultInRow(imp, "+SMI", convexSMI);
+		ri.setResultInRow(imp, "-SMI", concaveSMI);
 
 		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
 		double sR = (s2 - s1) / r;
