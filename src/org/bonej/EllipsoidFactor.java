@@ -801,6 +801,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		Arrays.fill(ellipsoids, null);
 
 		final AtomicInteger ai = new AtomicInteger(0);
+		final AtomicInteger counter = new AtomicInteger(0);
 		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
@@ -809,7 +810,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors, i);
-						IJ.showProgress(i, nPoints);
+						IJ.showProgress(counter.getAndAdd(skipRatio), nPoints);
 					}
 				}
 			});
