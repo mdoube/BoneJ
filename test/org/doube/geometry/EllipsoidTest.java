@@ -51,7 +51,6 @@ public class EllipsoidTest {
 		assertArrayEquals(new double[] { 17, 13, 7 }, rotated.getRadii(), 1E-9);
 	}
 
-
 	@Test
 	public void testContains() {
 		double[][] points = unitSphere.getSurfacePoints(1000);
@@ -142,7 +141,7 @@ public class EllipsoidTest {
 					+ ") with random scaling = " + 1 / rand);
 			assertTrue(!rotated.contains(x, y, z));
 		}
-		
+
 		double[][] points3 = seventeenFiveThree.getSurfacePoints(1000);
 
 		// inside
@@ -186,7 +185,7 @@ public class EllipsoidTest {
 		// outside
 		for (double[] p : points2) {
 			// dilate by random fraction
-			final double rand = Math.random()/3;
+			final double rand = Math.random() / 3;
 			double x = p[0] / rand;
 			double y = p[1] / rand;
 			double z = p[2] / rand;
@@ -232,15 +231,36 @@ public class EllipsoidTest {
 	}
 
 	@Test
-	public void testGetSortedRadii(){
+	public void testGetSortedRadii() {
 		final int t = 1000;
 		Ellipsoid e = unitSphere.copy();
 		double[] r = new double[3];
-		for (int i = 0; i < t; i++){
+		for (int i = 0; i < t; i++) {
 			e.dilate(Math.random(), Math.random(), Math.random());
 			r = e.getSortedRadii();
 			assertTrue(r[0] < r[1]);
 			assertTrue(r[1] < r[2]);
+		}
+	}
+
+	@Test
+	public void testGetEquation() {
+
+		for (int i = 1; i < 1000; i++) {
+			final double q = i * 0.1;
+			final double a = q;
+			final double b = Math.pow(q, 1.1);
+			final double c = Math.pow(q, 1.5);
+			final double x = i;
+			final double y = i * 0.1;
+			final double z = i;
+
+			Object[] fit = FitEllipsoid.yuryPetrov(FitEllipsoid.testEllipsoid(
+					a, b, c, Math.PI / 4.32, x, y, z, 0, 1000, true));
+			Ellipsoid ellipsoid = new Ellipsoid(fit);
+			double[] eq = ellipsoid.getEquation();
+			double[] fitEq = (double[]) fit[3];
+			assertArrayEquals(fitEq, eq, 1E-3);
 		}
 	}
 }

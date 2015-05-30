@@ -443,6 +443,53 @@ public class Ellipsoid {
 	}
 
 	/**
+	 * Get the 9 variables a - k of the equation
+	 * <p>
+	 * <i>ax</i><sup>2</sup> + <i>by</i><sup>2</sup> + <i>cz</i><sup>2</sup> +
+	 * 2<i>dxy</i> + 2<i>fxz</i> + 2<i>gyz</i> + 2<i>hx</i> + 2<i>jy</i> +
+	 * 2<i>kz</i> = 1
+	 * </p>
+	 * 
+	 * Thanks to Alessandro Felder for pointing out how this can be determined
+	 * trivially by multiplying out the elements of the matrix relation
+	 * 
+	 * <p>
+	 * [X - X<sub>0</sub>]<sup><i>T</i></sup> <i>H</i> [X - X<sub>0</sub>]
+	 * </p>
+	 * 
+	 * @return 9-element array containing the ellipsoid equation variables a-k
+	 * 
+	 * @see http://en.wikipedia.org/wiki/Matrix_multiplication#Row_vector.2
+	 *      C_square_matrix.2C_and_column_vector
+	 */
+	public double[] getEquation() {
+		final double h2112 = eh[1][0] + eh[0][1];
+		final double h3113 = eh[2][0] + eh[0][2];
+		final double h3223 = eh[2][1] + eh[1][2];
+		final double h11 = eh[0][0];
+		final double h22 = eh[1][1];
+		final double h33 = eh[2][2];
+		final double p = h11 * cx * cx + h22 * cy * cy + h33 * cz * cz + h2112
+				* cx * cy + h3113 * cx * cz + h3223 * cy * cz;
+		final double q = 1 - p;
+		final double twoQ = 2 * q;
+
+		final double a = h11 / q;
+		final double b = h22 / q;
+		final double c = h33 / q;
+		final double d = h2112 / twoQ;
+		final double f = h3113 / twoQ;
+		final double g = h3223 / twoQ;
+		final double h = (-2 * cx * h11 - cy * h2112 - cz * h3113) / twoQ;
+		final double j = (-2 * cy * h22 - cx * h2112 - cz * h3223) / twoQ;
+		final double k = (-2 * cz * h33 - cx * h3113 - cy * h3223) / twoQ;
+
+		double[] equation = { a, b, c, d, f, g, h, j, k };
+
+		return equation;
+	}
+
+	/**
 	 * High performance 3x3 matrix multiplier with no bounds or error checking
 	 * 
 	 * @param a

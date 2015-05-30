@@ -38,7 +38,7 @@ import ij.process.ImageProcessor;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij3d.Image3DUniverse;
 
 import org.doube.geometry.Trig;
@@ -93,7 +93,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 * diagonal length
 	 */
 	private double maxDrift = Math.sqrt(3);
-	private ResultsTable rt;
+//	private ResultsTable rt;
 	private Image3DUniverse universe;
 
 	private double stackVolume;
@@ -244,8 +244,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
-		if (IJ.debugMode)
-			rt.show("Ellipsoid volumes");
+//		if (IJ.debugMode)
+//			rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
@@ -690,13 +690,14 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
 
-						// find the subset of ellipsoids whose bounding box intersects with z
+						// find the subset of ellipsoids whose bounding box
+						// intersects with z
 						ArrayList<Ellipsoid> nearEllipsoids = new ArrayList<Ellipsoid>();
 						final int n = ellipsoids.length;
 						for (int i = 0; i < n; i++) {
 							Ellipsoid e = ellipsoids[i];
 							double[] zMinMax = e.getZMinAndMax();
-							if (zvD >= zMinMax[0] && zvD <= zMinMax[1]){
+							if (zvD >= zMinMax[0] && zvD <= zMinMax[1]) {
 								Ellipsoid f = e.copy();
 								f.id = i;
 								nearEllipsoids.add(f);
@@ -707,31 +708,33 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						for (int i = 0; i < o; i++) {
 							ellipsoidSubSet[i] = nearEllipsoids.get(i);
 						}
-						
+
 						final int q = ellipsoidSubSet.length;
 						for (int y = 0; y < h; y++) {
 							final double yvH = y * vH;
-							// find the subset of ellipsoids whose bounding box intersects with y
+							// find the subset of ellipsoids whose bounding box
+							// intersects with y
 							ArrayList<Ellipsoid> yEllipsoids = new ArrayList<Ellipsoid>();
 							for (int i = 0; i < q; i++) {
 								Ellipsoid e = ellipsoidSubSet[i];
 								double[] yMinMax = e.getYMinAndMax();
-								if (yvH >= yMinMax[0] && yvH <= yMinMax[1]){
+								if (yvH >= yMinMax[0] && yvH <= yMinMax[1]) {
 									yEllipsoids.add(e);
 								}
 							}
-							
+
 							final int r = yEllipsoids.size();
 							Ellipsoid[] ellipsoidSubSubSet = new Ellipsoid[r];
 							for (int i = 0; i < r; i++) {
 								ellipsoidSubSubSet[i] = yEllipsoids.get(i);
 							}
-							
+
 							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == -1) {
 									bigSlice[offset + x] = biggestEllipsoid(
-											ellipsoidSubSubSet, x * vW, yvH, zvD);
+											ellipsoidSubSubSet, x * vW, yvH,
+											zvD);
 								}
 							}
 						}
@@ -753,7 +756,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 *            position of the whole set. This means that subsets may be
 	 *            searched in sorted order and the ID which is returned is the
 	 *            index of the ellipsoid in the full array of ellipsoids rather
-	 *            than its index in the subset. The advantage is much faster searching.
+	 *            than its index in the subset. The advantage is much faster
+	 *            searching.
 	 * @param x
 	 * @param y
 	 * @param z
@@ -1041,9 +1045,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 					px, py, pz, px + " " + py + " " + pz);
 
 			// add history to the ResultsTable
-			for (int i = 0; i < volumeHistory.size(); i++) {
-				rt.setValue("" + index, i, volumeHistory.get(i));
-			}
+//			for (int i = 0; i < volumeHistory.size(); i++) {
+//				rt.setValue("" + index, i, volumeHistory.get(i));
+//			}
 		}
 
 		long stop = System.currentTimeMillis();
@@ -1169,12 +1173,56 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
 		Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
 		torqueLine.setColor(blue);
+
+		// Axis-aligned bounding box
+		double[] box = ellipsoid.getAxisAlignedBoundingBox();
+		float[] b = { (float) box[0], (float) box[1], (float) box[2],
+				(float) box[3], (float) box[4], (float) box[5] };
+		List<Point3f> aabb = new ArrayList<Point3f>();
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
 		try {
 			universe.addCustomMesh(mesh, "Point cloud " + name).setLocked(true);
 			universe.addCustomMesh(contactPointMesh,
 					"Contact points of " + name).setLocked(true);
 			universe.addCustomMesh(torqueLine, "Torque of " + name).setLocked(
 					true);
+			universe.addLineMesh(aabb, new Color3f(1.0f, 0.0f, 0.0f),
+					"AABB of " + name, false).setLocked(true);
 
 		} catch (Exception e) {
 			IJ.log("Something went wrong adding meshes to 3D viewer:\n"
