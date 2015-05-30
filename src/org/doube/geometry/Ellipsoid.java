@@ -42,6 +42,9 @@ public class Ellipsoid {
 	/** 3x3 matrix describing shape of ellipsoid */
 	private double[][] eh;
 
+	/** ID field for tracking this particular ellipsoid */
+	public int id;
+
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
 	 * 
@@ -145,16 +148,20 @@ public class Ellipsoid {
 		final double vy = y - cy;
 		final double vz = z - cz;
 
+		double[] radii = getSortedRadii();
+		final double maxRadius = radii[2];
+
+		// if further than maximal sphere's bounding box, must be outside
+		if (Math.abs(vx) > maxRadius || Math.abs(vy) > maxRadius
+				|| Math.abs(vz) > maxRadius)
+			return false;
+
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		// double[] radii = { ra, rb, rc };
-		// Arrays.sort(radii);
-		double[] radii = getSortedRadii();
-
 		// if further from centroid than major semiaxis length
 		// must be outside
-		if (length > radii[2])
+		if (length > maxRadius)
 			return false;
 
 		// if length closer than minor semiaxis length
@@ -183,33 +190,33 @@ public class Ellipsoid {
 	 * @return radii in ascending order
 	 */
 	public double[] getSortedRadii() {
-		
+
 		double a = this.ra;
 		double b = this.rb;
 		double c = this.rc;
 		double temp = 0;
-		
-		if (a > b){
+
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-		if (b > c){
+		if (b > c) {
 			temp = b;
 			b = c;
 			c = temp;
 		}
-		if (a > b){
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-			
+
 		double[] sortedRadii = { a, b, c };
 
 		return sortedRadii;
 	}
-	
+
 	public double[] getCentre() {
 		double[] centre = { cx, cy, cz };
 		return centre.clone();
@@ -373,6 +380,66 @@ public class Ellipsoid {
 	 */
 	private void update3x3Matrix() {
 		this.eh = times(times(ev, ed), transpose(ev));
+	}
+
+	/**
+	 * Calculate the minimal and maximal x values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal x values
+	 */
+	public double[] getXMinAndMax() {
+		final double m11 = ev[0][0] * ra;
+		final double m12 = ev[0][1] * rb;
+		final double m13 = ev[0][2] * rc;
+		final double d = Math.sqrt(m11 * m11 + m12 * m12 + m13 * m13);
+		double[] minMax = { cx - d, cx + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal and maximal y values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal y values
+	 */
+	public double[] getYMinAndMax() {
+		final double m21 = ev[1][0] * ra;
+		final double m22 = ev[1][1] * rb;
+		final double m23 = ev[1][2] * rc;
+		final double d = Math.sqrt(m21 * m21 + m22 * m22 + m23 * m23);
+		double[] minMax = { cy - d, cy + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal and maximal z values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal z values
+	 */
+	public double[] getZMinAndMax() {
+		final double m31 = ev[2][0] * ra;
+		final double m32 = ev[2][1] * rb;
+		final double m33 = ev[2][2] * rc;
+		final double d = Math.sqrt(m31 * m31 + m32 * m32 + m33 * m33);
+		double[] minMax = { cz - d, cz + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal axis-aligned bounding box of this ellipsoid
+	 * 
+	 * Thanks to Tavian Barnes for the simplification of the maths
+	 * http://tavianator.com/2014/06/exact-bounding-boxes-for-spheres-ellipsoids
+	 * 
+	 * 
+	 * @return 6-element array containing x min, x max, y min, y max, z min, z
+	 *         max
+	 */
+	public double[] getAxisAlignedBoundingBox() {
+		final double[] x = getXMinAndMax();
+		final double[] y = getYMinAndMax();
+		final double[] z = getZMinAndMax();
+		final double[] boundingBox = { x[0], x[1], y[0], y[1], z[0], z[1] };
+		return boundingBox;
 	}
 
 	/**
