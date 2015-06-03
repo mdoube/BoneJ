@@ -1330,7 +1330,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double t1 = 0;
 		double t2 = 0;
 
-		for (double[] p : contactPoints) {
+		final int n = contactPoints.size();
+		
+		for (int i = 0; i < n; i++) {
+			double[] p = contactPoints.get(i);
+			
 			// translate point to centre on origin
 			final double px = p[0] - cx;
 			final double py = p[1] - cy;
@@ -1553,7 +1557,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double[] zerothColumn = { a, b, c };
 
 		// form triangle in random plane
-		double[] vector = Vectors.randomVectors(1)[0];
+		double[] vector = Vectors.randomVector();
 
 		// first column, should be very close to [0, 1, 0]^T
 		double[] firstColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
