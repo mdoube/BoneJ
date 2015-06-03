@@ -810,6 +810,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors, i);
 						IJ.showProgress(counter.getAndAdd(skipRatio), nPoints);
+						IJ.showStatus("Optimising ellipsoids...");
 					}
 				}
 			});
@@ -837,8 +838,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
 			int[] skeletonPoint, double[][] unitVectors, final int index) {
-
-		IJ.showStatus("Optimising ellipsoids...");
 
 		long start = System.currentTimeMillis();
 
@@ -1060,6 +1059,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 		long stop = System.currentTimeMillis();
 
+		if (IJ.debugMode)
 		IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
 				+ totalIterations + " iterations ("
 				+ IJ.d2s((double) (stop - start) / totalIterations, 3)
