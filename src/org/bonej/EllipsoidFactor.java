@@ -44,7 +44,6 @@ import ij3d.Image3DUniverse;
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
-import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
@@ -1325,7 +1324,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double u = 2 / (c * c);
 
 		final double[][] rot = ellipsoid.getRotation();
-		final double[][] inv = (new Matrix(rot)).inverse().getArrayCopy();
+		final double[][] inv = Ellipsoid.transpose(rot);
 
 		double t0 = 0;
 		double t1 = 0;
