@@ -118,6 +118,9 @@ public class VectorsTest {
 			Matrix R = new Matrix(rotation);
 			double[][] arrayRinv = R.inverse().getArray();
 
+			//TODO alternatively use the un-transposed rotation array because
+			//the inverse of a rotation matrix is its transpose
+
 			for (int i = 0; i < 3; i++)
 				assertArrayEquals(arrayRinv[i], invRotation[i], 1E-12);
 		}
