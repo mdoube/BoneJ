@@ -4,7 +4,7 @@ import static org.junit.Assert.*;
 
 import javax.vecmath.Point3f;
 
-import org.doube.jama.Matrix;
+//import org.doube.jama.Matrix;
 import org.junit.Test;
 
 public class VectorsTest {
@@ -80,7 +80,7 @@ public class VectorsTest {
 		}
 	}
 
-	@Test
+/*	@Test
 	public void TestInv3() {
 		final int n = 1000;
 
@@ -122,5 +122,5 @@ public class VectorsTest {
 				assertArrayEquals(arrayRinv[i], invRotation[i], 1E-12);
 		}
 
-	}
+	} */
 }
