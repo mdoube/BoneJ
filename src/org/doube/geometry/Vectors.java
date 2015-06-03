@@ -138,15 +138,25 @@ public class Vectors {
 	 */
 	public static double[][] randomVectors(int nVectors) {
 		double[][] randomVectors = new double[nVectors][3];
-		for (int n = 0; n < nVectors; n++) {
-			final double z = 2 * Math.random() - 1;
-			final double rho = Math.sqrt(1 - z * z);
-			final double phi = Math.PI * (2 * Math.random() - 1);
-			final double x = rho * Math.cos(phi);
-			final double y = rho * Math.sin(phi);
-			randomVectors[n] = new double[]{x, y, z};
-		}
+		
+		for (int n = 0; n < nVectors; n++)
+			randomVectors[n] = randomVector();
+		
 		return randomVectors;
+	}
+	
+	/**
+	 * Generate a single randomly-oriented vector on the unit sphere
+	 * 
+	 * @return 3-element double array containing [x y z]^T
+	 */
+	public static double[] randomVector(){
+		final double z = 2 * Math.random() - 1;
+		final double rho = Math.sqrt(1 - z * z);
+		final double phi = Math.PI * (2 * Math.random() - 1);
+		final double x = rho * Math.cos(phi);
+		final double y = rho * Math.sin(phi);
+		return new double[]{x, y, z};
 	}
 
 	/**
