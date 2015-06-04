@@ -1060,10 +1060,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		long stop = System.currentTimeMillis();
 
 		if (IJ.debugMode)
-		IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
-				+ totalIterations + " iterations ("
-				+ IJ.d2s((double) (stop - start) / totalIterations, 3)
-				+ " ms/iteration)");
+			IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
+					+ totalIterations + " iterations ("
+					+ IJ.d2s((double) (stop - start) / totalIterations, 3)
+					+ " ms/iteration)");
 
 		return ellipsoid;
 	}
@@ -1277,26 +1277,38 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 */
 	private double[] contactPointUnitVector(Ellipsoid ellipsoid,
 			ArrayList<double[]> contactPoints) {
-		if (contactPoints.size() < 1)
+
+		final int nPoints = contactPoints.size();
+
+		if (nPoints < 1)
 			throw new IllegalArgumentException(
 					"Need at least one contact point");
-		double[] summedVector = new double[3];
-		final double[] c = ellipsoid.getCentre();
-		for (double[] p : contactPoints) {
-			final double l = Trig.distance3D(p, c);
-			double[] unitVector = { (p[0] - c[0]) / l, (p[1] - c[1]) / l,
-					(p[2] - c[2]) / l };
-			summedVector[0] += unitVector[0];
-			summedVector[1] += unitVector[1];
-			summedVector[2] += unitVector[2];
-		}
-		double[] unitVector = new double[3];
-		unitVector[0] = summedVector[0] / contactPoints.size();
-		unitVector[1] = summedVector[1] / contactPoints.size();
-		unitVector[2] = summedVector[2] / contactPoints.size();
 
-		unitVector = Vectors.norm(unitVector);
-		return unitVector;
+		final double[] c = ellipsoid.getCentre();
+		final double cx = c[0];
+		final double cy = c[1];
+		final double cz = c[2];
+		double xSum = 0;
+		double ySum = 0;
+		double zSum = 0;
+		for (int i = 0; i < nPoints; i++) {
+			final double[] p = contactPoints.get(i);
+			final double x = p[0] - cx;
+			final double y = p[1] - cy;
+			final double z = p[2] - cz;
+			final double l = Trig.distance3D(x, y, z);
+
+			xSum += x / l;
+			ySum += y / l;
+			zSum += z / l;
+		}
+
+		final double x = xSum / nPoints;
+		final double y = ySum / nPoints;
+		final double z = zSum / nPoints;
+		final double l = Trig.distance3D(x, y, z);
+
+		return new double[] { x / l, y / l, z / l };
 	}
 
 	/**
@@ -1331,10 +1343,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		double t2 = 0;
 
 		final int n = contactPoints.size();
-		
+
 		for (int i = 0; i < n; i++) {
 			double[] p = contactPoints.get(i);
-			
+
 			// translate point to centre on origin
 			final double px = p[0] - cx;
 			final double py = p[1] - cy;
