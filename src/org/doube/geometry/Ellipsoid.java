@@ -233,14 +233,18 @@ public class Ellipsoid {
 	public double[][] getSurfacePoints(final double[][] vectors) {
 		final int nPoints = vectors.length;
 		for (int p = 0; p < nPoints; p++) {
+			final double[] v = vectors[p];
+
 			// stretch the unit sphere into an ellipsoid
-			final double x = ra * vectors[p][0];
-			final double y = rb * vectors[p][1];
-			final double z = rc * vectors[p][2];
+			final double x = ra * v[0];
+			final double y = rb * v[1];
+			final double z = rc * v[2];
 			// rotate and translate the ellipsoid into position
-			vectors[p][0] = x * ev[0][0] + y * ev[0][1] + z * ev[0][2] + cx;
-			vectors[p][1] = x * ev[1][0] + y * ev[1][1] + z * ev[1][2] + cy;
-			vectors[p][2] = x * ev[2][0] + y * ev[2][1] + z * ev[2][2] + cz;
+			final double vx = x * ev[0][0] + y * ev[0][1] + z * ev[0][2] + cx;
+			final double vy = x * ev[1][0] + y * ev[1][1] + z * ev[1][2] + cy;
+			final double vz = x * ev[2][0] + y * ev[2][1] + z * ev[2][2] + cz;
+			
+			vectors[p] = new double[]{vx, vy, vz};
 		}
 		return vectors;
 	}
