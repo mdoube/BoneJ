@@ -492,11 +492,11 @@ public class Ellipsoid {
 	/**
 	 * High performance 3x3 matrix multiplier with no bounds or error checking
 	 * 
-	 * @param a
-	 * @param b
+	 * @param a 3x3 matrix
+	 * @param b 3x3 matrix
 	 * @return result of matrix multiplication, c = ab
 	 */
-	private double[][] times(double[][] a, double[][] b) {
+	private static double[][] times(double[][] a, double[][] b) {
 		final double a00 = a[0][0];
 		final double a01 = a[0][1];
 		final double a02 = a[0][2];
