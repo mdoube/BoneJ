@@ -58,65 +58,65 @@ public class ResultsWriter{
 		}
 		
 		if(imageAndAnalysisDetails.stOn){
-			String[] coHeadings = {"MuD [mg/cm³]","MuA [cm²]","LeanMuD [mg/cm³]","LeanMuA [cm²]","IntraFatD [mg/cm³]","IntraFatA [cm²]","FatD [mg/cm³]","FatA [cm²]","SubCutFatD [mg/cm³]","SubCutFatA [cm²]","LimbD [mg/cm³]","LimbA [cm²]","Density weighted fat percentage [%]"};
+			String[] coHeadings = {"MuD [mg/cm3]","MuA [cm2]","LeanMuD [mg/cm3]","LeanMuA [cm2]","IntraFatD [mg/cm3]","IntraFatA [cm2]","FatD [mg/cm3]","FatA [cm2]","SubCutFatD [mg/cm3]","SubCutFatA [cm2]","LimbD [mg/cm3]","LimbA [cm2]","Density weighted fat percentage [%]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
 		}
 		
 		if(imageAndAnalysisDetails.cOn){
-			String[] coHeadings = {"MaMassD [g/cm³]","StratecMaMassD [g/cm³]","MaD [mg/cm³]","MaA [mm²]","CoD [mg/cm³]","CoA [mm²]","Stratec CoD [mg/cm³]","Stratec CoA [mm²]",
-				"SSI [mm³]","SSImax [mm³]","SSImin [mm³]",
+			String[] coHeadings = {"MaMassD [g/cm3]","StratecMaMassD [g/cm3]","MaD [mg/cm3]","MaA [mm2]","CoD [mg/cm3]","CoA [mm2]","Stratec CoD [mg/cm3]","Stratec CoA [mm2]",
+				"SSI [mm3]","SSImax [mm3]","SSImin [mm3]",
 				"IPo [mm4]","Imax [mm4]","Imin [mm4]",
 				"dwIPo [mg/cm]","dwImax [mg/cm]","dwImin [mg/cm]",
-				"ToD [mg/cm³]","ToA[mm²]","MeA [mm²]","BSId[g²/cm4]"};
+				"ToD [mg/cm3]","ToA[mm2]","MeA [mm2]","BSId[g/cm4]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
 		}
 		if(imageAndAnalysisDetails.mOn){
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° mineral mass [mg]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?mineral mass [mg]\t";
 			}
 		}
 		
 		if(imageAndAnalysisDetails.conOn){
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-				headings+=i*imageAndAnalysisDetails.concentricSector+"° - "+((i+1)*imageAndAnalysisDetails.concentricSector)+"° concentric analysis pericortical radius [mm]\t";
+				headings+=i*imageAndAnalysisDetails.concentricSector+"?- "+((i+1)*imageAndAnalysisDetails.concentricSector)+"?concentric analysis pericortical radius [mm]\t";
 			}
 			for (int j = 0;j<imageAndAnalysisDetails.concentricDivisions;++j){
 				for (int i = 0;i<((int) 360/imageAndAnalysisDetails.concentricSector);++i){
-					headings+="Division "+(j+1)+" sector "+i*imageAndAnalysisDetails.concentricSector+"° - "+((i+1)*imageAndAnalysisDetails.concentricSector)+"° vBMD [mg/cm³]\t";
+					headings+="Division "+(j+1)+" sector "+i*imageAndAnalysisDetails.concentricSector+"?- "+((i+1)*imageAndAnalysisDetails.concentricSector)+"?vBMD [mg/cm3]\t";
 				}
 			}
 		}
 		
 		if(imageAndAnalysisDetails.dOn){
-			headings+="Peeled mean vBMD [mg/cm³]\t";
+			headings+="Peeled mean vBMD [mg/cm3]\t";
 			//Radial distribution
 			for (int i =0; i < (int) imageAndAnalysisDetails.divisions; ++i){
-				headings+= "Radial division "+i+" vBMD [mg/cm³]\t";
+				headings+= "Radial division "+i+" vBMD [mg/cm3]\t";
 			}
 			//Polar distribution
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+= "Polar sector "+i+" vBMD [mg/cm³]\t";
+				headings+= "Polar sector "+i+" vBMD [mg/cm3]\t";
 			}
 			
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° endocortical radius [mm]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?endocortical radius [mm]\t";
 			}
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° pericortical radius [mm]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?pericortical radius [mm]\t";
 			}
 			//Cortex BMD values			
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° endocortical vBMD [mg/cm³]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?endocortical vBMD [mg/cm3]\t";
 			}
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° midcortical vBMD [mg/cm³]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?midcortical vBMD [mg/cm3]\t";
 			}
 			for (int i = 0;i<((int) 360/imageAndAnalysisDetails.sectorWidth);++i){
-				headings+=i*imageAndAnalysisDetails.sectorWidth+"° - "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"° pericortical vBMD [mg/cm³]\t";
+				headings+=i*imageAndAnalysisDetails.sectorWidth+"?- "+((i+1)*imageAndAnalysisDetails.sectorWidth)+"?pericortical vBMD [mg/cm3]\t";
 			}
 
 		}
@@ -134,6 +134,7 @@ public class ResultsWriter{
 
 		if (imp != null){
 			if (Distribution_Analysis.getInfoProperty(imageInfo,"File Name")!= null){
+				results+=Distribution_Analysis.getInfoProperty(imageInfo,"File Path");
 				results+=Distribution_Analysis.getInfoProperty(imageInfo,"File Name")+"\t";
 			}else{
 				if(imp.getImageStackSize() == 1){
