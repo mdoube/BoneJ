@@ -27,6 +27,8 @@ import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
 import ij.process.*;	//Debugging
+import org.doube.bonej.pqct.selectroi.liveWireEngine.*;	//LiveWire
+
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectSoftROI extends RoiSelector{
@@ -128,6 +130,113 @@ public class SelectSoftROI extends RoiSelector{
 			for (int i = 0;i<tempMuscleSieve.length;++i){
 				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
 			}
+			
+			/*Pop-up muscleSieve image*/
+			ImagePlus ipVis = new ImagePlus("Visual");
+			ipVis.setProcessor(new ByteProcessor(width,height,muscleSieve));
+			new ImageConverter(ipVis).convertToRGB();
+			
+			//ipVis.show();
+			
+			/**Re-segment soft-tissues using livewire based on the muscleSieve
+				1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
+				2) use livewire on the 360 edge pixels
+				3) rotate livewire init pixels around a few times to get the segmentation to go through subcut/intramuscular fat
+			
+			*/
+			ArrayList<Double> ii = new ArrayList<Double>();
+			ArrayList<Double> jj = new ArrayList<Double>();
+			double[] softCentre = new double[2];
+			for (int i = 0;i<width;++i){
+				for (int j = 0; j<height;++j){
+					if (muscleSieve[i+j*width] > 0){
+						ii.add((double) i);
+						jj.add((double) j);						
+						softCentre[0]+=(double) i;
+						softCentre[1]+=(double) j;
+					}
+				}
+			}
+			softCentre[0]/=(double)ii.size();
+			softCentre[1]/=(double)jj.size();
+			double maxR = Math.sqrt(Math.pow(max(Math.abs(softCentre[0]-width),softCentre[0]),2d)+Math.pow(max(Math.abs(softCentre[1]-height),softCentre[1]),2d));
+			double[] rs = new double[360];
+			double r,t;
+			double[] theta = new double[360];
+			int[][] edgeCoords = new int[360][2];
+			//IJ.log("Into r");
+			for (int i = 0;i<360;++i){
+				r = maxR;
+				t = ((double)i)/180d*Math.PI;
+				while ( Math.round(r*Math.cos(t)+softCentre[0]) < 0 || Math.round(r*Math.sin(t)+softCentre[1]) < 0 ||
+						Math.round(r*Math.cos(t)+softCentre[0]) >= width || Math.round(r*Math.sin(t)+softCentre[1]) >= height){
+					r-=0.1;
+				}
+				while ( Math.round(r*Math.cos(t)+softCentre[0]) >= 0 && Math.round(r*Math.sin(t)+softCentre[1]) >= 0 &&
+						Math.round(r*Math.cos(t)+softCentre[0]) < width && Math.round(r*Math.sin(t)+softCentre[1]) < height &&
+						muscleSieve[(int) (Math.round(r*Math.cos(t)+softCentre[0])+Math.round(r*Math.sin(t)+softCentre[1])*width)] < 1){
+					r-=0.1;
+				}
+				rs[i] = r;
+				theta[i] = t;
+				edgeCoords[i][0]=(int) (Math.round(rs[i]*Math.cos(theta[i])+softCentre[0]));
+				edgeCoords[i][1]=(int) (Math.round(rs[i]*Math.sin(theta[i])+softCentre[1]));
+			}
+			
+						//Visualize segmentation
+			ipVis.getProcessor().setColor(new Color(255,0,0));
+			
+			for (int i = 0;i<359;++i){
+				ipVis.getProcessor().drawLine((int) (Math.round(rs[i]*Math.cos(theta[i])+softCentre[0])), (int) (Math.round(rs[i]*Math.sin(theta[i])+softCentre[1])), (int) (Math.round(rs[i+1]*Math.cos(theta[i+1])+softCentre[0])), (int) (Math.round(rs[i+1]*Math.sin(theta[i+1])+softCentre[1])));
+			}
+			//IMPLEMENT REPEATING LIVEWIRE AFTER ROTATION!!! Get seed points from livewire result...
+			//Use every tenth as the init for livewire, rotate twice (5 deg each)
+			double[][] pixels = new double[width][height];
+			for (int rr = 0;rr<height;++rr){
+				for (int c = 0;c<width;++c){
+					pixels[c][rr] = (double) muscleSieve[c+rr*width];
+				}
+			}
+			
+			ArrayList<Integer> edgeii = new ArrayList<Integer>();
+			ArrayList<Integer> edgejj = new ArrayList<Integer>();
+			LiveWireCosts lwc = new LiveWireCosts(pixels);
+			
+			for (int i = 0;i<360-10; i=i+10){
+				lwc.setSeed(edgeCoords[i][0],edgeCoords[i][1]);
+				while (lwc.returnPath(edgeCoords[i+10][0],edgeCoords[i+10][1]) == null){
+					try{Thread.sleep(10);}catch(Exception e){}
+				}
+				int[][] fromSeedToCursor = lwc.returnPath(edgeCoords[i+10][0],edgeCoords[i+10][1]);
+				for (int iii = 0;iii< fromSeedToCursor.length;++iii){
+					edgeii.add((int) fromSeedToCursor[iii][0]);
+					edgejj.add((int) fromSeedToCursor[iii][1]);
+					IJ.log("Edge Length "+edgeii.size()+" x "+edgeii.get(edgeii.size()-1)+" y "+edgejj.get(edgejj.size()-1));
+				}
+				
+			}
+			/*Connect the last bit*/
+			lwc.setSeed(edgeii.get(edgeii.size()-1),edgejj.get(edgejj.size()-1));
+			while (lwc.returnPath(edgeCoords[0][0],edgeCoords[0][1]) == null){
+				try{Thread.sleep(10);}catch(Exception e){}
+			}
+			int[][] fromSeedToCursor = lwc.returnPath(edgeCoords[0][0],edgeCoords[0][1]);
+			for (int i = 0;i< fromSeedToCursor.length;++i){
+				edgeii.add((int) fromSeedToCursor[i][0]);
+				edgejj.add((int) fromSeedToCursor[i][1]);
+			}
+			//Visualize liveWire result...
+			ipVis.getProcessor().setColor(new Color(0,255,0));
+			for (int i = 0;i<edgeii.size()-1;++i){
+				ipVis.getProcessor().drawLine(edgeii.get(i),edgejj.get(i),edgeii.get(i+1),edgejj.get(i+1));
+			}
+			//IJ.log("Got past r");
+
+			ipVis.setDisplayRange(0,1);
+			ipVis.show();
+			ipVis.repaintWindow();
+			/*Re-segmenting done*/
+			
 			/*create temp boneResult to wipe out bone and marrow*/
 			Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
 			byte[] boneResult	= (byte[]) masks2.get(1);
@@ -149,5 +258,9 @@ public class SelectSoftROI extends RoiSelector{
 				}
 			}
 		}
+	}
+	
+	double max(double a,double b){
+		return a >= b ? a:b;
 	}
 }

@@ -164,9 +164,9 @@ public class Distribution_Analysis implements PlugIn {
 		middleLabels[2] = "Analyse_concentric_density_distribution";
 		middleDefaults[2] = false;
 		middleLabels[3] = "Analyse_density_distribution";
-		middleDefaults[3] = true;
+		middleDefaults[3] = false;//true;
 		middleLabels[4] = "Analyse_soft_tissues";
-		middleDefaults[4] = false;
+		middleDefaults[4] = true;//false;
 		middleLabels[5] = "Prevent_peeling_PVE_pixels";
 		middleDefaults[5] = false;
 		middleLabels[6] = "Allow_cleaving";
