@@ -113,7 +113,7 @@ public class SelectSoftROI extends RoiSelector{
 			muscleSieve = new byte[softSieve.length];
 			int areaToAdd=0;
 			/*Include areas that contribute more than 1% on top of what is already included*/
-			while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.01 < muscleEdges.get(areaToAdd).area){
+			while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.001 < muscleEdges.get(areaToAdd).area){
 				byte[] tempMuscleSieve = fillSieve(muscleEdges.get(areaToAdd).iit, muscleEdges.get(areaToAdd).jiit,width,height,muscleImage,details.muscleThreshold);
 				for (int i = 0; i<tempMuscleSieve.length;++i){
 					if (tempMuscleSieve[i] > 0){muscleSieve[i] = tempMuscleSieve[i];}
@@ -189,12 +189,12 @@ public class SelectSoftROI extends RoiSelector{
 				edgeii.clear();
 				edgejj.clear();
 				LiveWireCosts lwc = new LiveWireCosts(pixels);
+				int[][] fromSeedToCursor;
 				for (int i = 0;i<seedii.size()-1; ++i){
 					lwc.setSeed(seedii.get(i),seedjj.get(i));
-					while (lwc.returnPath(seedii.get(i+1),seedjj.get(i+1)) == null){
+					while ((fromSeedToCursor = lwc.returnPath(seedii.get(i+1),seedjj.get(i+1))) == null){
 						try{Thread.sleep(1);}catch(Exception e){}
 					}
-					int[][] fromSeedToCursor = lwc.returnPath(seedii.get(i+1),seedjj.get(i+1));
 					for (int iii = 0;iii< fromSeedToCursor.length;++iii){
 						edgeii.add((int) fromSeedToCursor[iii][0]);
 						edgejj.add((int) fromSeedToCursor[iii][1]);
@@ -204,10 +204,10 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				/*Connect the last bit*/
 				lwc.setSeed(seedii.get(seedii.size()-1),seedjj.get(seedjj.size()-1));
-				while (lwc.returnPath(seedii.get(0),seedjj.get(0)) == null){
+				
+				while ((fromSeedToCursor = lwc.returnPath(seedii.get(0),seedjj.get(0))) == null){
 					try{Thread.sleep(1);}catch(Exception e){}
 				}
-				int[][] fromSeedToCursor = lwc.returnPath(seedii.get(0),seedjj.get(0));
 				for (int i = 0;i< fromSeedToCursor.length;++i){
 					edgeii.add((int) fromSeedToCursor[i][0]);
 					edgejj.add((int) fromSeedToCursor[i][1]);
@@ -215,7 +215,7 @@ public class SelectSoftROI extends RoiSelector{
 				//Set new seeds
 				seedii.clear();
 				seedjj.clear();
-				double divisions = 32;
+				double divisions = 36;
 				for (int i = (int) (0.5/divisions*edgeii.size());i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
 					seedii.add(edgeii.get(i));
 					seedjj.add(edgejj.get(i));
@@ -224,6 +224,7 @@ public class SelectSoftROI extends RoiSelector{
 			
 			//Fill in muscle mask with inter-muscular fat 
 			muscleSieve = getByteMask(width,height,edgeii,edgejj);
+			muscleSieve = dilateMuscleMask(muscleSieve,softScaledImage,width,height,muscleThreshold); //Dilate the sieve to include all muscle pixels
 			/*Re-segmenting done*/
 			
 			/*Wipe muscle area +1 layer of pixels away from subcut.*/
@@ -260,7 +261,55 @@ public class SelectSoftROI extends RoiSelector{
 		return a >= b ? a:b;
 	}
 	
+	
+	public byte[] dilateMuscleMask(byte[] mask,double[] softScaledImage,int width, int height,double threshold){
+		ArrayList<Integer> initialI = new ArrayList<Integer>();
+		ArrayList<Integer> initialJ= new ArrayList<Integer>();
+		int i,j;
+		for (i = 0;i<width;++i){
+			for (j = 0;j<height;++j){
+				if (mask[i+j*width]==1){
+					initialI.add(i);
+					initialJ.add(j);
+				}
+			}
+		}
+		
+		while (initialI.size() >0 && initialI.get(initialI.size()-1) > 0 &&  initialI.get(initialI.size()-1) < width-1
+			&& initialJ.get(initialJ.size()-1) > 0 && initialJ.get(initialJ.size()-1) < height-1){
+			i =initialI.get(initialI.size()-1);
+			j = initialJ.get(initialJ.size()-1);
+			initialI.remove( initialI.size()-1);
+			initialJ.remove( initialJ.size()-1);
+
+			if (mask[i+j*width] == 0 && softScaledImage[i+j*width] >=threshold){
+				mask[i+j*width] = 1;
+			}
+
+			if (mask[i-1+j*width] == 0 && softScaledImage[i+j*width] >=threshold) {
+				initialI.add(i-1);
+				initialJ.add(j);
+			}
+
+			if (mask[i+1+j*width] == 0 && softScaledImage[i+j*width] >=threshold) {
+				initialI.add(i+1);
+				initialJ.add(j);
+			}
 			
+			if (mask[i+(j-1)*width] == 0 && softScaledImage[i+j*width] >=threshold) {
+				initialI.add(i);
+				initialJ.add(j-1);
+			}
+			
+			if (mask[i+(j+1)*width] == 0 && softScaledImage[i+j*width] >=threshold) {
+				initialI.add(i);
+				initialJ.add(j+1);
+			}
+
+		}
+		return mask;
+	}
+	
 	byte[] getByteMask(int width,int height,ArrayList<Integer> edgeii,ArrayList<Integer> edgejj){
 		byte[] mask=new byte[width*height];
 		for (int i = 0; i<edgeii.size();++i){

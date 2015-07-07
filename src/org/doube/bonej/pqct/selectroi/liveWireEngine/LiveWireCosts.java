@@ -331,7 +331,7 @@ public class LiveWireCosts implements Runnable{
 		@param c y-coordinate of the seed
 	*/
     public void setSeed(int r, int c){
-	    System.out.println("Setting Seed r "+r+" c "+c);	
+	    //System.out.println("Setting Seed r "+r+" c "+c);	
     	myThreadRuns=false;
     	if (myThread != null){    	    	
 			try {
@@ -340,7 +340,7 @@ public class LiveWireCosts implements Runnable{
 				System.out.println("Bogus Exception");
 			}
 		}
-    	
+    	//System.out.println("Setting Seed joined");
     	tr = r;	
     	tc = c;	
     	myThreadRuns = true;

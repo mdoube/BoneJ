@@ -58,6 +58,13 @@ public class Distribution_Analysis implements PlugIn {
 		/*Set sector widths and division numbers*/
 		int[] sectorsAndDivisions = {10,3,10,10}; /*Distribution analysis sectorWidth, Distribution analysis sectors, Concentric distribution analysis sectorWidth, Concentric distribution analysis sectors*/
 		int[] filterSizes = {3,7};		//first is used for bone analysis filtering and second for soft tissue analysis filtering. ?x? median filter.
+		
+		//A ROI appears on the image every now and then, haven't figured out why -> remove any unwanted rois prior to soft-tissue analysis
+		byte removeROIs = 0;
+		if (imp.getRoi() == null){
+			removeROIs = 1;
+		}
+		
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
 		Calibration cal = imp.getCalibration();
@@ -273,11 +280,18 @@ public class Distribution_Analysis implements PlugIn {
 																							filterSizes);
 			scaledImageData = new ScaledImageData(signedShort, imp.getWidth(), imp.getHeight(),resolution, imageAndAnalysisDetails.scalingFactor, imageAndAnalysisDetails.constant,3,imageAndAnalysisDetails.flipHorizontal,imageAndAnalysisDetails.flipVertical,imageAndAnalysisDetails.noFiltering);	//Scale and 3x3 median filter the data
 			RoiSelector roi = null;
+			
+			
+			
 			if(imageAndAnalysisDetails.cOn || imageAndAnalysisDetails.mOn || imageAndAnalysisDetails.conOn || imageAndAnalysisDetails.dOn){
 				roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 			}
 			RoiSelector softRoi = null;
 			if(imageAndAnalysisDetails.stOn){
+				if (removeROIs ==1){
+					imp.setRoi(null,false);	//Remove unwanted ROIS
+				}
+			
 				softRoi = new SelectSoftROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 				if (roi == null){
 					roi = softRoi;
