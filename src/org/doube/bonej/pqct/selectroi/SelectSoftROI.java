@@ -122,22 +122,6 @@ public class SelectSoftROI extends RoiSelector{
 				areaToAdd++;
 			}
 
-			//muscleSieve		= (byte[]) muscleMasks.get(1);	/*Use all areas encircled as muscle (needed if there's fat between muscles)!!*/
-
-			/*Wipe muscle area +1 layer of pixels away from subcut.*/
-			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
-			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
-			for (int i = 0;i<tempMuscleSieve.length;++i){
-				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
-			}
-			
-			/*Pop-up muscleSieve image*/
-			ImagePlus ipVis = new ImagePlus("Visual");
-			ipVis.setProcessor(new ByteProcessor(width,height,muscleSieve));
-			new ImageConverter(ipVis).convertToRGB();
-			
-			//ipVis.show();
-			
 			/**Re-segment soft-tissues using livewire based on the muscleSieve
 				1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
 				2) use livewire on the 360 edge pixels
@@ -164,7 +148,7 @@ public class SelectSoftROI extends RoiSelector{
 			double r,t;
 			double[] theta = new double[360];
 			int[][] edgeCoords = new int[360][2];
-			//IJ.log("Into r");
+			//Get the extremes of muscle area with 1 deg increments in polar coordinates
 			for (int i = 0;i<360;++i){
 				r = maxR;
 				t = ((double)i)/180d*Math.PI;
@@ -182,37 +166,26 @@ public class SelectSoftROI extends RoiSelector{
 				edgeCoords[i][0]=(int) (Math.round(rs[i]*Math.cos(theta[i])+softCentre[0]));
 				edgeCoords[i][1]=(int) (Math.round(rs[i]*Math.sin(theta[i])+softCentre[1]));
 			}
-			
-						//Visualize segmentation
-			ipVis.getProcessor().setColor(new Color(255,0,0));
-			
-			for (int i = 0;i<359;++i){
-				ipVis.getProcessor().drawLine((int) (Math.round(rs[i]*Math.cos(theta[i])+softCentre[0])), (int) (Math.round(rs[i]*Math.sin(theta[i])+softCentre[1])), (int) (Math.round(rs[i+1]*Math.cos(theta[i+1])+softCentre[0])), (int) (Math.round(rs[i+1]*Math.sin(theta[i+1])+softCentre[1])));
-			}
-			//IMPLEMENT REPEATING LIVEWIRE AFTER ROTATION!!! Get seed points from livewire result...
-			//Use every tenth as the init for livewire, rotate twice (5 deg each)
+
 			double[][] pixels = new double[width][height];
 			for (int rr = 0;rr<height;++rr){
 				for (int c = 0;c<width;++c){
 					pixels[c][rr] = (double) muscleSieve[c+rr*width];
 				}
 			}
-			
+			//Arraylists for edge, and livewire seed coordinates
 			ArrayList<Integer> edgeii = new ArrayList<Integer>();
 			ArrayList<Integer> edgejj = new ArrayList<Integer>();
 			ArrayList<Integer> seedii = new ArrayList<Integer>();
 			ArrayList<Integer> seedjj = new ArrayList<Integer>();
 			//Create list of seed coordinates
-			
-			
-			
 			for (int i = 0;i<360;i=i+10){
 				seedii.add(edgeCoords[i][0]);
 				seedjj.add(edgeCoords[i][1]);
 			}
 			
-			for (int l = 0; l<5;++l){
-			//Loop from here
+			//Loop livewire 6 times over here
+			for (int l = 0; l<6;++l){
 				edgeii.clear();
 				edgejj.clear();
 				LiveWireCosts lwc = new LiveWireCosts(pixels);
@@ -250,26 +223,15 @@ public class SelectSoftROI extends RoiSelector{
 			}
 			
 			//Fill in muscle mask with inter-muscular fat 
-			byte[] muscleSieve2 = getByteMask(width,height,edgeii,edgejj);
-			//Loop until here
-			//Visualize liveWire result...
-			ipVis.getProcessor().setColor(new Color(0,255,0));
-			for (int i = 0;i<edgeii.size()-1;++i){
-				ipVis.getProcessor().drawLine(edgeii.get(i),edgejj.get(i),edgeii.get(i+1),edgejj.get(i+1));
-			}
-			//IJ.log("Got past r");
-
-			ipVis.setDisplayRange(0,1);
-			ipVis.show();
-			ipVis.repaintWindow();
-			
-			//Visualize result
-			ImagePlus ipVis2 = new ImagePlus("Muscle");
-			ipVis2.setProcessor(new ByteProcessor(width,height,muscleSieve2));
-			new ImageConverter(ipVis2).convertToRGB();
-			ipVis2.setDisplayRange(0,1);
-			ipVis2.show();
+			muscleSieve = getByteMask(width,height,edgeii,edgejj);
 			/*Re-segmenting done*/
+			
+			/*Wipe muscle area +1 layer of pixels away from subcut.*/
+			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
+			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+			for (int i = 0;i<tempMuscleSieve.length;++i){
+				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
+			}
 			
 			/*create temp boneResult to wipe out bone and marrow*/
 			Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
