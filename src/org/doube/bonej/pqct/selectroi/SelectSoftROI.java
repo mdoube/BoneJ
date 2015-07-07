@@ -200,31 +200,58 @@ public class SelectSoftROI extends RoiSelector{
 			
 			ArrayList<Integer> edgeii = new ArrayList<Integer>();
 			ArrayList<Integer> edgejj = new ArrayList<Integer>();
-			LiveWireCosts lwc = new LiveWireCosts(pixels);
+			ArrayList<Integer> seedii = new ArrayList<Integer>();
+			ArrayList<Integer> seedjj = new ArrayList<Integer>();
+			//Create list of seed coordinates
 			
-			for (int i = 0;i<360-10; i=i+10){
-				lwc.setSeed(edgeCoords[i][0],edgeCoords[i][1]);
-				while (lwc.returnPath(edgeCoords[i+10][0],edgeCoords[i+10][1]) == null){
-					try{Thread.sleep(10);}catch(Exception e){}
+			
+			
+			for (int i = 0;i<360;i=i+10){
+				seedii.add(edgeCoords[i][0]);
+				seedjj.add(edgeCoords[i][1]);
+			}
+			
+			for (int l = 0; l<5;++l){
+			//Loop from here
+				edgeii.clear();
+				edgejj.clear();
+				LiveWireCosts lwc = new LiveWireCosts(pixels);
+				for (int i = 0;i<seedii.size()-1; ++i){
+					lwc.setSeed(seedii.get(i),seedjj.get(i));
+					while (lwc.returnPath(seedii.get(i+1),seedjj.get(i+1)) == null){
+						try{Thread.sleep(1);}catch(Exception e){}
+					}
+					int[][] fromSeedToCursor = lwc.returnPath(seedii.get(i+1),seedjj.get(i+1));
+					for (int iii = 0;iii< fromSeedToCursor.length;++iii){
+						edgeii.add((int) fromSeedToCursor[iii][0]);
+						edgejj.add((int) fromSeedToCursor[iii][1]);
+						//IJ.log("Edge Length "+edgeii.size()+" x "+edgeii.get(edgeii.size()-1)+" y "+edgejj.get(edgejj.size()-1));
+					}
+					
 				}
-				int[][] fromSeedToCursor = lwc.returnPath(edgeCoords[i+10][0],edgeCoords[i+10][1]);
-				for (int iii = 0;iii< fromSeedToCursor.length;++iii){
-					edgeii.add((int) fromSeedToCursor[iii][0]);
-					edgejj.add((int) fromSeedToCursor[iii][1]);
-					IJ.log("Edge Length "+edgeii.size()+" x "+edgeii.get(edgeii.size()-1)+" y "+edgejj.get(edgejj.size()-1));
+				/*Connect the last bit*/
+				lwc.setSeed(seedii.get(seedii.size()-1),seedjj.get(seedjj.size()-1));
+				while (lwc.returnPath(seedii.get(0),seedjj.get(0)) == null){
+					try{Thread.sleep(1);}catch(Exception e){}
 				}
-				
+				int[][] fromSeedToCursor = lwc.returnPath(seedii.get(0),seedjj.get(0));
+				for (int i = 0;i< fromSeedToCursor.length;++i){
+					edgeii.add((int) fromSeedToCursor[i][0]);
+					edgejj.add((int) fromSeedToCursor[i][1]);
+				}
+				//Set new seeds
+				seedii.clear();
+				seedjj.clear();
+				double divisions = 32;
+				for (int i = (int) (0.5/divisions*edgeii.size());i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
+					seedii.add(edgeii.get(i));
+					seedjj.add(edgejj.get(i));
+				}
 			}
-			/*Connect the last bit*/
-			lwc.setSeed(edgeii.get(edgeii.size()-1),edgejj.get(edgejj.size()-1));
-			while (lwc.returnPath(edgeCoords[0][0],edgeCoords[0][1]) == null){
-				try{Thread.sleep(10);}catch(Exception e){}
-			}
-			int[][] fromSeedToCursor = lwc.returnPath(edgeCoords[0][0],edgeCoords[0][1]);
-			for (int i = 0;i< fromSeedToCursor.length;++i){
-				edgeii.add((int) fromSeedToCursor[i][0]);
-				edgejj.add((int) fromSeedToCursor[i][1]);
-			}
+			
+			//Fill in muscle mask with inter-muscular fat 
+			byte[] muscleSieve2 = getByteMask(width,height,edgeii,edgejj);
+			//Loop until here
 			//Visualize liveWire result...
 			ipVis.getProcessor().setColor(new Color(0,255,0));
 			for (int i = 0;i<edgeii.size()-1;++i){
@@ -235,6 +262,13 @@ public class SelectSoftROI extends RoiSelector{
 			ipVis.setDisplayRange(0,1);
 			ipVis.show();
 			ipVis.repaintWindow();
+			
+			//Visualize result
+			ImagePlus ipVis2 = new ImagePlus("Muscle");
+			ipVis2.setProcessor(new ByteProcessor(width,height,muscleSieve2));
+			new ImageConverter(ipVis2).convertToRGB();
+			ipVis2.setDisplayRange(0,1);
+			ipVis2.show();
 			/*Re-segmenting done*/
 			
 			/*create temp boneResult to wipe out bone and marrow*/
@@ -263,4 +297,92 @@ public class SelectSoftROI extends RoiSelector{
 	double max(double a,double b){
 		return a >= b ? a:b;
 	}
+	
+			
+	byte[] getByteMask(int width,int height,ArrayList<Integer> edgeii,ArrayList<Integer> edgejj){
+		byte[] mask=new byte[width*height];
+		for (int i = 0; i<edgeii.size();++i){
+			mask[edgeii.get(i)+edgejj.get(i)*width] = (byte) 1;
+		}
+		int[] fillInitCoords = findMaskFillInit(mask,width,height,edgeii,edgejj);
+		if (fillInitCoords != null){
+			return fillMask(fillInitCoords[0],fillInitCoords[1],mask,width,height);
+		}else{
+			return mask;
+		}
+	}
+	
+	byte[] fillMask(int i, int j, byte[] mask, int width,int height){
+		ArrayList<Integer> initialI = new ArrayList<Integer>();
+		ArrayList<Integer> initialJ= new ArrayList<Integer>();
+		initialI.add(i);
+		initialJ.add(j);
+		while (initialI.size() >0 && initialI.get(initialI.size()-1) > 0 &&  initialI.get(initialI.size()-1) < width-1
+			&& initialJ.get(initialJ.size()-1) > 0 && initialJ.get(initialJ.size()-1) < height-1){
+			i =initialI.get(initialI.size()-1);
+			j = initialJ.get(initialJ.size()-1);
+			initialI.remove( initialI.size()-1);
+			initialJ.remove( initialJ.size()-1);
+
+			if (mask[i+j*width] == 0 ){
+				mask[i+j*width] = 1;
+			}
+
+			if (mask[i-1+j*width] == 0) {
+				initialI.add(i-1);
+				initialJ.add(j);
+			}
+
+			if (mask[i+1+j*width] == 0) {
+				initialI.add(i+1);
+				initialJ.add(j);
+			}
+			
+			if (mask[i+(j-1)*width] == 0) {
+				initialI.add(i);
+				initialJ.add(j-1);
+			}
+			
+			if (mask[i+(j+1)*width] == 0) {
+				initialI.add(i);
+				initialJ.add(j+1);
+			}
+
+		}
+		return mask;
+	}
+	
+	int[] findMaskFillInit(byte[] mask,int width,int height,ArrayList<Integer> edgeii,ArrayList<Integer> edgejj){
+		int[] returnCoordinates = new int[2];
+		int[] steer = new int[2];
+		for (int j = 0; j< edgeii.size()-1; ++j){
+			returnCoordinates[0] = edgeii.get(j);
+			returnCoordinates[1] = edgejj.get(j);
+			double direction = Math.atan2(edgejj.get(j+1)-returnCoordinates[1],edgeii.get(j+1)-returnCoordinates[0]);
+			direction+=Math.PI/4.0;
+			for (int i = 0; i< 3; ++i){
+				
+				steer[0] = (int) Math.round(Math.cos(direction));
+				steer[1]= (int) Math.round(Math.sin(direction));
+				/*Handle OOB*/
+				while ((returnCoordinates[0]+steer[0])<0 || (returnCoordinates[0]+steer[0])>=width ||
+						(returnCoordinates[1]+steer[1])<0 || (returnCoordinates[1]+steer[1])>=height){
+					direction+=Math.PI/4.0;
+					steer[0] = (int) Math.round(Math.cos(direction));
+					steer[1]= (int) Math.round(Math.sin(direction));
+				}
+				if (mask[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] == 0){
+					returnCoordinates[0] +=steer[0];
+					returnCoordinates[1] +=steer[1];
+					return returnCoordinates;
+				}
+				if (result[returnCoordinates[0]+steer[0]+(returnCoordinates[1]+steer[1])*width] == 1){
+					break;
+				}
+				direction+=Math.PI/4.0;
+			}
+		}
+		return null;
+	}
+	
 }
