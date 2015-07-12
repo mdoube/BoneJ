@@ -29,8 +29,8 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
+import ij3d.Image3DUniverse;
 import isosurface.MeshEditor;
-
 import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
@@ -57,6 +57,10 @@ import customnode.CustomTriangleMesh;
  */
 public class StructureModelIndex implements PlugIn {
 
+	private boolean do3D = false;
+
+	private Image3DUniverse universe;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -77,6 +81,7 @@ public class StructureModelIndex implements PlugIn {
 		gd.addChoice("SMI Method", smiMethods, smiMethods[0]);
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
+		gd.addCheckbox("Show in 3D", do3D);
 		gd.addHelp("http://bonej.org/smi");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -86,6 +91,10 @@ public class StructureModelIndex implements PlugIn {
 		String smiMethod = gd.getNextChoice();
 		int voxelResampling = (int) Math.floor(gd.getNextNumber());
 		float meshSmoothing = (float) gd.getNextNumber();
+		do3D = gd.getNextBoolean();
+
+		if (do3D)
+			universe = new Image3DUniverse();
 
 		double smi = 0;
 		if (smiMethod.equals(smiMethods[1])) {
@@ -97,6 +106,8 @@ public class StructureModelIndex implements PlugIn {
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
+		if (do3D)
+			universe.show();
 		return;
 	}
 
@@ -189,7 +200,7 @@ public class StructureModelIndex implements PlugIn {
 	 * @return SMI
 	 */
 	@SuppressWarnings("unchecked")
-	public static double hildRueg(ImagePlus imp, int voxelResampling,
+	public double hildRueg(ImagePlus imp, int voxelResampling,
 			float meshSmoothing) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
@@ -319,6 +330,10 @@ public class StructureModelIndex implements PlugIn {
 
 			double deltaArea = area2 - area1;
 
+			if (do3D)
+				addTo3DUniverse(point0, point1, point2, area1, deltaArea, s1,
+						v, r);
+
 			if (deltaArea >= 0) {
 				convexDelta += deltaArea;
 				convexArea += area1;
@@ -336,7 +351,7 @@ public class StructureModelIndex implements PlugIn {
 		double concaveSMI = 6 * sRconcave * v / (s1 * s1);
 		IJ.log("Convex SMI = " + convexSMI);
 		IJ.log("Concave SMI = " + concaveSMI);
-		
+
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Concave", concaveFraction);
 		ri.setResultInRow(imp, "+SMI", convexSMI);
@@ -347,5 +362,25 @@ public class StructureModelIndex implements PlugIn {
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
 		return smi;
+	}
+
+	private void addTo3DUniverse(Point3f point0, Point3f point1,
+			Point3f point2, double area1, double deltaArea, double s1,
+			double v, double r) {
+		List<Point3f> mesh = new ArrayList<Point3f>();
+		mesh.add(point0);
+		mesh.add(point1);
+		mesh.add(point2);
+		CustomTriangleMesh triangle = new CustomTriangleMesh(mesh);
+
+		double smi = (s1 / area1) * 6 * (deltaArea / r) / (s1 * s1);
+		
+		float red = (float) (1 + smi/4);
+		float green = (float) (1 + smi/8);
+		float blue = (float) (1 - smi/4);
+		
+		Color3f color = new Color3f(red, green, blue);
+
+		universe.addTriangleMesh(mesh, color, triangle.toString());
 	}
 }
