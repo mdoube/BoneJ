@@ -373,12 +373,21 @@ public class StructureModelIndex implements PlugIn {
 		mesh.add(point2);
 		CustomTriangleMesh triangle = new CustomTriangleMesh(mesh);
 
-		double smi = (s1 / area1) * 6 * (deltaArea / r) / (s1 * s1);
-		
-		float red = (float) (1 + smi/4);
-		float green = (float) (1 + smi/8);
-		float blue = (float) (1 - smi/4);
-		
+		// double smi = (s1 / area1) * 6 * (deltaArea / r) / (s1 * s1);
+
+		double af = deltaArea / area1;
+
+		float red = 0.0f;
+		float green = 0.0f;
+		float blue = 0.0f;
+
+		if (af < 0) {
+			blue = (float) -af * 100;
+		} else {
+			red = (float) af * 100;
+			green = (float) af * 100;
+		}
+
 		Color3f color = new Color3f(red, green, blue);
 
 		universe.addTriangleMesh(mesh, color, triangle.toString());
