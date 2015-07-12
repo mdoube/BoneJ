@@ -105,6 +105,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 
 	private double stackVolume;
 
+	private double[][] regularVectors;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -174,6 +176,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		// }
 
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
+		regularVectors = unitVectors.clone();
+
 		int[][] skeletonPoints = skeletonPoints(imp);
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
@@ -1603,9 +1607,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			ArrayList<double[]> contactPoints, byte[][] pixels,
 			final double pW, final double pH, final double pD, final int w,
 			final int h, final int d) {
-		final double[][] unitVectors = Vectors.regularVectors(nVectors);
-		return findContactPoints(ellipsoid, contactPoints, unitVectors, pixels,
-				pW, pH, pD, w, h, d);
+		// final double[][] unitVectors = Vectors.regularVectors(nVectors);
+		// final double[][] unitVectors = regularVectors;
+		return findContactPoints(ellipsoid, contactPoints,
+				regularVectors.clone(), pixels, pW, pH, pD, w, h, d);
 	}
 
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
@@ -1615,9 +1620,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		contactPoints.clear();
 		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
 		final int nPoints = points.length;
-		double[] p = new double[3];
 		for (int i = 0; i < nPoints; i++) {
-			p = points[i];
+			final double[] p = points[i];
 			final int x = (int) Math.floor(p[0] / pW);
 			final int y = (int) Math.floor(p[1] / pH);
 			final int z = (int) Math.floor(p[2] / pD);
