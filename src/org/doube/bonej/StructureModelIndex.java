@@ -393,10 +393,10 @@ public class StructureModelIndex implements PlugIn {
 		float blue = 1.0f;
 
 		if (af >= 0) {
-			blue -= (float) af * 1000;
+			blue -= (float) Math.pow(af, 0.333) * 9;
 		} else {
-			red += (float) af * 1000;
-			green += (float) af * 1000;
+			red -= (float) Math.pow(-af, 0.333) * 9;
+			green -= (float) Math.pow(-af, 0.333) * 9;
 		}
 
 		Color3f colour = new Color3f(red, green, blue);
