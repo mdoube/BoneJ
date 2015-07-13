@@ -39,6 +39,7 @@ import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
+import customnode.CustomIndexedTriangleMesh;
 import customnode.CustomTriangleMesh;
 
 /**
@@ -59,7 +60,9 @@ public class StructureModelIndex implements PlugIn {
 
 	private boolean do3D = false;
 
-	private Image3DUniverse universe;
+//	private Image3DUniverse universe;
+	private List<Point3f> mesh;
+	private List<Color3f> colours;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
@@ -93,8 +96,10 @@ public class StructureModelIndex implements PlugIn {
 		float meshSmoothing = (float) gd.getNextNumber();
 		do3D = gd.getNextBoolean();
 
-		if (do3D)
-			universe = new Image3DUniverse();
+		if (do3D) {
+			mesh = new ArrayList<Point3f>();
+			colours = new ArrayList<Color3f>();
+		}
 
 		double smi = 0;
 		if (smiMethod.equals(smiMethods[1])) {
@@ -105,9 +110,20 @@ public class StructureModelIndex implements PlugIn {
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
+				
 		UsageReporter.reportEvent(this).send();
-		if (do3D)
+		
+		if (do3D) {
+			Image3DUniverse universe = new Image3DUniverse();
+			
+			CustomTriangleMesh triangles = new CustomTriangleMesh(mesh);
+			
+			triangles.setColor(colours);
+			
+			universe.addTriangleMesh(mesh, colours, "Surface curvature");
+			
 			universe.show();
+		}
 		return;
 	}
 
@@ -367,29 +383,28 @@ public class StructureModelIndex implements PlugIn {
 	private void addTo3DUniverse(Point3f point0, Point3f point1,
 			Point3f point2, double area1, double deltaArea, double s1,
 			double v, double r) {
-		List<Point3f> mesh = new ArrayList<Point3f>();
+
 		mesh.add(point0);
 		mesh.add(point1);
 		mesh.add(point2);
-		CustomTriangleMesh triangle = new CustomTriangleMesh(mesh);
-
-		// double smi = (s1 / area1) * 6 * (deltaArea / r) / (s1 * s1);
 
 		double af = deltaArea / area1;
 
-		float red = 0.0f;
-		float green = 0.0f;
-		float blue = 0.0f;
+		float red = 1.0f;
+		float green = 1.0f;
+		float blue = 1.0f;
 
-		if (af < 0) {
-			blue = (float) -af * 100;
+		if (af >= 0) {
+			blue -= (float) af * 1000;
 		} else {
-			red = (float) af * 100;
-			green = (float) af * 100;
+			red += (float) af * 1000;
+			green += (float) af * 1000;
 		}
 
-		Color3f color = new Color3f(red, green, blue);
+		Color3f colour = new Color3f(red, green, blue);
+		colours.add(colour);
+		colours.add(colour);
+		colours.add(colour);
 
-		universe.addTriangleMesh(mesh, color, triangle.toString());
 	}
 }
