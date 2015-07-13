@@ -58,8 +58,6 @@ import customnode.CustomTriangleMesh;
 public class StructureModelIndex implements PlugIn {
 
 	private boolean do3D = false;
-
-//	private Image3DUniverse universe;
 	private List<Point3f> mesh;
 	private List<Color3f> colours;
 
