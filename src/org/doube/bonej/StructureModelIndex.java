@@ -107,20 +107,20 @@ public class StructureModelIndex implements PlugIn {
 		ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
-				
 		UsageReporter.reportEvent(this).send();
-		
+
 		if (do3D) {
 			Image3DUniverse universe = new Image3DUniverse();
-			
+
 			CustomTriangleMesh triangles = new CustomTriangleMesh(mesh);
-			
+
 			triangles.setColor(colours);
-			
+
 			universe.addTriangleMesh(mesh, colours, "Surface curvature");
-			
+
 			universe.show();
 		}
+		IJ.showProgress(1);
 		return;
 	}
 
@@ -241,7 +241,7 @@ public class StructureModelIndex implements PlugIn {
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
 			IJ.showStatus("Finding vertices...");
-			IJ.showProgress(p, nPoints);
+			IJ.showProgress(p + 1, nPoints);
 			Point3f testPoint = triangles.get(p);
 			if (vertexHash.get(testPoint) == null) {
 				ArrayList<Integer> points = new ArrayList<Integer>();
@@ -313,7 +313,7 @@ public class StructureModelIndex implements PlugIn {
 		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
 			IJ.showStatus("Dilating surface mesh...");
-			IJ.showProgress(t, nPoints);
+			IJ.showProgress(t + 1, nPoints);
 			Point3f point = triangles.get(t);
 			Point3f newPoint = (Point3f) point.clone();
 			Point3f normal = (Point3f) normalsHash.get(point);
@@ -374,6 +374,7 @@ public class StructureModelIndex implements PlugIn {
 		double sR = (s2 - s1) / r;
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
+		IJ.showProgress(1.0);
 		return smi;
 	}
 
