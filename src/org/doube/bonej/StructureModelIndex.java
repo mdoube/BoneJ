@@ -57,9 +57,9 @@ import customnode.CustomTriangleMesh;
  */
 public class StructureModelIndex implements PlugIn {
 
-	private boolean do3D = false;
-	private List<Point3f> mesh;
-	private List<Color3f> colours;
+	private static boolean do3D = false;
+	private static List<Point3f> mesh;
+	private static List<Color3f> colours;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
@@ -213,7 +213,7 @@ public class StructureModelIndex implements PlugIn {
 	 * @return SMI
 	 */
 	@SuppressWarnings("unchecked")
-	public double hildRueg(ImagePlus imp, int voxelResampling,
+	public static double hildRueg(ImagePlus imp, int voxelResampling,
 			float meshSmoothing) {
 		int threshold = 128;
 		final boolean[] channels = { true, false, false };
@@ -378,7 +378,7 @@ public class StructureModelIndex implements PlugIn {
 		return smi;
 	}
 
-	private void addTo3DUniverse(Point3f point0, Point3f point1,
+	private static void addTo3DUniverse(Point3f point0, Point3f point1,
 			Point3f point2, double area1, double deltaArea, double s1,
 			double v, double r) {
 
