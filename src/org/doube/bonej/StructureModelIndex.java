@@ -39,7 +39,6 @@ import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
-import customnode.CustomIndexedTriangleMesh;
 import customnode.CustomTriangleMesh;
 
 /**
