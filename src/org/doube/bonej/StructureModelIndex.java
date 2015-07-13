@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- *  StructureModelIndex Copyright 2010 Michael Doube
+ *  StructureModelIndex Copyright 2010 2015 Michael Doube
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
