@@ -21,12 +21,12 @@ public class Help implements PlugIn {
 	/**
 	 * branch
 	 */
-	public static final String branch = "-ellipsoid-factor";
+	public static final String branch = "";
 	
 	/**
 	 * BoneJ version
 	 */
-	public static final String bonejVersion = "1.4.0"+branch;
+	public static final String bonejVersion = "1.4.1"+branch;
 
 	public void run(String arg) {
 		if (arg.equals("about")) {
