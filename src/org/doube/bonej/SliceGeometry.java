@@ -285,8 +285,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			this.c = this.m * cal.getCoefficients()[0] + this.c;
 			this.m = this.m * cal.getCoefficients()[1];
 		}
-		this.m = gd.getNextNumber();
-		this.c = gd.getNextNumber();
 		if (gd.wasCanceled())
 			return;
 
