@@ -98,6 +98,7 @@ public class Thickness implements PlugIn {
 		gd.addCheckbox("Spacing", false);
 		gd.addCheckbox("Graphic Result", true);
 		gd.addCheckbox("Use_ROI_Manager", false);
+		gd.addCheckbox("Mask thickness map", true);
 		gd.addHelp("http://bonej.org/thickness");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -107,6 +108,7 @@ public class Thickness implements PlugIn {
 		boolean doSpacing = gd.getNextBoolean();
 		boolean doGraphic = gd.getNextBoolean();
 		boolean doRoi = gd.getNextBoolean();
+		boolean doMask = gd.getNextBoolean();
 
 		long startTime = System.currentTimeMillis();
 		String title = stripExtension(imp.getTitle());
@@ -121,9 +123,9 @@ public class Thickness implements PlugIn {
 						true, 0, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
-				impLTC = getLocalThickness(crop, inverse);
+				impLTC = getLocalThickness(crop, inverse, doMask);
 			} else
-				impLTC = getLocalThickness(imp, inverse);
+				impLTC = getLocalThickness(imp, inverse, doMask);
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			double[] stats = StackStats.meanStdDev(impLTC);
@@ -143,9 +145,9 @@ public class Thickness implements PlugIn {
 						true, 255, 1);
 				ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
-				impLTCi = getLocalThickness(crop, inverse);
+				impLTCi = getLocalThickness(crop, inverse, doMask);
 			} else
-				impLTCi = getLocalThickness(imp, inverse);
+				impLTCi = getLocalThickness(imp, inverse, doMask);
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
@@ -593,14 +595,13 @@ public class Thickness implements PlugIn {
 				distSqValues[indDS++] = i;
 			}
 		}
-		// Build template
-		// The first index of the template is the number of nonzero components
-		// in the offest from the test point to the remote point. The second
-		// index is the radii index (of the test point). The value of the
-		// template
-		// is the minimum square radius of the remote point required to cover
-		// the
-		// ball of the test point.
+		/*
+		 * Build template The first index of the template is the number of
+		 * nonzero components in the offest from the test point to the remote
+		 * point. The second index is the radii index (of the test point). The
+		 * value of the template is the minimum square radius of the remote
+		 * point required to cover the ball of the test point.
+		 */
 		IJ.showStatus("Distance Ridge: creating search templates");
 		int[][] rSqTemplate = createTemplate(distSqValues);
 		int numCompZ, numCompY, numCompX, numComp;
@@ -677,14 +678,16 @@ public class Thickness implements PlugIn {
 		s = sNew;
 	}
 
-	// For each offset from the origin, (dx,dy,dz), and each radius-squared,
-	// rSq, find the smallest radius-squared, r1Squared, such that a ball
-	// of radius r1 centered at (dx,dy,dz) includes a ball of radius
-	// rSq centered at the origin. These balls refer to a 3D integer grid.
-	// The set of (dx,dy,dz) points considered is a cube center at the origin.
-	// The size of the computed array could be considerably reduced by symmetry,
-	// but then the time for the calculation using this array would increase
-	// (and more code would be needed).
+	/*
+	 * For each offset from the origin, (dx,dy,dz), and each radius-squared,
+	 * rSq, find the smallest radius-squared, r1Squared, such that a ball of
+	 * radius r1 centered at (dx,dy,dz) includes a ball of radius rSq centered
+	 * at the origin. These balls refer to a 3D integer grid. The set of
+	 * (dx,dy,dz) points considered is a cube center at the origin. The size of
+	 * the computed array could be considerably reduced by symmetry, but then
+	 * the time for the calculation using this array would increase (and more
+	 * code would be needed).
+	 */
 	int[][] createTemplate(int[] distSqValues) {
 		int[][] t = new int[3][];
 		t[0] = scanCube(1, 0, 0, distSqValues);
@@ -693,9 +696,11 @@ public class Thickness implements PlugIn {
 		return t;
 	}
 
-	// For a list of r² values, find the smallest r1² values such
-	// that a "ball" of radius r1 centered at (dx,dy,dz) includes a "ball"
-	// of radius r centered at the origin. "Ball" refers to a 3D integer grid.
+	/*
+	 * For a list of r² values, find the smallest r1² values such that a "ball"
+	 * of radius r1 centered at (dx,dy,dz) includes a "ball" of radius r
+	 * centered at the origin. "Ball" refers to a 3D integer grid.
+	 */
 	int[] scanCube(int dx, int dy, int dz, int[] distSqValues) {
 		final int numRadii = distSqValues.length;
 		int[] r1Sq = new int[numRadii];
@@ -876,9 +881,10 @@ public class Thickness implements PlugIn {
 			final int depth = this.d;
 			final float[][] stack = this.s;
 			float[] sk1;// sk,sk1;
-			// Loop through ridge points. For each one, update the local
-			// thickness for
-			// the points within its sphere.
+			/*
+			 * Loop through ridge points. For each one, update the local
+			 * thickness for the points within its sphere.
+			 */
 			int rInt;
 			int iStart, iStop, jStart, jStop, kStart, kStop;
 			float r1SquaredK, r1SquaredJK, r1Squared, s1;
@@ -930,14 +936,14 @@ public class Thickness implements PlugIn {
 										final int ind1 = i1 + widthJ1;
 										s1 = sk1[ind1];
 										if (rSquared > s1) {
-											// Get a lock on sk1 and check again
-											// to make sure
-											// that another thread has not
-											// increased
-											// sk1[ind1] to something larger
-											// than rSquared.
-											// A test shows that this may not be
-											// required...
+											/*
+											 * Get a lock on sk1 and check again
+											 * to make sure that another thread
+											 * has not increased sk1[ind1] to
+											 * something larger than rSquared. A
+											 * test shows that this may not be
+											 * required...
+											 */
 											synchronized (resources[k1]) {
 												s1 = sk1[ind1];
 												if (rSquared > s1) {
@@ -991,10 +997,11 @@ public class Thickness implements PlugIn {
 			newStack.addSlice(null, ipk);
 			sNew[k] = (float[]) ipk.getPixels();
 		}
-		// First set the output array to flags:
-		// 0 for a background point
-		// -1 for a non-background point that borders a background point
-		// s (input data) for an interior non-background point
+		/*
+		 * First set the output array to flags: 0 for a background point -1 for
+		 * a non-background point that borders a background point s (input data)
+		 * for an interior non-background point
+		 */
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -1003,20 +1010,15 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-			// Process the surface points. Initially set results to negative
-			// values
-			// to be able to avoid including them in averages of for subsequent
-			// points.
-			// During the calculation, positive values in sNew are interior
-			// non-background
-			// local thicknesses. Negative values are surface points. In this
-			// case
-			// the
-			// value might be -1 (not processed yet) or -result, where result is
-			// the
-			// average of the neighboring interior points. Negative values are
-			// excluded from
-			// the averaging.
+		/*
+		 * Process the surface points. Initially set results to negative values
+		 * to be able to avoid including them in averages of for subsequent
+		 * points. During the calculation, positive values in sNew are interior
+		 * non-background local thicknesses. Negative values are surface points.
+		 * In this case the value might be -1 (not processed yet) or -result,
+		 * where result is the average of the neighboring interior points.
+		 * Negative values are excluded from the averaging.
+		 */
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -1029,7 +1031,7 @@ public class Thickness implements PlugIn {
 				}// i
 			}// j
 		}// k
-			// Fix the negative values and double the results
+		// Fix the negative values and double the results
 		for (int k = 0; k < d; k++) {
 			for (int j = 0; j < h; j++) {
 				final int wj = w * j;
@@ -1303,8 +1305,39 @@ public class Thickness implements PlugIn {
 	}
 
 	/**
-	 * Get a local thickness map from an ImagePlus
+	 * Get a local thickness map from an ImagePlus with optional masking
+	 * correction
 	 * 
+	 * @param imp
+	 *            Binary ImagePlus
+	 * @param inv
+	 *            false if you want the thickness of the foreground and true if
+	 *            you want the thickness of the background
+	 * @param doMask
+	 *            true to apply a masking operation to enforce the map to
+	 *            contain thickness values only at coordinates where there is a
+	 *            corresponding input pixel
+	 * @return 32-bit ImagePlus containing a local thickness map
+	 */
+	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv,
+			boolean doMask) {
+		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
+			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
+		}
+		float[][] s = geometryToDistanceMap(imp, inv);
+		distanceMaptoDistanceRidge(imp, s);
+		distanceRidgetoLocalThickness(imp, s);
+		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
+		if (doMask)
+			impLTC = trimOverhang(imp, impLTC, inv);
+		return impLTC;
+	}
+
+	/**
+	 * Get a local thickness map from an ImagePlus, without masking correction
+	 * 
+	 * @see getLocalThickness(ImagePlus imp, boolean inv, boolean doMask) :
+	 *      ImagePlus
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @param inv
@@ -1313,13 +1346,45 @@ public class Thickness implements PlugIn {
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
 	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
-		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
-			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
+		return getLocalThickness(imp, inv, false);
+	}
+
+	/**
+	 * Reduce error in thickness quantitation by trimming the one pixel overhang
+	 * in the thickness map
+	 * 
+	 * @param imp
+	 *            Binary input image
+	 * @param impLTC
+	 *            Thickness map
+	 * @param inv
+	 *            true if calculating thickness of background, false for
+	 *            foreground
+	 * @return Thickness map with pixels masked by input image
+	 */
+	private ImagePlus trimOverhang(ImagePlus imp, ImagePlus impLTC, boolean inv) {
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getImageStackSize();
+
+		final ImageStack stack = imp.getImageStack();
+		final ImageStack mapStack = impLTC.getImageStack();
+
+		final int keepValue = inv ? 0 : 255;
+		ImageProcessor ip = new ByteProcessor(w, h);
+		ImageProcessor map = new FloatProcessor(w, h);
+		for (int z = 1; z <= d; z++) {
+			IJ.showStatus("Masking thickness map...");
+			IJ.showProgress(z, d);
+			ip = stack.getProcessor(z);
+			map = mapStack.getProcessor(z);
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) {
+					if (ip.get(x, y) != keepValue)
+						map.set(x, y, 0);
+				}
+			}
 		}
-		float[][] s = geometryToDistanceMap(imp, inv);
-		distanceMaptoDistanceRidge(imp, s);
-		distanceRidgetoLocalThickness(imp, s);
-		ImagePlus impLTC = localThicknesstoCleanedUpLocalThickness(imp, s);
 		return impLTC;
 	}
 }

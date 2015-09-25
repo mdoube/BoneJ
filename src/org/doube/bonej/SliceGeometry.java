@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  * SliceGeometry plugin for ImageJ
- * Copyright 2009 2010 Michael Doube 
+ * Copyright 2009 2010 2015 Michael Doube 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -182,6 +182,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double[] secondaryDiameter;
 	/** Flag to clear the results table or concatenate */
 	private boolean clearResults;
+	/** Use the masked version of thickness, which trims the 1px overhang */
+	private boolean doMask;
 	private double background;
 	private double foreground;
 	private boolean doPartialVolume;
@@ -221,6 +223,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 		gd.addCheckbox("2D_Thickness", true);
 		gd.addCheckbox("3D_Thickness", false);
+		gd.addCheckbox("Mask thickness map", false);
 		gd.addCheckbox("Draw_Axes", true);
 		gd.addCheckbox("Draw_Centroids", true);
 		gd.addCheckbox("Annotated_Copy_(2D)", true);
@@ -247,6 +250,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		boneID = BoneList.guessBone(bone);
 		this.doThickness2D = gd.getNextBoolean();
 		this.doThickness3D = gd.getNextBoolean();
+		this.doMask = gd.getNextBoolean();
 		this.doAxes = gd.getNextBoolean();
 		this.doCentroids = gd.getNextBoolean();
 		this.doCopy = gd.getNextBoolean();
@@ -275,7 +279,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			max = cal.getRawValue(max);
 			this.background = cal.getRawValue(this.background);
 			this.foreground = cal.getRawValue(this.foreground);
+			
+			//convert HU->density user input into raw->density coefficients
+			//for use in later calculations
+			this.c = this.m * cal.getCoefficients()[0] + this.c;
+			this.m = this.m * cal.getCoefficients()[1];
 		}
+		this.m = gd.getNextNumber();
+		this.c = gd.getNextNumber();
 		if (gd.wasCanceled())
 			return;
 
@@ -867,7 +878,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// convert to binary
 		ImagePlus binaryImp = convertToBinary(imp, min, max);
 
-		ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
+		ImagePlus thickImp = th.getLocalThickness(binaryImp, false, doMask);
 
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			if (this.emptySlices[s]) {
@@ -988,7 +999,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				binaryImp.setCalibration(cal);
 				// calculate thickness
 				Thickness th = new Thickness();
-				ImagePlus thickImp = th.getLocalThickness(binaryImp, false);
+				ImagePlus thickImp = th.getLocalThickness(binaryImp, false, doMask);
 				FloatProcessor thickIp = (FloatProcessor) thickImp
 						.getProcessor();
 				double sumPix = 0;
@@ -1080,6 +1091,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
 		Roi initialRoi = imp.getRoi();
+		final int xMin = imp.getImageStack().getRoi().x;
 		double[] feretValues = new double[3];
 		this.feretAngle = new double[this.al];
 		this.feretMax = new double[this.al];
@@ -1092,7 +1104,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
 			Wand w = new Wand(ip);
-			w.autoOutline(0,
+			w.autoOutline(xMin,
 					(int) Math.round(this.sliceCentroids[1][s] / this.vH), min,
 					max, Wand.EIGHT_CONNECTED);
 			if (this.emptySlices[s] || w.npoints == 0) {
@@ -1135,7 +1147,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			return false;
 		Vector<?> checkboxes = gd.getCheckboxes();
 		Vector<?> nFields = gd.getNumericFields();
-		Checkbox calibration = (Checkbox) checkboxes.get(9);
+		Checkbox calibration = (Checkbox) checkboxes.get(10);
 		boolean isHUCalibrated = calibration.getState();
 		TextField minT = (TextField) nFields.get(0);
 		TextField maxT = (TextField) nFields.get(1);
@@ -1165,7 +1177,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		else
 			DialogModifier.replaceUnitString(gd, "HU", "grey");
 
-		Checkbox oriented = (Checkbox) checkboxes.get(8);
+		Checkbox oriented = (Checkbox) checkboxes.get(9);
 		if (orienteer == null) {
 			oriented.setState(false);
 			oriented.setEnabled(false);

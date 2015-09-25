@@ -115,12 +115,17 @@ import ij.io.OpenDialog;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
+
+import ij.process.ShortProcessor;
+
+//import java.awt.Checkbox;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.doube.util.UsageReporter;
@@ -130,14 +135,14 @@ import org.doube.util.UsageReporter;
  * 
  * @author B. Koller, SCANCO Medical AG, April 2005
  * @author K.-H. Kunzelmann, Operative Dentistry, LMU-München, Ger, April 2006
- * @author Michael Doube, RVC, London, UK. Refactoring for BoneJ 2012
+ * @author Michael Doube, RVC, London, UK. Refactoring for BoneJ 2012 2014
  */
 public class ISQReader implements PlugIn {
 
 	private static final String MAGIC = "CTDATA-HEADER_V1";
 
 	private long skipCount;
-	private int bytesPerPixel, bufferSize, byteCount, nPixels;
+	private int bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
 
 	public void run(String arg) {
@@ -238,12 +243,13 @@ public class ISQReader implements PlugIn {
 				+ ((IJ.isWindows()) ? "\\" : "/");
 		fi.width = width;
 		fi.height = height;
+		fi.offset = offset;
 
 		if (startZ > 0) {
-			long area = width * height;
-			long sliceTimesArea = area * startZ;
+			final long area = width * height;
+			final long sliceTimesArea = area * startZ;
 			// multiplication * 2 because a "short" value is 2 bytes long
-			long sliceTimesAreaTimes2 = sliceTimesArea * 2;
+			final long sliceTimesAreaTimes2 = sliceTimesArea * 2;
 			long dummy = (long) fi.offset + sliceTimesAreaTimes2;
 
 			if (dummy <= Integer.MAX_VALUE && dummy > 0) {
@@ -283,7 +289,6 @@ public class ISQReader implements PlugIn {
 
 			fi.pixelWidth = fi.pixelWidth * 2;
 			fi.pixelHeight = fi.pixelHeight * 2;
-			fi.pixelDepth = getPixelSize(path)[2] * 2;
 			widthStack = widthROI / 2;
 			heightStack = heightROI / 2;
 		} else {
@@ -291,13 +296,10 @@ public class ISQReader implements PlugIn {
 			heightStack = heightROI;
 		}
 
-		// temp stack, needed later for downsampling
-		float[] downsampledPixels32_temp = new float[(widthROI * heightROI)
-				/ (2 * 2)];
-
 		// modified to match the size of the ROI
 		ImageStack stack = new ImageStack(widthStack, heightStack);
 		long skip = fi.longOffset > 0 ? fi.longOffset : fi.offset;
+		skip += startZ * width * height * 2;
 
 		try {
 			FileInputStream is = new FileInputStream(path);
@@ -305,80 +307,36 @@ public class ISQReader implements PlugIn {
 			for (int i = 1; i <= nSlices; i++) {
 				IJ.showStatus("Reading: " + i + "/" + nSlices);
 
+				//read the whole slice into an array
+				//this is really inefficient if only a small ROI is needed
+				//as must read all pixels off disk then throw them away
 				short[] pixels = readPixels(is, skip, width, height);
 
 				// get pixels for ROI only
 				int indexCountPixels = startY * width + startX;
 				int indexCountROI = 0;
 
-				short[] pixelsROI;
-				pixelsROI = new short[widthROI * heightROI];
+				short[] pixelsROI = new short[widthROI * heightROI];
 
 				for (int u = 0; u < heightROI; u++) {
 					System.arraycopy(pixels, indexCountPixels, pixelsROI,
 							indexCountROI, widthROI);
-					indexCountPixels = indexCountPixels + widthROI
-							+ (width - endX) + startX - 1;
-					indexCountROI = indexCountROI + widthROI;
+					indexCountPixels += width;
+					indexCountROI += widthROI;
 				}
 
 				if (pixels == null)
 					break;
 
-				if (downsample == true) {
-					float[] pixels32 = new float[widthROI * heightROI];
-					final int muScaling = getMuScaling(path);
-					for (int s = 0; s < widthROI * heightROI; s++) {
-						float value = (pixelsROI[s] & 0xffff);
-						value -= 32768;
-						value /= muScaling;
-						if (value < 0)
-							value = 0;
-						pixels32[s] = value; 
-					}
-					// System.out.println("Downsample loop ... ");
-					float[] downsampledPixels32 = new float[(widthROI * heightROI)
-							/ (2 * 2)];
-					// float[] downsampledPixels32_temp = new
-					// float[(widthROI*heightROI)/(2*2)];
-					short[] downsampledPixels_av = new short[(widthROI * heightROI)
-							/ (2 * 2)];
+	
+				if (downsample) {
+					ImageProcessor ip = new ShortProcessor(widthROI, heightROI);
+					ip.setPixels(pixelsROI);
+					ip.setInterpolationMethod(ImageProcessor.BICUBIC);
+					ImageProcessor downsizedIp = ip.resize(widthROI / 2, heightROI / 2, true);
+					stack.addSlice("microCT-Import_by_KHK_w_" + widthROI
+							+ "_h_" + heightROI + "_slice." + i, downsizedIp);
 
-					int index = 0;
-					// here we calculate the average in the x,y plane.
-					for (int h = 0; h < heightROI - 1; h = h + 2) {
-						for (int w = 0; w < widthROI - 1; w = w + 2) {
-							downsampledPixels32[index] = ((pixels32[(h * widthROI)
-									+ w]
-									+ pixels32[(h * widthROI) + w + 1]
-									+ pixels32[((h + 1) * widthROI) + w] + pixels32[((h + 1) * widthROI)
-									+ w + 1]) / 4);
-							index = index + 1;
-							if (index >= widthStack * heightStack)
-								index = 0;
-						}
-					}
-					if (i % 2 > 0) {
-						System.arraycopy(downsampledPixels32, 0,
-								downsampledPixels32_temp, 0,
-								downsampledPixels32.length);
-					} else {
-						float temp1, temp2, temp3;
-						for (int s = 0; s < heightStack * widthStack; s++) {
-							temp1 = downsampledPixels32[s];
-							temp2 = downsampledPixels32_temp[s];
-							temp3 = ((temp1 + temp2) / 2) * 4096;
-							if (temp3 < 0.0)
-								temp3 = 0.0f;
-							if (temp3 > 65535.0)
-								temp3 = 65535.0f;
-							downsampledPixels_av[s] = (short) temp3;
-						}
-
-						stack.addSlice("microCT-Import_by_KH_w_" + widthStack
-								+ "_h_" + heightStack + "_slice." + i,
-								downsampledPixels_av);
-					}
 				} else {
 
 					for (int index = 0; index < widthROI * heightROI; index++) {
@@ -416,7 +374,7 @@ public class ISQReader implements PlugIn {
 
 		cal.pixelWidth = (downsample) ? pixelSize[0] * 2 : pixelSize[0];
 		cal.pixelHeight = (downsample) ? pixelSize[1] * 2 : pixelSize[1];
-		cal.pixelDepth = (downsample) ? pixelSize[2] * 2 : pixelSize[2];
+		cal.pixelDepth = pixelSize[2];
 		cal.setUnit("mm");
 		cal.xOrigin = -startX;
 		cal.yOrigin = -startY;
@@ -467,8 +425,6 @@ public class ISQReader implements PlugIn {
 	 */
 	private short[] readPixels(FileInputStream in, int width, int height) {
 		try {
-
-			bytesPerPixel = 2;
 			skip(in, width, height);
 			return read16bitImage(in);
 
@@ -493,28 +449,21 @@ public class ISQReader implements PlugIn {
 		int totalRead = 0;
 		int base = 0;
 		int count;
-		int bufferCount;
 
 		while (totalRead < byteCount) {
 			if ((totalRead + bufferSize) > byteCount)
 				bufferSize = byteCount - totalRead;
-			bufferCount = 0;
 
-			while (bufferCount < bufferSize) { // fill the buffer
-				count = in.read(buffer, bufferCount, bufferSize - bufferCount);
+				count = in.read(buffer, 0, bufferSize);
+				
 				if (count == -1) {
 					eofErrorCount++;
-					// fi.fileType was only ever set once, and not based on
-					// anything dynamic, so should always be true
-					// if (fi.fileType == FileInfo.GRAY16_SIGNED)
-					for (int i = base; i < pixels.length; i++)
-						pixels[i] = (short) 32768;
+					Arrays.fill(pixels, Short.MAX_VALUE);
 					return pixels;
 				}
-				bufferCount += count;
-			}
 			totalRead += bufferSize;
-			pixelsRead = bufferSize / bytesPerPixel;
+			// divide by two because there are 2 bytes per pixel
+			pixelsRead = bufferSize / 2;
 			for (int i = base, j = 0; i < (base + pixelsRead); i++, j += 2)
 				pixels[i] = (short) ((((buffer[j + 1] & 0xff) << 8) | (buffer[j] & 0xff)) + 32768);
 			base += pixelsRead;
@@ -546,8 +495,8 @@ public class ISQReader implements PlugIn {
 				bytesRead += count;
 
 			}
-		}
-		byteCount = width * height * bytesPerPixel;
+		} 
+		byteCount = width * height * 2; //16-bit images so 2 bytes per pixel
 
 		nPixels = width * height;
 		bufferSize = byteCount / 25;
@@ -720,6 +669,12 @@ public class ISQReader implements PlugIn {
 		return readInt(path, 508) * 512 + 512;
 	}
 
+	/**
+	 * Get the pixel spacing in real units (mm)
+	 * 
+	 * @param path location of file in filesystem
+	 * @return {x, y, z} pixel spacing in real units (mm) 
+	 */
 	public double[] getPixelSize(String path) {
 		int[] nPixels = getImageSize(path);
 		double[] realSize = getRealSize(path);

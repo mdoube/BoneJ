@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- *  StructureModelIndex Copyright 2010 Michael Doube
+ *  StructureModelIndex Copyright 2010 2015 Michael Doube
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,8 +29,8 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
+import ij3d.Image3DUniverse;
 import isosurface.MeshEditor;
-
 import marchingcubes.MCTriangulator;
 
 import org.doube.bonej.Dilate;
@@ -57,6 +57,10 @@ import customnode.CustomTriangleMesh;
  */
 public class StructureModelIndex implements PlugIn {
 
+	private static boolean do3D = false;
+	private static List<Point3f> mesh;
+	private static List<Color3f> colours;
+
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -77,6 +81,7 @@ public class StructureModelIndex implements PlugIn {
 		gd.addChoice("SMI Method", smiMethods, smiMethods[0]);
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
+		gd.addCheckbox("Show in 3D", do3D);
 		gd.addHelp("http://bonej.org/smi");
 		gd.showDialog();
 		if (gd.wasCanceled()) {
@@ -86,6 +91,12 @@ public class StructureModelIndex implements PlugIn {
 		String smiMethod = gd.getNextChoice();
 		int voxelResampling = (int) Math.floor(gd.getNextNumber());
 		float meshSmoothing = (float) gd.getNextNumber();
+		do3D = gd.getNextBoolean();
+
+		if (do3D) {
+			mesh = new ArrayList<Point3f>();
+			colours = new ArrayList<Color3f>();
+		}
 
 		double smi = 0;
 		if (smiMethod.equals(smiMethods[1])) {
@@ -97,6 +108,19 @@ public class StructureModelIndex implements PlugIn {
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
+
+		if (do3D) {
+			Image3DUniverse universe = new Image3DUniverse();
+
+			CustomTriangleMesh triangles = new CustomTriangleMesh(mesh);
+
+			triangles.setColor(colours);
+
+			universe.addTriangleMesh(mesh, colours, "Surface curvature");
+
+			universe.show();
+		}
+		IJ.showProgress(1);
 		return;
 	}
 
@@ -217,7 +241,7 @@ public class StructureModelIndex implements PlugIn {
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
 			IJ.showStatus("Finding vertices...");
-			IJ.showProgress(p, nPoints);
+			IJ.showProgress(p + 1, nPoints);
 			Point3f testPoint = triangles.get(p);
 			if (vertexHash.get(testPoint) == null) {
 				ArrayList<Integer> points = new ArrayList<Integer>();
@@ -289,7 +313,7 @@ public class StructureModelIndex implements PlugIn {
 		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
 			IJ.showStatus("Dilating surface mesh...");
-			IJ.showProgress(t, nPoints);
+			IJ.showProgress(t + 1, nPoints);
 			Point3f point = triangles.get(t);
 			Point3f newPoint = (Point3f) point.clone();
 			Point3f normal = (Point3f) normalsHash.get(point);
@@ -319,6 +343,10 @@ public class StructureModelIndex implements PlugIn {
 
 			double deltaArea = area2 - area1;
 
+			if (do3D)
+				addTo3DUniverse(point0, point1, point2, area1, deltaArea, s1,
+						v, r);
+
 			if (deltaArea >= 0) {
 				convexDelta += deltaArea;
 				convexArea += area1;
@@ -337,10 +365,44 @@ public class StructureModelIndex implements PlugIn {
 		IJ.log("Convex SMI = " + convexSMI);
 		IJ.log("Concave SMI = " + concaveSMI);
 
+		ResultInserter ri = ResultInserter.getInstance();
+		ri.setResultInRow(imp, "Concave", concaveFraction);
+		ri.setResultInRow(imp, "SMI+", convexSMI);
+		ri.setResultInRow(imp, "SMI-", concaveSMI);
+
 		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
 		double sR = (s2 - s1) / r;
 		double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
+		IJ.showProgress(1.0);
 		return smi;
+	}
+
+	private static void addTo3DUniverse(Point3f point0, Point3f point1,
+			Point3f point2, double area1, double deltaArea, double s1,
+			double v, double r) {
+
+		mesh.add(point0);
+		mesh.add(point1);
+		mesh.add(point2);
+
+		double af = deltaArea / area1;
+
+		float red = 1.0f;
+		float green = 1.0f;
+		float blue = 1.0f;
+
+		if (af >= 0) {
+			blue -= (float) Math.pow(af, 0.333) * 9;
+		} else {
+			red -= (float) Math.pow(-af, 0.333) * 9;
+			green -= (float) Math.pow(-af, 0.333) * 9;
+		}
+
+		Color3f colour = new Color3f(red, green, blue);
+		colours.add(colour);
+		colours.add(colour);
+		colours.add(colour);
+
 	}
 }

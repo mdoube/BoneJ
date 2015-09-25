@@ -37,7 +37,7 @@ public class SelectSoftROI extends RoiSelector{
 		softSieve = null;
 		byte[] softResult = null;
 		if (details.stOn){
-			
+
 			/*Get rid of measurement tube used at the UKK institute*/
 			byte[] sleeve = null;
 			if (details.sleeveOn){
@@ -50,13 +50,39 @@ public class SelectSoftROI extends RoiSelector{
 					}
 				}
 			}
-			
+
+
+			/**Ignore data outside manually selected ROI, if manualRoi has been selected*/
+			Roi ijROI = imp.getRoi();
+			double[] tempScaledImage = (double[]) softScaledImage.clone();
+			if (ijROI != null && details.manualRoi){	/*Set pixels outside the manually selected ROI to zero*/
+				/*Check whether pixel is within ROI, mark with bone threshold*/
+				for (int j = 0;j< height;j++){
+					for (int i = 0; i < width;i++){
+						if (ijROI.contains(i,j)){
+						}else{
+							softScaledImage[i+j*width] = minimum;
+						}
+					}
+				}
+				/*Check whether a polygon can be acquired and include polygon points too*/
+				Polygon polygon = ijROI.getPolygon();
+				if (polygon != null){
+					for (int j = 0;j< polygon.npoints;j++){
+						softScaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width] = tempScaledImage[polygon.xpoints[j]+polygon.ypoints[j]*width];
+					}
+				}
+			}
+
+
+
+
 			Vector<Object> masks = getSieve(softScaledImage,airThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,true);
 			softSieve						= (byte[]) masks.get(0);
 			softResult					 	= (byte[]) masks.get(1);
 			Vector<DetectedEdge> stEdges	= (Vector<DetectedEdge>) masks.get(2);
-			
-			/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin) 
+
+			/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin)
 			on top of fat to enable finding muscle border
 			*/
 			byte[] muscleSieve = (byte[]) softSieve.clone();
@@ -69,7 +95,7 @@ public class SelectSoftROI extends RoiSelector{
 					subCutaneousFat = (byte[]) muscleSieve.clone();
 				}
 			}
-			
+
 			/*Remove everything other than the selected limb from the image*/
 			for (int i = 0; i<muscleSieve.length;++i){
 				if (muscleSieve[i] < 1){
@@ -85,7 +111,7 @@ public class SelectSoftROI extends RoiSelector{
 			muscleSieve = new byte[softSieve.length];
 			int areaToAdd=0;
 			/*Include areas that contribute more than 1% on top of what is already included*/
-			while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.01 < muscleEdges.get(areaToAdd).area){ 
+			while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.01 < muscleEdges.get(areaToAdd).area){
 				byte[] tempMuscleSieve = fillSieve(muscleEdges.get(areaToAdd).iit, muscleEdges.get(areaToAdd).jiit,width,height,muscleImage,details.muscleThreshold);
 				for (int i = 0; i<tempMuscleSieve.length;++i){
 					if (tempMuscleSieve[i] > 0){muscleSieve[i] = tempMuscleSieve[i];}
@@ -93,9 +119,9 @@ public class SelectSoftROI extends RoiSelector{
 				tempMuscleArea+=muscleEdges.get(areaToAdd).area;
 				areaToAdd++;
 			}
-			
+
 			//muscleSieve		= (byte[]) muscleMasks.get(1);	/*Use all areas encircled as muscle (needed if there's fat between muscles)!!*/
-			
+
 			/*Wipe muscle area +1 layer of pixels away from subcut.*/
 			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
 			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);

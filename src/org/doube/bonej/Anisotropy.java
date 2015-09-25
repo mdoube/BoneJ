@@ -161,6 +161,8 @@ public class Anisotropy implements PlugIn, DialogListener {
 		if (doEigens){
 			EigenvalueDecomposition E = (EigenvalueDecomposition) result[2];
 			Matrix eVectors = E.getV();
+			eVectors.printToIJLog("Fabric tensor vectors");
+			E.getD().printToIJLog("Fabric tensor values");
 			double[] eValues = E.getRealEigenvalues();
 			for (int i = 0; i < 3; i++)
 				for (int j = 0; j < 3; j++)

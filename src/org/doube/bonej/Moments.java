@@ -109,12 +109,19 @@ public class Moments implements PlugIn, DialogListener {
 		boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
+		
+		double m = gd.getNextNumber();
+		double c = gd.getNextNumber();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
+			
+			//convert HU->density user input into raw->density coefficients
+			//for use in later calculations
+			c = m * cal.getCoefficients()[0] + c;
+			m = m * cal.getCoefficients()[1];
 		}
-		final double m = gd.getNextNumber();
-		final double c = gd.getNextNumber();
+		
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
 		final boolean doAxes3D = gd.getNextBoolean();
