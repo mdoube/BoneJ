@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  * SliceGeometry plugin for ImageJ
- * Copyright 2009 2010 Michael Doube 
+ * Copyright 2009 2010 2015 Michael Doube 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1029,6 +1029,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
 		Roi initialRoi = imp.getRoi();
+		final int xMin = imp.getImageStack().getRoi().x;
 		double[] feretValues = new double[3];
 		this.feretAngle = new double[this.al];
 		this.feretMax = new double[this.al];
@@ -1041,7 +1042,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		for (int s = this.startSlice; s <= this.endSlice; s++) {
 			ImageProcessor ip = imp.getImageStack().getProcessor(s);
 			Wand w = new Wand(ip);
-			w.autoOutline(0,
+			w.autoOutline(xMin,
 					(int) Math.round(this.sliceCentroids[1][s] / this.vH), min,
 					max, Wand.EIGHT_CONNECTED);
 			if (this.emptySlices[s] || w.npoints == 0) {
