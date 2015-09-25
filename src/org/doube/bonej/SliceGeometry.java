@@ -274,6 +274,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		this.doPartialVolume = gd.getNextBoolean();
 		this.background = gd.getNextNumber();
 		this.foreground = gd.getNextNumber();
+		if (gd.wasCanceled())
+			return;
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
@@ -285,8 +287,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			this.c = this.m * cal.getCoefficients()[0] + this.c;
 			this.m = this.m * cal.getCoefficients()[1];
 		}
-		if (gd.wasCanceled())
-			return;
 
 		if (calculateCentroids(imp, min, max) == 0) {
 			IJ.error("No pixels available to calculate.\n"
@@ -1182,7 +1182,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		} else
 			oriented.setEnabled(true);
 
-		Checkbox partialBox = (Checkbox) checkboxes.get(10);
+		Checkbox partialBox = (Checkbox) checkboxes.get(11);
 		boolean doVolumeCompensation = partialBox.getState();
 		if (doVolumeCompensation) {
 			minP.setEnabled(true);
