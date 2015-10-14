@@ -88,6 +88,11 @@ public class StructureModelIndex implements PlugIn {
 			return;
 		}
 
+		IJ.showMessage("Do not use SMI for science", "<html><p>SMI is strongly confounded by the amount of surface that is concave.</p>"
+				+ "<p>Please <b>do not</b> use SMI for scientific research.</p>"
+				+ "<p>For more details see:</p>"
+				+ "<p>Salmon PL et al. (2015) Structure model index does not measure rods and plates in trabecular bone <a href=\"http://dx.doi.org/10.3389/fendo.2015.00162\">http://dx.doi.org/10.3389/fendo.2015.00162</a></p></html>");
+		
 		String smiMethod = gd.getNextChoice();
 		int voxelResampling = (int) Math.floor(gd.getNextNumber());
 		float meshSmoothing = (float) gd.getNextNumber();
