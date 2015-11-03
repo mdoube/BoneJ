@@ -17,18 +17,17 @@ public class ReporterOptions implements PlugIn {
 	public static final String SESSIONKEY = "bonej.report.bonejsession";
 	public static final String IJSESSIONKEY = "bonej.report.ijsession";
 
-	public void run(String arg) {
+	public void run(final String arg) {
 
-		GenericDialog dialog = new GenericDialog("BoneJ");
+		final GenericDialog dialog = new GenericDialog("BoneJ");
 		dialog.addMessage("Allow usage data collection?");
 		dialog.addMessage("BoneJ would like to collect data on \n"
-				+ "which plugins are being used, to direct development\n"
-				+ "and promote BoneJ to funders.");
-		dialog.addMessage("If you agree to participate please hit OK\n"
-				+ "otherwise, cancel. For more information click Help.");
+				+ "which plugins are being used, to direct development\n" + "and promote BoneJ to funders.");
+		dialog.addMessage(
+				"If you agree to participate please hit OK\n" + "otherwise, cancel. For more information click Help.");
 		dialog.addHelp("http://bonej.org/stats");
 		dialog.showDialog();
-		if (dialog.wasCanceled()){
+		if (dialog.wasCanceled()) {
 			Prefs.set(OPTOUTKEY, false);
 			Prefs.set(ReporterOptions.COOKIE, "");
 			Prefs.set(ReporterOptions.COOKIE2, "");
@@ -37,11 +36,9 @@ public class ReporterOptions implements PlugIn {
 			Prefs.set(ReporterOptions.IJSESSIONKEY, "");
 		} else {
 			Prefs.set(OPTOUTKEY, true);
-			Prefs.set(ReporterOptions.COOKIE,
-					new Random().nextInt(Integer.MAX_VALUE));
-			Prefs.set(ReporterOptions.COOKIE2,
-					new Random().nextInt(Integer.MAX_VALUE));
-			long time = System.currentTimeMillis() / 1000;
+			Prefs.set(ReporterOptions.COOKIE, new Random().nextInt(Integer.MAX_VALUE));
+			Prefs.set(ReporterOptions.COOKIE2, new Random().nextInt(Integer.MAX_VALUE));
+			final long time = System.currentTimeMillis() / 1000;
 			Prefs.set(ReporterOptions.FIRSTTIMEKEY, Long.toString(time));
 			Prefs.set(SESSIONKEY, 1);
 		}

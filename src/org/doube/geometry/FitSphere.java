@@ -3,7 +3,7 @@ package org.doube.geometry;
 /**
  * FitSphere class for ImageJ
  * Copyright 2009 2010 Michael Doube
- * 
+ *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
  *the Free Software Foundation, either version 3 of the License, or
@@ -21,32 +21,31 @@ package org.doube.geometry;
 import org.doube.jama.Matrix;
 
 /**
- *<p>
+ * <p>
  * Find the best fitting sphere
- * 
+ *
  * Ported from Angelo Tardugno's C++
  * </p>
- * 
- * 
- *@author Michael Doube and Angelo Tardugno
- *@version 0.1
+ *
+ *
+ * @author Michael Doube and Angelo Tardugno
+ * @version 0.1
  */
 public class FitSphere {
 
 	/**
 	 * Fit a sphere to 3D coordinates
-	 * 
+	 *
 	 * @param points
 	 *            double[n][3] containing n (x, y, z) coordinates
 	 * @return double[4] containing (x, y, z) centre and radius
 	 * @throws IllegalArgumentException
 	 *             if n < 5
 	 */
-	public static double[] fitSphere(double[][] points) {
+	public static double[] fitSphere(final double[][] points) {
 		final int nPoints = points.length;
 		if (nPoints < 5) {
-			throw new IllegalArgumentException(
-					"Too few points to fit sphere; n = " + nPoints);
+			throw new IllegalArgumentException("Too few points to fit sphere; n = " + nPoints);
 		}
 		final double[] centroid = Centroid.getCentroid(points);
 
@@ -54,7 +53,7 @@ public class FitSphere {
 		double y = centroid[1];
 		double z = centroid[2];
 
-		double[] radii = new double[nPoints];
+		final double[] radii = new double[nPoints];
 		double g_new = 100.0;
 		double g_old = 1.0;
 		double r = 0;
@@ -66,9 +65,9 @@ public class FitSphere {
 
 		while (Math.abs(g_new - g_old) > 1e-10) {
 			Matrix J = new Matrix(nPoints, 4);
-			double[][] Jp = J.getArray();
+			final double[][] Jp = J.getArray();
 			Matrix D = new Matrix(nPoints, 1);
-			double[][] dp = D.getArray(); // dp is a pointer to d's values
+			final double[][] dp = D.getArray(); // dp is a pointer to d's values
 			g_old = g_new;
 			for (int i = 0; i < nPoints; i++) {
 				final double pX = points[i][0] - x;
@@ -83,24 +82,24 @@ public class FitSphere {
 				radii[i] = ri;
 			}
 			D = D.times(-1);
-			Matrix J1 = J;
+			final Matrix J1 = J;
 			J = J.transpose();
-			Matrix J2 = J.times(J1);
-			Matrix Jd = J.times(D);
-			Matrix X = J2.inverse().times(Jd);
-			double[][] xp = X.getArray();
+			final Matrix J2 = J.times(J1);
+			final Matrix Jd = J.times(D);
+			final Matrix X = J2.inverse().times(Jd);
+			final double[][] xp = X.getArray();
 			x += xp[0][0];
 			y += xp[1][0];
 			z += xp[2][0];
 			r += xp[3][0];
 			D = D.times(-1);
-			Matrix G = J.times(D);
-			double[][] Gp = G.getArray();
+			final Matrix G = J.times(D);
+			final double[][] Gp = G.getArray();
 			g_new = 0.0;
 			for (int i = 0; i < 4; i++)
 				g_new += Gp[i][0];
 		}
-		double[] centreRadius = { x, y, z, r };
+		final double[] centreRadius = { x, y, z, r };
 		return centreRadius;
 	}
 }

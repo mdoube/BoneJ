@@ -32,8 +32,7 @@ import java.util.ArrayList;
  *
  */
 
-public class SkeletonResult
-{
+public class SkeletonResult {
 	int numOfTrees;
 
 	// skeleton tree fields
@@ -41,11 +40,11 @@ public class SkeletonResult
 	int[] numberOfBranches = null;
 	/** number of end points voxels of every tree */
 	int[] numberOfEndPoints = null;
-	/** number of junctions voxels of every tree*/
+	/** number of junctions voxels of every tree */
 	int[] numberOfJunctionVoxels = null;
 	/** number of slab voxels of every specific tree */
 	int[] numberOfSlabs = null;
-	/** number of junctions of every specific tree*/
+	/** number of junctions of every specific tree */
 	int[] numberOfJunctions = null;
 	/** number of triple points in every tree */
 	int[] numberOfTriplePoints = null;
@@ -59,212 +58,170 @@ public class SkeletonResult
 	int[] numberOfVoxels = null;
 
 	/** list of end point coordinates in the entire image */
-	ArrayList <Point> listOfEndPoints = null;
+	ArrayList<Point> listOfEndPoints = null;
 	/** list of junction coordinates in the entire image */
-	ArrayList <Point> listOfJunctionVoxels = null;
+	ArrayList<Point> listOfJunctionVoxels = null;
 	/** list of slab coordinates in the entire image */
-	ArrayList <Point> listOfSlabVoxels = null;
+	ArrayList<Point> listOfSlabVoxels = null;
 	/** list of slab coordinates in the entire image */
-	ArrayList <Point> listOfStartingSlabVoxels = null;
+	ArrayList<Point> listOfStartingSlabVoxels = null;
 
 	// Shortest path variables
 	/** list of longest shortest paths from the skeletons in the image */
-	ArrayList <Double> shortestPathList;
+	ArrayList<Double> shortestPathList;
 	/** shortest path start position array */
 	double[][] spStartPosition;
 
 	/** array of graphs (one per tree) */
 	private Graph[] graph = null;
 
-
-	public SkeletonResult(int numOfTrees)
-	{
+	public SkeletonResult(final int numOfTrees) {
 		this.numOfTrees = numOfTrees;
 	}
 
 	// setter methods
-	public void setNumOfTrees(int numOfTrees)
-	{
+	public void setNumOfTrees(final int numOfTrees) {
 		this.numOfTrees = numOfTrees;
 	}
 
-	public void setBranches(int[] numberOfBranches)
-	{
+	public void setBranches(final int[] numberOfBranches) {
 		this.numberOfBranches = numberOfBranches;
 	}
 
-	public void setJunctions(int[] numberOfJunctions)
-	{
+	public void setJunctions(final int[] numberOfJunctions) {
 		this.numberOfJunctions = numberOfJunctions;
 	}
 
-	public void setEndPoints(int[] numberOfEndPoints)
-	{
+	public void setEndPoints(final int[] numberOfEndPoints) {
 		this.numberOfEndPoints = numberOfEndPoints;
 	}
 
-	public void setJunctionVoxels(int[] numberOfJunctionVoxels)
-	{
+	public void setJunctionVoxels(final int[] numberOfJunctionVoxels) {
 		this.numberOfJunctionVoxels = numberOfJunctionVoxels;
 	}
 
-	public void setSlabs(int[] numberOfSlabs)
-	{
+	public void setSlabs(final int[] numberOfSlabs) {
 		this.numberOfSlabs = numberOfSlabs;
 	}
 
-	public void setNumberOfVoxels(int[] numberOfVoxels)
-	{
+	public void setNumberOfVoxels(final int[] numberOfVoxels) {
 		this.numberOfVoxels = numberOfVoxels;
 	}
 
-	public void setTriples(int[] numberOfTriplePoints)
-	{
+	public void setTriples(final int[] numberOfTriplePoints) {
 		this.numberOfTriplePoints = numberOfTriplePoints;
 	}
 
-	public void setQuadruples(int[] numberOfQuadruplePoints)
-	{
+	public void setQuadruples(final int[] numberOfQuadruplePoints) {
 		this.numberOfQuadruplePoints = numberOfQuadruplePoints;
 	}
 
-	public void setAverageBranchLength(double[] averageBranchLength)
-	{
+	public void setAverageBranchLength(final double[] averageBranchLength) {
 		this.averageBranchLength = averageBranchLength;
 	}
 
-	public void setMaximumBranchLength(double[] maximumBranchLength)
-	{
+	public void setMaximumBranchLength(final double[] maximumBranchLength) {
 		this.maximumBranchLength = maximumBranchLength;
 	}
 
-
-	public void setListOfEndPoints(ArrayList <Point> listOfEndPoints)
-	{
+	public void setListOfEndPoints(final ArrayList<Point> listOfEndPoints) {
 		this.listOfEndPoints = listOfEndPoints;
 	}
 
-	public void setListOfJunctionVoxels(ArrayList <Point> listOfJunctionVoxels)
-	{
+	public void setListOfJunctionVoxels(final ArrayList<Point> listOfJunctionVoxels) {
 		this.listOfJunctionVoxels = listOfJunctionVoxels;
 	}
 
-	public void setListOfSlabVoxels(ArrayList <Point> listOfSlabVoxels)
-	{
+	public void setListOfSlabVoxels(final ArrayList<Point> listOfSlabVoxels) {
 		this.listOfSlabVoxels = listOfSlabVoxels;
 	}
 
-	public void setListOfStartingSlabVoxels(ArrayList <Point> listOfStartingSlabVoxels)
-	{
+	public void setListOfStartingSlabVoxels(final ArrayList<Point> listOfStartingSlabVoxels) {
 		this.listOfStartingSlabVoxels = listOfStartingSlabVoxels;
 	}
-	public void setShortestPathList(ArrayList <Double> shortestPathList)
-	{
+
+	public void setShortestPathList(final ArrayList<Double> shortestPathList) {
 		this.shortestPathList = shortestPathList;
 	}
-	public void setSpStartPosition(double[][] spStartPosition)
-	{
+
+	public void setSpStartPosition(final double[][] spStartPosition) {
 		this.spStartPosition = spStartPosition;
 	}
 
-
-	public void setGraph(Graph[] graph)
-	{
+	public void setGraph(final Graph[] graph) {
 		this.graph = graph;
 	}
 
-
-
 	// getter methods
-	public int getNumOfTrees()
-	{
+	public int getNumOfTrees() {
 		return numOfTrees;
 	}
 
-	public int[] getBranches()
-	{
+	public int[] getBranches() {
 		return numberOfBranches;
 	}
 
-	public int[] getJunctions()
-	{
+	public int[] getJunctions() {
 		return numberOfJunctions;
 	}
 
-	public int[] getEndPoints()
-	{
+	public int[] getEndPoints() {
 		return numberOfEndPoints;
 	}
 
-	public int[] getJunctionVoxels()
-	{
+	public int[] getJunctionVoxels() {
 		return numberOfJunctionVoxels;
 	}
 
-	public int[] getSlabs()
-	{
+	public int[] getSlabs() {
 		return numberOfSlabs;
 	}
 
-	public int[] getTriples()
-	{
+	public int[] getTriples() {
 		return numberOfTriplePoints;
 	}
 
-	public int[] getQuadruples()
-	{
+	public int[] getQuadruples() {
 		return numberOfQuadruplePoints;
 	}
 
-	public double[] getAverageBranchLength()
-	{
+	public double[] getAverageBranchLength() {
 		return averageBranchLength;
 	}
 
-	public double[] getMaximumBranchLength()
-	{
+	public double[] getMaximumBranchLength() {
 		return maximumBranchLength;
 	}
 
-	public int[] getNumberOfVoxels()
-	{
+	public int[] getNumberOfVoxels() {
 		return numberOfVoxels;
 	}
 
-
-	public ArrayList <Point> getListOfEndPoints()
-	{
+	public ArrayList<Point> getListOfEndPoints() {
 		return listOfEndPoints;
 	}
 
-	public ArrayList <Point> getListOfJunctionVoxels()
-	{
+	public ArrayList<Point> getListOfJunctionVoxels() {
 		return listOfJunctionVoxels;
 	}
 
-	public ArrayList <Point> getListOfSlabVoxels()
-	{
+	public ArrayList<Point> getListOfSlabVoxels() {
 		return listOfSlabVoxels;
 	}
 
-	public ArrayList <Point> getListOfStartingSlabVoxels()
-	{
+	public ArrayList<Point> getListOfStartingSlabVoxels() {
 		return listOfStartingSlabVoxels;
 	}
 
-	public ArrayList <Double> getShortestPathList()
-	{
+	public ArrayList<Double> getShortestPathList() {
 		return shortestPathList;
 	}
 
-	public double[][] getSpStartPosition()
-	{
+	public double[][] getSpStartPosition() {
 		return spStartPosition;
 	}
 
-
-	public Graph[] getGraph()
-	{
+	public Graph[] getGraph() {
 		return graph;
 	}
 
@@ -275,18 +232,15 @@ public class SkeletonResult
 	 * points, junction voxels and "normal" voxels.
 	 * <p>
 	 *
-	 * numberOfEndPoints, numberOfJunctionVoxels and numberOfSlabs must exit
-	 * and have at least numOfTrees fields each.
+	 * numberOfEndPoints, numberOfJunctionVoxels and numberOfSlabs must exit and
+	 * have at least numOfTrees fields each.
 	 *
 	 * @return An array with the number of voxels in every tree
 	 */
-	public int[] calculateNumberOfVoxels()
-	{
+	public int[] calculateNumberOfVoxels() {
 		numberOfVoxels = new int[numOfTrees];
 		for (int i = 0; i < numOfTrees; ++i) {
-			numberOfVoxels[i] = numberOfEndPoints[i]
-				+ numberOfJunctionVoxels[i]
-				+ numberOfSlabs[i];
+			numberOfVoxels[i] = numberOfEndPoints[i] + numberOfJunctionVoxels[i] + numberOfSlabs[i];
 		}
 
 		return numberOfVoxels;

@@ -3,7 +3,7 @@ package org.doube.bonej;
 /**
  * SphereFitter plugin for ImageJ
  * Copyright 2008 2009 2010 Michael Doube
- * 
+ *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
  *the Free Software Foundation, either version 3 of the License, or
@@ -23,16 +23,6 @@ import java.awt.Checkbox;
 import java.awt.TextField;
 import java.util.Vector;
 
-import ij.IJ;
-import ij.ImagePlus;
-import ij.ImageStack;
-//import ij.WindowManager;
-import ij.process.ImageProcessor;
-import ij.plugin.PlugIn;
-import ij.gui.*;
-import ij.plugin.frame.*;
-import ij.measure.Calibration;
-
 import org.doube.geometry.FitSphere;
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
@@ -40,18 +30,30 @@ import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
 import org.doube.util.UsageReporter;
 
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.gui.DialogListener;
+import ij.gui.GenericDialog;
+import ij.gui.OvalRoi;
+import ij.measure.Calibration;
+import ij.plugin.PlugIn;
+import ij.plugin.frame.RoiManager;
+//import ij.WindowManager;
+import ij.process.ImageProcessor;
+
 /**
  * <p>
  * Takes point selections from ROI manager and returns the centroid and radius
  * of a best fit sphere Ported from Angelo Tardugno's C++
  * </p>
- * 
- * 
+ *
+ *
  * @author Michael Doube and Angelo Tardugno
  */
 public class SphereFitter implements PlugIn, DialogListener {
 
-	public void run(String arg) {
+	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
@@ -59,19 +61,19 @@ public class SphereFitter implements PlugIn, DialogListener {
 			IJ.noImage();
 			return;
 		}
-		ImageCheck ic = new ImageCheck();
+		final ImageCheck ic = new ImageCheck();
 		if (!ic.isMultiSlice(imp)) {
 			IJ.error("Stack required");
 			return;
 		}
-		RoiManager roiMan = RoiManager.getInstance();
+		final RoiManager roiMan = RoiManager.getInstance();
 		if (roiMan == null && imp != null) {
 			IJ.error("Please populate ROI Manager with point ROIs");
 			IJ.run("ROI Manager...");
 			return;
 		}
 
-		GenericDialog gd = new GenericDialog("Setup");
+		final GenericDialog gd = new GenericDialog("Setup");
 		gd.addCheckbox("Copy Sphere", true);
 		gd.addNumericField("Padding", 2, 0, 2, "voxels");
 		gd.addCheckbox("Inner Cube", true);
@@ -95,37 +97,34 @@ public class SphereFitter implements PlugIn, DialogListener {
 
 		final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
 		if (points == null) {
-			IJ.showMessage("Can't fit sphere to points.\n"
-					+ "No usable points in the ROI Manager.");
+			IJ.showMessage("Can't fit sphere to points.\n" + "No usable points in the ROI Manager.");
 			return;
 		}
-		double i = points[0][2];
+		final double i = points[0][2];
 		double j = i;
-		for (double[] p : points)
+		for (final double[] p : points)
 			if (p[2] != i)
 				j = p[2];
 		if (j == i) {
-			IJ.showMessage("Can't fit sphere to points.\n"
-					+ "All points are on the same slice.\n"
-					+ "Check the ROI Manager option More >> Options... >\n"
-					+ "Associate ROIs with stack positions.\n");
+			IJ.showMessage("Can't fit sphere to points.\n" + "All points are on the same slice.\n"
+					+ "Check the ROI Manager option More >> Options... >\n" + "Associate ROIs with stack positions.\n");
 			return;
 		}
 
 		double[] sphereDim = new double[4];
 		try {
 			sphereDim = FitSphere.fitSphere(points);
-		} catch (IllegalArgumentException ia) {
+		} catch (final IllegalArgumentException ia) {
 			IJ.showMessage(ia.getMessage());
 			return;
-		} catch (RuntimeException re) {
-			IJ.showMessage("Can't fit sphere to points.\n"
-					+ "Add more point ROI's to the ROI Manager and try again.\n");
+		} catch (final RuntimeException re) {
+			IJ.showMessage(
+					"Can't fit sphere to points.\n" + "Add more point ROI's to the ROI Manager and try again.\n");
 			return;
 		}
 
-		String units = imp.getCalibration().getUnits();
-		ResultInserter ri = ResultInserter.getInstance();
+		final String units = imp.getCalibration().getUnits();
+		final ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "X centroid (" + units + ")", sphereDim[0]);
 		ri.setResultInRow(imp, "Y centroid (" + units + ")", sphereDim[1]);
 		ri.setResultInRow(imp, "Z centroid (" + units + ")", sphereDim[2]);
@@ -146,16 +145,16 @@ public class SphereFitter implements PlugIn, DialogListener {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param imp
 	 * @param padding
 	 * @param cropFactor
 	 * @param sphereDim
 	 * @return
 	 */
-	public ImagePlus copySphere(ImagePlus imp, int padding, double cropFactor,
-			double[] sphereDim) {
-		Calibration cal = imp.getCalibration();
+	public ImagePlus copySphere(final ImagePlus imp, final int padding, final double cropFactor,
+			final double[] sphereDim) {
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -184,7 +183,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
 		final ImageStack sourceStack = imp.getImageStack();
-		ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
+		final ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
@@ -194,12 +193,10 @@ public class SphereFitter implements PlugIn, DialogListener {
 			final int tZ = z - startZ + 1;
 			final double dZ = z * vD - zC;
 			final double dZ2 = dZ * dZ;
-			targetStack.setPixels(
-					Moments.getEmptyPixels(roiWidth, roiHeight,
-							imp.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight, imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
-			ImageProcessor targetIP = targetStack.getProcessor(tZ);
+			final ImageProcessor targetIP = targetStack.getProcessor(tZ);
 			for (int y = startY; y < endY; y++) {
 				final int tY = y - startY;
 				final double dY = y * vH - yC;
@@ -214,23 +211,21 @@ public class SphereFitter implements PlugIn, DialogListener {
 				}
 			}
 		}
-		ImagePlus target = new ImagePlus("Sphere", targetStack);
+		final ImagePlus target = new ImagePlus("Sphere", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(),
-				imp.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(), imp.getDisplayRangeMax());
 		return target;
 	}
 
 	/**
-	 * 
+	 *
 	 * @param imp
 	 * @param cropFactor
 	 * @param sphereDim
 	 * @return
 	 */
-	public ImagePlus copyInnerCube(ImagePlus imp, double cropFactor,
-			double[] sphereDim) {
-		Calibration cal = imp.getCalibration();
+	public ImagePlus copyInnerCube(final ImagePlus imp, final double cropFactor, final double[] sphereDim) {
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -259,7 +254,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
 		final ImageStack sourceStack = imp.getStack();
-		ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
+		final ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
@@ -267,12 +262,10 @@ public class SphereFitter implements PlugIn, DialogListener {
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying largest enclosed cube");
 			final int tZ = z - startZ + 1;
-			targetStack.setPixels(
-					Moments.getEmptyPixels(roiWidth, roiHeight,
-							imp.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight, imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
-			ImageProcessor targetIP = targetStack.getProcessor(tZ);
+			final ImageProcessor targetIP = targetStack.getProcessor(tZ);
 			for (int y = startY; y < endY; y++) {
 				final int tY = y - startY;
 				for (int x = startX; x < endX; x++) {
@@ -280,23 +273,21 @@ public class SphereFitter implements PlugIn, DialogListener {
 				}
 			}
 		}
-		ImagePlus target = new ImagePlus("Inner Cube", targetStack);
+		final ImagePlus target = new ImagePlus("Inner Cube", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(),
-				imp.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(), imp.getDisplayRangeMax());
 		return target;
 	}
 
 	/**
-	 * 
+	 *
 	 * @param imp
 	 * @param cropFactor
 	 * @param sphereDim
 	 * @return
 	 */
-	public ImagePlus copyOuterCube(ImagePlus imp, double cropFactor,
-			double[] sphereDim) {
-		Calibration cal = imp.getCalibration();
+	public ImagePlus copyOuterCube(final ImagePlus imp, final double cropFactor, final double[] sphereDim) {
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -325,7 +316,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		if (startZ + roiDepth > imp.getStackSize())
 			roiDepth = imp.getStackSize() - startZ;
 		final ImageStack sourceStack = imp.getImageStack();
-		ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
+		final ImageStack targetStack = new ImageStack(roiWidth, roiHeight, roiDepth);
 		final int endZ = startZ + roiDepth;
 		final int endY = startY + roiHeight;
 		final int endX = startX + roiWidth;
@@ -333,12 +324,10 @@ public class SphereFitter implements PlugIn, DialogListener {
 			final int tZ = z - startZ + 1;
 			IJ.showProgress(z - startZ, roiDepth);
 			IJ.showStatus("Copying smallest enclosing cube");
-			targetStack.setPixels(
-					Moments.getEmptyPixels(roiWidth, roiHeight,
-							imp.getBitDepth()), tZ);
+			targetStack.setPixels(Moments.getEmptyPixels(roiWidth, roiHeight, imp.getBitDepth()), tZ);
 			targetStack.setSliceLabel(sourceStack.getShortSliceLabel(z), tZ);
 			final ImageProcessor ip = sourceStack.getProcessor(z);
-			ImageProcessor targetIP = targetStack.getProcessor(tZ);
+			final ImageProcessor targetIP = targetStack.getProcessor(tZ);
 			for (int y = startY; y < endY; y++) {
 				final int tY = y - startY;
 				for (int x = startX; x < endX; x++) {
@@ -346,17 +335,16 @@ public class SphereFitter implements PlugIn, DialogListener {
 				}
 			}
 		}
-		ImagePlus target = new ImagePlus("Outer Cube", targetStack);
+		final ImagePlus target = new ImagePlus("Outer Cube", targetStack);
 		target.setCalibration(cal);
-		target.setDisplayRange(imp.getDisplayRangeMin(),
-				imp.getDisplayRangeMax());
+		target.setDisplayRange(imp.getDisplayRangeMin(), imp.getDisplayRangeMax());
 		return target;
 	}
 
 	/**
 	 * Add series of circular ROIs to the ROI Manager based on the centre and
 	 * radius of a sphere
-	 * 
+	 *
 	 * @param imp
 	 *            Needed for decalibration of calibrated (x,y,z) r values
 	 * @param roiMan
@@ -367,16 +355,14 @@ public class SphereFitter implements PlugIn, DialogListener {
 	 * @throws IllegalArgumentException
 	 *             if roiMan is null, rather than instantiating RoiManager.
 	 */
-	public static void addToRoiManager(ImagePlus imp, RoiManager roiMan,
-			double[] sphereDim, boolean clearRois)
-			throws IllegalArgumentException {
+	public static void addToRoiManager(final ImagePlus imp, final RoiManager roiMan, final double[] sphereDim,
+			final boolean clearRois) throws IllegalArgumentException {
 		if (roiMan == null)
-			throw new IllegalArgumentException(
-					"ROI Manager has not been instantiated");
+			throw new IllegalArgumentException("ROI Manager has not been instantiated");
 		if (clearRois) {
 			RoiMan.deleteAll(roiMan);
 		}
-		Calibration cal = imp.getCalibration();
+		final Calibration cal = imp.getCalibration();
 		final double xs = sphereDim[0];
 		final int xi = (int) (xs / cal.pixelWidth);
 		final double ys = sphereDim[1];
@@ -391,19 +377,19 @@ public class SphereFitter implements PlugIn, DialogListener {
 			final double rc = Math.sqrt(r * r - zd * zd);
 			final int wi = (int) (rc / cal.pixelWidth);
 			final int hi = (int) (rc / cal.pixelHeight);
-			OvalRoi ellipse = new OvalRoi(xi - wi, yi - hi, wi * 2, hi * 2);
+			final OvalRoi ellipse = new OvalRoi(xi - wi, yi - hi, wi * 2, hi * 2);
 			ellipse.setPosition(z);
 			roiMan.addRoi(ellipse);
 		}
 	}
 
-	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
-		Vector<?> checkboxes = gd.getCheckboxes();
-		Vector<?> numbers = gd.getNumericFields();
-		Checkbox box = (Checkbox) checkboxes.get(0);
-		TextField num = (TextField) numbers.get(0);
+		final Vector<?> checkboxes = gd.getCheckboxes();
+		final Vector<?> numbers = gd.getNumericFields();
+		final Checkbox box = (Checkbox) checkboxes.get(0);
+		final TextField num = (TextField) numbers.get(0);
 		if (box.getState()) {
 			num.setEnabled(true);
 		} else {

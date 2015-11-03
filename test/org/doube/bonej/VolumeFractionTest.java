@@ -1,27 +1,27 @@
 package org.doube.bonej;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.awt.Rectangle;
+
+import org.doube.geometry.TestDataMaker;
+import org.junit.Test;
 
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.plugin.frame.RoiManager;
 
-import org.doube.geometry.TestDataMaker;
-import org.junit.Test;
-
 public class VolumeFractionTest {
-	private ImagePlus rod = TestDataMaker.rod(256, 64);
-	private ImagePlus sphere = TestDataMaker.sphere(64);
-	private ImagePlus brick = TestDataMaker.brick(32, 64, 96);
-	private VolumeFraction vf = new VolumeFraction();
-	private double[] expectedRod = { 826368, 256 * 128 * 128 };
-	private double[] expectedSphere = { 1097342, 130 * 130 * 131 };
-	private double[] expectedBrick = { 32 * 64 * 96, 34 * 66 * 98 };
-	private double[] quarterRod = { 206592, 256 * 64 * 64 };
-	private double[] quarterSphere = { 274335, 65 * 65 * 131 };
-	private double[] quarterBrick = { 16 * 32 * 96, 17 * 33 * 98 };
+	private final ImagePlus rod = TestDataMaker.rod(256, 64);
+	private final ImagePlus sphere = TestDataMaker.sphere(64);
+	private final ImagePlus brick = TestDataMaker.brick(32, 64, 96);
+	private final VolumeFraction vf = new VolumeFraction();
+	private final double[] expectedRod = { 826368, 256 * 128 * 128 };
+	private final double[] expectedSphere = { 1097342, 130 * 130 * 131 };
+	private final double[] expectedBrick = { 32 * 64 * 96, 34 * 66 * 98 };
+	private final double[] quarterRod = { 206592, 256 * 64 * 64 };
+	private final double[] quarterSphere = { 274335, 65 * 65 * 131 };
+	private final double[] quarterBrick = { 16 * 32 * 96, 17 * 33 * 98 };
 
 	@Test
 	public void testGetVolumesImagePlusDoubleDouble() {
@@ -33,23 +33,23 @@ public class VolumeFractionTest {
 
 		vols = vf.getVolumes(brick, 1, 255);
 		assertArrayEquals(expectedBrick, vols, 0);
-		
+
 		int w = rod.getWidth();
 		rod.setRoi(new Rectangle(0, 0, w / 2, w / 2));
 		vols = vf.getVolumes(rod, 1, 255);
 		assertArrayEquals(quarterRod, vols, 0);
-		
+
 		w = sphere.getWidth();
 		sphere.setRoi(new Rectangle(0, 0, w / 2, w / 2));
 		vols = vf.getVolumes(sphere, 1, 255);
 		assertArrayEquals(quarterSphere, vols, 0);
-		
+
 		w = brick.getWidth();
-		int h = brick.getHeight();
+		final int h = brick.getHeight();
 		brick.setRoi(new Rectangle(0, 0, w / 2, h / 2));
 		vols = vf.getVolumes(brick, 1, 255);
 		assertArrayEquals(quarterBrick, vols, 0);
-		
+
 		rod.setRoi(new Rectangle(0, 0, 0, 0));
 		sphere.setRoi(new Rectangle(0, 0, 0, 0));
 		brick.setRoi(new Rectangle(0, 0, 0, 0));
@@ -63,17 +63,17 @@ public class VolumeFractionTest {
 		double[] vols = vf.getVolumes(rod, 1, 255, true);
 		assertArrayEquals(quarterRod, vols, 0);
 		roiMan.close();
-		
+
 		roiMan = new RoiManager();
 		w = sphere.getWidth();
 		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
 		vols = vf.getVolumes(sphere, 1, 255, true);
 		assertArrayEquals(quarterSphere, vols, 0);
 		roiMan.close();
-		
+
 		roiMan = new RoiManager();
 		w = brick.getWidth();
-		int h = brick.getHeight();
+		final int h = brick.getHeight();
 		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, h / 2)));
 		vols = vf.getVolumes(brick, 1, 255, true);
 		assertArrayEquals(quarterBrick, vols, 0);
@@ -100,17 +100,17 @@ public class VolumeFractionTest {
 		double[] vols = vf.getSurfaceVolume(rod, 1, 255, 1, true, false);
 		assertArrayEquals(quarterRod, vols, 500);
 		roiMan.close();
-		
+
 		roiMan = new RoiManager();
 		w = sphere.getWidth();
 		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, w / 2)));
 		vols = vf.getSurfaceVolume(sphere, 1, 255, 1, true, false);
 		assertArrayEquals(quarterSphere, vols, 300);
 		roiMan.close();
-		
+
 		roiMan = new RoiManager();
 		w = brick.getWidth();
-		int h = brick.getHeight();
+		final int h = brick.getHeight();
 		roiMan.addRoi(new Roi(new Rectangle(0, 0, w / 2, h / 2)));
 		vols = vf.getSurfaceVolume(brick, 1, 255, 1, true, false);
 		assertArrayEquals(quarterBrick, vols, 200);

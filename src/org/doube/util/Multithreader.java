@@ -4,7 +4,7 @@ import ij.Prefs;
 
 /**
  * MultiThreading copyright 2007 Stephan Preibisch
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License 2
  * as published by the Free Software Foundation.
@@ -19,29 +19,30 @@ import ij.Prefs;
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-
 /**
  * Multithreader utility class for convenient multithreading of ImageJ plugins
- * 
+ *
  * @author Stephan Preibisch
  * @author Michael Doube
- * 
- * @see <p>
- *      <a href="http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD"
+ *
+ * @see
+ * 		<p>
+ *      <a href=
+ *      "http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD"
  *      >http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/
  *      MultiThreading.java;hb=HEAD</a>
  */
 public class Multithreader {
-	public static void startTask(Runnable run) {
-		Thread[] threads = newThreads();
+	public static void startTask(final Runnable run) {
+		final Thread[] threads = newThreads();
 
 		for (int ithread = 0; ithread < threads.length; ++ithread)
 			threads[ithread] = new Thread(run);
 		startAndJoin(threads);
 	}
 
-	public static void startTask(Runnable run, int numThreads) {
-		Thread[] threads = newThreads(numThreads);
+	public static void startTask(final Runnable run, final int numThreads) {
+		final Thread[] threads = newThreads(numThreads);
 
 		for (int ithread = 0; ithread < threads.length; ++ithread)
 			threads[ithread] = new Thread(run);
@@ -49,15 +50,15 @@ public class Multithreader {
 	}
 
 	public static Thread[] newThreads() {
-		int nthread = Prefs.getThreads();
+		final int nthread = Prefs.getThreads();
 		return new Thread[nthread];
 	}
 
-	public static Thread[] newThreads(int numThreads) {
+	public static Thread[] newThreads(final int numThreads) {
 		return new Thread[numThreads];
 	}
 
-	public static void startAndJoin(Thread[] threads) {
+	public static void startAndJoin(final Thread[] threads) {
 		for (int ithread = 0; ithread < threads.length; ++ithread) {
 			threads[ithread].setPriority(Thread.NORM_PRIORITY);
 			threads[ithread].start();
@@ -66,7 +67,7 @@ public class Multithreader {
 		try {
 			for (int ithread = 0; ithread < threads.length; ++ithread)
 				threads[ithread].join();
-		} catch (InterruptedException ie) {
+		} catch (final InterruptedException ie) {
 			throw new RuntimeException(ie);
 		}
 	}

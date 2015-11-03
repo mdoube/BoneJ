@@ -44,29 +44,22 @@ import ij.plugin.frame.PlugInFrame;
 
 /**
  * Indicator to show directions such as medial, proximal, cranial, north, left
- * 
+ *
  * @author Michael Doube
  * @author Wayne Rasband
- * 
+ *
  */
 @SuppressWarnings("serial")
-public class Orienteer extends PlugInFrame implements AdjustmentListener,
-		ItemListener, TextListener, MouseWheelListener {
+public class Orienteer extends PlugInFrame
+		implements AdjustmentListener, ItemListener, TextListener, MouseWheelListener {
 
 	public static final String LOC_KEY = "aa.loc";
-	private static final String[][] axisLabels = {
-			{ "medial", "lateral", "M", "L" },
-			{ "cranial", "caudal", "Cr", "Ca" },
-			{ "rostral", "caudal", "Ro", "Ca" },
-			{ "dorsal", "ventral", "D", "V" },
-			{ "anterior", "posterior", "A", "P" },
-			{ "superior", "inferior", "Sup", "Inf" },
-			{ "proximal", "distal", "Pr", "Di" },
-			{ "dorsal", "palmar", "Do", "Pa" },
-			{ "dorsal", "plantar", "Do", "Pl" },
-			{ "dorsal", "volar", "Do", "Vo" },
-			{ "axial", "abaxial", "Ax", "Ab" }, { "north", "south", "N", "S" },
-			{ "east", "west", "E", "W" }, { "up", "down", "Up", "D" },
+	private static final String[][] axisLabels = { { "medial", "lateral", "M", "L" },
+			{ "cranial", "caudal", "Cr", "Ca" }, { "rostral", "caudal", "Ro", "Ca" }, { "dorsal", "ventral", "D", "V" },
+			{ "anterior", "posterior", "A", "P" }, { "superior", "inferior", "Sup", "Inf" },
+			{ "proximal", "distal", "Pr", "Di" }, { "dorsal", "palmar", "Do", "Pa" },
+			{ "dorsal", "plantar", "Do", "Pl" }, { "dorsal", "volar", "Do", "Vo" }, { "axial", "abaxial", "Ax", "Ab" },
+			{ "north", "south", "N", "S" }, { "east", "west", "E", "W" }, { "up", "down", "Up", "D" },
 			{ "right", "left", "R", "L" } };
 
 	/** Current principal direction choice */
@@ -76,8 +69,8 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private int axis1 = 0;
 
 	/** Direction labels */
-	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3],
-			axisLabels[axis1][2], axisLabels[axis1][3] };
+	private String[] directions = { axisLabels[axis0][2], axisLabels[axis0][3], axisLabels[axis1][2],
+			axisLabels[axis1][3] };
 	private static Orienteer instance;
 
 	/** Current orientation in radians */
@@ -90,16 +83,16 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	private Point p;
 
 	private Integer activeImpID;
-	private Hashtable<Integer, Double> thetaHash = new Hashtable<Integer, Double>();
-	private Hashtable<Integer, Integer> lengthHash = new Hashtable<Integer, Integer>();
-	private Hashtable<Integer, Point> centreHash = new Hashtable<Integer, Point>();
-	private Hashtable<Integer, GeneralPath> pathHash = new Hashtable<Integer, GeneralPath>();
-	private Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
-	private Hashtable<Integer, boolean[]> reflectHash = new Hashtable<Integer, boolean[]>();
-	private Hashtable<Integer, boolean[]> unitHash = new Hashtable<Integer, boolean[]>();
+	private final Hashtable<Integer, Double> thetaHash = new Hashtable<Integer, Double>();
+	private final Hashtable<Integer, Integer> lengthHash = new Hashtable<Integer, Integer>();
+	private final Hashtable<Integer, Point> centreHash = new Hashtable<Integer, Point>();
+	private final Hashtable<Integer, GeneralPath> pathHash = new Hashtable<Integer, GeneralPath>();
+	private final Hashtable<Integer, int[]> axisHash = new Hashtable<Integer, int[]>();
+	private final Hashtable<Integer, boolean[]> reflectHash = new Hashtable<Integer, boolean[]>();
+	private final Hashtable<Integer, boolean[]> unitHash = new Hashtable<Integer, boolean[]>();
 
-	private Overlay overlay = new Overlay();
-	private int fontSize = 12;
+	private final Overlay overlay = new Overlay();
+	private final int fontSize = 12;
 	private double scale = 1;
 	private GeneralPath path;
 	private BasicStroke stroke;
@@ -124,7 +117,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		super("Orientation");
 		if (instance != null) {
 			if (!instance.getTitle().equals(getTitle())) {
-				Orienteer aa = (Orienteer) instance;
+				final Orienteer aa = instance;
 				Prefs.saveLocation(LOC_KEY, aa.getLocation());
 				aa.close();
 			} else {
@@ -140,8 +133,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		c = new GridBagConstraints();
 		setLayout(gridbag);
 
-		slider = new Scrollbar(Scrollbar.HORIZONTAL,
-				(int) (theta * 180 / Math.PI), 1, 0, 360);
+		slider = new Scrollbar(Scrollbar.HORIZONTAL, (int) (theta * 180 / Math.PI), 1, 0, 360);
 		int y = 0;
 		c.gridy = y++;
 		c.insets = new Insets(2, 10, 0, 10);
@@ -154,13 +146,13 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.addMouseWheelListener(this);
 
 		degRadPanel = new Panel();
-		Label degRadLabel = new Label("Orientation");
+		final Label degRadLabel = new Label("Orientation");
 		degRadPanel.add(degRadLabel);
 		text = new TextField(IJ.d2s(theta * 180 / Math.PI, 3), 7);
 		degRadPanel.add(text);
 		text.addTextListener(this);
 
-		CheckboxGroup degRad = new CheckboxGroup();
+		final CheckboxGroup degRad = new CheckboxGroup();
 		deg = new Checkbox("deg", degRad, true);
 		rad = new Checkbox("rad", degRad, false);
 		degRadPanel.add(deg);
@@ -170,7 +162,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 
 		panel0 = new Panel();
 
-		Label label0 = new Label("Principal direction");
+		final Label label0 = new Label("Principal direction");
 		panel0.add(label0);
 
 		axis0Choice = new Choice();
@@ -186,7 +178,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		panel0.add(reflect0);
 
 		panel1 = new Panel();
-		Label label1 = new Label("Secondary direction");
+		final Label label1 = new Label("Secondary direction");
 		panel1.add(label1);
 
 		axis1Choice = new Choice();
@@ -226,7 +218,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		add(panel1, c);
 
 		pack();
-		Point loc = Prefs.getLocation(LOC_KEY);
+		final Point loc = Prefs.getLocation(LOC_KEY);
 		if (loc != null)
 			setLocation(loc);
 		else
@@ -234,22 +226,22 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		if (IJ.isMacOSX())
 			setResizable(false);
 		setVisible(true);
-		ImagePlus imp = WindowManager.getCurrentImage();
+		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp != null)
 			setup(imp);
 	}
 
-	private void setup(ImagePlus imp) {
+	private void setup(final ImagePlus imp) {
 		if (imp == null)
 			return;
 		if (checkHash(imp)) {
 			IJ.log("Image has already been set up");
 			return;
 		}
-		Integer id = new Integer(imp.getID());
+		final Integer id = new Integer(imp.getID());
 		activeImpID = id;
-		int w = imp.getWidth();
-		int h = imp.getHeight();
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
 		this.theta = 0;
 		slider.setValue((int) (theta * 180 / Math.PI));
 		this.isReflected0 = false;
@@ -263,28 +255,27 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		path.lineTo(p.x + length, p.y);
 		path.moveTo(p.x, p.y - length);
 		path.lineTo(p.x, p.y + length);
-		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND,
-				BasicStroke.JOIN_MITER);
+		stroke = new BasicStroke(1, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER);
 		imp.setOverlay(path, Color.BLUE, stroke);
 		rotateTo(theta);
 		centreHash.put(id, new Point(p));
 		thetaHash.put(id, new Double(theta));
 		pathHash.put(id, new GeneralPath(path));
-		int[] axes = { axis0, axis1 };
+		final int[] axes = { axis0, axis1 };
 		axisHash.put(id, axes.clone());
 		lengthHash.put(id, new Integer(this.length));
-		boolean[] reflectors = { isReflected0, isReflected1 };
+		final boolean[] reflectors = { isReflected0, isReflected1 };
 		reflectHash.put(id, reflectors.clone());
 		deg.setState(true);
 		rad.setState(false);
-		boolean[] units = { deg.getState(), rad.getState() };
+		final boolean[] units = { deg.getState(), rad.getState() };
 		unitHash.put(id, units);
 		updateTextbox();
 		UsageReporter.reportEvent(this).send();
 	}
 
 	private void update() {
-		ImagePlus imp = WindowManager.getCurrentImage();
+		final ImagePlus imp = WindowManager.getCurrentImage();
 		activeImpID = new Integer(imp.getID());
 		instance.setTitle("Orientation - " + imp.getTitle());
 		if (!checkHash(imp)) {
@@ -293,12 +284,12 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		}
 		this.p = centreHash.get(activeImpID);
 		this.theta = thetaHash.get(activeImpID);
-		int[] axes = axisHash.get(activeImpID);
+		final int[] axes = axisHash.get(activeImpID);
 		this.axis0 = axes[0];
 		this.axis1 = axes[1];
 		this.path = pathHash.get(activeImpID);
 		this.length = lengthHash.get(activeImpID);
-		boolean[] reflectors = reflectHash.get(activeImpID);
+		final boolean[] reflectors = reflectHash.get(activeImpID);
 		this.isReflected0 = reflectors[0];
 		this.isReflected1 = reflectors[1];
 		axis0Choice.select(axis0);
@@ -306,7 +297,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		slider.setValue((int) (theta * 180 / Math.PI));
 		reflect0.setState(isReflected0);
 		reflect1.setState(isReflected1);
-		boolean[] units = unitHash.get(activeImpID);
+		final boolean[] units = unitHash.get(activeImpID);
 		deg.setState(units[0]);
 		rad.setState(units[1]);
 		updateTextbox();
@@ -315,12 +306,12 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 
 	/**
 	 * Check if an image is already handled by Orientation
-	 * 
+	 *
 	 * @param imp
 	 * @return true if this image is already handled by Orientation
 	 */
-	private boolean checkHash(ImagePlus imp) {
-		Integer i = new Integer(imp.getID());
+	private boolean checkHash(final ImagePlus imp) {
+		final Integer i = new Integer(imp.getID());
 		return thetaHash.containsKey(i);
 	}
 
@@ -331,20 +322,20 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	/**
 	 * Gets the labels associated with an ImagePlus. Returns null if the image
 	 * isn't being tracked by Orienteer.
-	 * 
+	 *
 	 * @param imp
 	 * @return an array of axis labels, with the principal direction in the
 	 *         zeroth position, the principal tail in the 1st position, the
 	 *         secondary head in the 2nd position and the secondary tail in the
 	 *         3rd position.
 	 */
-	public String[] getDirections(ImagePlus imp) {
+	public String[] getDirections(final ImagePlus imp) {
 		if (!checkHash(imp))
 			return null;
-		Integer id = new Integer(imp.getID());
-		int[] axes = axisHash.get(id);
-		boolean[] ref = reflectHash.get(id);
-		String[] dirs = new String[4];
+		final Integer id = new Integer(imp.getID());
+		final int[] axes = axisHash.get(id);
+		final boolean[] ref = reflectHash.get(id);
+		final String[] dirs = new String[4];
 
 		if (!ref[0]) {
 			dirs[0] = axisLabels[axes[0]][2];
@@ -366,38 +357,38 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	/**
 	 * Retrieve the orientation of the named axis. If the axis name is not
 	 * found, the principal axis orientation is returned.
-	 * 
+	 *
 	 * @param direction
 	 *            Label you wish to match
 	 * @return orientation of the axis in radians clockwise from 12 o'clock
 	 */
-	public double getOrientation(String direction) {
-		ImagePlus imp = WindowManager.getCurrentImage();
+	public double getOrientation(final String direction) {
+		final ImagePlus imp = WindowManager.getCurrentImage();
 		return getOrientation(imp, direction);
 	}
 
 	/**
 	 * Overloaded version of getOrientation that takes no argument
-	 * 
+	 *
 	 * @return orientation of the principal direction in radians clockwise from
 	 *         12 o'clock
 	 */
 	public double getOrientation() {
-		double orientation = this.theta;
+		final double orientation = this.theta;
 		return orientation;
 	}
 
 	/**
 	 * Get the orientation of the principal direction
-	 * 
+	 *
 	 * @param imp
 	 * @return Orientation in radians clockwise from 12 o'clock
 	 * @throws IllegalArgumentException
 	 *             if imp has not been activated by Orientation
 	 */
-	public double getOrientation(ImagePlus imp) {
-		Integer id = new Integer(imp.getID());
-		Double o = thetaHash.get(id);
+	public double getOrientation(final ImagePlus imp) {
+		final Integer id = new Integer(imp.getID());
+		final Double o = thetaHash.get(id);
 		if (o == null) {
 			throw new IllegalArgumentException();
 		} else {
@@ -405,9 +396,9 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		}
 	}
 
-	public double getOrientation(ImagePlus imp, String direction) {
+	public double getOrientation(final ImagePlus imp, final String direction) {
 		double orientation = getOrientation(imp);
-		String[] dir = getDirections(imp);
+		final String[] dir = getDirections(imp);
 
 		int quadrant = 0;
 		for (int i = 0; i < 4; i++) {
@@ -440,43 +431,43 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 	/**
 	 * Given a set of (x,y) coordinates, find the caliper diameters across the
 	 * axes
-	 * 
+	 *
 	 * @param points
 	 *            in double[n][2] format
 	 * @return caliper diameters across the principal and secondary axes (zeroth
 	 *         and first elements respectively)
 	 */
-	public double[] getDiameters(double[][] points) {
+	public double[] getDiameters(final double[][] points) {
 		double xMin = Double.POSITIVE_INFINITY;
 		double xMax = Double.NEGATIVE_INFINITY;
 		double yMin = Double.POSITIVE_INFINITY;
 		double yMax = Double.NEGATIVE_INFINITY;
 		final int nPoints = points.length;
 		for (int i = 0; i < nPoints; i++) {
-			double x = points[i][0];
-			double y = points[i][1];
-			double xr = x * Math.cos(-theta) - y * Math.sin(-theta);
-			double yr = x * Math.sin(-theta) + y * Math.cos(-theta);
+			final double x = points[i][0];
+			final double y = points[i][1];
+			final double xr = x * Math.cos(-theta) - y * Math.sin(-theta);
+			final double yr = x * Math.sin(-theta) + y * Math.cos(-theta);
 			xMin = Math.min(xMin, xr);
 			xMax = Math.max(xMax, xr);
 			yMin = Math.min(yMin, yr);
 			yMax = Math.max(yMax, yr);
 		}
-		double[] result = { yMax - yMin, xMax - xMin };
+		final double[] result = { yMax - yMin, xMax - xMin };
 		return result;
 	}
 
 	/**
 	 * Rotate the direction indicator by a given angle
-	 * 
+	 *
 	 * @param deltaTheta
 	 *            number of radians to rotate by (+ve is clockwise, -ve is
 	 *            anti-clockwise)
 	 */
-	public void rotate(double deltaTheta) {
-		ImagePlus imp = WindowManager.getCurrentImage();
+	public void rotate(final double deltaTheta) {
+		final ImagePlus imp = WindowManager.getCurrentImage();
 		this.activeImpID = new Integer(imp.getID());
-		AffineTransform transform = new AffineTransform();
+		final AffineTransform transform = new AffineTransform();
 		transform.rotate(deltaTheta, p.x, p.y);
 		this.theta += deltaTheta;
 		path.transform(transform);
@@ -490,33 +481,27 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 
 	/**
 	 * Rotate the principal direction to a new angle
-	 * 
+	 *
 	 * @param newTheta
 	 *            desired orientation in radians clockwise from 12 o'clock of
 	 *            the principal direction
 	 */
-	public void rotateTo(double newTheta) {
+	public void rotateTo(final double newTheta) {
 		rotate(newTheta - this.theta);
 		this.theta = newTheta;
 		thetaHash.put(activeImpID, newTheta);
 	}
 
 	private void addLabels() {
-		ImagePlus imp = WindowManager.getImage(activeImpID);
+		final ImagePlus imp = WindowManager.getImage(activeImpID);
 		scale = imp.getCanvas().getMagnification();
-		Font font = new Font("SansSerif", Font.PLAIN, (int) (fontSize / scale));
-		final double lsinTheta = (length + (fontSize / scale))
-				* Math.sin(theta);
-		final double lcosTheta = (length + (fontSize / scale))
-				* Math.cos(theta);
-		addString(directions[0], (int) (p.x + lsinTheta),
-				(int) (p.y - lcosTheta), Color.RED, font);
-		addString(directions[1], (int) (p.x - lsinTheta),
-				(int) (p.y + lcosTheta), Color.BLUE, font);
-		addString(directions[2], (int) (p.x + lcosTheta),
-				(int) (p.y + lsinTheta), Color.BLUE, font);
-		addString(directions[3], (int) (p.x - lcosTheta),
-				(int) (p.y - lsinTheta), Color.BLUE, font);
+		final Font font = new Font("SansSerif", Font.PLAIN, (int) (fontSize / scale));
+		final double lsinTheta = (length + (fontSize / scale)) * Math.sin(theta);
+		final double lcosTheta = (length + (fontSize / scale)) * Math.cos(theta);
+		addString(directions[0], (int) (p.x + lsinTheta), (int) (p.y - lcosTheta), Color.RED, font);
+		addString(directions[1], (int) (p.x - lsinTheta), (int) (p.y + lcosTheta), Color.BLUE, font);
+		addString(directions[2], (int) (p.x + lcosTheta), (int) (p.y + lsinTheta), Color.BLUE, font);
+		addString(directions[3], (int) (p.x - lcosTheta), (int) (p.y - lsinTheta), Color.BLUE, font);
 	}
 
 	private void updateDirections() {
@@ -531,90 +516,92 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 			text.setText(IJ.d2s(this.theta, 5));
 	}
 
-	void addPath(Shape shape, Color color, BasicStroke stroke) {
-		Roi roi = new ShapeRoi(shape);
+	void addPath(final Shape shape, final Color color, final BasicStroke stroke) {
+		final Roi roi = new ShapeRoi(shape);
 		roi.setStrokeColor(color);
 		roi.setStroke(stroke);
 		roi.setStrokeWidth(roi.getStrokeWidth() / (float) scale);
 		overlay.add(roi);
 	}
 
-	void addString(String text, int x, int y, Color color, Font font) {
-		TextRoi roi = new TextRoi(x, y, text, font);
-		roi.setLocation(x - text.length() * (int) (fontSize / scale) / 4, y
-				- (int) (fontSize / scale) / 2);
+	void addString(final String text, final int x, final int y, final Color color, final Font font) {
+		final TextRoi roi = new TextRoi(x, y, text, font);
+		roi.setLocation(x - text.length() * (int) (fontSize / scale) / 4, y - (int) (fontSize / scale) / 2);
 		roi.setStrokeColor(color);
 		overlay.add(roi);
 	}
 
+	@Override
 	public void close() {
 		super.close();
 		instance = null;
-		for (Integer i : thetaHash.keySet())
+		for (final Integer i : thetaHash.keySet())
 			WindowManager.getImage(i.intValue()).setOverlay(null);
 	}
 
-	public void windowActivated(WindowEvent e) {
+	@Override
+	public void windowActivated(final WindowEvent e) {
 		super.windowActivated(e);
 		update();
 		WindowManager.setWindow(this);
 	}
 
-	public void windowClosing(WindowEvent e) {
+	@Override
+	public void windowClosing(final WindowEvent e) {
 		close();
 		Prefs.saveLocation(LOC_KEY, getLocation());
 	}
 
-	public void adjustmentValueChanged(AdjustmentEvent e) {
+	public void adjustmentValueChanged(final AdjustmentEvent e) {
 		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
 			updateTextbox();
 		}
 	}
 
-	public void itemStateChanged(ItemEvent e) {
-		Object source = e.getSource();
+	public void itemStateChanged(final ItemEvent e) {
+		final Object source = e.getSource();
 		if (source.equals(axis0Choice)) {
-			int i = axis0Choice.getSelectedIndex();
+			final int i = axis0Choice.getSelectedIndex();
 			if (i == axis1Choice.getSelectedIndex()) {
 				axis0Choice.select(axis0);
 				IJ.error("Both axes cannot indicate the same direction");
 				return;
 			}
 			axis0 = i;
-			int[] axes = { axis0, axis1 };
+			final int[] axes = { axis0, axis1 };
 			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (source.equals(axis1Choice)) {
-			int i = axis1Choice.getSelectedIndex();
+			final int i = axis1Choice.getSelectedIndex();
 			if (i == axis0Choice.getSelectedIndex()) {
 				axis1Choice.select(axis1);
 				IJ.error("Both axes cannot indicate the same direction");
 				return;
 			}
 			axis1 = i;
-			int[] axes = { axis0, axis1 };
+			final int[] axes = { axis0, axis1 };
 			axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (source.equals(reflect0)) {
 			isReflected0 = reflect0.getState();
-			boolean[] reflectors = { isReflected0, isReflected1 };
+			final boolean[] reflectors = { isReflected0, isReflected1 };
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		} else if (source.equals(reflect1)) {
 			isReflected1 = reflect1.getState();
-			boolean[] reflectors = { isReflected0, isReflected1 };
+			final boolean[] reflectors = { isReflected0, isReflected1 };
 			reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		} else if (source.equals(deg) || source.equals(rad)) {
-			boolean[] units = { deg.getState(), rad.getState() };
+			final boolean[] units = { deg.getState(), rad.getState() };
 			unitHash.put(activeImpID, units);
 			updateTextbox();
 		}
 	}
 
-	public void textValueChanged(TextEvent e) {
-		TextField field = (TextField) e.getSource();
+	public void textValueChanged(final TextEvent e) {
+		final TextField field = (TextField) e.getSource();
 		double value = Double.parseDouble(field.getText());
 		if (deg.getState())
 			value *= Math.PI / 180;
@@ -625,7 +612,7 @@ public class Orienteer extends PlugInFrame implements AdjustmentListener,
 		rotateTo(value);
 	}
 
-	public void mouseWheelMoved(MouseWheelEvent e) {
+	public void mouseWheelMoved(final MouseWheelEvent e) {
 		final int oldPos = slider.getValue();
 		int newPos = oldPos + e.getWheelRotation();
 		if (newPos < 0)

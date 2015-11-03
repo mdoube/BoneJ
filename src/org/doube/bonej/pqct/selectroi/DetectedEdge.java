@@ -19,35 +19,36 @@
 */
 
 package org.doube.bonej.pqct.selectroi;
-import java.util.*;	//Vector, Collections
-import java.lang.Math; //atan2
-import java.awt.*;			//Polygon, Rectangle
-import org.doube.bonej.pqct.io.*;	//image data
-import ij.*;		//ImagePlus
-import ij.gui.*;	//ImagePlus ROI
-import ij.text.*; 	//Debugging ...
-import ij.process.*;	//Debugging
-@SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
-public class DetectedEdge implements Comparable<DetectedEdge>{
-	public Vector<Integer> iit;		//indexes for x-coordinates
-	public Vector<Integer> jiit;	//indexes for y-coordinates
+//Vector, Collections
+import java.util.Vector;
+
+@SuppressWarnings(value = { "serial", "unchecked" }) // Unchecked for obtaining
+														// Vector<Object> as a
+														// returnvalue
+
+public class DetectedEdge implements Comparable<DetectedEdge> {
+	public Vector<Integer> iit; // indexes for x-coordinates
+	public Vector<Integer> jiit; // indexes for y-coordinates
 	public int area;
 	public int length;
-	
-	public DetectedEdge(Vector<Integer> iit,Vector<Integer> jiit,int area){
+
+	public DetectedEdge(final Vector<Integer> iit, final Vector<Integer> jiit, final int area) {
 		this.iit = iit;
 		this.jiit = jiit;
 		this.length = iit.size();
 		this.area = area;
 	}
-	
-	public int compareTo(DetectedEdge o){
-		int returnValue = 0;
-		if (o == null || this == null) {throw new NullPointerException();}
-		if (this.area == o.area) {return 0;}
-		return this.area < o.area ? -1 : 1;		
+
+	public int compareTo(final DetectedEdge o) {
+		final int returnValue = 0;
+		if (o == null || this == null) {
+			throw new NullPointerException();
+		}
+		if (this.area == o.area) {
+			return 0;
+		}
+		return this.area < o.area ? -1 : 1;
 	}
 
-	
 }

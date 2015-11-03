@@ -19,9 +19,11 @@
 */
 
 package org.doube.bonej.pqct.analysis;
-import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
 
-public class SoftTissueAnalysis{
+//ROI selection..
+import org.doube.bonej.pqct.selectroi.SelectSoftROI;
+
+public class SoftTissueAnalysis {
 	public double MuA;
 	public double IntraMuFatA;
 	public double TotalMuA;
@@ -35,62 +37,63 @@ public class SoftTissueAnalysis{
 	public double SubCutFatD;
 	public double LimbD;
 	public double FatPercentage;
-	public SoftTissueAnalysis(SelectSoftROI roi){
-		MuA			=0;
-		FatA		=0;
-		LimbA		=0;
-		IntraMuFatA	=0;
-		TotalMuA	=0;
-		MuD			=0;
-		FatD		=0;
-		LimbD		=0;
-		IntraMuFatD	=0;
-		TotalMuD	=0;
-		SubCutFatA	=0;
-		SubCutFatD	=0;
+
+	public SoftTissueAnalysis(final SelectSoftROI roi) {
+		MuA = 0;
+		FatA = 0;
+		LimbA = 0;
+		IntraMuFatA = 0;
+		TotalMuA = 0;
+		MuD = 0;
+		FatD = 0;
+		LimbD = 0;
+		IntraMuFatD = 0;
+		TotalMuD = 0;
+		SubCutFatA = 0;
+		SubCutFatD = 0;
 		double weightedFatArea = 0;
 		double weightedLimbArea = 0;
-		for (int i =0;i<roi.width*roi.height;i++){
-			if (roi.softSieve[i] >0){ //Bone & Marrow not excluded!!
-				LimbA +=1;
-				LimbD +=roi.softScaledImage[i];
-				weightedLimbArea += roi.softScaledImage[i]+1000.0;
+		for (int i = 0; i < roi.width * roi.height; i++) {
+			if (roi.softSieve[i] > 0) { // Bone & Marrow not excluded!!
+				LimbA += 1;
+				LimbD += roi.softScaledImage[i];
+				weightedLimbArea += roi.softScaledImage[i] + 1000.0;
 			}
-			if (roi.softSieve[i] ==2 || roi.softSieve[i] ==5){ //Fat
-				FatA +=1;
-				FatD +=roi.softScaledImage[i];
-				weightedFatArea += roi.softScaledImage[i]+1000.0;
+			if (roi.softSieve[i] == 2 || roi.softSieve[i] == 5) { // Fat
+				FatA += 1;
+				FatD += roi.softScaledImage[i];
+				weightedFatArea += roi.softScaledImage[i] + 1000.0;
 			}
-			if (roi.softSieve[i] ==3){ //Muscle no IntraFat
-				MuA +=1;
-				MuD +=roi.softScaledImage[i];
-				TotalMuA	+=1;
-				TotalMuD	+=roi.softScaledImage[i];
+			if (roi.softSieve[i] == 3) { // Muscle no IntraFat
+				MuA += 1;
+				MuD += roi.softScaledImage[i];
+				TotalMuA += 1;
+				TotalMuD += roi.softScaledImage[i];
 			}
-			if (roi.softSieve[i] ==4){ //IntraFat
-				IntraMuFatA	+=1;
-				IntraMuFatD	+=roi.softScaledImage[i];
-				TotalMuA	+=1;
-				TotalMuD	+=roi.softScaledImage[i];
-				weightedFatArea += roi.softScaledImage[i]+1000.0;
+			if (roi.softSieve[i] == 4) { // IntraFat
+				IntraMuFatA += 1;
+				IntraMuFatD += roi.softScaledImage[i];
+				TotalMuA += 1;
+				TotalMuD += roi.softScaledImage[i];
+				weightedFatArea += roi.softScaledImage[i] + 1000.0;
 			}
-			if (roi.softSieve[i] ==5){ //subCutFat
-				SubCutFatA	+=1;
-				SubCutFatD	+=roi.softScaledImage[i];
+			if (roi.softSieve[i] == 5) { // subCutFat
+				SubCutFatA += 1;
+				SubCutFatD += roi.softScaledImage[i];
 			}
 		}
-		LimbD/=LimbA;
-		LimbA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		FatD/=FatA;
-		FatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		SubCutFatD/=SubCutFatA;
-		SubCutFatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		MuD/=MuA;
-		MuA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		TotalMuD/=TotalMuA;
-		TotalMuA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		IntraMuFatD/=IntraMuFatA;
-		IntraMuFatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
-		FatPercentage = (weightedFatArea/weightedLimbArea)*100.0;
+		LimbD /= LimbA;
+		LimbA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		FatD /= FatA;
+		FatA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		SubCutFatD /= SubCutFatA;
+		SubCutFatA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		MuD /= MuA;
+		MuA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		TotalMuD /= TotalMuA;
+		TotalMuA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		IntraMuFatD /= IntraMuFatA;
+		IntraMuFatA *= roi.pixelSpacing * roi.pixelSpacing / 100.0;
+		FatPercentage = (weightedFatArea / weightedLimbArea) * 100.0;
 	}
 }

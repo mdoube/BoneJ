@@ -3,7 +3,7 @@ package org.doube.bonej;
 /**
  * VolumeFraction plugin for ImageJ
  * Copyright 2009 2010 Michael Doube
- * 
+ *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
  *the Free Software Foundation, either version 3 of the License, or
@@ -31,8 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
-import marchingcubes.MCTriangulator;
-
 import org.doube.util.DialogModifier;
 import org.doube.util.ImageCheck;
 import org.doube.util.Multithreader;
@@ -41,24 +39,23 @@ import org.doube.util.RoiMan;
 import org.doube.util.UsageReporter;
 
 import customnode.CustomTriangleMesh;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.measure.Calibration;
-import ij.process.ImageProcessor;
-import ij.plugin.PlugIn;
-import ij.plugin.frame.RoiManager;
-
 import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Roi;
 import ij.gui.WaitForUserDialog;
+import ij.measure.Calibration;
+import ij.plugin.PlugIn;
+import ij.plugin.frame.RoiManager;
+import ij.process.ImageProcessor;
 import ij3d.Image3DUniverse;
+import marchingcubes.MCTriangulator;
 
 public class VolumeFraction implements PlugIn, DialogListener {
 
-	public void run(String arg) {
+	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
@@ -67,13 +64,12 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			return;
 		}
 		if (imp.getBitDepth() == 32 || imp.getBitDepth() == 24) {
-			IJ
-					.error("Volume Fraction requires a binary, 8-bit or 16-bit image");
+			IJ.error("Volume Fraction requires a binary, 8-bit or 16-bit image");
 			return;
 		}
 
-		GenericDialog gd = new GenericDialog("Volume");
-		String[] types = { "Voxel", "Surface" };
+		final GenericDialog gd = new GenericDialog("Volume");
+		final String[] types = { "Voxel", "Surface" };
 		gd.addChoice("Algorithm", types, types[0]);
 		gd.addNumericField("Surface resampling", 6, 0);
 		((TextField) gd.getNumericFields().get(0)).setEnabled(false);
@@ -86,7 +82,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		if (gd.wasCanceled()) {
 			return;
 		}
-		String type = gd.getNextChoice();
+		final String type = gd.getNextChoice();
 		final int resampling = (int) Math.floor(gd.getNextNumber());
 		final boolean useRoiManager = gd.getNextBoolean();
 		final boolean show3D = gd.getNextBoolean();
@@ -100,19 +96,18 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			volumes = getVolumes(imp, minT, maxT, useRoiManager);
 		} else if (type.equals(types[1])) {
 			try {
-				volumes = getSurfaceVolume(imp, minT, maxT, resampling,
-						useRoiManager, show3D);
-			} catch (Exception e) {
+				volumes = getSurfaceVolume(imp, minT, maxT, resampling, useRoiManager, show3D);
+			} catch (final Exception e) {
 				IJ.handleException(e);
 				return;
 			}
 		}
-		double volBone = volumes[0];
-		double volTotal = volumes[1];
-		double p = volBone / volTotal;
-		Calibration cal = imp.getCalibration();
+		final double volBone = volumes[0];
+		final double volTotal = volumes[1];
+		final double p = volBone / volTotal;
+		final Calibration cal = imp.getCalibration();
 
-		ResultInserter ri = ResultInserter.getInstance();
+		final ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "BV (" + cal.getUnits() + "³)", volBone);
 		ri.setResultInRow(imp, "TV (" + cal.getUnits() + "³)", volTotal);
 		ri.setResultInRow(imp, "BV/TV", p);
@@ -124,20 +119,19 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	/**
 	 * Get the total and thresholded volumes of a masked area, ignoring the ROI
 	 * Manager if it exists
-	 * 
+	 *
 	 * @param imp
 	 * @param minT
 	 * @param maxT
 	 * @return
 	 */
-	public double[] getVolumes(final ImagePlus imp, final double minT,
-			final double maxT) {
+	public double[] getVolumes(final ImagePlus imp, final double minT, final double maxT) {
 		return getVolumes(imp, minT, maxT, false);
 	}
 
 	/**
 	 * Get the total and thresholded volumes of a masked area
-	 * 
+	 *
 	 * @param imp
 	 *            Image
 	 * @param minT
@@ -145,36 +139,34 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	 * @param maxT
 	 *            maximum threshold (inclusive)
 	 * @return double[2] containing the foreground and total volumes
-	 * 
+	 *
 	 */
-	public double[] getVolumes(final ImagePlus imp, final double minT,
-			final double maxT, final boolean useRoiMan) {
+	public double[] getVolumes(final ImagePlus imp, final double minT, final double maxT, final boolean useRoiMan) {
 		final ImageStack stack = imp.getImageStack();
 		final int nSlices = stack.getSize();
 		final AtomicInteger ai = new AtomicInteger(1);
-		Thread[] threads = Multithreader.newThreads();
+		final Thread[] threads = Multithreader.newThreads();
 		final long[] volTotalT = new long[nSlices + 1];
 		final long[] volBoneT = new long[nSlices + 1];
 		final RoiManager roiMan = RoiManager.getInstance();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai
-							.getAndIncrement()) {
-						ImageProcessor ipSlice = stack.getProcessor(s);
+					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai.getAndIncrement()) {
+						final ImageProcessor ipSlice = stack.getProcessor(s);
 						ipSlice.setRoi(imp.getRoi());
 						if (roiMan != null && useRoiMan) {
 							ipSlice.resetRoi();
 							ArrayList<Roi> rois = new ArrayList<Roi>();
 							if (nSlices == 1) {
-								Roi[] roiArray = roiMan.getRoisAsArray();
-								for (Roi roi : roiArray)
+								final Roi[] roiArray = roiMan.getRoisAsArray();
+								for (final Roi roi : roiArray)
 									rois.add(roi);
 							} else
 								rois = RoiMan.getSliceRoi(roiMan, s);
 							if (rois.size() == 0)
 								continue;
-							for (Roi roi : rois) {
+							for (final Roi roi : rois) {
 								ipSlice.setRoi(roi);
 								calculate(ipSlice, volTotalT, volBoneT, s);
 							}
@@ -183,14 +175,14 @@ public class VolumeFraction implements PlugIn, DialogListener {
 					}
 				}
 
-				private void calculate(ImageProcessor ipSlice,
-						long[] volTotalT, long[] volBoneT, int s) {
+				private void calculate(final ImageProcessor ipSlice, final long[] volTotalT, final long[] volBoneT,
+						final int s) {
 					final Rectangle r = ipSlice.getRoi();
 					final int rLeft = r.x;
 					final int rTop = r.y;
 					final int rRight = rLeft + r.width;
 					final int rBottom = rTop + r.height;
-					ImageProcessor mask = ipSlice.getMask();
+					final ImageProcessor mask = ipSlice.getMask();
 					final boolean hasMask = (mask != null);
 					for (int v = rTop; v < rBottom; v++) {
 						final int vrTop = v - rTop;
@@ -215,30 +207,29 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			volTotal += volTotalT[i];
 			volBone += volBoneT[i];
 		}
-		Calibration cal = imp.getCalibration();
-		double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
-		double[] volumes = { volBone * voxelVol, volTotal * voxelVol };
+		final Calibration cal = imp.getCalibration();
+		final double voxelVol = cal.pixelWidth * cal.pixelHeight * cal.pixelDepth;
+		final double[] volumes = { volBone * voxelVol, volTotal * voxelVol };
 		return volumes;
 	}
 
 	/**
 	 * Get the volumes from a stack using a surface mesh. Ignores the ROI
 	 * Manager and doesn't draw any 3D results
-	 * 
+	 *
 	 * @param imp
 	 * @param minT
 	 * @param maxT
 	 * @param resampling
 	 * @return
 	 */
-	public double[] getSurfaceVolume(final ImagePlus imp, final double minT,
-			final double maxT, int resampling) {
+	public double[] getSurfaceVolume(final ImagePlus imp, final double minT, final double maxT, final int resampling) {
 		return getSurfaceVolume(imp, minT, maxT, resampling, false, false);
 	}
 
 	/**
 	 * Calculate the foreground (bone) and total volumes, using surface meshes.
-	 * 
+	 *
 	 * @param imp
 	 *            Input ImagePlus
 	 * @param minT
@@ -255,9 +246,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public double[] getSurfaceVolume(final ImagePlus imp, final double minT,
-			final double maxT, int resampling, final boolean useRoiMan,
-			boolean show3D) {
+	public double[] getSurfaceVolume(final ImagePlus imp, final double minT, final double maxT, final int resampling,
+			final boolean useRoiMan, final boolean show3D) {
 		final ImageStack stack = imp.getImageStack();
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
@@ -281,8 +271,8 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final int zm = zmin;
 		final ImageProcessor[] outIps = new ImageProcessor[di];
 		final ImageProcessor[] maskIps = new ImageProcessor[di];
-		ImageStack outStack = new ImageStack(wi, hi, di);
-		ImageStack maskStack = new ImageStack(wi, hi, di);
+		final ImageStack outStack = new ImageStack(wi, hi, di);
+		final ImageStack maskStack = new ImageStack(wi, hi, di);
 		for (int i = 0; i < di; i++) {
 			outStack.setPixels(Moments.getEmptyPixels(wi, hi, 8), i + 1);
 			maskStack.setPixels(Moments.getEmptyPixels(wi, hi, 8), i + 1);
@@ -290,57 +280,52 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			maskIps[i] = maskStack.getProcessor(i + 1);
 		}
 		final AtomicInteger ai = new AtomicInteger(zmin);
-		Thread[] threads = Multithreader.newThreads();
+		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
-					for (int s = ai.getAndIncrement(); s < di + zm; s = ai
-							.getAndIncrement()) {
+					for (int s = ai.getAndIncrement(); s < di + zm; s = ai.getAndIncrement()) {
 						IJ.showStatus("Creating binary templates...");
 						IJ.showProgress(s, di);
-						ImageProcessor ipSlice = stack.getProcessor(s);
-							ipSlice.setRoi(imp.getRoi());
+						final ImageProcessor ipSlice = stack.getProcessor(s);
+						ipSlice.setRoi(imp.getRoi());
 						if (roiMan != null && useRoiMan) {
 							ipSlice.resetRoi();
 							ArrayList<Roi> rois = new ArrayList<Roi>();
 							if (nSlices == 1) {
-								Roi[] roiArray = roiMan.getRoisAsArray();
-								for (Roi roi : roiArray)
+								final Roi[] roiArray = roiMan.getRoisAsArray();
+								for (final Roi roi : roiArray)
 									rois.add(roi);
 							} else
 								rois = RoiMan.getSliceRoi(roiMan, s);
 							if (rois.size() == 0)
 								continue;
-							for (Roi roi : rois) {
+							for (final Roi roi : rois) {
 								ipSlice.setRoi(roi);
-								drawMasks(ipSlice, maskIps, outIps, s, xm, ym,
-										zm);
+								drawMasks(ipSlice, maskIps, outIps, s, xm, ym, zm);
 							}
 						} else
 							drawMasks(ipSlice, maskIps, outIps, s, xm, ym, zm);
 					}
 				}
 
-				private void drawMasks(ImageProcessor ipSlice,
-						ImageProcessor[] maskIps, ImageProcessor[] outIps,
-						int s, int xmin, int ymin, int zmin) {
-					ImageProcessor mask = ipSlice.getMask();
+				private void drawMasks(final ImageProcessor ipSlice, final ImageProcessor[] maskIps,
+						final ImageProcessor[] outIps, final int s, final int xmin, final int ymin, final int zmin) {
+					final ImageProcessor mask = ipSlice.getMask();
 					final Rectangle r = ipSlice.getRoi();
 					final int rLeft = r.x;
 					final int rTop = r.y;
 					final int rRight = rLeft + r.width;
 					final int rBottom = rTop + r.height;
-					boolean hasMask = (mask != null);
+					final boolean hasMask = (mask != null);
 					for (int v = rTop; v < rBottom; v++) {
 						final int vrTop = v - rTop;
 						for (int u = rLeft; u < rRight; u++) {
 							if (!hasMask || mask.get(u - rLeft, vrTop) > 0) {
-								maskIps[s - zmin].set(u - xmin, v - ymin,
-										(byte) 255);
+								maskIps[s - zmin].set(u - xmin, v - ymin, (byte) 255);
 								final double pixel = ipSlice.get(u, v);
 								if (pixel >= minT && pixel <= maxT) {
-									outIps[s - zmin].set(u - xmin, v - ymin,
-											(byte) 255);
+									outIps[s - zmin].set(u - xmin, v - ymin, (byte) 255);
 								}
 							}
 						}
@@ -349,32 +334,30 @@ public class VolumeFraction implements PlugIn, DialogListener {
 			});
 		}
 		Multithreader.startAndJoin(threads);
-		ImagePlus outImp = new ImagePlus();
+		final ImagePlus outImp = new ImagePlus();
 		outImp.setStack("Out", outStack);
 		outImp.setCalibration(imp.getCalibration());
-		ImagePlus maskImp = new ImagePlus();
+		final ImagePlus maskImp = new ImagePlus();
 		maskImp.setStack("Mask", maskStack);
 		maskImp.setCalibration(imp.getCalibration());
 		IJ.showStatus("Creating surface mesh...");
-		Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
-		Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
-		boolean[] channels = { true, false, false };
-		MCTriangulator mct = new MCTriangulator();
-		List<Point3f> points = mct.getTriangles(outImp, 128, channels,
-				resampling);
-		CustomTriangleMesh surface = new CustomTriangleMesh(points, yellow,
-				0.4f);
+		final Color3f yellow = new Color3f(1.0f, 1.0f, 0.0f);
+		final Color3f blue = new Color3f(0.0f, 0.0f, 1.0f);
+		final boolean[] channels = { true, false, false };
+		final MCTriangulator mct = new MCTriangulator();
+		List<Point3f> points = mct.getTriangles(outImp, 128, channels, resampling);
+		final CustomTriangleMesh surface = new CustomTriangleMesh(points, yellow, 0.4f);
 		IJ.showStatus("Calculating BV...");
-		double boneVolume = Math.abs(surface.getVolume());
+		final double boneVolume = Math.abs(surface.getVolume());
 		IJ.showStatus("Creating surface mesh...");
 		points = mct.getTriangles(maskImp, 128, channels, resampling);
-		CustomTriangleMesh mask = new CustomTriangleMesh(points, blue, 0.65f);
+		final CustomTriangleMesh mask = new CustomTriangleMesh(points, blue, 0.65f);
 		IJ.showStatus("Calculating TV...");
-		double totalVolume = Math.abs(mask.getVolume());
-		double[] volumes = { boneVolume, totalVolume };
+		final double totalVolume = Math.abs(mask.getVolume());
+		final double[] volumes = { boneVolume, totalVolume };
 		IJ.showStatus("");
 		if (show3D) {
-			Image3DUniverse univ = new Image3DUniverse();
+			final Image3DUniverse univ = new Image3DUniverse();
 			univ.addCustomMesh(surface, "BV");
 			univ.addCustomMesh(mask, "TV");
 			univ.show();
@@ -382,9 +365,9 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		return volumes;
 	}
 
-	private double[] setThreshold(ImagePlus imp) {
-		double[] thresholds = new double[2];
-		ImageCheck ic = new ImageCheck();
+	private double[] setThreshold(final ImagePlus imp) {
+		final double[] thresholds = new double[2];
+		final ImageCheck ic = new ImageCheck();
 		if (ic.isBinary(imp)) {
 			thresholds[0] = 128;
 			thresholds[1] = 255;
@@ -397,15 +380,15 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		return thresholds;
 	}
 
-	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
-		Vector<?> choices = gd.getChoices();
-		Choice choice = (Choice) choices.get(0);
-		Vector<?> numbers = gd.getNumericFields();
-		TextField num = (TextField) numbers.get(0);
-		Vector<?> boxes = gd.getCheckboxes();
-		Checkbox box = (Checkbox) boxes.get(1);
+		final Vector<?> choices = gd.getChoices();
+		final Choice choice = (Choice) choices.get(0);
+		final Vector<?> numbers = gd.getNumericFields();
+		final TextField num = (TextField) numbers.get(0);
+		final Vector<?> boxes = gd.getCheckboxes();
+		final Checkbox box = (Checkbox) boxes.get(1);
 
 		if (choice.getSelectedIndex() == 1) {
 			num.setEnabled(true);

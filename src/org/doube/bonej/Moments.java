@@ -1,6 +1,28 @@
 package org.doube.bonej;
 
-/** Moments ImageJ plugin Copyright 2008 2009 2010 Michael Doube 
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.Rectangle;
+import java.awt.TextField;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
+
+import org.doube.jama.EigenvalueDecomposition;
+import org.doube.jama.Matrix;
+import org.doube.util.DialogModifier;
+import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
+import org.doube.util.ThresholdGuesser;
+import org.doube.util.UsageReporter;
+
+import customnode.CustomPointMesh;
+
+/** Moments ImageJ plugin Copyright 2008 2009 2010 Michael Doube
  *
  *This program is free software: you can redistribute it and/or modify
  *it under the terms of the GNU General Public License as published by
@@ -20,51 +42,30 @@ package org.doube.bonej;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.process.ImageProcessor;
-import ij.process.StackConverter;
+import ij.gui.DialogListener;
+import ij.gui.GenericDialog;
+import ij.measure.Calibration;
 import ij.plugin.Duplicator;
 import ij.plugin.PlugIn;
-import ij.measure.Calibration;
-import ij.gui.*;
+import ij.process.ImageProcessor;
+import ij.process.StackConverter;
 import ij3d.Content;
 import ij3d.Image3DUniverse;
-
-import java.awt.AWTEvent;
-import java.awt.Checkbox;
-import java.awt.Rectangle;
-import java.awt.TextField;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Vector;
-
-import javax.vecmath.Color3f;
-import javax.vecmath.Point3f;
-
-import org.doube.jama.Matrix;
-import org.doube.jama.EigenvalueDecomposition;
-import org.doube.util.DialogModifier;
-import org.doube.util.ImageCheck;
-import org.doube.util.ResultInserter;
-import org.doube.util.ThresholdGuesser;
-import org.doube.util.UsageReporter;
-
-import customnode.CustomPointMesh;
 
 /**
  * Calculate centroid and principal axes of a thresholded stack; originally
  * designed for 16-bit CT scans of a bone in air so default thresholds are 0 and
  * 4000 HU, but most greyscale images should be handled
- * 
+ *
  * @author Michael Doube
- * 
+ *
  */
 public class Moments implements PlugIn, DialogListener {
 
 	private boolean fieldUpdated = false;
 	private Calibration cal;
 
-	public void run(String arg) {
+	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
@@ -73,7 +74,7 @@ public class Moments implements PlugIn, DialogListener {
 			return;
 		}
 		cal = imp.getCalibration();
-		double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
+		final double[] thresholds = ThresholdGuesser.setDefaultThreshold(imp);
 		double min = thresholds[0];
 		double max = thresholds[1];
 		String pixUnits;
@@ -82,16 +83,14 @@ public class Moments implements PlugIn, DialogListener {
 			fieldUpdated = true;
 		} else
 			pixUnits = "grey";
-		GenericDialog gd = new GenericDialog("Setup");
+		final GenericDialog gd = new GenericDialog("Setup");
 		gd.addNumericField("Start Slice:", 1, 0);
 		gd.addNumericField("End Slice:", imp.getStackSize(), 0);
 
 		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
-		gd
-				.addMessage("Only pixels >= bone min\n"
-						+ "and <= bone max are used.");
+		gd.addMessage("Only pixels >= bone min\n" + "and <= bone max are used.");
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
@@ -106,42 +105,38 @@ public class Moments implements PlugIn, DialogListener {
 		}
 		final int startSlice = (int) gd.getNextNumber();
 		final int endSlice = (int) gd.getNextNumber();
-		boolean isHUCalibrated = gd.getNextBoolean();
+		final boolean isHUCalibrated = gd.getNextBoolean();
 		min = gd.getNextNumber();
 		max = gd.getNextNumber();
-		
+
 		double m = gd.getNextNumber();
 		double c = gd.getNextNumber();
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
-			
-			//convert HU->density user input into raw->density coefficients
-			//for use in later calculations
+
+			// convert HU->density user input into raw->density coefficients
+			// for use in later calculations
 			c = m * cal.getCoefficients()[0] + c;
 			m = m * cal.getCoefficients()[1];
 		}
-		
+
 		final boolean doAlign = gd.getNextBoolean();
 		final boolean doAxes = gd.getNextBoolean();
 		final boolean doAxes3D = gd.getNextBoolean();
 
-		double[] centroid = getCentroid3D(imp, startSlice, endSlice, min, max,
-				m, c);
+		final double[] centroid = getCentroid3D(imp, startSlice, endSlice, min, max, m, c);
 		if (centroid[0] < 0) {
-			IJ.error("Empty Stack",
-					"No voxels are available for calculation.\n"
-							+ "Check your ROI and threshold.");
+			IJ.error("Empty Stack", "No voxels are available for calculation.\n" + "Check your ROI and threshold.");
 			return;
 		}
-		Object[] momentResults = calculateMoments(imp, startSlice, endSlice,
-				centroid, min, max, m, c);
+		final Object[] momentResults = calculateMoments(imp, startSlice, endSlice, centroid, min, max, m, c);
 
-		EigenvalueDecomposition E = (EigenvalueDecomposition) momentResults[0];
-		double[] moments = (double[]) momentResults[1];
+		final EigenvalueDecomposition E = (EigenvalueDecomposition) momentResults[0];
+		final double[] moments = (double[]) momentResults[1];
 
-		String units = imp.getCalibration().getUnits();
-		ResultInserter ri = ResultInserter.getInstance();
+		final String units = imp.getCalibration().getUnits();
+		final ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Xc (" + units + ")", centroid[0]);
 		ri.setResultInRow(imp, "Yc (" + units + ")", centroid[1]);
 		ri.setResultInRow(imp, "Zc (" + units + ")", centroid[2]);
@@ -159,8 +154,7 @@ public class Moments implements PlugIn, DialogListener {
 		ri.updateTable();
 
 		if (doAlign)
-			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice,
-					min, max, doAxes).show();
+			alignToPrincipalAxes(imp, E.getV(), centroid, startSlice, endSlice, min, max, doAxes).show();
 
 		if (doAxes3D)
 			show3DAxes(imp, E.getV(), centroid, startSlice, endSlice, min, max);
@@ -179,18 +173,17 @@ public class Moments implements PlugIn, DialogListener {
 	 * Convert a pixel value <i>x</i> to a voxel density <i>y</i> given
 	 * calibration constants <i>m</i>, <i>c</i> for the equation <i>y</i> =
 	 * <i>mx</i> + <i>c</i>
-	 * 
+	 *
 	 * @param pixelValue
 	 *            raw pixel value
 	 * @param m
 	 *            slope of regression line
 	 * @param c
 	 *            y intercept of regression line
-	 * 
+	 *
 	 * @return voxelDensity
 	 */
-	private double voxelDensity(double pixelValue, double m, double c,
-			double factor) {
+	private double voxelDensity(final double pixelValue, final double m, final double c, final double factor) {
 		double voxelDensity = (m * pixelValue + c) / factor;
 		if (voxelDensity < 0)
 			voxelDensity = 0;
@@ -200,12 +193,12 @@ public class Moments implements PlugIn, DialogListener {
 	/**
 	 * Get a scale factor because density is in g / cm³ but our units are mm so
 	 * density is 1000* too high
-	 * 
+	 *
 	 * @param imp
 	 * @return
 	 */
-	private double getDensityFactor(ImagePlus imp) {
-		String units = imp.getCalibration().getUnits();
+	private double getDensityFactor(final ImagePlus imp) {
+		final String units = imp.getCalibration().getUnits();
 		double factor = 1;
 		if (units.contains("mm")) {
 			factor = 1000;
@@ -219,24 +212,24 @@ public class Moments implements PlugIn, DialogListener {
 	 * Return an empty pixel array of the type appropriate for the bit depth
 	 * required. Returns an Object, which can be used when adding an empty slice
 	 * to a stack
-	 * 
+	 *
 	 * @param w
 	 * @param h
 	 * @param bitDepth
 	 * @return Object containing an array of the type needed for an image with
 	 *         bitDepth
 	 */
-	public static Object getEmptyPixels(int w, int h, int bitDepth) {
+	public static Object getEmptyPixels(final int w, final int h, final int bitDepth) {
 
 		Object emptyPixels = new Object();
 		if (bitDepth == 8) {
-			byte[] bytePixels = new byte[w * h];
+			final byte[] bytePixels = new byte[w * h];
 			emptyPixels = bytePixels;
 		} else if (bitDepth == 16) {
-			short[] shortPixels = new short[w * h];
+			final short[] shortPixels = new short[w * h];
 			emptyPixels = shortPixels;
 		} else if (bitDepth == 32) {
-			float[] floatPixels = new float[w * h];
+			final float[] floatPixels = new float[w * h];
 			emptyPixels = floatPixels;
 		}
 		return emptyPixels;
@@ -245,7 +238,7 @@ public class Moments implements PlugIn, DialogListener {
 	/**
 	 * Calculate a density-weighted centroid in an image using z-clip planes,
 	 * threshold clipping and density = m * pixel value + c density equation
-	 * 
+	 *
 	 * @param imp
 	 *            ImagePlus
 	 * @param startSlice
@@ -262,15 +255,15 @@ public class Moments implements PlugIn, DialogListener {
 	 *            constant in density equation
 	 * @return double[] containing (x,y,z) centroid in scaled units
 	 */
-	public double[] getCentroid3D(ImagePlus imp, int startSlice, int endSlice,
-			final double min, final double max, final double m, final double c) {
+	public double[] getCentroid3D(final ImagePlus imp, final int startSlice, final int endSlice, final double min,
+			final double max, final double m, final double c) {
 		final ImageStack stack = imp.getImageStack();
 		final Rectangle r = imp.getProcessor().getRoi();
 		final int rW = r.x + r.width;
 		final int rH = r.y + r.height;
 		final int rX = r.x;
 		final int rY = r.y;
-		Calibration cal = imp.getCalibration();
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -283,14 +276,12 @@ public class Moments implements PlugIn, DialogListener {
 		for (int z = startSlice; z <= endSlice; z++) {
 			IJ.showStatus("Calculating centroid...");
 			IJ.showProgress(z - startSlice, endSlice - startSlice);
-			ImageProcessor ip = stack.getProcessor(z);
+			final ImageProcessor ip = stack.getProcessor(z);
 			for (int y = rY; y < rH; y++) {
 				for (int x = rX; x < rW; x++) {
 					final double testPixel = ip.get(x, y);
 					if (testPixel >= min && testPixel <= max) {
-						final double voxelMass = voxelDensity(testPixel, m, c,
-								factor)
-								* voxVol;
+						final double voxelMass = voxelDensity(testPixel, m, c, factor) * voxVol;
 						sumMass += voxelMass;
 						sumx += x * voxelMass;
 						sumy += y * voxelMass;
@@ -309,15 +300,14 @@ public class Moments implements PlugIn, DialogListener {
 			centZ = -1;
 		}
 		// centroid in real units
-		double[] centroid = { centX * vW, centY * vH, centZ * vD };
+		final double[] centroid = { centX * vW, centY * vH, centZ * vD };
 		return centroid;
 	}/* end findCentroid3D */
 
-	public Object[] calculateMoments(ImagePlus imp, int startSlice,
-			int endSlice, double[] centroid, final double min,
-			final double max, double m, double c) {
+	public Object[] calculateMoments(final ImagePlus imp, final int startSlice, final int endSlice,
+			final double[] centroid, final double min, final double max, final double m, final double c) {
 		// START OF 3D MOMENT CALCULATIONS
-		Calibration cal = imp.getCalibration();
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
@@ -346,27 +336,22 @@ public class Moments implements PlugIn, DialogListener {
 		for (int z = startSlice; z <= endSlice; z++) {
 			IJ.showStatus("Calculating inertia tensor...");
 			IJ.showProgress(z - startSlice, endSlice - startSlice);
-			ImageProcessor ip = stack.getProcessor(z);
+			final ImageProcessor ip = stack.getProcessor(z);
 			for (int y = rY; y < rH; y++) {
 				for (int x = rX; x < rW; x++) {
-					final double testPixel = (double) ip.get(x, y);
+					final double testPixel = ip.get(x, y);
 					if (testPixel < min || testPixel > max) {
 						continue;
 					} else {
 						sumVoxVol += voxVol;
-						final double voxMass = voxelDensity(testPixel, m, c,
-								factor)
-								* voxVol;
+						final double voxMass = voxelDensity(testPixel, m, c, factor) * voxVol;
 						sumVoxMass += voxMass;
 						final double xvWcX = x * vW - cX;
 						final double yvHcY = y * vH - cY;
 						final double zvDcZ = z * vD - cZ;
-						Icxx += (yvHcY * yvHcY + zvDcZ * zvDcZ + voxVhVd)
-								* voxMass;
-						Icyy += (xvWcX * xvWcX + zvDcZ * zvDcZ + voxVwVd)
-								* voxMass;
-						Iczz += (yvHcY * yvHcY + xvWcX * xvWcX + voxVhVw)
-								* voxMass;
+						Icxx += (yvHcY * yvHcY + zvDcZ * zvDcZ + voxVhVd) * voxMass;
+						Icyy += (xvWcX * xvWcX + zvDcZ * zvDcZ + voxVwVd) * voxMass;
+						Iczz += (yvHcY * yvHcY + xvWcX * xvWcX + voxVhVw) * voxMass;
 						Icxy += xvWcX * yvHcY * voxMass;
 						Icxz += xvWcX * zvDcZ * voxMass;
 						Icyz += yvHcY * zvDcZ * voxMass;
@@ -375,7 +360,7 @@ public class Moments implements PlugIn, DialogListener {
 			}
 		}
 		// create the inertia tensor matrix
-		double[][] inertiaTensor = new double[3][3];
+		final double[][] inertiaTensor = new double[3][3];
 		inertiaTensor[0][0] = Icxx;
 		inertiaTensor[1][1] = Icyy;
 		inertiaTensor[2][2] = Iczz;
@@ -385,24 +370,22 @@ public class Moments implements PlugIn, DialogListener {
 		inertiaTensor[1][2] = -Icyz;
 		inertiaTensor[2][0] = -Icxz;
 		inertiaTensor[2][1] = -Icyz;
-		Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
+		final Matrix inertiaTensorMatrix = new Matrix(inertiaTensor);
 
 		// do the Eigenvalue decomposition
-		EigenvalueDecomposition E = new EigenvalueDecomposition(
-				inertiaTensorMatrix);
+		final EigenvalueDecomposition E = new EigenvalueDecomposition(inertiaTensorMatrix);
 		E.getD().printToIJLog("Eigenvalues");
 		E.getV().printToIJLog("Eigenvectors");
 
-		double[] moments = { sumVoxVol, sumVoxMass, Icxx, Icyy, Iczz, Icxy,
-				Icxz, Icyz };
-		Object[] result = { E, moments };
+		final double[] moments = { sumVoxVol, sumVoxMass, Icxx, Icyy, Iczz, Icxy, Icxz, Icyz };
+		final Object[] result = { E, moments };
 
 		return result;
 	}
 
 	/**
 	 * Draw a copy of the original image aligned to its principal axes
-	 * 
+	 *
 	 * @param imp
 	 *            Input image
 	 * @param E
@@ -417,39 +400,37 @@ public class Moments implements PlugIn, DialogListener {
 	 *            if true, draw axes on the aligned copy
 	 * @return ImagePlus copy of the input image
 	 */
-	public ImagePlus alignToPrincipalAxes(ImagePlus imp, Matrix E,
-			double[] centroid, int startSlice, int endSlice, double min,
-			double max, boolean doAxes) {
+	public ImagePlus alignToPrincipalAxes(final ImagePlus imp, final Matrix E, final double[] centroid,
+			final int startSlice, final int endSlice, final double min, final double max, final boolean doAxes) {
 		final ImageStack sourceStack = imp.getImageStack();
-		Calibration cal = imp.getCalibration();
+		final Calibration cal = imp.getCalibration();
 		final double vW = cal.pixelWidth;
 		final double vH = cal.pixelHeight;
 		final double vD = cal.pixelDepth;
 		final double vS = Math.min(vW, Math.min(vH, vD));
 		final int d = sourceStack.getSize();
-		int[] sides = getRotatedSize(E, imp, centroid, startSlice, endSlice,
-				min, max);
+		final int[] sides = getRotatedSize(E, imp, centroid, startSlice, endSlice, min, max);
 
 		// Rotation matrix to rotate data 90 deg around x axis
-		double[][] rotX = new double[3][3];
+		final double[][] rotX = new double[3][3];
 		rotX[0][0] = 1;
 		rotX[1][2] = -1;
 		rotX[2][1] = 1;
-		Matrix RotX = new Matrix(rotX);
+		final Matrix RotX = new Matrix(rotX);
 
 		// Rotation matrix to rotate data 90 deg around y axis
-		double[][] rotY = new double[3][3];
+		final double[][] rotY = new double[3][3];
 		rotY[0][2] = 1;
 		rotY[1][1] = 1;
 		rotY[2][0] = -1;
-		Matrix RotY = new Matrix(rotY);
+		final Matrix RotY = new Matrix(rotY);
 
 		// Rotation matrix to rotate data 90 deg around z axis
-		double[][] rotZ = new double[3][3];
+		final double[][] rotZ = new double[3][3];
 		rotZ[0][1] = -1;
 		rotZ[1][0] = 1;
 		rotZ[2][2] = 1;
-		Matrix RotZ = new Matrix(rotZ);
+		final Matrix RotZ = new Matrix(rotZ);
 
 		final int wi = sides[0];
 		final int hi = sides[1];
@@ -489,17 +470,17 @@ public class Moments implements PlugIn, DialogListener {
 
 		// Check for reflection
 		if (!rotation.isRightHanded()) {
-			double[][] reflectY = new double[3][3];
+			final double[][] reflectY = new double[3][3];
 			reflectY[0][0] = -1;
 			reflectY[1][1] = 1;
 			reflectY[2][2] = 1;
-			Matrix RefY = new Matrix(reflectY);
+			final Matrix RefY = new Matrix(reflectY);
 			rotation = rotation.times(RefY);
 			IJ.log("Reflected the rotation matrix");
 		}
 		rotation.printToIJLog("Rotation Matrix (Source -> Target)");
 
-		Matrix eVecInv = rotation.inverse();
+		final Matrix eVecInv = rotation.inverse();
 		eVecInv.printToIJLog("Inverse Rotation Matrix (Target -> Source)");
 		final double[][] eigenVecInv = eVecInv.getArrayCopy();
 
@@ -516,32 +497,31 @@ public class Moments implements PlugIn, DialogListener {
 		// find the corresponding source voxel
 
 		// Cache the sourceStack's processors
-		ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
+		final ImageProcessor[] sliceProcessors = new ImageProcessor[d + 1];
 		for (int z = 1; z <= d; z++) {
 			sliceProcessors[z] = sourceStack.getProcessor(z);
 		}
 		// Initialise an empty stack and tartgetStack's processor array
-		ImageStack targetStack = new ImageStack(wT, hT, dT);
-		ImageProcessor[] targetProcessors = new ImageProcessor[dT + 1];
+		final ImageStack targetStack = new ImageStack(wT, hT, dT);
+		final ImageProcessor[] targetProcessors = new ImageProcessor[dT + 1];
 		for (int z = 1; z <= dT; z++) {
 			targetStack.setPixels(getEmptyPixels(wT, hT, imp.getBitDepth()), z);
 			targetProcessors[z] = targetStack.getProcessor(z);
 		}
 
 		// Multithread start
-		int nThreads = Runtime.getRuntime().availableProcessors();
-		AlignThread[] alignThread = new AlignThread[nThreads];
+		final int nThreads = Runtime.getRuntime().availableProcessors();
+		final AlignThread[] alignThread = new AlignThread[nThreads];
 		for (int thread = 0; thread < nThreads; thread++) {
-			alignThread[thread] = new AlignThread(thread, nThreads, imp,
-					sliceProcessors, targetProcessors, eigenVecInv, centroid,
-					wT, hT, dT, startSlice, endSlice);
+			alignThread[thread] = new AlignThread(thread, nThreads, imp, sliceProcessors, targetProcessors, eigenVecInv,
+					centroid, wT, hT, dT, startSlice, endSlice);
 			alignThread[thread].start();
 		}
 		try {
 			for (int thread = 0; thread < nThreads; thread++) {
 				alignThread[thread].join();
 			}
-		} catch (InterruptedException ie) {
+		} catch (final InterruptedException ie) {
 			IJ.error("A thread was interrupted.");
 		}
 		// end multithreading
@@ -554,14 +534,14 @@ public class Moments implements PlugIn, DialogListener {
 			for (int z = 1; z <= dT; z++) {
 				// z axis
 				try {
-					ImageProcessor axisIP = targetStack.getProcessor(z);
+					final ImageProcessor axisIP = targetStack.getProcessor(z);
 					axisIP.set(xCent, yCent, axisColour);
-				} catch (NullPointerException npe) {
+				} catch (final NullPointerException npe) {
 					IJ.handleException(npe);
 					break;
 				}
 			}
-			ImageProcessor axisIP = targetStack.getProcessor(zCent);
+			final ImageProcessor axisIP = targetStack.getProcessor(zCent);
 			axisIP.setColor(Integer.MAX_VALUE);
 			// x axis
 			axisIP.drawLine(0, yCent, wT, yCent);
@@ -569,24 +549,22 @@ public class Moments implements PlugIn, DialogListener {
 			// y axis
 			axisIP.drawLine(xCent, 0, xCent, hT);
 		}
-		ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(),
-				targetStack);
+		final ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(), targetStack);
 		impTarget.setCalibration(imp.getCalibration());
-		Calibration targetCal = impTarget.getCalibration();
+		final Calibration targetCal = impTarget.getCalibration();
 		targetCal.pixelDepth = vS;
 		targetCal.pixelHeight = vS;
 		targetCal.pixelWidth = vS;
-		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp
-				.getDisplayRangeMax());
+		impTarget.setDisplayRange(imp.getDisplayRangeMin(), imp.getDisplayRangeMax());
 		return impTarget;
 	}
 
 	/**
 	 * Multithreading class to look up aligned voxel values, processing each
 	 * slice in its own thread
-	 * 
+	 *
 	 * @author Michael Doube
-	 * 
+	 *
 	 */
 	class AlignThread extends Thread {
 		final int thread, nThreads, wT, hT, dT, startSlice, endSlice;
@@ -596,11 +574,10 @@ public class Moments implements PlugIn, DialogListener {
 		final double[][] eigenVecInv;
 		final double[] centroid;
 
-		public AlignThread(int thread, int nThreads, ImagePlus imp,
-				ImageProcessor[] sliceProcessors,
-				ImageProcessor[] targetProcessors, double[][] eigenVecInv,
-				double[] centroid, int wT, int hT, int dT, int startSlice,
-				int endSlice) {
+		public AlignThread(final int thread, final int nThreads, final ImagePlus imp,
+				final ImageProcessor[] sliceProcessors, final ImageProcessor[] targetProcessors,
+				final double[][] eigenVecInv, final double[] centroid, final int wT, final int hT, final int dT,
+				final int startSlice, final int endSlice) {
 			this.impT = imp;
 			this.stackT = this.impT.getStack();
 			this.thread = thread;
@@ -616,13 +593,14 @@ public class Moments implements PlugIn, DialogListener {
 			this.endSlice = endSlice;
 		}
 
+		@Override
 		public void run() {
 			final Rectangle r = this.impT.getProcessor().getRoi();
 			final int rW = r.x + r.width;
 			final int rH = r.y + r.height;
 			final int rX = r.x;
 			final int rY = r.y;
-			Calibration cal = this.impT.getCalibration();
+			final Calibration cal = this.impT.getCalibration();
 			final double vW = cal.pixelWidth;
 			final double vH = cal.pixelHeight;
 			final double vD = cal.pixelDepth;
@@ -650,7 +628,7 @@ public class Moments implements PlugIn, DialogListener {
 				IJ.showProgress(z, this.dT);
 				// this.targetStack.setPixels(getEmptyPixels(this.wT, this.hT,
 				// this.impT.getBitDepth()), z);
-				ImageProcessor targetIP = targetProcessors[z];
+				final ImageProcessor targetIP = targetProcessors[z];
 				final double zD = z * vS - zTc;
 				final double zDeVI00 = zD * eVI20;
 				final double zDeVI01 = zD * eVI21;
@@ -662,24 +640,19 @@ public class Moments implements PlugIn, DialogListener {
 					final double yDeVI12 = yD * eVI12;
 					for (int x = 0; x < this.wT; x++) {
 						final double xD = x * vS - xTc;
-						final double xAlign = xD * eVI00 + yDeVI10 + zDeVI00
-								+ xTc;
-						final double yAlign = xD * eVI01 + yDeVI11 + zDeVI01
-								+ yTc;
-						final double zAlign = xD * eVI02 + yDeVI12 + zDeVI02
-								+ zTc;
+						final double xAlign = xD * eVI00 + yDeVI10 + zDeVI00 + xTc;
+						final double yAlign = xD * eVI01 + yDeVI11 + zDeVI01 + yTc;
+						final double zAlign = xD * eVI02 + yDeVI12 + zDeVI02 + zTc;
 						// possibility to do some voxel interpolation instead
 						// of just rounding in next 3 lines
 						final int xA = (int) Math.floor((xAlign + dXc) / vW);
 						final int yA = (int) Math.floor((yAlign + dYc) / vH);
 						final int zA = (int) Math.floor((zAlign + dZc) / vD);
 
-						if (xA < rX || xA >= rW || yA < rY || yA >= rH
-								|| zA < this.startSlice || zA > this.endSlice) {
+						if (xA < rX || xA >= rW || yA < rY || yA >= rH || zA < this.startSlice || zA > this.endSlice) {
 							continue;
 						} else {
-							targetIP.set(x, y, this.sliceProcessors[zA].get(xA,
-									yA));
+							targetIP.set(x, y, this.sliceProcessors[zA].get(xA, yA));
 						}
 					}
 				}
@@ -690,7 +663,7 @@ public class Moments implements PlugIn, DialogListener {
 	/**
 	 * Find side lengths in pixels of the smallest stack to fit the aligned
 	 * image
-	 * 
+	 *
 	 * @param E
 	 *            Rotation matrix
 	 * @param imp
@@ -708,8 +681,8 @@ public class Moments implements PlugIn, DialogListener {
 	 * @return Width, height and depth of a stack that will 'just fit' the
 	 *         aligned image
 	 */
-	private int[] getRotatedSize(Matrix E, ImagePlus imp, double[] centroid,
-			int startSlice, int endSlice, double min, double max) {
+	private int[] getRotatedSize(final Matrix E, final ImagePlus imp, final double[] centroid, final int startSlice,
+			final int endSlice, final double min, final double max) {
 		final ImageStack stack = imp.getImageStack();
 		final Calibration cal = imp.getCalibration();
 		final double xC = centroid[0];
@@ -742,7 +715,7 @@ public class Moments implements PlugIn, DialogListener {
 
 		for (int z = startSlice; z <= endSlice; z++) {
 			IJ.showStatus("Getting aligned stack dimensions...");
-			ImageProcessor ip = stack.getProcessor(z);
+			final ImageProcessor ip = stack.getProcessor(z);
 			final double zCz = z * vD - zC;
 			final double zCzv20 = zCz * v20;
 			final double zCzv21 = zCz * v21;
@@ -781,20 +754,20 @@ public class Moments implements PlugIn, DialogListener {
 		}
 
 		// use the smallest input voxel dimension as the voxel size
-		double vS = Math.min(vW, Math.min(vH, vD));
+		final double vS = Math.min(vW, Math.min(vH, vD));
 
-		int tW = (int) Math.floor(2 * xTmax / vS) + 5;
-		int tH = (int) Math.floor(2 * yTmax / vS) + 5;
-		int tD = (int) Math.floor(2 * zTmax / vS) + 5;
+		final int tW = (int) Math.floor(2 * xTmax / vS) + 5;
+		final int tH = (int) Math.floor(2 * yTmax / vS) + 5;
+		final int tD = (int) Math.floor(2 * zTmax / vS) + 5;
 
-		int[] size = { tW, tH, tD };
+		final int[] size = { tW, tH, tD };
 		return size;
 	}
 
 	/**
 	 * Create a copy of the original image aligned to the tensor defined by a
 	 * 3x3 Eigenvector matrix
-	 * 
+	 *
 	 * @param imp
 	 *            input ImagePlus stack
 	 * @param E
@@ -815,19 +788,16 @@ public class Moments implements PlugIn, DialogListener {
 	 *            intercept of density equation, d = m * p + c
 	 * @return aligned ImagePlus
 	 */
-	public ImagePlus alignImage(ImagePlus imp, Matrix E, boolean doAxes,
-			int startSlice, int endSlice, double min, double max, double m,
-			double c) {
-		final double[] centroid = getCentroid3D(imp, startSlice, endSlice, min,
-				max, m, c);
-		ImagePlus alignedImp = alignToPrincipalAxes(imp, E, centroid,
-				startSlice, endSlice, min, max, doAxes);
+	public ImagePlus alignImage(final ImagePlus imp, final Matrix E, final boolean doAxes, final int startSlice,
+			final int endSlice, final double min, final double max, final double m, final double c) {
+		final double[] centroid = getCentroid3D(imp, startSlice, endSlice, min, max, m, c);
+		final ImagePlus alignedImp = alignToPrincipalAxes(imp, E, centroid, startSlice, endSlice, min, max, doAxes);
 		return alignedImp;
 	}
 
 	/**
 	 * Display principal axes on a 3D rendered version of the image
-	 * 
+	 *
 	 * @param imp
 	 *            Original image
 	 * @param E
@@ -843,14 +813,14 @@ public class Moments implements PlugIn, DialogListener {
 	 * @param max
 	 *            upper threshold
 	 */
-	private void show3DAxes(ImagePlus imp, Matrix E, double[] centroid,
-			int startSlice, int endSlice, double min, double max) {
-		Calibration cal = imp.getCalibration();
+	private void show3DAxes(final ImagePlus imp, final Matrix E, final double[] centroid, final int startSlice,
+			final int endSlice, final double min, final double max) {
+		final Calibration cal = imp.getCalibration();
 		// copy the data from inside the ROI and convert it to 8-bit
-		Duplicator d = new Duplicator();
-		ImagePlus roiImp = d.run(imp, startSlice, endSlice);
+		final Duplicator d = new Duplicator();
+		final ImagePlus roiImp = d.run(imp, startSlice, endSlice);
 		if (imp.getRoi() != null) {
-			Rectangle roi = imp.getRoi().getBounds();
+			final Rectangle roi = imp.getRoi().getBounds();
 			centroid[0] -= roi.getX() * cal.pixelWidth;
 			centroid[1] -= roi.getY() * cal.pixelHeight;
 		}
@@ -859,82 +829,79 @@ public class Moments implements PlugIn, DialogListener {
 		final double cY = centroid[1];
 		final double cZ = centroid[2];
 
-		Point3f cent = new Point3f();
+		final Point3f cent = new Point3f();
 		cent.x = (float) cX;
 		cent.y = (float) cY;
 		cent.z = (float) cZ;
 
 		// initialise and show the 3D universe
-		Image3DUniverse univ = new Image3DUniverse();
+		final Image3DUniverse univ = new Image3DUniverse();
 		univ.show();
 
 		// show the centroid
-		ArrayList<Point3f> point = new ArrayList<Point3f>();
+		final ArrayList<Point3f> point = new ArrayList<Point3f>();
 		point.add(cent);
-		CustomPointMesh mesh = new CustomPointMesh(point);
+		final CustomPointMesh mesh = new CustomPointMesh(point);
 		mesh.setPointSize(5.0f);
-		float red = 0.0f;
-		float green = 0.5f;
-		float blue = 1.0f;
-		Color3f cColour = new Color3f(red, green, blue);
+		final float red = 0.0f;
+		final float green = 0.5f;
+		final float blue = 1.0f;
+		final Color3f cColour = new Color3f(red, green, blue);
 		mesh.setColor(cColour);
 		try {
 			univ.addCustomMesh(mesh, "Centroid").setLocked(true);
-		} catch (NullPointerException npe) {
+		} catch (final NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
 		}
 
 		// show the axes
-		int[] sideLengths = getRotatedSize(E, roiImp, centroid, 1, endSlice
-				- startSlice + 1, min, max);
-		final double vS = Math.min(cal.pixelWidth, Math.min(cal.pixelHeight,
-				cal.pixelDepth));
+		final int[] sideLengths = getRotatedSize(E, roiImp, centroid, 1, endSlice - startSlice + 1, min, max);
+		final double vS = Math.min(cal.pixelWidth, Math.min(cal.pixelHeight, cal.pixelDepth));
 		final double l1 = sideLengths[0] * vS;
 		final double l2 = sideLengths[1] * vS;
 		final double l3 = sideLengths[2] * vS;
-		List<Point3f> axes = new ArrayList<Point3f>();
-		Point3f start1 = new Point3f();
+		final List<Point3f> axes = new ArrayList<Point3f>();
+		final Point3f start1 = new Point3f();
 		start1.x = (float) (cX - E.get(0, 0) * l1);
 		start1.y = (float) (cY - E.get(1, 0) * l1);
 		start1.z = (float) (cZ - E.get(2, 0) * l1);
 		axes.add(start1);
 
-		Point3f end1 = new Point3f();
+		final Point3f end1 = new Point3f();
 		end1.x = (float) (cX + E.get(0, 0) * l1);
 		end1.y = (float) (cY + E.get(1, 0) * l1);
 		end1.z = (float) (cZ + E.get(2, 0) * l1);
 		axes.add(end1);
 
-		Point3f start2 = new Point3f();
+		final Point3f start2 = new Point3f();
 		start2.x = (float) (cX - E.get(0, 1) * l2);
 		start2.y = (float) (cY - E.get(1, 1) * l2);
 		start2.z = (float) (cZ - E.get(2, 1) * l2);
 		axes.add(start2);
 
-		Point3f end2 = new Point3f();
+		final Point3f end2 = new Point3f();
 		end2.x = (float) (cX + E.get(0, 1) * l2);
 		end2.y = (float) (cY + E.get(1, 1) * l2);
 		end2.z = (float) (cZ + E.get(2, 1) * l2);
 		axes.add(end2);
 
-		Point3f start3 = new Point3f();
+		final Point3f start3 = new Point3f();
 		start3.x = (float) (cX - E.get(0, 2) * l3);
 		start3.y = (float) (cY - E.get(1, 2) * l3);
 		start3.z = (float) (cZ - E.get(2, 2) * l3);
 		axes.add(start3);
 
-		Point3f end3 = new Point3f();
+		final Point3f end3 = new Point3f();
 		end3.x = (float) (cX + E.get(0, 2) * l3);
 		end3.y = (float) (cY + E.get(1, 2) * l3);
 		end3.z = (float) (cZ + E.get(2, 2) * l3);
 		axes.add(end3);
 
-		Color3f aColour = new Color3f(red, green, blue);
+		final Color3f aColour = new Color3f(red, green, blue);
 		try {
-			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(
-					true);
-		} catch (NullPointerException npe) {
+			univ.addLineMesh(axes, aColour, "Principal axes", false).setLocked(true);
+		} catch (final NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
 		}
@@ -942,26 +909,26 @@ public class Moments implements PlugIn, DialogListener {
 		// show the stack
 		try {
 			new StackConverter(roiImp).convertToGray8();
-			Content c = univ.addVoltex(roiImp);
+			final Content c = univ.addVoltex(roiImp);
 			c.setLocked(true);
-		} catch (NullPointerException npe) {
+		} catch (final NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
 		}
 		return;
 	}
 
-	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
+	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
-		Vector<?> checkboxes = gd.getCheckboxes();
-		Vector<?> nFields = gd.getNumericFields();
-		Checkbox box0 = (Checkbox) checkboxes.get(0);
-		boolean isHUCalibrated = box0.getState();
-		TextField minT = (TextField) nFields.get(2);
-		TextField maxT = (TextField) nFields.get(3);
-		double min = Double.parseDouble(minT.getText());
-		double max = Double.parseDouble(maxT.getText());
+		final Vector<?> checkboxes = gd.getCheckboxes();
+		final Vector<?> nFields = gd.getNumericFields();
+		final Checkbox box0 = (Checkbox) checkboxes.get(0);
+		final boolean isHUCalibrated = box0.getState();
+		final TextField minT = (TextField) nFields.get(2);
+		final TextField maxT = (TextField) nFields.get(3);
+		final double min = Double.parseDouble(minT.getText());
+		final double max = Double.parseDouble(maxT.getText());
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));

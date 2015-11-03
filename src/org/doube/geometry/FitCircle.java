@@ -1,9 +1,11 @@
 package org.doube.geometry;
 
+import org.doube.jama.EigenvalueDecomposition;
+
 /**
  * FitCircle Java class for fitting circles to 2D coordinate data
- * 
- * Copyright 2009 2010 Michael Doube 
+ *
+ * Copyright 2009 2010 Michael Doube
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,38 +22,40 @@ package org.doube.geometry;
  */
 
 import org.doube.jama.Matrix;
-import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.SingularValueDecomposition;
 
 /**
  * Methods for fitting circles to coordinates
- * 
+ *
  * @author Michael Doube, ported from Nikolai Chernov's MATLAB scripts
- * @see <p>
- *      Al-Sharadqha & Chernov (2009) <a
- *      href="http://dx.doi.org/10.1214/09-EJS419"> Error analysis for circle
- *      fitting algorithms</a>. Electronic Journal of Statistics 3, pp. 886-911<br/>
+ * @see
+ * 		<p>
+ *      Al-Sharadqha & Chernov (2009)
+ *      <a href="http://dx.doi.org/10.1214/09-EJS419"> Error analysis for circle
+ *      fitting algorithms</a>. Electronic Journal of Statistics 3, pp. 886-911
+ *      <br/>
  *      <br />
- *      <a href="http://www.math.uab.edu/~chernov/cl/MATLABcircle.html"
- *      >http://www.math.uab.edu/~chernov/cl/MATLABcircle.html</a>
+ *      <a href="http://www.math.uab.edu/~chernov/cl/MATLABcircle.html" >http://
+ *      www.math.uab.edu/~chernov/cl/MATLABcircle.html</a>
  *      </p>
- * 
+ *
  */
 public class FitCircle {
 
 	/**
 	 * Kåsa fit
-	 * 
-	 * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+	 *
+	 * @param double[n][2]
+	 *            containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
-	 * 
+	 *
 	 */
-	public static double[] kasaFit(double[][] points) {
-		int nPoints = points.length;
+	public static double[] kasaFit(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[][] z = new double[nPoints][1];
-		double[][] xy1 = new double[nPoints][3];
+		final double[][] z = new double[nPoints][1];
+		final double[][] xy1 = new double[nPoints][3];
 		for (int n = 0; n < nPoints; n++) {
 			z[n][0] = points[n][0] * points[n][0] + points[n][1] * points[n][1];
 			xy1[n][0] = points[n][0];
@@ -59,14 +63,15 @@ public class FitCircle {
 			xy1[n][2] = 1;
 		}
 
-		Matrix XY1 = new Matrix(xy1);
-		Matrix Z = new Matrix(z);
-		Matrix P = (XY1.inverse()).times(Z); // no direct left divide in Jama!
-		double[] centreRadius = new double[3];
+		final Matrix XY1 = new Matrix(xy1);
+		final Matrix Z = new Matrix(z);
+		final Matrix P = (XY1.inverse()).times(Z); // no direct left divide in
+													// Jama!
+		final double[] centreRadius = new double[3];
 
-		double p0 = P.get(0, 0);
-		double p1 = P.get(1, 0);
-		double p2 = P.get(2, 0);
+		final double p0 = P.get(0, 0);
+		final double p1 = P.get(1, 0);
+		final double p2 = P.get(2, 0);
 		centreRadius[0] = p0 / 2;
 		centreRadius[1] = p1 / 2;
 		centreRadius[2] = Math.sqrt((p0 * p0 + p1 * p1) / 4 + p2);
@@ -75,22 +80,23 @@ public class FitCircle {
 
 	/**
 	 * Pratt method (Newton style)
-	 * 
-	 * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+	 *
+	 * @param double[n][2]
+	 *            containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
-	 * 
+	 *
 	 */
-	public static double[] prattNewton(double[][] points) {
-		int nPoints = points.length;
+	public static double[] prattNewton(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] centroid = Centroid.getCentroid(points);
+		final double[] centroid = Centroid.getCentroid(points);
 		double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 
 		for (int i = 0; i < nPoints; i++) {
-			double Xi = points[i][0] - centroid[0];
-			double Yi = points[i][1] - centroid[1];
-			double Zi = Xi * Xi + Yi * Yi;
+			final double Xi = points[i][0] - centroid[0];
+			final double Yi = points[i][1] - centroid[1];
+			final double Zi = Xi * Xi + Yi * Yi;
 			Mxy += Xi * Yi;
 			Mxx += Xi * Xi;
 			Myy += Yi * Yi;
@@ -105,32 +111,30 @@ public class FitCircle {
 		Myz /= nPoints;
 		Mzz /= nPoints;
 
-		double Mz = Mxx + Myy;
-		double Cov_xy = Mxx * Myy - Mxy * Mxy;
-		double Mxz2 = Mxz * Mxz;
-		double Myz2 = Myz * Myz;
+		final double Mz = Mxx + Myy;
+		final double Cov_xy = Mxx * Myy - Mxy * Mxy;
+		final double Mxz2 = Mxz * Mxz;
+		final double Myz2 = Myz * Myz;
 
-		double A2 = 4 * Cov_xy - 3 * Mz * Mz - Mzz;
-		double A1 = Mzz * Mz + 4 * Cov_xy * Mz - Mxz2 - Myz2 - Mz * Mz * Mz;
-		double A0 = Mxz2 * Myy + Myz2 * Mxx - Mzz * Cov_xy - 2 * Mxz * Myz
-				* Mxy + Mz * Mz * Cov_xy;
-		double A22 = A2 + A2;
+		final double A2 = 4 * Cov_xy - 3 * Mz * Mz - Mzz;
+		final double A1 = Mzz * Mz + 4 * Cov_xy * Mz - Mxz2 - Myz2 - Mz * Mz * Mz;
+		final double A0 = Mxz2 * Myy + Myz2 * Mxx - Mzz * Cov_xy - 2 * Mxz * Myz * Mxy + Mz * Mz * Cov_xy;
+		final double A22 = A2 + A2;
 
-		double epsilon = 1e-12;
+		final double epsilon = 1e-12;
 		double ynew = 1e+20;
-		int IterMax = 20;
+		final int IterMax = 20;
 		double xnew = 0;
 		for (int iter = 0; iter <= IterMax; iter++) {
-			double yold = ynew;
+			final double yold = ynew;
 			ynew = A0 + xnew * (A1 + xnew * (A2 + 4 * xnew * xnew));
 			if (Math.abs(ynew) > Math.abs(yold)) {
-				System.out
-						.println("Newton-Pratt goes wrong direction: |ynew| > |yold|");
+				System.out.println("Newton-Pratt goes wrong direction: |ynew| > |yold|");
 				xnew = 0;
 				break;
 			}
-			double Dy = A1 + xnew * (A22 + 16 * xnew * xnew);
-			double xold = xnew;
+			final double Dy = A1 + xnew * (A22 + 16 * xnew * xnew);
+			final double xold = xnew;
 			xnew = xold - ynew / Dy;
 			if (Math.abs((xnew - xold) / xnew) < epsilon) {
 				break;
@@ -144,41 +148,42 @@ public class FitCircle {
 				xnew = 0;
 			}
 		}
-		double det = xnew * xnew - xnew * Mz + Cov_xy;
-		double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
-		double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
-		double r = Math.sqrt(x * x + y * y + Mz + 2 * xnew);
+		final double det = xnew * xnew - xnew * Mz + Cov_xy;
+		final double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
+		final double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
+		final double r = Math.sqrt(x * x + y * y + Mz + 2 * xnew);
 
-		double[] centreRadius = { x + centroid[0], y + centroid[1], r };
+		final double[] centreRadius = { x + centroid[0], y + centroid[1], r };
 		return centreRadius;
 	}
 
 	/**
 	 * Pratt method (SVD style)
-	 * 
-	 * 
-	 * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+	 *
+	 *
+	 * @param double[n][2]
+	 *            containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
 	 */
-	public static double[] prattSVD(double[][] points) {
-		int nPoints = points.length;
+	public static double[] prattSVD(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] centroid = Centroid.getCentroid(points);
-		double[][] xyXY1 = new double[nPoints][4];
+		final double[] centroid = Centroid.getCentroid(points);
+		final double[][] xyXY1 = new double[nPoints][4];
 		for (int i = 0; i < nPoints; i++) {
-			double x = points[i][0] - centroid[0];
-			double y = points[i][1] - centroid[1];
+			final double x = points[i][0] - centroid[0];
+			final double y = points[i][1] - centroid[1];
 			xyXY1[i][0] = x * x + y * y;
 			xyXY1[i][1] = x;
 			xyXY1[i][2] = y;
 			xyXY1[i][3] = 1;
 		}
 
-		Matrix XYXY1 = new Matrix(xyXY1);
-		SingularValueDecomposition svd = new SingularValueDecomposition(XYXY1);
-		Matrix S = svd.getS();
-		Matrix V = svd.getV();
+		final Matrix XYXY1 = new Matrix(xyXY1);
+		final SingularValueDecomposition svd = new SingularValueDecomposition(XYXY1);
+		final Matrix S = svd.getS();
+		final Matrix V = svd.getV();
 		Matrix A;
 		Matrix W;
 		if (S.get(3, 3) / S.get(0, 0) < 1e-12) {
@@ -186,48 +191,46 @@ public class FitCircle {
 			System.out.println("Pratt singular case");
 		} else {
 			W = V.times(S);
-			double[][] bInv = { { 0, 0, 0, -0.5 }, { 0, 1, 0, 0 },
-					{ 0, 0, 1, 0 }, { -0.5, 0, 0, 0 } };
-			Matrix Binv = new Matrix(bInv);
-			EigenvalueDecomposition ed = new EigenvalueDecomposition((W
-					.transpose()).times(Binv.times(W)));
-			Matrix D = ed.getD();
-			Matrix E = ed.getV();
-			int col = getNthSmallestCol(D, 2);
+			final double[][] bInv = { { 0, 0, 0, -0.5 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { -0.5, 0, 0, 0 } };
+			final Matrix Binv = new Matrix(bInv);
+			final EigenvalueDecomposition ed = new EigenvalueDecomposition((W.transpose()).times(Binv.times(W)));
+			final Matrix D = ed.getD();
+			final Matrix E = ed.getV();
+			final int col = getNthSmallestCol(D, 2);
 			A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 			for (int i = 0; i < 4; i++) {
 				S.set(i, i, 1 / S.get(i, i));
 			}
 			A = V.times(S.times(A));
 		}
-		double a0 = A.get(0, 0);
-		double a1 = A.get(1, 0);
-		double a2 = A.get(2, 0);
-		double a3 = A.get(3, 0);
-		double[] centreRadius = new double[3];
+		final double a0 = A.get(0, 0);
+		final double a1 = A.get(1, 0);
+		final double a2 = A.get(2, 0);
+		final double a3 = A.get(3, 0);
+		final double[] centreRadius = new double[3];
 		centreRadius[0] = -(a1 / a0) / 2 + centroid[0];
 		centreRadius[1] = -(a2 / a0) / 2 + centroid[1];
-		centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
-				.abs(a0)) / 2;
+		centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math.abs(a0)) / 2;
 		return centreRadius;
 	}
 
 	/**
 	 * Taubin method (Newton Style)
-	 * 
-	 * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+	 *
+	 * @param double[n][2]
+	 *            containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
 	 */
-	public static double[] taubinNewton(double[][] points) {
-		int nPoints = points.length;
+	public static double[] taubinNewton(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] centroid = Centroid.getCentroid(points);
+		final double[] centroid = Centroid.getCentroid(points);
 		double Mxx = 0, Myy = 0, Mxy = 0, Mxz = 0, Myz = 0, Mzz = 0;
 		for (int i = 0; i < nPoints; i++) {
-			double Xi = points[i][0] - centroid[0];
-			double Yi = points[i][1] - centroid[1];
-			double Zi = Xi * Xi + Yi * Yi;
+			final double Xi = points[i][0] - centroid[0];
+			final double Yi = points[i][1] - centroid[1];
+			final double Zi = Xi * Xi + Yi * Yi;
 			Mxy += Xi * Yi;
 			Mxx += Xi * Xi;
 			Myy += Yi * Yi;
@@ -243,33 +246,30 @@ public class FitCircle {
 		Myz /= nPoints;
 		Mzz /= nPoints;
 
-		double Mz = Mxx + Myy;
-		double Cov_xy = Mxx * Myy - Mxy * Mxy;
-		double A3 = 4 * Mz;
-		double A2 = -3 * Mz * Mz - Mzz;
-		double A1 = Mzz * Mz + 4 * Cov_xy * Mz - Mxz * Mxz - Myz * Myz - Mz
-				* Mz * Mz;
-		double A0 = Mxz * Mxz * Myy + Myz * Myz * Mxx - Mzz * Cov_xy - 2 * Mxz
-				* Myz * Mxy + Mz * Mz * Cov_xy;
-		double A22 = A2 + A2;
-		double A33 = A3 + A3 + A3;
+		final double Mz = Mxx + Myy;
+		final double Cov_xy = Mxx * Myy - Mxy * Mxy;
+		final double A3 = 4 * Mz;
+		final double A2 = -3 * Mz * Mz - Mzz;
+		final double A1 = Mzz * Mz + 4 * Cov_xy * Mz - Mxz * Mxz - Myz * Myz - Mz * Mz * Mz;
+		final double A0 = Mxz * Mxz * Myy + Myz * Myz * Mxx - Mzz * Cov_xy - 2 * Mxz * Myz * Mxy + Mz * Mz * Cov_xy;
+		final double A22 = A2 + A2;
+		final double A33 = A3 + A3 + A3;
 
 		double xnew = 0;
 		double ynew = 1e+20;
-		double epsilon = 1e-12;
-		double iterMax = 20;
+		final double epsilon = 1e-12;
+		final double iterMax = 20;
 
 		for (int iter = 0; iter < iterMax; iter++) {
-			double yold = ynew;
+			final double yold = ynew;
 			ynew = A0 + xnew * (A1 + xnew * (A2 + xnew * A3));
 			if (Math.abs(ynew) > Math.abs(yold)) {
-				System.out
-						.println("Newton-Taubin goes wrong direction: |ynew| > |yold|");
+				System.out.println("Newton-Taubin goes wrong direction: |ynew| > |yold|");
 				xnew = 0;
 				break;
 			}
-			double Dy = A1 + xnew * (A22 + xnew * A33);
-			double xold = xnew;
+			final double Dy = A1 + xnew * (A22 + xnew * A33);
+			final double xold = xnew;
 			xnew = xold - ynew / Dy;
 			if (Math.abs((xnew - xold) / xnew) < epsilon) {
 				break;
@@ -283,10 +283,10 @@ public class FitCircle {
 				xnew = 0;
 			}
 		}
-		double[] centreRadius = new double[3];
-		double det = xnew * xnew - xnew * Mz + Cov_xy;
-		double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
-		double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
+		final double[] centreRadius = new double[3];
+		final double det = xnew * xnew - xnew * Mz + Cov_xy;
+		final double x = (Mxz * (Myy - xnew) - Myz * Mxy) / (det * 2);
+		final double y = (Myz * (Mxx - xnew) - Mxz * Mxy) / (det * 2);
 		centreRadius[0] = x + centroid[0];
 		centreRadius[1] = y + centroid[1];
 		centreRadius[2] = Math.sqrt(x * x + y * y + Mz);
@@ -296,80 +296,79 @@ public class FitCircle {
 
 	/**
 	 * Taubin method, SVD version
-	 * 
-	 * @param double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
+	 *
+	 * @param double[n][2]
+	 *            containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return double[] containing (<i>x</i>, <i>y</i>) centre and radius
 	 */
-	public static double[] taubinSVD(double[][] points) {
-		int nPoints = points.length;
+	public static double[] taubinSVD(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] centroid = Centroid.getCentroid(points);
+		final double[] centroid = Centroid.getCentroid(points);
 
-		double[][] zxy = new double[nPoints][3];
-		double[] z = new double[nPoints];
+		final double[][] zxy = new double[nPoints][3];
+		final double[] z = new double[nPoints];
 		double sumZ = 0;
 		for (int n = 0; n < nPoints; n++) {
-			double x = points[n][0] - centroid[0];
-			double y = points[n][1] - centroid[1];
+			final double x = points[n][0] - centroid[0];
+			final double y = points[n][1] - centroid[1];
 			zxy[n][1] = x;
 			zxy[n][2] = y;
 			z[n] = x * x + y * y;
 			sumZ += z[n];
 		}
-		double meanZ = sumZ / nPoints;
-		double sqrtMeanZ2 = 2 * Math.sqrt(meanZ);
+		final double meanZ = sumZ / nPoints;
+		final double sqrtMeanZ2 = 2 * Math.sqrt(meanZ);
 		for (int n = 0; n < nPoints; n++) {
 			zxy[n][0] = (z[n] - meanZ) / sqrtMeanZ2;
 		}
 
-		Matrix ZXY = new Matrix(zxy);
-		SingularValueDecomposition svd = new SingularValueDecomposition(ZXY);
-		Matrix V = svd.getV();
-		Matrix A = V.getMatrix(0, V.getRowDimension() - 1, 2, 2);
-		double a1 = A.get(0, 0) / sqrtMeanZ2;
+		final Matrix ZXY = new Matrix(zxy);
+		final SingularValueDecomposition svd = new SingularValueDecomposition(ZXY);
+		final Matrix V = svd.getV();
+		final Matrix A = V.getMatrix(0, V.getRowDimension() - 1, 2, 2);
+		final double a1 = A.get(0, 0) / sqrtMeanZ2;
 		A.set(0, 0, a1);
-		double[][] a = A.getArray();
-		double[] b = new double[a.length + 1];
+		final double[][] a = A.getArray();
+		final double[] b = new double[a.length + 1];
 		for (int i = 0; i < a.length; i++) {
 			b[i] = a[i][0];
 		}
 		b[b.length - 1] = -meanZ * a1;
-		double[] centreRadius = new double[3];
+		final double[] centreRadius = new double[3];
 
 		centreRadius[0] = -b[1] / (a1 * 2) + centroid[0];
 		centreRadius[1] = -b[2] / (a1 * 2) + centroid[1];
-		centreRadius[2] = Math
-				.sqrt(b[1] * b[1] + b[2] * b[2] - 4 * b[0] * b[3])
-				/ (Math.abs(b[0]) * 2);
+		centreRadius[2] = Math.sqrt(b[1] * b[1] + b[2] * b[2] - 4 * b[0] * b[3]) / (Math.abs(b[0]) * 2);
 		return centreRadius;
 	}
 
 	/**
 	 * Chernov's non-biased Hyper algebraic method. Simple version.
-	 * 
-	 * @see <p>
-	 *      <a
-	 *      href="http://www.math.uab.edu/~chernov/cl/HyperSVD.m">http://www.math
-	 *      .uab.edu/~chernov/cl/HyperSVD.m</a>
+	 *
+	 * @see
+	 * 		<p>
+	 *      <a href="http://www.math.uab.edu/~chernov/cl/HyperSVD.m">http://www.
+	 *      math .uab.edu/~chernov/cl/HyperSVD.m</a>
 	 *      </p>
-	 * 
+	 *
 	 * @param points
 	 *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
 	 *         circle radius
 	 */
-	public static double[] hyperSimple(double[][] points) {
-		int nPoints = points.length;
+	public static double[] hyperSimple(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
 
-		double[][] zxy1 = new double[nPoints][4];
+		final double[][] zxy1 = new double[nPoints][4];
 		double xSum = 0, ySum = 0, zSum = 0;
 		for (int n = 0; n < nPoints; n++) {
-			double x = points[n][0];
-			double y = points[n][1];
-			double z = x * x + y * y;
+			final double x = points[n][0];
+			final double y = points[n][1];
+			final double z = x * x + y * y;
 			zxy1[n][0] = z;
 			zxy1[n][1] = x;
 			zxy1[n][2] = y;
@@ -380,66 +379,65 @@ public class FitCircle {
 			zSum += z;
 
 		}
-		double s0 = zSum / nPoints;
-		double s1 = xSum / nPoints;
-		double s2 = ySum / nPoints;
+		final double s0 = zSum / nPoints;
+		final double s1 = xSum / nPoints;
+		final double s2 = ySum / nPoints;
 
-		Matrix ZXY1 = new Matrix(zxy1);
-		Matrix M = (ZXY1.transpose()).times(ZXY1);
+		final Matrix ZXY1 = new Matrix(zxy1);
+		final Matrix M = (ZXY1.transpose()).times(ZXY1);
 
-		double[][] n = { { 8 * s0, 4 * s1, 4 * s2, 2 }, { 4 * s1, 1, 0, 0 },
-				{ 4 * s2, 0, 1, 0 }, { 2, 0, 0, 0 } };
-		Matrix N = new Matrix(n);
-		Matrix NM = (N.inverse()).times(M);
+		final double[][] n = { { 8 * s0, 4 * s1, 4 * s2, 2 }, { 4 * s1, 1, 0, 0 }, { 4 * s2, 0, 1, 0 },
+				{ 2, 0, 0, 0 } };
+		final Matrix N = new Matrix(n);
+		final Matrix NM = (N.inverse()).times(M);
 
-		EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
-		Matrix E = ED.getV();
-		Matrix D = ED.getD();
+		final EigenvalueDecomposition ED = new EigenvalueDecomposition(NM);
+		final Matrix E = ED.getV();
+		final Matrix D = ED.getD();
 
-		int col = getNthSmallestCol(D, 2);
+		final int col = getNthSmallestCol(D, 2);
 
-		Matrix A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
+		final Matrix A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 
-		double[] centreRadius = new double[3];
+		final double[] centreRadius = new double[3];
 
 		centreRadius[0] = -1 * (A.get(1, 0) / A.get(0, 0)) / 2;
 		centreRadius[1] = -1 * (A.get(2, 0) / A.get(0, 0)) / 2;
 
-		double[][] a = A.getArray();
-		centreRadius[2] = Math.sqrt(a[1][0] * a[1][0] + a[2][0] * a[2][0] - 4
-				* a[0][0] * a[3][0])
-				/ Math.abs(a[0][0]) / 2;
+		final double[][] a = A.getArray();
+		centreRadius[2] = Math.sqrt(a[1][0] * a[1][0] + a[2][0] * a[2][0] - 4 * a[0][0] * a[3][0]) / Math.abs(a[0][0])
+				/ 2;
 
 		return centreRadius;
 	}
 
 	/**
 	 * Chernov's non-biased Hyper algebraic method. Stability optimised version.
-	 * 
-	 * @see <p>
-	 *      <a
-	 *      href="http://www.math.uab.edu/~chernov/cl/HyperSVD.m">http://www.math
-	 *      .uab.edu/~chernov/cl/HyperSVD.m</a>
+	 *
+	 * @see
+	 * 		<p>
+	 *      <a href="http://www.math.uab.edu/~chernov/cl/HyperSVD.m">http://www.
+	 *      math .uab.edu/~chernov/cl/HyperSVD.m</a>
 	 *      </p>
-	 * 
+	 *
 	 * @param points
 	 *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
 	 *         circle radius
 	 */
-	public static double[] hyperStable(double[][] points) {
-		int nPoints = points.length;
+	public static double[] hyperStable(final double[][] points) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] centroid = Centroid.getCentroid(points);
+		final double[] centroid = Centroid.getCentroid(points);
 
 		double sumZ = 0;
-		double[][] zxy1 = new double[nPoints][4];
+		final double[][] zxy1 = new double[nPoints][4];
 		// centre data and assign vector values
 		for (int n = 0; n < nPoints; n++) {
-			double x = points[n][0] - centroid[0];
-			double y = points[n][1] - centroid[1];
-			double z = x * x + y * y;
+			final double x = points[n][0] - centroid[0];
+			final double y = points[n][1] - centroid[1];
+			final double z = x * x + y * y;
 			sumZ += z;
 			zxy1[n][0] = z;
 			zxy1[n][1] = x;
@@ -447,11 +445,11 @@ public class FitCircle {
 			zxy1[n][3] = 1;
 		}
 
-		Matrix ZXY1 = new Matrix(zxy1);
-		SingularValueDecomposition svd = new SingularValueDecomposition(ZXY1);
+		final Matrix ZXY1 = new Matrix(zxy1);
+		final SingularValueDecomposition svd = new SingularValueDecomposition(ZXY1);
 
-		Matrix S = svd.getS();
-		Matrix V = svd.getV();
+		final Matrix S = svd.getS();
+		final Matrix V = svd.getV();
 
 		Matrix A;
 
@@ -460,17 +458,16 @@ public class FitCircle {
 			A = V.getMatrix(0, V.getRowDimension() - 1, 3, 3);
 		} else {
 			// regular case
-			Matrix Y = V.times(S.times(V.transpose()));
+			final Matrix Y = V.times(S.times(V.transpose()));
 
-			double[][] bInv = { { 0, 0, 0, 0.5 }, { 0, 1, 0, 0 },
-					{ 0, 0, 1, 0 }, { 0.5, 0, 0, -2 * sumZ / nPoints } };
-			Matrix Binv = new Matrix(bInv);
-			EigenvalueDecomposition ED = new EigenvalueDecomposition((Y
-					.transpose()).times(Binv.times(Y)));
-			Matrix D = ED.getD(); // eigenvalues
-			Matrix E = ED.getV(); // eigenvectors
+			final double[][] bInv = { { 0, 0, 0, 0.5 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 },
+					{ 0.5, 0, 0, -2 * sumZ / nPoints } };
+			final Matrix Binv = new Matrix(bInv);
+			final EigenvalueDecomposition ED = new EigenvalueDecomposition((Y.transpose()).times(Binv.times(Y)));
+			final Matrix D = ED.getD(); // eigenvalues
+			final Matrix E = ED.getV(); // eigenvectors
 
-			int col = getNthSmallestCol(D, 2);
+			final int col = getNthSmallestCol(D, 2);
 
 			A = E.getMatrix(0, E.getRowDimension() - 1, col, col);
 
@@ -480,51 +477,50 @@ public class FitCircle {
 			A = V.times(S.times((V.transpose()).times(A)));
 		}
 
-		double a0 = A.get(0, 0);
-		double a1 = A.get(1, 0);
-		double a2 = A.get(2, 0);
-		double a3 = A.get(3, 0);
+		final double a0 = A.get(0, 0);
+		final double a1 = A.get(1, 0);
+		final double a2 = A.get(2, 0);
+		final double a3 = A.get(3, 0);
 
-		double[] centreRadius = new double[3];
+		final double[] centreRadius = new double[3];
 		centreRadius[0] = -(a1 / a0) / 2 + centroid[0];
 		centreRadius[1] = -(a2 / a0) / 2 + centroid[1];
-		centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math
-				.abs(a0)) / 2;
+		centreRadius[2] = (Math.sqrt(a1 * a1 + a2 * a2 - 4 * a0 * a3) / Math.abs(a0)) / 2;
 		return centreRadius;
 	}
 
 	/**
 	 * Levenberg-Marquardt fit in the "full" (a,b,R) space
-	 * 
+	 *
 	 * @param points
 	 *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
 	 *         circle radius
 	 */
-	public static double[] levenMarqFull(double[][] points, double lambdaIni) {
+	public static double[] levenMarqFull(final double[][] points, final double lambdaIni) {
 		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] guess = hyperStable(points);
+		final double[] guess = hyperStable(points);
 		double x = guess[0];
 		double y = guess[1];
 		double r = guess[2];
 
-		double[][] par = { { x, y, r } };
+		final double[][] par = { { x, y, r } };
 		Matrix Par = new Matrix(par);
 		Matrix ParTemp = new Matrix(par);
-		double epsilon = 1e-6;
+		final double epsilon = 1e-6;
 		double progress = epsilon;
-		int iterMax = 50;
+		final int iterMax = 50;
 		double lambda_sqrt = Math.sqrt(lambdaIni);
 
 		double f = 0;
 		double[][] j = new double[nPoints + 3][3];
 		double[][] g = new double[nPoints + 3][1];
 		for (int i = 0; i < nPoints; i++) {
-			double dX = points[i][0] - x;
-			double dY = points[i][1] - y;
-			double d = Math.sqrt(dX * dX + dY * dY);
+			final double dX = points[i][0] - x;
+			final double dY = points[i][1] - y;
+			final double d = Math.sqrt(dX * dX + dY * dY);
 			j[i][0] = -dX / d;
 			j[i][1] = -dY / d;
 			j[i][2] = -1;
@@ -532,12 +528,12 @@ public class FitCircle {
 			f += (d - r) * (d - r);
 		}
 
-		Matrix J = new Matrix(j);
-		Matrix G = new Matrix(g);
+		final Matrix J = new Matrix(j);
+		final Matrix G = new Matrix(g);
 
 		double fTemp = 0;
-		double[][] jTemp = new double[nPoints + 3][3];
-		double[][] gTemp = new double[nPoints + 3][1];
+		final double[][] jTemp = new double[nPoints + 3][3];
+		final double[][] gTemp = new double[nPoints + 3][1];
 
 		for (int iter = 0; iter < iterMax; iter++) {
 			int safety = 0;
@@ -549,7 +545,7 @@ public class FitCircle {
 				G.set(nPoints, 0, 0);
 				G.set(nPoints + 1, 0, 0);
 				G.set(nPoints + 2, 0, 0);
-				Matrix DelPar = (J.inverse()).times(G);
+				final Matrix DelPar = (J.inverse()).times(G);
 				progress = DelPar.normF() / (Par.normF() + epsilon);
 				if (progress < epsilon) {
 					break;
@@ -559,9 +555,9 @@ public class FitCircle {
 				y = ParTemp.get(0, 1);
 				r = ParTemp.get(0, 2);
 				for (int i = 0; i < nPoints; i++) {
-					double dX = points[i][0] - x;
-					double dY = points[i][1] - y;
-					double d = Math.sqrt(dX * dX + dY * dY);
+					final double dX = points[i][0] - x;
+					final double dY = points[i][1] - y;
+					final double d = Math.sqrt(dX * dX + dY * dY);
 					jTemp[i][0] = -dX / d;
 					jTemp[i][1] = -dY / d;
 					jTemp[i][2] = -1;
@@ -584,41 +580,41 @@ public class FitCircle {
 			g = gTemp;
 			f = fTemp;
 		}
-		double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), Par.get(0, 2) };
+		final double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), Par.get(0, 2) };
 		return centreRadius;
 	}
 
 	/**
 	 * If initial value of Lambda is not supplied, it defaults to 1
-	 * 
+	 *
 	 * @param points
 	 * @return
 	 */
-	public static double[] levenMarqFull(double[][] points) {
+	public static double[] levenMarqFull(final double[][] points) {
 		return levenMarqFull(points, 1);
 	}
 
 	/**
 	 * Levenberg-Marquardt fit in the "reduced" (a,b) space
-	 * 
+	 *
 	 * @param points
 	 *            double[n][2] containing n (<i>x</i>, <i>y</i>) coordinates
 	 * @return 3-element double[] containing (<i>x</i>, <i>y</i>) centre and
 	 *         circle radius
 	 */
-	public static double[] levenMarqRed(double[][] points, double lambdaIni) {
-		int nPoints = points.length;
+	public static double[] levenMarqRed(final double[][] points, final double lambdaIni) {
+		final int nPoints = points.length;
 		if (nPoints < 3)
 			throw new IllegalArgumentException("Too few points");
-		double[] guess = hyperStable(points);
+		final double[] guess = hyperStable(points);
 		double x = guess[0];
 		double y = guess[1];
-		double[][] par = { { x, y } };
+		final double[][] par = { { x, y } };
 		Matrix Par = new Matrix(par);
 		Matrix ParTemp = new Matrix(par);
-		double epsilon = 1e-6;
+		final double epsilon = 1e-6;
 		double progress = epsilon;
-		int iterMax = 50;
+		final int iterMax = 50;
 		double lambda_sqrt = Math.sqrt(lambdaIni);
 
 		double f = 0;
@@ -627,11 +623,11 @@ public class FitCircle {
 		double sumDx = 0;
 		double sumDy = 0;
 		double sumD = 0;
-		double[] dd = new double[nPoints];
+		final double[] dd = new double[nPoints];
 		for (int i = 0; i < nPoints; i++) {
 			double dX = points[i][0] - x;
 			double dY = points[i][1] - y;
-			double d = Math.sqrt(dX * dX + dY * dY);
+			final double d = Math.sqrt(dX * dX + dY * dY);
 			dX /= d;
 			dY /= d;
 			dd[i] = d;
@@ -647,18 +643,18 @@ public class FitCircle {
 		for (int i = 0; i < nPoints; i++) {
 			j[i][0] += meanDx;
 			j[i][1] += meanDy;
-			double d = dd[i];
+			final double d = dd[i];
 			g[i][0] = d - r;
 			f += (d - r) * (d - r);
 		}
 
-		Matrix J = new Matrix(j);
-		Matrix G = new Matrix(g);
+		final Matrix J = new Matrix(j);
+		final Matrix G = new Matrix(g);
 
 		double fTemp = 0;
 		double rTemp = 0;
-		double[][] jTemp = new double[nPoints + 2][2];
-		double[][] gTemp = new double[nPoints + 2][1];
+		final double[][] jTemp = new double[nPoints + 2][2];
+		final double[][] gTemp = new double[nPoints + 2][1];
 
 		for (int iter = 0; iter < iterMax; iter++) {
 			int safety = 0;
@@ -668,7 +664,7 @@ public class FitCircle {
 				J.set(nPoints + 1, 1, lambda_sqrt);
 				G.set(nPoints, 0, 0);
 				G.set(nPoints + 1, 0, 0);
-				Matrix DelPar = (J.inverse()).times(G);
+				final Matrix DelPar = (J.inverse()).times(G);
 				progress = DelPar.normF() / (r + Par.normF() + epsilon);
 				if (progress < epsilon) {
 					break;
@@ -682,7 +678,7 @@ public class FitCircle {
 				for (int i = 0; i < nPoints; i++) {
 					double dX = points[i][0] - x;
 					double dY = points[i][1] - y;
-					double d = Math.sqrt(dX * dX + dY * dY);
+					final double d = Math.sqrt(dX * dX + dY * dY);
 					dX /= d;
 					dY /= d;
 					dd[i] = d;
@@ -698,7 +694,7 @@ public class FitCircle {
 				for (int i = 0; i < nPoints; i++) {
 					jTemp[i][0] += meanDx;
 					jTemp[i][1] += meanDy;
-					double d = dd[i];
+					final double d = dd[i];
 					gTemp[i][0] = d - rTemp;
 					fTemp += (d - rTemp) * (d - rTemp);
 				}
@@ -719,23 +715,23 @@ public class FitCircle {
 			f = fTemp;
 			r = rTemp;
 		}
-		double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), r };
+		final double[] centreRadius = { Par.get(0, 0), Par.get(0, 1), r };
 		return centreRadius;
 	}
 
 	/**
 	 * If initial value for lambda is not supplied, it defaults to 1.
-	 * 
+	 *
 	 * @param points
 	 * @return
 	 */
-	public static double[] levenMarqRed(double[][] points) {
+	public static double[] levenMarqRed(final double[][] points) {
 		return levenMarqRed(points, 1);
 	}
 
 	/**
 	 * Generate coordinates of a circular arc
-	 * 
+	 *
 	 * @param x
 	 *            x coordinate of centre
 	 * @param y
@@ -750,19 +746,17 @@ public class FitCircle {
 	 *            Number of coordinates
 	 * @param noise
 	 *            Add noise of intensity 'noise'
-	 * 
+	 *
 	 * @return
 	 */
-	public static double[][] getTestCircle(double x, double y, double r, int n,
-			double startAngle, double endAngle, double noise) {
-		double[][] testCircle = new double[n][2];
-		double arc = (endAngle - startAngle) / (2 * Math.PI);
+	public static double[][] getTestCircle(final double x, final double y, final double r, final int n,
+			final double startAngle, final double endAngle, final double noise) {
+		final double[][] testCircle = new double[n][2];
+		final double arc = (endAngle - startAngle) / (2 * Math.PI);
 		for (int i = 0; i < n; i++) {
-			double theta = startAngle + i * 2 * Math.PI * arc / n;
-			testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5))
-					* Math.sin(theta) + x;
-			testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5))
-					* Math.cos(theta) + y;
+			final double theta = startAngle + i * 2 * Math.PI * arc / n;
+			testCircle[i][0] = r * (1 + noise * (Math.random() - 0.5)) * Math.sin(theta) + x;
+			testCircle[i][1] = r * (1 + noise * (Math.random() - 0.5)) * Math.cos(theta) + y;
 		}
 
 		return testCircle;
@@ -770,7 +764,7 @@ public class FitCircle {
 
 	/**
 	 * Generate coordinates of a circle
-	 * 
+	 *
 	 * @param x
 	 *            x coordinate of centre
 	 * @param y
@@ -781,46 +775,46 @@ public class FitCircle {
 	 *            Number of coordinates
 	 * @param noise
 	 *            Add noise of intensity 'noise'
-	 * 
+	 *
 	 * @return
 	 */
-	public static double[][] getTestCircle(double x, double y, double r, int n,
-			double noise) {
+	public static double[][] getTestCircle(final double x, final double y, final double r, final int n,
+			final double noise) {
 		return getTestCircle(x, y, r, n, 0, 2 * Math.PI, noise);
 	}
 
 	/**
 	 * Calculate the mean squared errors between the fit circle and the
 	 * coordinates
-	 * 
+	 *
 	 * @param points
 	 * @param abR
 	 * @return double[] containing mean squared errors in x, y, R and sum of (x,
 	 *         y, R)
 	 */
-	public static double[] getErrors(double[][] points, double[] abR) {
-		int nPoints = points.length;
+	public static double[] getErrors(final double[][] points, final double[] abR) {
+		final int nPoints = points.length;
 
-		double a = abR[0];
-		double b = abR[1];
-		double R = abR[2];
+		final double a = abR[0];
+		final double b = abR[1];
+		final double R = abR[2];
 		double sumX2 = 0;
 		double sumY2 = 0;
 		double sumR2 = 0;
 
 		for (int i = 0; i < nPoints; i++) {
-			double x = points[i][0];
-			double y = points[i][1];
-			double r = Math.sqrt((x - a) * (x - a) + (y - b) * (y - b));
-			double theta = Math.atan2((y - b), (x - a));
-			double xt = R * Math.cos(theta) + a;
-			double yt = R * Math.sin(theta) + b;
+			final double x = points[i][0];
+			final double y = points[i][1];
+			final double r = Math.sqrt((x - a) * (x - a) + (y - b) * (y - b));
+			final double theta = Math.atan2((y - b), (x - a));
+			final double xt = R * Math.cos(theta) + a;
+			final double yt = R * Math.sin(theta) + b;
 
 			sumX2 += (x - xt) * (x - xt);
 			sumY2 += (y - yt) * (y - yt);
 			sumR2 += (R - r) * (R - r);
 		}
-		double[] errors = new double[4];
+		final double[] errors = new double[4];
 		errors[0] = sumX2 / nPoints;
 		errors[1] = sumY2 / nPoints;
 		errors[2] = sumR2 / nPoints;
@@ -831,7 +825,7 @@ public class FitCircle {
 	/**
 	 * Return the column in Matrix D that contains the nth smallest diagonal
 	 * value
-	 * 
+	 *
 	 * @param D
 	 *            the matrix to search
 	 * @param n
@@ -839,9 +833,9 @@ public class FitCircle {
 	 *            second smallest, etc.)
 	 * @return column index of the nth smallest diagonal in D
 	 */
-	private static int getNthSmallestCol(Matrix D, int n) {
-		double[] diagD = new double[D.getColumnDimension()];
-		int[] index = new int[D.getColumnDimension()];
+	private static int getNthSmallestCol(final Matrix D, final int n) {
+		final double[] diagD = new double[D.getColumnDimension()];
+		final int[] index = new int[D.getColumnDimension()];
 		for (int i = 0; i < D.getColumnDimension(); i++) {
 			diagD[i] = D.get(i, i);
 			index[i] = i;
@@ -870,10 +864,9 @@ public class FitCircle {
 			System.out.println("Error: the smallest e-value is positive...");
 		}
 		if (diagD[diagD.length - 2] < 0) {
-			System.out
-					.println("Error: the second smallest e-value is negative...");
+			System.out.println("Error: the second smallest e-value is negative...");
 		}
-		int col = index[index.length - n];
+		final int col = index[index.length - n];
 		return col;
 	}
 }

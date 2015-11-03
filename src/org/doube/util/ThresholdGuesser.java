@@ -8,18 +8,18 @@ public class ThresholdGuesser {
 
 	/**
 	 * Set up default thresholds and report them to the user as HU values if the
-	 * image has HU calibration or plain values if not.  Used as a first guess
+	 * image has HU calibration or plain values if not. Used as a first guess
 	 * for dialogs that have to handle both HU and uncalibrated images.
-	 * 
+	 *
 	 * @return double[2] containing minimum and maximum thresholds
 	 */
-	public static double[] setDefaultThreshold(ImagePlus imp) {
-		Calibration cal = imp.getCalibration();
+	public static double[] setDefaultThreshold(final ImagePlus imp) {
+		final Calibration cal = imp.getCalibration();
 		double min = 0;
 		double max = 0;
 		if (!ImageCheck.huCalibrated(imp)) {
 			// set some sensible thresholding defaults
-			int[] histogram = StackStats.getStackHistogram(imp);
+			final int[] histogram = StackStats.getStackHistogram(imp);
 			final int histoLength = histogram.length;
 			int histoMax = histoLength - 1;
 			for (int i = histoLength - 1; i >= 0; i--) {
@@ -39,7 +39,7 @@ public class ThresholdGuesser {
 			min = airHU + 1000;
 			max = airHU + 5000;
 		}
-		double[] thresholds = { min, max };
+		final double[] thresholds = { min, max };
 		return thresholds;
 	}
 }

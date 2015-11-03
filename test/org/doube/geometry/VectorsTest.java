@@ -1,6 +1,7 @@
 package org.doube.geometry;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import javax.vecmath.Point3f;
 
@@ -24,22 +25,22 @@ public class VectorsTest {
 
 	@Test
 	public void testCrossProductPoint3fPoint3fPoint3f() {
-		Point3f result = Vectors.crossProduct(p0, p1, p2);
-		Point3f expected = new Point3f(6.0f, -12.0f, 6.0f);
+		final Point3f result = Vectors.crossProduct(p0, p1, p2);
+		final Point3f expected = new Point3f(6.0f, -12.0f, 6.0f);
 		assertEquals(expected, result);
 	}
 
 	@Test
 	public void testCrossProductDoubleArrayDoubleArrayDoubleArray() {
-		double[] result = Vectors.crossProduct(point0, point1, point2);
-		double[] expected = { 6, -12, 6 };
+		final double[] result = Vectors.crossProduct(point0, point1, point2);
+		final double[] expected = { 6, -12, 6 };
 		assertArrayEquals(expected, result, 1e-12);
 	}
 
 	@Test
 	public void testCrossProductDoubleArrayArrayDoubleArrayArray() {
-		double[][] result = Vectors.crossProduct(pa0, pa1);
-		double[][] expected = { { 6 }, { -12 }, { 6 } };
+		final double[][] result = Vectors.crossProduct(pa0, pa1);
+		final double[][] expected = { { 6 }, { -12 }, { 6 } };
 		assertEquals(expected[0][0], result[0][0], 1e-12);
 		assertEquals(expected[1][0], result[1][0], 1e-12);
 		assertEquals(expected[2][0], result[2][0], 1e-12);
@@ -47,15 +48,15 @@ public class VectorsTest {
 
 	@Test
 	public void testCrossProductDoubleArrayDoubleArray() {
-		double[] result = Vectors.crossProduct(a, b);
-		double[] expected = { 6, -12, 6 };
+		final double[] result = Vectors.crossProduct(a, b);
+		final double[] expected = { 6, -12, 6 };
 		assertArrayEquals(expected, result, 1e-12);
 	}
 
 	@Test
 	public void testRandomVectors() {
 		final int n = 1000;
-		double[][] v = Vectors.randomVectors(n);
+		final double[][] v = Vectors.randomVectors(n);
 		// check that vectors are unit vectors
 		for (int i = 0; i < n; i++) {
 			final double x = v[i][0];
@@ -69,7 +70,7 @@ public class VectorsTest {
 	@Test
 	public void testRegularVectors() {
 		final int n = 1000;
-		double[][] v = Vectors.regularVectors(n);
+		final double[][] v = Vectors.regularVectors(n);
 		// check that vectors are unit vectors
 		for (int i = 0; i < n; i++) {
 			final double x = v[i][0];
@@ -80,50 +81,45 @@ public class VectorsTest {
 		}
 	}
 
-/*	@Test
-	public void TestInv3() {
-		final int n = 1000;
-
-		for (int j = 0; j < n; j++) {
-			final double nudge = 0.4;
-
-			double b = Math.random() * (nudge + nudge) - nudge;
-			double c = Math.random() * (nudge + nudge) - nudge;
-			double a = Math.sqrt(1 - b * b - c * c);
-
-			// zeroth column, should be very close to [1, 0, 0]^T (mostly x)
-			double[] zerothColumn = { a, b, c };
-
-			// form triangle in random plane
-			double[] vector = Vectors.randomVectors(1)[0];
-
-			// first column, should be very close to [0, 1, 0]^T
-			double[] firstColumn = Vectors.norm(Vectors.crossProduct(
-					zerothColumn, vector));
-
-			// second column, should be very close to [0, 0, 1]^T
-			double[] secondColumn = Vectors.norm(Vectors.crossProduct(
-					zerothColumn, firstColumn));
-
-			double[][] rotation = { zerothColumn, firstColumn, secondColumn };
-
-			// array has subarrays as rows, need them as columns
-			// matrix to invert
-			rotation = Ellipsoid.transpose(rotation);
-
-			// the method under test should calculate the matrix inverse
-			double[][] invRotation = Vectors.inv3(rotation);
-
-			// get a reference inverted matrix to test against
-			Matrix R = new Matrix(rotation);
-			double[][] arrayRinv = R.inverse().getArray();
-
-			//TODO alternatively use the un-transposed rotation array because
-			//the inverse of a rotation matrix is its transpose
-
-			for (int i = 0; i < 3; i++)
-				assertArrayEquals(arrayRinv[i], invRotation[i], 1E-12);
-		}
-
-	} */
+	/*
+	 * @Test public void TestInv3() { final int n = 1000;
+	 * 
+	 * for (int j = 0; j < n; j++) { final double nudge = 0.4;
+	 * 
+	 * double b = Math.random() * (nudge + nudge) - nudge; double c =
+	 * Math.random() * (nudge + nudge) - nudge; double a = Math.sqrt(1 - b * b -
+	 * c * c);
+	 * 
+	 * // zeroth column, should be very close to [1, 0, 0]^T (mostly x) double[]
+	 * zerothColumn = { a, b, c };
+	 * 
+	 * // form triangle in random plane double[] vector =
+	 * Vectors.randomVectors(1)[0];
+	 * 
+	 * // first column, should be very close to [0, 1, 0]^T double[] firstColumn
+	 * = Vectors.norm(Vectors.crossProduct( zerothColumn, vector));
+	 * 
+	 * // second column, should be very close to [0, 0, 1]^T double[]
+	 * secondColumn = Vectors.norm(Vectors.crossProduct( zerothColumn,
+	 * firstColumn));
+	 * 
+	 * double[][] rotation = { zerothColumn, firstColumn, secondColumn };
+	 * 
+	 * // array has subarrays as rows, need them as columns // matrix to invert
+	 * rotation = Ellipsoid.transpose(rotation);
+	 * 
+	 * // the method under test should calculate the matrix inverse double[][]
+	 * invRotation = Vectors.inv3(rotation);
+	 * 
+	 * // get a reference inverted matrix to test against Matrix R = new
+	 * Matrix(rotation); double[][] arrayRinv = R.inverse().getArray();
+	 * 
+	 * //TODO alternatively use the un-transposed rotation array because //the
+	 * inverse of a rotation matrix is its transpose
+	 * 
+	 * for (int i = 0; i < 3; i++) assertArrayEquals(arrayRinv[i],
+	 * invRotation[i], 1E-12); }
+	 * 
+	 * }
+	 */
 }

@@ -32,27 +32,27 @@ import ij.process.ImageProcessor;
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ *
  */
 
 /**
- * Main class of the ImageJ/Fiji plugin for skeleton analysis.
- * This class is a plugin for the ImageJ and Fiji interfaces for analyzing
- * 2D/3D skeleton images.
+ * Main class of the ImageJ/Fiji plugin for skeleton analysis. This class is a
+ * plugin for the ImageJ and Fiji interfaces for analyzing 2D/3D skeleton
+ * images.
  * <p>
  * For more detailed information, visit the AnalyzeSkeleton home page:
- * <A target="_blank" href="http://fiji.sc/wiki/index.php/AnalyzeSkeleton">http://fiji.sc/wiki/index.php/AnalyzeSkeleton</A>
+ * <A target="_blank" href="http://fiji.sc/wiki/index.php/AnalyzeSkeleton">http:
+ * //fiji.sc/wiki/index.php/AnalyzeSkeleton</A>
  *
  *
  * @author Ignacio Arganda-Carreras <iarganda@mit.edu>
  *
  */
-public class AnalyzeSkeleton implements PlugInFilter
-{
+public class AnalyzeSkeleton implements PlugInFilter {
 	/** end point flag */
 	public static byte END_POINT = 30;
 	/** junction flag */
@@ -60,8 +60,8 @@ public class AnalyzeSkeleton implements PlugInFilter
 	/** slab flag */
 	public static byte SLAB = 127;
 	/** shortest path flag */
-	public static byte SHORTEST_PATH = 96; 
-	
+	public static byte SHORTEST_PATH = 96;
+
 	/** working image plus */
 	private ImagePlus imRef;
 
@@ -73,10 +73,10 @@ public class AnalyzeSkeleton implements PlugInFilter
 	private int depth = 0;
 	/** working image stack */
 	private ImageStack inputImage = null;
-	
+
 	/** visit flags */
-	private boolean [][][] visited = null;
-	
+	private boolean[][][] visited = null;
+
 	// Measures
 	/** total number of end points voxels */
 	private int totalNumberOfEndPoints = 0;
@@ -84,14 +84,17 @@ public class AnalyzeSkeleton implements PlugInFilter
 	private int totalNumberOfJunctionVoxels = 0;
 	/** total number of slab voxels */
 	private int totalNumberOfSlabs = 0;
-	/** auxiliary variable to store the length of longest shortest path in a graph */
+	/**
+	 * auxiliary variable to store the length of longest shortest path in a
+	 * graph
+	 */
 	private double shortestPath = 0;
-	
+
 	// Shortest path variables
 	/** list of longest shortest paths from the skeletons in the image */
-	private ArrayList< Double > shortestPathList;
+	private ArrayList<Double> shortestPathList;
 	/** list containing longest shortest path points (one per tree) */
-	private ArrayList< Point >[] shortestPathPoints = null; 
+	private ArrayList<Point>[] shortestPathPoints = null;
 	/** shortest path x start position */
 	private int spx = 0;
 	/** shortest path y start position */
@@ -102,80 +105,84 @@ public class AnalyzeSkeleton implements PlugInFilter
 	private double[][] spStartPosition;
 	/** shortest path output stack */
 	private ImageStack shortPathImage = null;
-	
+
 	// Tree fields
 	/** number of branches for every specific tree */
 	private int[] numberOfBranches = null;
 	/** number of end points voxels of every tree */
 	private int[] numberOfEndPoints = null;
-	/** number of junctions voxels of every tree*/
+	/** number of junctions voxels of every tree */
 	private int[] numberOfJunctionVoxels = null;
 	/** number of slab voxels of every specific tree */
-	private int[] numberOfSlabs = null;	
-	/** number of junctions of every specific tree*/
+	private int[] numberOfSlabs = null;
+	/** number of junctions of every specific tree */
 	private int[] numberOfJunctions = null;
 	/** number of triple points in every tree */
 	private int[] numberOfTriplePoints = null;
 	/** number of quadruple points in every tree */
 	private int[] numberOfQuadruplePoints = null;
 	/** list of end points in every tree */
-	private ArrayList <Point> endPointsTree [] = null;
+	private ArrayList<Point> endPointsTree[] = null;
 	/** list of junction voxels in every tree */
-	private ArrayList <Point> junctionVoxelTree [] = null;
+	private ArrayList<Point> junctionVoxelTree[] = null;
 	/** list of special slab coordinates where circular tree starts */
-	private ArrayList <Point> startingSlabTree [] = null;
-	
+	private ArrayList<Point> startingSlabTree[] = null;
+
 	/** average branch length */
 	private double[] averageBranchLength = null;
-	
+
 	/** maximum branch length */
 	private double[] maximumBranchLength = null;
-	
+
 	/** list of end point coordinates in the entire image */
-	private ArrayList <Point> listOfEndPoints = null;
+	private ArrayList<Point> listOfEndPoints = null;
 	/** list of junction coordinates in the entire image */
-	private ArrayList <Point> listOfJunctionVoxels = null;
+	private ArrayList<Point> listOfJunctionVoxels = null;
 	/** list of slab coordinates in the entire image */
-	private ArrayList <Point> listOfSlabVoxels = null;
+	private ArrayList<Point> listOfSlabVoxels = null;
 	/** list of slab coordinates in the entire image */
-	private ArrayList <Point> listOfStartingSlabVoxels = null;
-	
-	/** list of groups of junction voxels that belong to the same tree junction (in every tree) */
-	private ArrayList < ArrayList <Point> > listOfSingleJunctions[] = null;
+	private ArrayList<Point> listOfStartingSlabVoxels = null;
+
+	/**
+	 * list of groups of junction voxels that belong to the same tree junction
+	 * (in every tree)
+	 */
+	private ArrayList<ArrayList<Point>> listOfSingleJunctions[] = null;
 	/** array of junction vertex per tree */
 	private Vertex[][] junctionVertex = null;
-	
-	/** stack image containing the corresponding skeleton tags (end point, junction or slab) */
+
+	/**
+	 * stack image containing the corresponding skeleton tags (end point,
+	 * junction or slab)
+	 */
 	private ImageStack taggedImage = null;
-	
+
 	/** auxiliary temporary point */
 	private Point auxPoint = null;
-	
+
 	/** number of trees (skeletons) in the image */
 	private int numOfTrees = 0;
-	
+
 	/** pruning option */
 	private boolean bPruneCycles = true;
-	
-	 /** dead-end pruning option */
+
+	/** dead-end pruning option */
 	public static boolean pruneEnds = false;
-	
+
 	/** calculate largest shortest path option */
 	public static boolean calculateShortestPath = false;
-	
+
 	/** array of graphs (one per tree) */
 	private Graph[] graph = null;
-	
+
 	/** auxiliary list of slabs */
 	private ArrayList<Point> slabList = null;
 	/** auxiliary final vertex */
 	private Vertex auxFinalVertex = null;
-		
+
 	/** prune cycle options */
-	public static final String[] pruneCyclesModes = {"none", 
-													 "shortest branch", 
-													 "lowest intensity voxel", 
-													 "lowest intensity branch"};
+	public static final String[] pruneCyclesModes = { "none", "shortest branch", "lowest intensity voxel",
+			"lowest intensity branch" };
 	/** no pruning mode index */
 	public static final int NONE = 0;
 	/** shortest branch pruning mode index */
@@ -184,130 +191,130 @@ public class AnalyzeSkeleton implements PlugInFilter
 	public static final int LOWEST_INTENSITY_VOXEL = 2;
 	/** lowest intensity branch pruning mode index */
 	public static final int LOWEST_INTENSITY_BRANCH = 3;
-	
+
 	/** original grayscale image (for lowest pixel intensity pruning mode) */
 	private ImageStack originalImage = null;
-	
+
 	/** prune cycle options index */
 	public static int pruneIndex = AnalyzeSkeleton.NONE;
-	
+
 	/** x- neighborhood offset */
 	private int x_offset = 1;
 	/** y- neighborhood offset */
 	private int y_offset = 1;
 	/** z- neighborhood offset */
 	private int z_offset = 1;
-	
+
 	/** boolean flag to display extra information in result tables */
 	public static boolean verbose = false;
-	
+
 	/** silent run flag, to distinguish between GUI and plugin calls */
 	protected boolean silent = false;
 
 	/** debugging flag */
 	private static final boolean debug = false;
-	
-	/* -----------------------------------------------------------------------*/
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * This method is called once when the filter is loaded.
-	 * 
-	 * @param arg argument specified for this plugin
-	 * @param imp currently active image
+	 *
+	 * @param arg
+	 *            argument specified for this plugin
+	 * @param imp
+	 *            currently active image
 	 * @return flag word that specifies the filters capabilities
 	 */
-	public int setup(String arg, ImagePlus imp) 
-	{
+	public int setup(final String arg, final ImagePlus imp) {
 		this.imRef = imp;
-		
-		if (arg.equals("about")) 
-		{
+
+		if (arg.equals("about")) {
 			showAbout();
 			return DONE;
 		}
 
-		return DOES_8G; 
-	} // end method setup 
-	
-	/* -----------------------------------------------------------------------*/
+		return DOES_8G;
+	} // end method setup
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Process the image: tag skeleton and show results.
-	 * 
+	 *
 	 * @see ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)
 	 */
-	public void run(ImageProcessor ip) 
-	{
+	public void run(final ImageProcessor ip) {
 		if (!ImageCheck.checkEnvironment())
 			return;
-		GenericDialog gd = new GenericDialog("Analyze Skeleton");
-		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes, 
-										AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
+		final GenericDialog gd = new GenericDialog("Analyze Skeleton");
+		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
+				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
 		gd.addCheckbox("Prune ends", pruneEnds);
 		gd.addCheckbox("Calculate largest shortest path", calculateShortestPath);
 		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
 		gd.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
 		gd.showDialog();
-		
+
 		// Exit when canceled
-		if (gd.wasCanceled()) 
+		if (gd.wasCanceled())
 			return;
 		pruneIndex = gd.getNextChoiceIndex();
 		pruneEnds = gd.getNextBoolean();
 		calculateShortestPath = gd.getNextBoolean();
 		AnalyzeSkeleton.verbose = gd.getNextBoolean();
-		
+
 		// pre-checking if another image is needed and also setting bPruneCycles
 		ImagePlus origIP = null;
-		switch(pruneIndex)
-		{
-			// No pruning
-			case AnalyzeSkeleton.NONE:
-				this.bPruneCycles = false;
-				break;
-			// Pruning cycles by shortest branch
-			case AnalyzeSkeleton.SHORTEST_BRANCH:
-				this.bPruneCycles = true;
-				break;
-			// Pruning cycles by lowest pixel intensity
-			case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
-			case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
-				// Select original image between the open images
-				int[] ids = WindowManager.getIDList();
-				if ( ids == null || ids.length < 1 )
-				{
-					IJ.showMessage( "You should have at least one image open." );
-					return;
-				}
-				
-				String[] titles = new String[ ids.length ];
-				for ( int i = 0; i < ids.length; ++i )
-				{
-					titles[ i ] = ( WindowManager.getImage( ids[ i ] ) ).getTitle();
-				}
-				
-				final GenericDialog gd2 = new GenericDialog( "Image selection" );
-				
-				gd2.addMessage( "Select original grayscale image:" );
-				final String current = WindowManager.getCurrentImage().getTitle();
-				gd2.addChoice( "original_image", titles, current );
-				
-				gd2.showDialog();
-				
-				if (gd2.wasCanceled()) 
-					return;
-				
-				// Get original stack
-				origIP = WindowManager.getImage( ids[ gd2.getNextChoiceIndex() ] );
+		switch (pruneIndex) {
+		// No pruning
+		case AnalyzeSkeleton.NONE:
+			this.bPruneCycles = false;
+			break;
+		// Pruning cycles by shortest branch
+		case AnalyzeSkeleton.SHORTEST_BRANCH:
+			this.bPruneCycles = true;
+			break;
+		// Pruning cycles by lowest pixel intensity
+		case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
+		case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
+			// Select original image between the open images
+			final int[] ids = WindowManager.getIDList();
+			if (ids == null || ids.length < 1) {
+				IJ.showMessage("You should have at least one image open.");
+				return;
+			}
 
-				this.bPruneCycles = true;
-				break;
-			default:
+			final String[] titles = new String[ids.length];
+			for (int i = 0; i < ids.length; ++i) {
+				titles[i] = (WindowManager.getImage(ids[i])).getTitle();
+			}
+
+			final GenericDialog gd2 = new GenericDialog("Image selection");
+
+			gd2.addMessage("Select original grayscale image:");
+			final String current = WindowManager.getCurrentImage().getTitle();
+			gd2.addChoice("original_image", titles, current);
+
+			gd2.showDialog();
+
+			if (gd2.wasCanceled())
+				return;
+
+			// Get original stack
+			origIP = WindowManager.getImage(ids[gd2.getNextChoiceIndex()]);
+
+			this.bPruneCycles = true;
+			break;
+		default:
 		}
 
 		// now we have all the information that's needed for running the plugin
 		// as if it was called from somewhere else
 		run(pruneIndex, pruneEnds, calculateShortestPath, origIP, false, verbose);
 
-		if(debug)
+		if (debug)
 			IJ.log("num of skeletons = " + this.numOfTrees);
 
 		// Show results table
@@ -319,70 +326,66 @@ public class AnalyzeSkeleton implements PlugInFilter
 	/**
 	 * This method is intended for non-interactively using this plugin.
 	 * <p>
-	 * @param pruneIndex The pruneIndex, as asked by the initial gui dialog.
-	 * @param pruneEnds flag to prune end-point-ending branches
-	 * @param shortPath flag to calculate the longest shortest path
-	 * @param origIP original input image
-	 * @param silent 
-	 * @param verbose flag to display running information 
+	 * 
+	 * @param pruneIndex
+	 *            The pruneIndex, as asked by the initial gui dialog.
+	 * @param pruneEnds
+	 *            flag to prune end-point-ending branches
+	 * @param shortPath
+	 *            flag to calculate the longest shortest path
+	 * @param origIP
+	 *            original input image
+	 * @param silent
+	 * @param verbose
+	 *            flag to display running information
 	 */
-	public SkeletonResult run(
-			int pruneIndex,
-			boolean pruneEnds,			
-			boolean shortPath,
-			ImagePlus origIP,
-			boolean silent,
-			boolean verbose)
-	{
+	public SkeletonResult run(final int pruneIndex, final boolean pruneEnds, final boolean shortPath,
+			final ImagePlus origIP, final boolean silent, final boolean verbose) {
 		AnalyzeSkeleton.pruneIndex = pruneIndex;
 		this.silent = silent;
 		AnalyzeSkeleton.pruneEnds = pruneEnds;
 		AnalyzeSkeleton.calculateShortestPath = shortPath;
 		AnalyzeSkeleton.verbose = verbose;
 
-		switch(pruneIndex)
-		{
-			// No pruning
-			case AnalyzeSkeleton.NONE:
-				this.bPruneCycles = false;
-				break;
-			// Pruning cycles by shortest branch
-			case AnalyzeSkeleton.SHORTEST_BRANCH:
-				this.bPruneCycles = true;
-				break;
-			// Pruning cycles by lowest pixel intensity
-			case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
-			case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
-				// calculate neighborhood size given the calibration
-				calculateNeighborhoodOffsets(origIP.getCalibration());
-				this.originalImage = origIP.getStack();
-				this.bPruneCycles = true;
-				break;
-			default:
+		switch (pruneIndex) {
+		// No pruning
+		case AnalyzeSkeleton.NONE:
+			this.bPruneCycles = false;
+			break;
+		// Pruning cycles by shortest branch
+		case AnalyzeSkeleton.SHORTEST_BRANCH:
+			this.bPruneCycles = true;
+			break;
+		// Pruning cycles by lowest pixel intensity
+		case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
+		case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
+			// calculate neighborhood size given the calibration
+			calculateNeighborhoodOffsets(origIP.getCalibration());
+			this.originalImage = origIP.getStack();
+			this.bPruneCycles = true;
+			break;
+		default:
 		}
 
 		this.width = this.imRef.getWidth();
 		this.height = this.imRef.getHeight();
 		this.depth = this.imRef.getStackSize();
 		this.inputImage = this.imRef.getStack();
-		
+
 		// initialize visit flags
 		resetVisited();
-		
+
 		// Tag skeleton, differentiate trees and visit them
 		processSkeleton(this.inputImage);
-		
-		 // prune ends
-		if (pruneEnds) 
-		{
+
+		// prune ends
+		if (pruneEnds) {
 			pruneEndBranches(this.inputImage, this.taggedImage);
 		}
-		
+
 		// Prune cycles if necessary
-		if(bPruneCycles)
-		{
-			if(pruneCycles(this.inputImage, this.originalImage, AnalyzeSkeleton.pruneIndex))
-			{
+		if (bPruneCycles) {
+			if (pruneCycles(this.inputImage, this.originalImage, AnalyzeSkeleton.pruneIndex)) {
 				// initialize visit flags
 				resetVisited();
 				// Recalculate analysis over the new image
@@ -390,57 +393,55 @@ public class AnalyzeSkeleton implements PlugInFilter
 				processSkeleton(this.inputImage);
 			}
 		}
-		
+
 		// Calculate triple points (junctions with exactly 3 branches)
 		calculateTripleAndQuadruplePoints();
-	
-		if(shortPath)
-		{
-			if(debug)
+
+		if (shortPath) {
+			if (debug)
 				IJ.log("Calculating longest shortest paths...");
-			
+
 			// Copy input image
 			this.shortPathImage = new ImageStack(this.width, this.height, this.inputImage.getColorModel());
-			for(int i=1; i<=this.inputImage.getSize(); i++)
+			for (int i = 1; i <= this.inputImage.getSize(); i++)
 				shortPathImage.addSlice(this.inputImage.getSliceLabel(i), this.inputImage.getProcessor(i).duplicate());
-			
-			shortestPathList = new ArrayList < Double >();
-			
-			this.shortestPathPoints = new ArrayList [ this.numOfTrees ];
-			
+
+			shortestPathList = new ArrayList<Double>();
+
+			this.shortestPathPoints = new ArrayList[this.numOfTrees];
+
 			// Visit skeleton and measure distances.
 			// and apply warshall algorithm
 			spStartPosition = new double[this.numOfTrees][3];
-			for(int i = 0; i < this.numOfTrees; i++)
-			{							
-				shortestPathPoints[ i ] = new ArrayList<Point>();
+			for (int i = 0; i < this.numOfTrees; i++) {
+				shortestPathPoints[i] = new ArrayList<Point>();
 				// Warshall algorithm including tag positions
-				this.shortestPath = warshallAlgorithm(this.graph[i], shortestPathPoints[ i ]);
+				this.shortestPath = warshallAlgorithm(this.graph[i], shortestPathPoints[i]);
 				shortestPathList.add(this.shortestPath);
 				spStartPosition[i][0] = spx * this.imRef.getCalibration().pixelWidth;
 				spStartPosition[i][1] = spy * this.imRef.getCalibration().pixelHeight;
-				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;				
+				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;
 			}
-			
+
 			if (!silent) {
 				// Display short paths in a new stack
-				ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
+				final ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
 				shortIP.show();
 
 				// Set same calibration as the input image
 				shortIP.setCalibration(this.imRef.getCalibration());
 
-				// We apply the Fire LUT and reset the min and max to be between 0-255.
+				// We apply the Fire LUT and reset the min and max to be between
+				// 0-255.
 				IJ.run(shortIP, "Fire", null);
 
-				//IJ.resetMinAndMax();
+				// IJ.resetMinAndMax();
 				shortIP.resetDisplayRange();
 				shortIP.updateAndDraw();
 			}
-		
+
 		}
-		
-		
+
 		// Return the analysis results
 		return assembleResults();
 	}
@@ -448,68 +449,65 @@ public class AnalyzeSkeleton implements PlugInFilter
 	/**
 	 * This method is intended for non-interactively using this plugin.
 	 * <p>
-	 * @param pruneIndex The pruneIndex, as asked by the initial gui dialog.
-	 * @param thresholdLength maximum length of the branches to prune (all branches below that value are removed)
-	 * @param shortPath flag to calculate the longest shortest path
-	 * @param origIP original input image
-	 * @param silent 
-	 * @param verbose flag to display running information 
+	 * 
+	 * @param pruneIndex
+	 *            The pruneIndex, as asked by the initial gui dialog.
+	 * @param thresholdLength
+	 *            maximum length of the branches to prune (all branches below
+	 *            that value are removed)
+	 * @param shortPath
+	 *            flag to calculate the longest shortest path
+	 * @param origIP
+	 *            original input image
+	 * @param silent
+	 * @param verbose
+	 *            flag to display running information
 	 */
-	public SkeletonResult run(
-			int pruneIndex,
-			double thresholdLength,			
-			boolean shortPath,
-			ImagePlus origIP,
-			boolean silent,
-			boolean verbose)
-	{
+	public SkeletonResult run(final int pruneIndex, final double thresholdLength, final boolean shortPath,
+			final ImagePlus origIP, final boolean silent, final boolean verbose) {
 		AnalyzeSkeleton.pruneIndex = pruneIndex;
 		this.silent = silent;
-		AnalyzeSkeleton.pruneEnds = true;		
+		AnalyzeSkeleton.pruneEnds = true;
 		AnalyzeSkeleton.calculateShortestPath = shortPath;
 		AnalyzeSkeleton.verbose = verbose;
 
-		switch(pruneIndex)
-		{
-			// No pruning
-			case AnalyzeSkeleton.NONE:
-				this.bPruneCycles = false;
-				break;
-			// Pruning cycles by shortest branch
-			case AnalyzeSkeleton.SHORTEST_BRANCH:
-				this.bPruneCycles = true;
-				break;
-			// Pruning cycles by lowest pixel intensity
-			case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
-			case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
-				// calculate neighborhood size given the calibration
-				calculateNeighborhoodOffsets(origIP.getCalibration());
-				this.originalImage = origIP.getStack();
-				this.bPruneCycles = true;
-				break;
-			default:
+		switch (pruneIndex) {
+		// No pruning
+		case AnalyzeSkeleton.NONE:
+			this.bPruneCycles = false;
+			break;
+		// Pruning cycles by shortest branch
+		case AnalyzeSkeleton.SHORTEST_BRANCH:
+			this.bPruneCycles = true;
+			break;
+		// Pruning cycles by lowest pixel intensity
+		case AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL:
+		case AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH:
+			// calculate neighborhood size given the calibration
+			calculateNeighborhoodOffsets(origIP.getCalibration());
+			this.originalImage = origIP.getStack();
+			this.bPruneCycles = true;
+			break;
+		default:
 		}
 
 		this.width = this.imRef.getWidth();
 		this.height = this.imRef.getHeight();
 		this.depth = this.imRef.getStackSize();
 		this.inputImage = this.imRef.getStack();
-		
+
 		// initialize visit flags
 		resetVisited();
-		
+
 		// Tag skeleton, differentiate trees and visit them
 		processSkeleton(this.inputImage);
-		
-		 // prune ends
+
+		// prune ends
 		pruneEndBranches(this.inputImage, this.taggedImage, thresholdLength);
-		
-		
+
 		// Prune cycles if necessary
-		if(bPruneCycles)
-		{
-			if(pruneCycles(this.inputImage, this.originalImage, AnalyzeSkeleton.pruneIndex))
-			{
+		if (bPruneCycles) {
+			if (pruneCycles(this.inputImage, this.originalImage, AnalyzeSkeleton.pruneIndex)) {
 				// initialize visit flags
 				resetVisited();
 				// Recalculate analysis over the new image
@@ -517,188 +515,176 @@ public class AnalyzeSkeleton implements PlugInFilter
 				processSkeleton(this.inputImage);
 			}
 		}
-		
+
 		// Calculate triple points (junctions with exactly 3 branches)
 		calculateTripleAndQuadruplePoints();
-	
-		if(shortPath)
-		{
-			if(debug)
+
+		if (shortPath) {
+			if (debug)
 				IJ.log("Calculating longest shortest paths...");
-			
+
 			// Copy input image
 			this.shortPathImage = new ImageStack(this.width, this.height, this.inputImage.getColorModel());
-			for(int i=1; i<=this.inputImage.getSize(); i++)
+			for (int i = 1; i <= this.inputImage.getSize(); i++)
 				shortPathImage.addSlice(this.inputImage.getSliceLabel(i), this.inputImage.getProcessor(i).duplicate());
-			
-			shortestPathList = new ArrayList < Double >();
-			
-			this.shortestPathPoints = new ArrayList [ this.numOfTrees ];
-			
+
+			shortestPathList = new ArrayList<Double>();
+
+			this.shortestPathPoints = new ArrayList[this.numOfTrees];
+
 			// Visit skeleton and measure distances.
 			// and apply warshall algorithm
 			spStartPosition = new double[this.numOfTrees][3];
-			for(int i = 0; i < this.numOfTrees; i++)
-			{							
-				shortestPathPoints[ i ] = new ArrayList<Point>();
+			for (int i = 0; i < this.numOfTrees; i++) {
+				shortestPathPoints[i] = new ArrayList<Point>();
 				// Warshall algorithm including tag positions
-				this.shortestPath = warshallAlgorithm(this.graph[i], shortestPathPoints[ i ]);
+				this.shortestPath = warshallAlgorithm(this.graph[i], shortestPathPoints[i]);
 				shortestPathList.add(this.shortestPath);
 				spStartPosition[i][0] = spx * this.imRef.getCalibration().pixelWidth;
 				spStartPosition[i][1] = spy * this.imRef.getCalibration().pixelHeight;
-				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;				
+				spStartPosition[i][2] = spz * this.imRef.getCalibration().pixelDepth;
 			}
-			
+
 			if (!silent) {
 				// Display short paths in a new stack
-				ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
+				final ImagePlus shortIP = new ImagePlus("Longest shortest paths", shortPathImage);
 				shortIP.show();
 
 				// Set same calibration as the input image
 				shortIP.setCalibration(this.imRef.getCalibration());
 
-				// We apply the Fire LUT and reset the min and max to be between 0-255.
+				// We apply the Fire LUT and reset the min and max to be between
+				// 0-255.
 				IJ.run(shortIP, "Fire", null);
 
-				//IJ.resetMinAndMax();
+				// IJ.resetMinAndMax();
 				shortIP.resetDisplayRange();
 				shortIP.updateAndDraw();
 			}
-		
+
 		}
-		
-		
+
 		// Return the analysis results
 		return assembleResults();
 	}
-	
+
 	/**
 	 * Get the graphs of the current skeletons
+	 * 
 	 * @return array of graphs (one per tree/skeleton)
 	 */
-	public Graph[] getGraphs()
-	{
+	public Graph[] getGraphs() {
 		return graph;
 	}
-	
+
 	/**
-	 * Get the list of points (including junctions and end points) of the 
+	 * Get the list of points (including junctions and end points) of the
 	 * largest shortest paths in the skeleton image (one per tree).
+	 * 
 	 * @return array with the lists of points of the shortest paths
 	 */
-	public ArrayList<Point>[] getShortestPathPoints()
-	{
+	public ArrayList<Point>[] getShortestPathPoints() {
 		return this.shortestPathPoints;
 	}
-	
+
 	/**
-	 * A simpler standalone running method, for analyzation without pruning
-	 * or showing images.
+	 * A simpler standalone running method, for analyzation without pruning or
+	 * showing images.
 	 * <p>
 	 * This one just calls run(AnalyzeSkeleton_.NONE, false, null, true, false)
 	 */
-	public SkeletonResult run()
-	{
+	public SkeletonResult run() {
 		return run(NONE, false, false, null, true, false);
 	}
 
 	/**
 	 * Prune end branches
 	 *
-	 * @param stack input skeleton image
-	 * @param taggedImage tagged skeleton image
+	 * @param stack
+	 *            input skeleton image
+	 * @param taggedImage
+	 *            tagged skeleton image
 	 *
 	 */
-	private void pruneEndBranches(ImageStack stack, ImageStack taggedImage) 
-	{
-		if(debug)
+	private void pruneEndBranches(final ImageStack stack, final ImageStack taggedImage) {
+		if (debug)
 			IJ.log("Pruning end-point branches...");
-		for (int t = 0; t < this.numOfTrees; t++)
-		{
-			if(debug)
+		for (int t = 0; t < this.numOfTrees; t++) {
+			if (debug)
 				IJ.log("Pruning tree #" + t);
-			
-			Graph g = graph[t];
-			ArrayList<Vertex> vertices = g.getVertices();
-			ListIterator<Vertex> vit = vertices.listIterator();
-			
-			if(debug)
+
+			final Graph g = graph[t];
+			final ArrayList<Vertex> vertices = g.getVertices();
+			final ListIterator<Vertex> vit = vertices.listIterator();
+
+			if (debug)
 				IJ.log("Initial number of vertices: " + graph[t].getVertices().size());
-			
-			while (vit.hasNext())
-			{
-				Vertex v = vit.next();
+
+			while (vit.hasNext()) {
+				final Vertex v = vit.next();
 				// Check if the vertex is an end point
-				if (v.getBranches().size() == 1 && isEndPoint( v.getPoints().get( 0 ) ) )
-				{
-					if(debug)
+				if (v.getBranches().size() == 1 && isEndPoint(v.getPoints().get(0))) {
+					if (debug)
 						IJ.log("Pruning branch starting at " + v.getPoints().get(0));
-					
+
 					// Remove end point voxels
 					ArrayList<Point> points = v.getPoints();
 					final int nPoints = points.size();
-					
-					for (int i = 0; i < nPoints; i++)
-					{
-						Point p = points.get(i);
+
+					for (int i = 0; i < nPoints; i++) {
+						final Point p = points.get(i);
 						setPixel(stack, p.x, p.y, p.z, (byte) 0);
 						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
 						this.numberOfEndPoints[t]--;
 						this.totalNumberOfEndPoints--;
-						Iterator<Point> pit = this.listOfEndPoints.listIterator();
-						while (pit.hasNext()){
-							Point ep = pit.next();
-							if (ep.equals(p)){
+						final Iterator<Point> pit = this.listOfEndPoints.listIterator();
+						while (pit.hasNext()) {
+							final Point ep = pit.next();
+							if (ep.equals(p)) {
 								pit.remove();
 								break;
 							}
 						}
 					}
-					
+
 					// Remove branch voxels
-					Edge branch = v.getBranches().get(0);
+					final Edge branch = v.getBranches().get(0);
 					points = branch.getSlabs();
 					final int nSlabs = points.size();
-					for (int i = 0; i < nSlabs; i++)
-					{
-						Point p = points.get(i);
+					for (int i = 0; i < nSlabs; i++) {
+						final Point p = points.get(i);
 						setPixel(stack, p.x, p.y, p.z, (byte) 0);
 						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
 						this.numberOfSlabs[t]--;
 						this.totalNumberOfSlabs--;
-						Iterator<Point> pit = this.listOfSlabVoxels.listIterator();
-						while (pit.hasNext())
-						{
-							Point ep = pit.next();
-							if (ep.equals(p)){
+						final Iterator<Point> pit = this.listOfSlabVoxels.listIterator();
+						while (pit.hasNext()) {
+							final Point ep = pit.next();
+							if (ep.equals(p)) {
 								pit.remove();
 								break;
 							}
-						}						
+						}
 					}
-					
+
 					// remove the Edge from the Graph
-					ArrayList<Edge> gEdges = graph[t].getEdges();
-					Iterator<Edge> git = gEdges.listIterator();
-					while (git.hasNext())
-					{
-						Edge e = git.next();
-						if (e.equals(branch))
-						{
+					final ArrayList<Edge> gEdges = graph[t].getEdges();
+					final Iterator<Edge> git = gEdges.listIterator();
+					while (git.hasNext()) {
+						final Edge e = git.next();
+						if (e.equals(branch)) {
 							git.remove();
 							break;
 						}
 					}
-					
+
 					// remove the Edge from the opposite Vertex
-					Vertex opp = branch.getOppositeVertex(v);
-					ArrayList<Edge> oppBranches = opp.getBranches();
-					Iterator<Edge> oppIt = oppBranches.listIterator();
-					while (oppIt.hasNext())
-					{
-						Edge oppBranch = oppIt.next();
-						if (oppBranch.equals(branch))
-						{
+					final Vertex opp = branch.getOppositeVertex(v);
+					final ArrayList<Edge> oppBranches = opp.getBranches();
+					final Iterator<Edge> oppIt = oppBranches.listIterator();
+					while (oppIt.hasNext()) {
+						final Edge oppBranch = oppIt.next();
+						if (oppBranch.equals(branch)) {
 							oppIt.remove();
 							break;
 						}
@@ -710,114 +696,103 @@ public class AnalyzeSkeleton implements PlugInFilter
 					// remove the Vertex from the Graph
 					vit.remove();
 				}
-			}						
-			
-			if(debug)
+			}
+
+			if (debug)
 				IJ.log("Final number of vertices: " + graph[t].getVertices().size());
 		}
-						
+
 		return;
 	}
-	
+
 	/**
 	 * Prune end branches of a specific length
 	 *
-	 * @param stack input skeleton image
-	 * @param taggedImage tagged skeleton image
-	 * @param length limit length to prune the branches (in calibrated units)
+	 * @param stack
+	 *            input skeleton image
+	 * @param taggedImage
+	 *            tagged skeleton image
+	 * @param length
+	 *            limit length to prune the branches (in calibrated units)
 	 *
 	 */
-	private void pruneEndBranches(
-			ImageStack stack, 
-			ImageStack taggedImage, 
-			double length) 
-	{
-		if(debug)
+	private void pruneEndBranches(final ImageStack stack, final ImageStack taggedImage, final double length) {
+		if (debug)
 			IJ.log("Pruning end-point branches...");
-		for (int t = 0; t < this.numOfTrees; t++)
-		{
-			if(debug)
+		for (int t = 0; t < this.numOfTrees; t++) {
+			if (debug)
 				IJ.log("Pruning tree #" + t);
-			
-			Graph g = graph[t];
-			ArrayList<Vertex> vertices = g.getVertices();
-			ListIterator<Vertex> vit = vertices.listIterator();
-			
-			if(debug)
+
+			final Graph g = graph[t];
+			final ArrayList<Vertex> vertices = g.getVertices();
+			final ListIterator<Vertex> vit = vertices.listIterator();
+
+			if (debug)
 				IJ.log("Initial number of vertices: " + graph[t].getVertices().size());
-			
-			while (vit.hasNext())
-			{
-				Vertex v = vit.next();
-				if (v.getBranches().size() == 1 && v.getBranches().get(0).getLength() <= length)
-				{
-					if(debug)
+
+			while (vit.hasNext()) {
+				final Vertex v = vit.next();
+				if (v.getBranches().size() == 1 && v.getBranches().get(0).getLength() <= length) {
+					if (debug)
 						IJ.log("Pruning branch starting at " + v.getPoints().get(0));
 					// Remove end point voxels
 					ArrayList<Point> points = v.getPoints();
 					final int nPoints = points.size();
-					
-					for (int i = 0; i < nPoints; i++)
-					{
-						Point p = points.get(i);
+
+					for (int i = 0; i < nPoints; i++) {
+						final Point p = points.get(i);
 						setPixel(stack, p.x, p.y, p.z, (byte) 0);
 						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
 						this.numberOfEndPoints[t]--;
 						this.totalNumberOfEndPoints--;
-						Iterator<Point> pit = this.listOfEndPoints.listIterator();
-						while (pit.hasNext()){
-							Point ep = pit.next();
-							if (ep.equals(p)){
+						final Iterator<Point> pit = this.listOfEndPoints.listIterator();
+						while (pit.hasNext()) {
+							final Point ep = pit.next();
+							if (ep.equals(p)) {
 								pit.remove();
 								break;
 							}
 						}
 					}
-					
+
 					// Remove branch voxels
-					Edge branch = v.getBranches().get(0);
+					final Edge branch = v.getBranches().get(0);
 					points = branch.getSlabs();
 					final int nSlabs = points.size();
-					for (int i = 0; i < nSlabs; i++)
-					{
-						Point p = points.get(i);
+					for (int i = 0; i < nSlabs; i++) {
+						final Point p = points.get(i);
 						setPixel(stack, p.x, p.y, p.z, (byte) 0);
 						setPixel(taggedImage, p.x, p.y, p.z, (byte) 0);
 						this.numberOfSlabs[t]--;
 						this.totalNumberOfSlabs--;
-						Iterator<Point> pit = this.listOfSlabVoxels.listIterator();
-						while (pit.hasNext())
-						{
-							Point ep = pit.next();
-							if (ep.equals(p)){
+						final Iterator<Point> pit = this.listOfSlabVoxels.listIterator();
+						while (pit.hasNext()) {
+							final Point ep = pit.next();
+							if (ep.equals(p)) {
 								pit.remove();
 								break;
 							}
-						}						
+						}
 					}
-					
+
 					// remove the Edge from the Graph
-					ArrayList<Edge> gEdges = graph[t].getEdges();
-					Iterator<Edge> git = gEdges.listIterator();
-					while (git.hasNext())
-					{
-						Edge e = git.next();
-						if (e.equals(branch))
-						{
+					final ArrayList<Edge> gEdges = graph[t].getEdges();
+					final Iterator<Edge> git = gEdges.listIterator();
+					while (git.hasNext()) {
+						final Edge e = git.next();
+						if (e.equals(branch)) {
 							git.remove();
 							break;
 						}
 					}
-					
+
 					// remove the Edge from the opposite Vertex
-					Vertex opp = branch.getOppositeVertex(v);
-					ArrayList<Edge> oppBranches = opp.getBranches();
-					Iterator<Edge> oppIt = oppBranches.listIterator();
-					while (oppIt.hasNext())
-					{
-						Edge oppBranch = oppIt.next();
-						if (oppBranch.equals(branch))
-						{
+					final Vertex opp = branch.getOppositeVertex(v);
+					final ArrayList<Edge> oppBranches = opp.getBranches();
+					final Iterator<Edge> oppIt = oppBranches.listIterator();
+					while (oppIt.hasNext()) {
+						final Edge oppBranch = oppIt.next();
+						if (oppBranch.equals(branch)) {
 							oppIt.remove();
 							break;
 						}
@@ -829,54 +804,53 @@ public class AnalyzeSkeleton implements PlugInFilter
 					// remove the Vertex from the Graph
 					vit.remove();
 				}
-			}						
-			
-			if(debug)
+			}
+
+			if (debug)
 				IJ.log("Final number of vertices: " + graph[t].getVertices().size());
 		}
-						
+
 		return;
 	}
-	
-	
+
 	// ---------------------------------------------------------------------------
 	/**
 	 * Calculate the neighborhood size based on the calibration of the image.
-	 * @param calibration image calibration
+	 * 
+	 * @param calibration
+	 *            image calibration
 	 */
-	private void calculateNeighborhoodOffsets(Calibration calibration) 
-	{
+	private void calculateNeighborhoodOffsets(final Calibration calibration) {
 		double max = calibration.pixelDepth;
-		if(calibration.pixelHeight > max)
+		if (calibration.pixelHeight > max)
 			max = calibration.pixelHeight;
-		if(calibration.pixelWidth > max)
+		if (calibration.pixelWidth > max)
 			max = calibration.pixelWidth;
 
-		this.x_offset = ((int) Math.round(max / calibration.pixelWidth) > 1) ? 
-							(int) Math.round(max / calibration.pixelWidth) : 1;
-		this.y_offset = ((int) Math.round(max / calibration.pixelHeight) > 1) ? 
-							(int) Math.round(max / calibration.pixelHeight) : 1;
-		this.z_offset = ((int) Math.round(max / calibration.pixelDepth) > 1) ? 
-							(int) Math.round(max / calibration.pixelDepth) : 1;
-				
-		if(debug)
-		{
+		this.x_offset = ((int) Math.round(max / calibration.pixelWidth) > 1)
+				? (int) Math.round(max / calibration.pixelWidth) : 1;
+		this.y_offset = ((int) Math.round(max / calibration.pixelHeight) > 1)
+				? (int) Math.round(max / calibration.pixelHeight) : 1;
+		this.z_offset = ((int) Math.round(max / calibration.pixelDepth) > 1)
+				? (int) Math.round(max / calibration.pixelDepth) : 1;
+
+		if (debug) {
 			IJ.log("x_offset = " + this.x_offset);
 			IJ.log("y_offset = " + this.y_offset);
 			IJ.log("z_offset = " + this.z_offset);
 		}
-																					
+
 	}// end method calculateNeighborhoodOffsets
 
 	// ---------------------------------------------------------------------------
 	/**
 	 * Process skeleton: tag image, mark trees and visit.
-	 * 
-	 * @param inputImage2 input skeleton image to process
+	 *
+	 * @param inputImage2
+	 *            input skeleton image to process
 	 */
-	public void processSkeleton(ImageStack inputImage2) 
-	{
-		// Initialize  global lists of points
+	public void processSkeleton(final ImageStack inputImage2) {
+		// Initialize global lists of points
 		this.listOfEndPoints = new ArrayList<Point>();
 		this.listOfJunctionVoxels = new ArrayList<Point>();
 		this.listOfSlabVoxels = new ArrayList<Point>();
@@ -884,32 +858,29 @@ public class AnalyzeSkeleton implements PlugInFilter
 		this.totalNumberOfEndPoints = 0;
 		this.totalNumberOfJunctionVoxels = 0;
 		this.totalNumberOfSlabs = 0;
-		
-		
+
 		// Prepare data: classify voxels and tag them.
-		this.taggedImage = tagImage(inputImage2);		
-		
+		this.taggedImage = tagImage(inputImage2);
+
 		// Show tags image.
-		if(!bPruneCycles && !silent)
-		{
+		if (!bPruneCycles && !silent) {
 			displayTagImage(taggedImage);
 		}
 
 		// Mark trees
-		ImageStack treeIS = markTrees(taggedImage);
-		
-		if(this.numOfTrees == 0)
+		final ImageStack treeIS = markTrees(taggedImage);
+
+		if (this.numOfTrees == 0)
 			return;
-		
+
 		// Ask memory for every tree
 		initializeTrees();
-		                                      
+
 		// Divide groups of end-points and junction voxels
-		if(this.numOfTrees > 1)
+		if (this.numOfTrees > 1)
 			divideVoxelsByTrees(treeIS);
-		if(this.numOfTrees == 1)
-		{
-			if(debug)
+		if (this.numOfTrees == 1) {
+			if (debug)
 				IJ.log("list of end points size = " + this.listOfEndPoints.size());
 			this.endPointsTree[0] = this.listOfEndPoints;
 			this.numberOfEndPoints[0] = this.listOfEndPoints.size();
@@ -917,214 +888,189 @@ public class AnalyzeSkeleton implements PlugInFilter
 			this.numberOfJunctionVoxels[0] = this.listOfJunctionVoxels.size();
 			this.startingSlabTree[0] = this.listOfStartingSlabVoxels;
 		}
-		
+
 		// Calculate number of junctions (skipping neighbor junction voxels)
-		groupJunctions(treeIS);						
-		
+		groupJunctions(treeIS);
+
 		// Mark all unvisited
 		resetVisited();
-		
+
 		// Visit skeleton and measure distances.
-		for(int i = 0; i < this.numOfTrees; i++)
-			visitSkeleton(taggedImage, treeIS, i+1);
-		
+		for (int i = 0; i < this.numOfTrees; i++)
+			visitSkeleton(taggedImage, treeIS, i + 1);
+
 	} // end method processSkeleton
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Prune cycles from tagged image and update it.
-	 * 
-	 * @param inputImage input skeleton image
-	 * @param originalImage original gray-scale image
-	 * @param pruningMode (SHORTEST_BRANCH, LOWEST_INTENSITY_VOXEL, LOWEST_INTENSITY_BRANCH)
-	 * @return true if the input image was pruned or false if there were no cycles
+	 *
+	 * @param inputImage
+	 *            input skeleton image
+	 * @param originalImage
+	 *            original gray-scale image
+	 * @param pruningMode
+	 *            (SHORTEST_BRANCH, LOWEST_INTENSITY_VOXEL,
+	 *            LOWEST_INTENSITY_BRANCH)
+	 * @return true if the input image was pruned or false if there were no
+	 *         cycles
 	 */
-	private boolean pruneCycles(
-			ImageStack inputImage, 
-			final ImageStack originalImage, 
-			final int pruningMode) 
-	{
+	private boolean pruneCycles(final ImageStack inputImage, final ImageStack originalImage, final int pruningMode) {
 		boolean pruned = false;
-		
-		for(int iTree = 0 ; iTree < this.numOfTrees; iTree ++)
-		{
+
+		for (int iTree = 0; iTree < this.numOfTrees; iTree++) {
 			// For circular trees we just remove one slab
-			if(this.startingSlabTree[iTree].size() == 1)
-			{
-				setPixel(inputImage, this.startingSlabTree[iTree].get(0),(byte) 0);
+			if (this.startingSlabTree[iTree].size() == 1) {
+				setPixel(inputImage, this.startingSlabTree[iTree].get(0), (byte) 0);
 				pruned = true;
-			}
-			else // For the rest, we do depth-first search to detect the cycles
+			} else // For the rest, we do depth-first search to detect the
+					// cycles
 			{
 				// DFS
-				ArrayList <Edge> backEdges = this.graph[iTree].depthFirstSearch();
+				final ArrayList<Edge> backEdges = this.graph[iTree].depthFirstSearch();
 
-				if(debug)
-				{
-					IJ.log( " --------------------------- ");
-					final String[] s = new String[]{"UNDEFINED", "TREE" , "BACK"};
-					for(final Edge e : this.graph[iTree].getEdges())
-					{
-						IJ.log(" edge " + e.getV1().getPoints().get(0) + " - " + e.getV2().getPoints().get(0) + " : " + s[e.getType()+1]);
+				if (debug) {
+					IJ.log(" --------------------------- ");
+					final String[] s = new String[] { "UNDEFINED", "TREE", "BACK" };
+					for (final Edge e : this.graph[iTree].getEdges()) {
+						IJ.log(" edge " + e.getV1().getPoints().get(0) + " - " + e.getV2().getPoints().get(0) + " : "
+								+ s[e.getType() + 1]);
 					}
 				}
 
 				// If DFS returned backEdges, we need to delete the loops
-				if(backEdges.size() > 0)
-				{
-					// Find all edges of each loop (backtracking the predecessors)
-					for(final Edge e : backEdges)
-					{
-						ArrayList<Edge> loopEdges = new ArrayList<Edge>();
+				if (backEdges.size() > 0) {
+					// Find all edges of each loop (backtracking the
+					// predecessors)
+					for (final Edge e : backEdges) {
+						final ArrayList<Edge> loopEdges = new ArrayList<Edge>();
 						loopEdges.add(e);
 
 						Edge minEdge = e;
 
-						// backtracking (starting at the vertex with higher order index
-						final Vertex finalLoopVertex = e.getV1().getVisitOrder() < e.getV2().getVisitOrder() ? e.getV1() : e.getV2();
+						// backtracking (starting at the vertex with higher
+						// order index
+						final Vertex finalLoopVertex = e.getV1().getVisitOrder() < e.getV2().getVisitOrder() ? e.getV1()
+								: e.getV2();
 
-						Vertex backtrackVertex = e.getV1().getVisitOrder() < e.getV2().getVisitOrder() ? e.getV2() : e.getV1();
+						Vertex backtrackVertex = e.getV1().getVisitOrder() < e.getV2().getVisitOrder() ? e.getV2()
+								: e.getV1();
 
 						// backtrack until reaching final loop vertex
-						while(!finalLoopVertex.equals(backtrackVertex))
-						{
+						while (!finalLoopVertex.equals(backtrackVertex)) {
 							// Extract predecessor
 							final Edge pre = backtrackVertex.getPredecessor();
 							// Update shortest loop edge if necessary
-							if(pruningMode == AnalyzeSkeleton.SHORTEST_BRANCH && 
-									pre.getSlabs().size() < minEdge.getSlabs().size())
+							if (pruningMode == AnalyzeSkeleton.SHORTEST_BRANCH
+									&& pre.getSlabs().size() < minEdge.getSlabs().size())
 								minEdge = pre;
 							// Add to loop edge list
 							loopEdges.add(pre);
 							// Extract predecessor
-							backtrackVertex = pre.getV1().equals(backtrackVertex) ? pre.getV2() : pre.getV1(); 
+							backtrackVertex = pre.getV1().equals(backtrackVertex) ? pre.getV2() : pre.getV1();
 						}
-						
+
 						// Prune cycle
-						if(pruningMode == AnalyzeSkeleton.SHORTEST_BRANCH)
-						{
+						if (pruningMode == AnalyzeSkeleton.SHORTEST_BRANCH) {
 							// Remove middle slab from the shortest loop edge
 							Point removeCoords = null;
-							if(minEdge.getSlabs().size() > 0)
-								removeCoords = minEdge.getSlabs().get(minEdge.getSlabs().size()/2);
-							else 
+							if (minEdge.getSlabs().size() > 0)
+								removeCoords = minEdge.getSlabs().get(minEdge.getSlabs().size() / 2);
+							else
 								removeCoords = minEdge.getV1().getPoints().get(0);
-							setPixel(inputImage, removeCoords,(byte) 0);
-						}
-						else if (pruningMode == AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL)
-						{
+							setPixel(inputImage, removeCoords, (byte) 0);
+						} else if (pruningMode == AnalyzeSkeleton.LOWEST_INTENSITY_VOXEL) {
 							removeLowestIntensityVoxel(loopEdges, inputImage, originalImage);
-						}
-						else if(pruningMode == AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH)
-						{
+						} else if (pruningMode == AnalyzeSkeleton.LOWEST_INTENSITY_BRANCH) {
 							cutLowestIntensityBranch(loopEdges, inputImage, originalImage);
 						}
-					}// endfor backEdges
+					} // endfor backEdges
 
 					pruned = true;
 				}
 			}
 		}
-		
-		return pruned;		
+
+		return pruned;
 	}// end method pruneCycles
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Cut the a list of edges in the lowest pixel intensity voxel (calculated
 	 * from the original -grayscale- image).
-	 * 
-	 * @param loopEdges list of edges to be analyzed
-	 * @param inputImage2 input skeleton image
-	 * @param originalGrayImage original gray image
+	 *
+	 * @param loopEdges
+	 *            list of edges to be analyzed
+	 * @param inputImage2
+	 *            input skeleton image
+	 * @param originalGrayImage
+	 *            original gray image
 	 */
-	private void removeLowestIntensityVoxel(
-			final ArrayList<Edge> loopEdges,
-			ImageStack inputImage2,
-			ImageStack originalGrayImage) 
-	{
+	private void removeLowestIntensityVoxel(final ArrayList<Edge> loopEdges, final ImageStack inputImage2,
+			final ImageStack originalGrayImage) {
 		Point lowestIntensityVoxel = null;
-		
+
 		double lowestIntensityValue = Double.MAX_VALUE;
-		
-		for(final Edge e : loopEdges)
-		{
-			for(final Point p : e.getSlabs())
-			{
-				final double avg = getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
-				if(avg < lowestIntensityValue)
-				{
+
+		for (final Edge e : loopEdges) {
+			for (final Point p : e.getSlabs()) {
+				final double avg = getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset, this.y_offset,
+						this.z_offset);
+				if (avg < lowestIntensityValue) {
 					lowestIntensityValue = avg;
 					lowestIntensityVoxel = p;
 				}
 			}
 			// Check vertices
 			/*
-			for(final Point p : e.getV1().getPoints())
-			{
-				final double avg = getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
-				if(avg < lowestIntensityValue)
-				{
-					lowestIntensityValue = avg;
-					lowestIntensityVoxel = p;
-				}
-			}
-			for(final Point p : e.getV2().getPoints())
-			{
-				final double avg = getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
-				if(avg < lowestIntensityValue)
-				{
-					lowestIntensityValue = avg;
-					lowestIntensityVoxel = p;
-				}
-			}
-			*/
+			 * for(final Point p : e.getV1().getPoints()) { final double avg =
+			 * getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset,
+			 * this.y_offset, this.z_offset); if(avg < lowestIntensityValue) {
+			 * lowestIntensityValue = avg; lowestIntensityVoxel = p; } }
+			 * for(final Point p : e.getV2().getPoints()) { final double avg =
+			 * getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset,
+			 * this.y_offset, this.z_offset); if(avg < lowestIntensityValue) {
+			 * lowestIntensityValue = avg; lowestIntensityVoxel = p; } }
+			 */
 		}
-		
+
 		// Cut loop in the lowest intensity pixel value position
-		if(debug)
+		if (debug)
 			IJ.log("Cut loop at coordinates: " + lowestIntensityVoxel);
-		setPixel(inputImage2, lowestIntensityVoxel,(byte) 0);
-	}//end method removeLowestIntensityVoxel
-	
+		setPixel(inputImage2, lowestIntensityVoxel, (byte) 0);
+	}// end method removeLowestIntensityVoxel
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Cut the a list of edges in the lowest pixel intensity branch.
-	 * 
-	 * @param loopEdges list of edges to be analyzed
-	 * @param inputImage2 input skeleton image
+	 *
+	 * @param loopEdges
+	 *            list of edges to be analyzed
+	 * @param inputImage2
+	 *            input skeleton image
 	 */
-	private void cutLowestIntensityBranch(
-			final ArrayList<Edge> loopEdges,
-			ImageStack inputImage2,
-			ImageStack originalGrayImage) 
-	{
+	private void cutLowestIntensityBranch(final ArrayList<Edge> loopEdges, final ImageStack inputImage2,
+			final ImageStack originalGrayImage) {
 		Edge lowestIntensityEdge = null;
-		
+
 		double lowestIntensityValue = Double.MAX_VALUE;
-		
+
 		Point cutPoint = null;
-		
-		for(final Edge e : loopEdges)
-		{
+
+		for (final Edge e : loopEdges) {
 			// Calculate average intensity of the edge neighborhood
 			double min_val = Double.MAX_VALUE;
 			Point darkestPoint = null;
-							
+
 			double edgeIntensity = 0;
 			double n_vox = 0;
-			
+
 			// Check slab points
-			for(final Point p : e.getSlabs())
-			{
-				final double avg = getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
+			for (final Point p : e.getSlabs()) {
+				final double avg = getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset, this.y_offset,
+						this.z_offset);
 				// Keep track of the darkest slab point of the edge
-				if(avg < min_val)
-				{
+				if (avg < min_val) {
 					min_val = avg;
 					darkestPoint = p;
 				}
@@ -1132,61 +1078,57 @@ public class AnalyzeSkeleton implements PlugInFilter
 				n_vox++;
 			}
 			// Check vertices
-			for(final Point p : e.getV1().getPoints())
-			{
-				edgeIntensity += getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
+			for (final Point p : e.getV1().getPoints()) {
+				edgeIntensity += getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset, this.y_offset,
+						this.z_offset);
 				n_vox++;
 			}
-			for(final Point p : e.getV2().getPoints())
-			{
-				edgeIntensity += getAverageNeighborhoodValue(originalGrayImage, p,
-						this.x_offset, this.y_offset, this.z_offset);
+			for (final Point p : e.getV2().getPoints()) {
+				edgeIntensity += getAverageNeighborhoodValue(originalGrayImage, p, this.x_offset, this.y_offset,
+						this.z_offset);
 				n_vox++;
 			}
-			
-			if(n_vox != 0)
+
+			if (n_vox != 0)
 				edgeIntensity /= n_vox;
-			if(debug)
-			{
-				IJ.log("Loop edge between " + e.getV1().getPoints().get(0) + " and " + e.getV2().getPoints().get(0) + ":");
+			if (debug) {
+				IJ.log("Loop edge between " + e.getV1().getPoints().get(0) + " and " + e.getV2().getPoints().get(0)
+						+ ":");
 				IJ.log("avg edge intensity = " + edgeIntensity + " darkest slab point = " + darkestPoint.toString());
 			}
 			// Keep track of the lowest intensity edge
-			if(edgeIntensity < lowestIntensityValue)
-			{
+			if (edgeIntensity < lowestIntensityValue) {
 				lowestIntensityEdge = e;
 				lowestIntensityValue = edgeIntensity;
 				cutPoint = darkestPoint;
 			}
 		}
-		
+
 		// Cut loop in the lowest intensity branch medium position
 		Point removeCoords = null;
 		if (lowestIntensityEdge.getSlabs().size() > 0)
 			removeCoords = cutPoint;
-		else 
-		{
-			IJ.error("Lowest intensity branch without slabs?!: vertex " 
+		else {
+			IJ.error("Lowest intensity branch without slabs?!: vertex "
 					+ lowestIntensityEdge.getV1().getPoints().get(0));
 			removeCoords = lowestIntensityEdge.getV1().getPoints().get(0);
 		}
-		
-		if(debug)
+
+		if (debug)
 			IJ.log("Cut loop at coordinates: " + removeCoords);
-		setPixel(inputImage2, removeCoords,(byte) 0);
-		
+		setPixel(inputImage2, removeCoords, (byte) 0);
+
 	}// end method cutLowestIntensityBranch
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Display tag image on a new window.
-	 * 
-	 * @param taggedImage tag image to be diplayed
+	 *
+	 * @param taggedImage
+	 *            tag image to be diplayed
 	 */
-	void displayTagImage(ImageStack taggedImage)
-	{
-		ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
+	void displayTagImage(final ImageStack taggedImage) {
+		final ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
 		tagIP.show();
 
 		// Set same calibration as the input image
@@ -1195,56 +1137,53 @@ public class AnalyzeSkeleton implements PlugInFilter
 		// We apply the Fire LUT and reset the min and max to be between 0-255.
 		IJ.run(tagIP, "Fire", null);
 
-		//IJ.resetMinAndMax();
+		// IJ.resetMinAndMax();
 		tagIP.resetDisplayRange();
 		tagIP.updateAndDraw();
 	} // end method displayTagImage
-	
+
 	// -----------------------------------------------------------------------
 	/**
-	 * Divide the end point, junction and special (starting) slab voxels in the 
+	 * Divide the end point, junction and special (starting) slab voxels in the
 	 * corresponding tree lists.
-	 * 
-	 *  @param treeIS tree image
+	 *
+	 * @param treeIS
+	 *            tree image
 	 */
-	private void divideVoxelsByTrees(ImageStack treeIS) 
-	{
+	private void divideVoxelsByTrees(final ImageStack treeIS) {
 		// Add end points to the corresponding tree
-		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
-		{
+		for (int i = 0; i < this.totalNumberOfEndPoints; i++) {
 			final Point p = this.listOfEndPoints.get(i);
-			this.endPointsTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);
+			this.endPointsTree[(int) getFloatPixel(treeIS, p) - 1].add(p);
 		}
-		
+
 		// Add junction voxels to the corresponding tree
-		for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
-		{
-			final Point p = this.listOfJunctionVoxels.get(i);			
-			this.junctionVoxelTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
+		for (int i = 0; i < this.totalNumberOfJunctionVoxels; i++) {
+			final Point p = this.listOfJunctionVoxels.get(i);
+			this.junctionVoxelTree[(int) getFloatPixel(treeIS, p) - 1].add(p);
+			;
 		}
-		
+
 		// Add special slab voxels to the corresponding tree
-		for(int i = 0; i < this.listOfStartingSlabVoxels.size(); i++)
-		{
-			final Point p = this.listOfStartingSlabVoxels.get(i);			
-			this.startingSlabTree[ (int)getFloatPixel( treeIS, p ) - 1 ].add(p);;
+		for (int i = 0; i < this.listOfStartingSlabVoxels.size(); i++) {
+			final Point p = this.listOfStartingSlabVoxels.get(i);
+			this.startingSlabTree[(int) getFloatPixel(treeIS, p) - 1].add(p);
+			;
 		}
-		
+
 		// Assign number of end points and junction voxels per tree
-		for(int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{
+		for (int iTree = 0; iTree < this.numOfTrees; iTree++) {
 			this.numberOfEndPoints[iTree] = this.endPointsTree[iTree].size();
 			this.numberOfJunctionVoxels[iTree] = this.junctionVoxelTree[iTree].size();
 		}
-		
+
 	} // end divideVoxelsByTrees
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Ask memory for trees.
 	 */
-	private void initializeTrees()
-	{
+	private void initializeTrees() {
 		this.numberOfBranches = new int[this.numOfTrees];
 		this.numberOfEndPoints = new int[this.numOfTrees];
 		this.numberOfJunctionVoxels = new int[this.numOfTrees];
@@ -1254,131 +1193,128 @@ public class AnalyzeSkeleton implements PlugInFilter
 		this.numberOfQuadruplePoints = new int[this.numOfTrees];
 		this.averageBranchLength = new double[this.numOfTrees];
 		this.maximumBranchLength = new double[this.numOfTrees];
-		this.endPointsTree = new ArrayList[this.numOfTrees];		
+		this.endPointsTree = new ArrayList[this.numOfTrees];
 		this.junctionVoxelTree = new ArrayList[this.numOfTrees];
 		this.startingSlabTree = new ArrayList[this.numOfTrees];
 		this.listOfSingleJunctions = new ArrayList[this.numOfTrees];
-		
+
 		this.graph = new Graph[this.numOfTrees];
-		
-		for(int i = 0; i < this.numOfTrees; i++)
-		{
-			this.endPointsTree[i] = new ArrayList <Point>();
-			this.junctionVoxelTree[i] = new ArrayList <Point>();
-			this.startingSlabTree[i] = new ArrayList <Point>();
-			this.listOfSingleJunctions[i] = new ArrayList < ArrayList <Point> > ();
+
+		for (int i = 0; i < this.numOfTrees; i++) {
+			this.endPointsTree[i] = new ArrayList<Point>();
+			this.junctionVoxelTree[i] = new ArrayList<Point>();
+			this.startingSlabTree[i] = new ArrayList<Point>();
+			this.listOfSingleJunctions[i] = new ArrayList<ArrayList<Point>>();
 		}
-		this.junctionVertex  = new Vertex[this.numOfTrees][];
+		this.junctionVertex = new Vertex[this.numOfTrees][];
 	}// end method initializeTrees
-	
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Show results table.
 	 */
-	private void showResults() 
-	{
+	private void showResults() {
 		final ResultsTable rt = new ResultsTable();
-		
-		final String[] head = {"Skeleton", "# Branches","# Junctions", "# End-point voxels",
-						 "# Junction voxels","# Slab voxels","Average Branch Length", 
-						 "# Triple points", "# Quadruple points", "Maximum Branch Length",
-						 "Longest Shortest Path", "spx", "spy", "spz"};
-				
-		for(int i = 0 ; i < this.numOfTrees; i++)
-		{
+
+		final String[] head = { "Skeleton", "# Branches", "# Junctions", "# End-point voxels", "# Junction voxels",
+				"# Slab voxels", "Average Branch Length", "# Triple points", "# Quadruple points",
+				"Maximum Branch Length", "Longest Shortest Path", "spx", "spy", "spz" };
+
+		for (int i = 0; i < this.numOfTrees; i++) {
 			rt.incrementCounter();
 
-			rt.addValue(head[ 1], this.numberOfBranches[i]);        
-			rt.addValue(head[ 2], this.numberOfJunctions[i]);
-			rt.addValue(head[ 3], this.numberOfEndPoints[i]);
-			rt.addValue(head[ 4], this.numberOfJunctionVoxels[i]);
-			rt.addValue(head[ 5], this.numberOfSlabs[i]);
-			rt.addValue(head[ 6], this.averageBranchLength[i]);
-			rt.addValue(head[ 7], this.numberOfTriplePoints[i]);
-			rt.addValue(head[ 8], this.numberOfQuadruplePoints[i]);
-			rt.addValue(head[ 9], this.maximumBranchLength[i]);
-			if(null != this.shortestPathList)
-			{
-				rt.addValue(head[10],this.shortestPathList.get(i));
-				rt.addValue(head[11],this.spStartPosition[i][0]);
-				rt.addValue(head[12],this.spStartPosition[i][1]);
-				rt.addValue(head[13],this.spStartPosition[i][2]);
+			rt.addValue(head[1], this.numberOfBranches[i]);
+			rt.addValue(head[2], this.numberOfJunctions[i]);
+			rt.addValue(head[3], this.numberOfEndPoints[i]);
+			rt.addValue(head[4], this.numberOfJunctionVoxels[i]);
+			rt.addValue(head[5], this.numberOfSlabs[i]);
+			rt.addValue(head[6], this.averageBranchLength[i]);
+			rt.addValue(head[7], this.numberOfTriplePoints[i]);
+			rt.addValue(head[8], this.numberOfQuadruplePoints[i]);
+			rt.addValue(head[9], this.maximumBranchLength[i]);
+			if (null != this.shortestPathList) {
+				rt.addValue(head[10], this.shortestPathList.get(i));
+				rt.addValue(head[11], this.spStartPosition[i][0]);
+				rt.addValue(head[12], this.spStartPosition[i][1]);
+				rt.addValue(head[13], this.spStartPosition[i][2]);
 			}
 
-			if (0 == i % 100) 
+			if (0 == i % 100)
 				rt.show("Results");
 		}
 		rt.show("Results");
-		
+
 		// Extra information
-		if(AnalyzeSkeleton.verbose)
-		{
+		if (AnalyzeSkeleton.verbose) {
 			// New results table
 			final ResultsTable extra_rt = new ResultsTable();
-			
-			final String[] extra_head = {"Branch", "Skeleton ID", 
-							"Branch length","V1 x", "V1 y",
-							"V1 z","V2 x","V2 y", "V2 z", "Euclidean distance"};
-			
-	
+
+			final String[] extra_head = { "Branch", "Skeleton ID", "Branch length", "V1 x", "V1 y", "V1 z", "V2 x",
+					"V2 y", "V2 z", "Euclidean distance" };
+
 			// Edge comparator (by branch length)
-			Comparator<Edge> comp = new Comparator<Edge>(){
-				public int compare(Edge o1, Edge o2)
-				{
-					final double diff = o1.getLength() - o2.getLength(); 
-					if(diff < 0)
+			final Comparator<Edge> comp = new Comparator<Edge>() {
+				public int compare(final Edge o1, final Edge o2) {
+					final double diff = o1.getLength() - o2.getLength();
+					if (diff < 0)
 						return 1;
-					else if(diff == 0)
+					else if (diff == 0)
 						return 0;
 					else
 						return -1;
 				}
-				public boolean equals(Object o)
-				{
+
+				@Override
+				public boolean equals(final Object o) {
 					return false;
 				}
 			};
 			// Display branch information for each tree
-			for(int i = 0 ; i < this.numOfTrees; i++)
-			{
+			for (int i = 0; i < this.numOfTrees; i++) {
 				final ArrayList<Edge> listEdges = this.graph[i].getEdges();
 				// Sort branches by length
 				Collections.sort(listEdges, comp);
-				for(final Edge e : listEdges)
-				{
+				for (final Edge e : listEdges) {
 					extra_rt.incrementCounter();
-					extra_rt.addValue(extra_head[1], i+1);
+					extra_rt.addValue(extra_head[1], i + 1);
 					extra_rt.addValue(extra_head[2], e.getLength());
-					extra_rt.addValue(extra_head[3], e.getV1().getPoints().get(0).x * this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(extra_head[4], e.getV1().getPoints().get(0).y * this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(extra_head[5], e.getV1().getPoints().get(0).z * this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(extra_head[6], e.getV2().getPoints().get(0).x * this.imRef.getCalibration().pixelWidth);
-					extra_rt.addValue(extra_head[7], e.getV2().getPoints().get(0).y * this.imRef.getCalibration().pixelHeight);
-					extra_rt.addValue(extra_head[8], e.getV2().getPoints().get(0).z * this.imRef.getCalibration().pixelDepth);
-					extra_rt.addValue(extra_head[9], this.calculateDistance(e.getV1().getPoints().get(0), e.getV2().getPoints().get(0)));
-				}		
-											
+					extra_rt.addValue(extra_head[3],
+							e.getV1().getPoints().get(0).x * this.imRef.getCalibration().pixelWidth);
+					extra_rt.addValue(extra_head[4],
+							e.getV1().getPoints().get(0).y * this.imRef.getCalibration().pixelHeight);
+					extra_rt.addValue(extra_head[5],
+							e.getV1().getPoints().get(0).z * this.imRef.getCalibration().pixelDepth);
+					extra_rt.addValue(extra_head[6],
+							e.getV2().getPoints().get(0).x * this.imRef.getCalibration().pixelWidth);
+					extra_rt.addValue(extra_head[7],
+							e.getV2().getPoints().get(0).y * this.imRef.getCalibration().pixelHeight);
+					extra_rt.addValue(extra_head[8],
+							e.getV2().getPoints().get(0).z * this.imRef.getCalibration().pixelDepth);
+					extra_rt.addValue(extra_head[9],
+							this.calculateDistance(e.getV1().getPoints().get(0), e.getV2().getPoints().get(0)));
+				}
+
 			}
 			extra_rt.show("Branch information");
 		}
-		
+
 	}// end method showResults
 
 	/**
 	 * Returns one of the two result images in an ImageStack object.
 	 *
-	 * @param longestShortestPath Get the tagged longest shortest paths instead of the standard tagged image
+	 * @param longestShortestPath
+	 *            Get the tagged longest shortest paths instead of the standard
+	 *            tagged image
 	 *
-	 * @return The results image with a tagged skeleton 
+	 * @return The results image with a tagged skeleton
 	 */
-	public ImageStack getResultImage(boolean longestShortestPath)
-	{
+	public ImageStack getResultImage(final boolean longestShortestPath) {
 		if (longestShortestPath) {
 			return this.shortPathImage;
 		}
 		return this.taggedImage;
 	}
-
 
 	/**
 	 * Returns the analysis results in a SkeletonResult object.
@@ -1386,9 +1322,8 @@ public class AnalyzeSkeleton implements PlugInFilter
 	 *
 	 * @return The results of the skeleton analysis.
 	 */
-	protected SkeletonResult assembleResults()
-	{
-		SkeletonResult result = new SkeletonResult(numOfTrees);
+	protected SkeletonResult assembleResults() {
+		final SkeletonResult result = new SkeletonResult(numOfTrees);
 		result.setBranches(numberOfBranches);
 		result.setJunctions(numberOfJunctions);
 		result.setEndPoints(numberOfEndPoints);
@@ -1406,7 +1341,7 @@ public class AnalyzeSkeleton implements PlugInFilter
 
 		result.setShortestPathList(shortestPathList);
 		result.setSpStartPosition(spStartPosition);
-		
+
 		result.setGraph(graph);
 
 		result.calculateNumberOfVoxels();
@@ -1417,252 +1352,242 @@ public class AnalyzeSkeleton implements PlugInFilter
 	// -----------------------------------------------------------------------
 	/**
 	 * Visit skeleton from end points and register measures.
-	 * 
+	 *
 	 * @param taggedImage
-	 * 
+	 *
 	 * @deprecated
 	 */
-	private void visitSkeleton(ImageStack taggedImage) 
-	{
-	
+	@Deprecated
+	private void visitSkeleton(final ImageStack taggedImage) {
+
 		// length of branches
-		double branchLength = 0;		
+		double branchLength = 0;
 		int numberOfBranches = 0;
 		double maximumBranchLength = 0;
 		double averageBranchLength = 0;
 		Point initialPoint = null;
 		Point finalPoint = null;
-		
-	
+
 		// Visit branches starting at end points
-		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
-		{			
-			Point endPointCoord = this.listOfEndPoints.get(i);
-					 
+		for (int i = 0; i < this.totalNumberOfEndPoints; i++) {
+			final Point endPointCoord = this.listOfEndPoints.get(i);
+
 			// visit branch until next junction or end point.
-			double length = visitBranch(endPointCoord);
-						
-			if(length == 0)						
-				continue;			
-			
+			final double length = visitBranch(endPointCoord);
+
+			if (length == 0)
+				continue;
+
 			// increase number of branches
 			numberOfBranches++;
-			branchLength += length;				
-			
+			branchLength += length;
+
 			// update maximum branch length
-			if(length > maximumBranchLength)
-			{
+			if (length > maximumBranchLength) {
 				maximumBranchLength = length;
 				initialPoint = endPointCoord;
 				finalPoint = this.auxPoint;
 			}
 		}
-		
-	
+
 		// Now visit branches starting at junctions
-		for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
-		{
-			Point junctionCoord = this.listOfJunctionVoxels.get(i);
-			
+		for (int i = 0; i < this.totalNumberOfJunctionVoxels; i++) {
+			final Point junctionCoord = this.listOfJunctionVoxels.get(i);
+
 			// Mark junction as visited
 			setVisited(junctionCoord, true);
-					
+
 			Point nextPoint = getNextUnvisitedVoxel(junctionCoord);
-			
-			while(nextPoint != null)
-			{
-				branchLength += calculateDistance(junctionCoord, nextPoint);								
-								
-				double length = visitBranch(nextPoint);
-				
+
+			while (nextPoint != null) {
+				branchLength += calculateDistance(junctionCoord, nextPoint);
+
+				final double length = visitBranch(nextPoint);
+
 				branchLength += length;
-				
+
 				// Increase number of branches
-				if(length != 0)
-				{
+				if (length != 0) {
 					numberOfBranches++;
 					// update maximum branch length
-					if(length > maximumBranchLength)
-					{
+					if (length > maximumBranchLength) {
 						maximumBranchLength = length;
 						initialPoint = junctionCoord;
 						finalPoint = this.auxPoint;
 					}
 				}
-				
+
 				nextPoint = getNextUnvisitedVoxel(junctionCoord);
-			}					
+			}
 		}
 
 		// Average length
 		averageBranchLength = branchLength / numberOfBranches;
-		
+
 	} // end visitSkeleton
-	
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Visit skeleton starting at end-points, junctions and slab of circular 
-	 * skeletons, and record measurements.
-	 * 
-	 * @param taggedImage tag skeleton image
-	 * @param treeImage skeleton image with tree classification
-	 * @param currentTree number of the tree to be visited
+
+	/*
+	 * -----------------------------------------------------------------------
 	 */
-	private void visitSkeleton(ImageStack taggedImage, ImageStack treeImage, int currentTree) 
-	{
+	/**
+	 * Visit skeleton starting at end-points, junctions and slab of circular
+	 * skeletons, and record measurements.
+	 *
+	 * @param taggedImage
+	 *            tag skeleton image
+	 * @param treeImage
+	 *            skeleton image with tree classification
+	 * @param currentTree
+	 *            number of the tree to be visited
+	 */
+	private void visitSkeleton(final ImageStack taggedImage, final ImageStack treeImage, final int currentTree) {
 		// tree index
 		final int iTree = currentTree - 1;
-		
-		if(debug)
-		{
+
+		if (debug) {
 			// Junction vertices in the tree
-			IJ.log("this.junctionVertex["+(iTree)+"].length = " + this.junctionVertex[iTree].length);
-			for(int i = 0; i < this.junctionVertex[iTree].length; i++)
-			{
+			IJ.log("this.junctionVertex[" + (iTree) + "].length = " + this.junctionVertex[iTree].length);
+			for (int i = 0; i < this.junctionVertex[iTree].length; i++) {
 				IJ.log(" vertices points: " + this.junctionVertex[iTree][i]);
 			}
 		}
-		
+
 		// Create new graph
 		this.graph[iTree] = new Graph();
 		// Add all junction vertices
-		for(int i = 0; i < this.junctionVertex[iTree].length; i++)
+		for (int i = 0; i < this.junctionVertex[iTree].length; i++)
 			this.graph[iTree].addVertex(this.junctionVertex[iTree][i]);
-	
-		if(debug)
+
+		if (debug)
 			IJ.log(" Analyzing tree number " + currentTree);
 		// length of branches
 		double branchLength = 0;
-						
-		this.maximumBranchLength[iTree] = 0;		
+
+		this.maximumBranchLength[iTree] = 0;
 		this.numberOfSlabs[iTree] = 0;
-	
+
 		// Visit branches starting at end points
-		for(int i = 0; i < this.numberOfEndPoints[iTree]; i++)
-		{									
+		for (int i = 0; i < this.numberOfEndPoints[iTree]; i++) {
 			final Point endPointCoord = this.endPointsTree[iTree].get(i);
-			
-			if(debug)
+
+			if (debug)
 				IJ.log("\n*** visit from end point: " + endPointCoord + " *** ");
-			
+
 			// Skip when visited
-			if(isVisited(endPointCoord))
-			{
-				//if(this.initialPoint[iTree] == null)
-				//	IJ.error("WEIRD:" + " (" + endPointCoord.x + ", " + endPointCoord.y + ", " + endPointCoord.z + ")");
-				if(debug)
+			if (isVisited(endPointCoord)) {
+				// if(this.initialPoint[iTree] == null)
+				// IJ.error("WEIRD:" + " (" + endPointCoord.x + ", " +
+				// endPointCoord.y + ", " + endPointCoord.z + ")");
+				if (debug)
 					IJ.log("visited = (" + endPointCoord.x + ", " + endPointCoord.y + ", " + endPointCoord.z + ")");
 				continue;
 			}
-			
+
 			// Initial vertex
-			Vertex v1 = new Vertex();
+			final Vertex v1 = new Vertex();
 			v1.addPoint(endPointCoord);
 			this.graph[iTree].addVertex(v1);
-			if(i == 0)
+			if (i == 0)
 				this.graph[iTree].setRoot(v1);
-			
+
 			// slab list for the edge
 			this.slabList = new ArrayList<Point>();
-					 
+
 			// Otherwise, visit branch until next junction or end point.
 			double length = visitBranch(endPointCoord, iTree);
-						
+
 			// If length is 0, it means the tree is formed by only one voxel.
-			if(length == 0)
-			{
+			if (length == 0) {
 				// If there is an adjacent visited junction, count it
 				// as a single voxel branch
-				final Point aux = getVisitedJunctionNeighbor(endPointCoord, v1);				
-				if(null != aux)
-				{
+				final Point aux = getVisitedJunctionNeighbor(endPointCoord, v1);
+				if (null != aux) {
 					this.auxFinalVertex = findPointVertex(this.junctionVertex[iTree], aux);
 					length += calculateDistance(endPointCoord, aux);
-					
-					// Add the length to the first point of the vertex (to prevent later from having
+
+					// Add the length to the first point of the vertex (to
+					// prevent later from having
 					// euclidean distances larger than the actual distance)
 					length += calculateDistance(auxFinalVertex.getPoints().get(0), endPointCoord);
-					// Add branch to graph			
-					if(debug)
-						IJ.log( "adding branch from " + v1.getPoints().get(0) + " to " + this.auxFinalVertex.getPoints().get(0) );
+					// Add branch to graph
+					if (debug)
+						IJ.log("adding branch from " + v1.getPoints().get(0) + " to "
+								+ this.auxFinalVertex.getPoints().get(0));
 					this.graph[iTree].addVertex(this.auxFinalVertex);
 					this.graph[iTree].addEdge(new Edge(v1, this.auxFinalVertex, this.slabList, length));
 					// increase number of branches
 					this.numberOfBranches[iTree]++;
-					
-					if(debug)
+
+					if (debug)
 						IJ.log("increased number of branches, length = " + length);
-					
-					branchLength += length;	
-				}
-				else
-					if(debug)
-						IJ.log("set initial point to final point");
+
+					branchLength += length;
+				} else if (debug)
+					IJ.log("set initial point to final point");
 				continue;
 			}
-			
+
 			// If the final point is a slab, then we add the path to the
 			// neighbor junction voxel not belonging to the initial vertex
 			// (unless it is a self loop)
-			if(isSlab(this.auxPoint))
-			{
+			if (isSlab(this.auxPoint)) {
 				final Point aux = this.auxPoint;
-				//IJ.log("Looking for " + this.auxPoint + " in the list of vertices...");
+				// IJ.log("Looking for " + this.auxPoint + " in the list of
+				// vertices...");
 				this.auxPoint = getVisitedJunctionNeighbor(this.auxPoint, v1);
 				this.auxFinalVertex = findPointVertex(this.junctionVertex[iTree], this.auxPoint);
-				if(this.auxPoint == null)
-				{
-					//IJ.log("Point "+ aux + " has not neighbor end junction! (inner loop)");
+				if (this.auxPoint == null) {
+					// IJ.log("Point "+ aux + " has not neighbor end junction!
+					// (inner loop)");
 					// Inner loop
 					this.auxFinalVertex = v1;
 					this.auxPoint = aux;
 				}
 				length += calculateDistance(this.auxPoint, aux);
-								
-				// Add the length to the first point of the vertex (to prevent later from having
+
+				// Add the length to the first point of the vertex (to prevent
+				// later from having
 				// euclidean distances larger than the actual distance)
 				length += calculateDistance(auxFinalVertex.getPoints().get(0), auxPoint);
 			}
-			
-			// Add branch to graph			
-			if(debug)
-				IJ.log("adding branch from " + v1.getPoints().get(0) + " to " + this.auxFinalVertex.getPoints().get(0) +  ", aux point = " + this.auxPoint);
+
+			// Add branch to graph
+			if (debug)
+				IJ.log("adding branch from " + v1.getPoints().get(0) + " to " + this.auxFinalVertex.getPoints().get(0)
+						+ ", aux point = " + this.auxPoint);
 			this.graph[iTree].addVertex(this.auxFinalVertex);
 			this.graph[iTree].addEdge(new Edge(v1, this.auxFinalVertex, this.slabList, length));
-			
+
 			// increase number of branches
 			this.numberOfBranches[iTree]++;
-			
-			if(debug)
+
+			if (debug)
 				IJ.log("increased number of branches, length = " + length);
-			
-			branchLength += length;				
-			
+
+			branchLength += length;
+
 			// update maximum branch length
-			if(length > this.maximumBranchLength[iTree])
-			{
+			if (length > this.maximumBranchLength[iTree]) {
 				this.maximumBranchLength[iTree] = length;
 			}
 		}
-		
+
 		// If there is no end points, set the first junction as root.
-		if(this.numberOfEndPoints[iTree] == 0 && this.junctionVoxelTree[iTree].size() > 0)
-			this.graph[iTree].setRoot(this.junctionVertex[iTree][0]);		
-	
-		if(debug)
-			IJ.log( " --------------------------- ");
-		
+		if (this.numberOfEndPoints[iTree] == 0 && this.junctionVoxelTree[iTree].size() > 0)
+			this.graph[iTree].setRoot(this.junctionVertex[iTree][0]);
+
+		if (debug)
+			IJ.log(" --------------------------- ");
+
 		// Now visit branches starting at junctions
-		// 08/26/2009 Changed the loop to visit first the junction voxels that are
-		//            forming a single junction.
-		for(int i = 0; i < this.junctionVertex[iTree].length; i++)
-		{			
-			for(int j = 0; j < this.junctionVertex[iTree][i].getPoints().size(); j++)
-			{
+		// 08/26/2009 Changed the loop to visit first the junction voxels that
+		// are
+		// forming a single junction.
+		for (int i = 0; i < this.junctionVertex[iTree].length; i++) {
+			for (int j = 0; j < this.junctionVertex[iTree][i].getPoints().size(); j++) {
 				final Point junctionCoord = this.junctionVertex[iTree][i].getPoints().get(j);
 
-				if(debug)
+				if (debug)
 					IJ.log("\n*** visit from junction " + junctionCoord + " *** ");
 
 				// Mark junction as visited
@@ -1670,21 +1595,19 @@ public class AnalyzeSkeleton implements PlugInFilter
 
 				Point nextPoint = getNextUnvisitedVoxel(junctionCoord);
 
-				while(nextPoint != null)
-				{
+				while (nextPoint != null) {
 					// Do not count adjacent junctions
-					if( !isJunction(nextPoint))
-					{
+					if (!isJunction(nextPoint)) {
 						if (debug)
 							IJ.log("visiting " + nextPoint);
-						
+
 						// Create graph edge
 						this.slabList = new ArrayList<Point>();
 						this.slabList.add(nextPoint);
 						this.numberOfSlabs[iTree]++;
 
 						// Calculate distance from junction to that point
-						double length = calculateDistance(junctionCoord, nextPoint);	
+						double length = calculateDistance(junctionCoord, nextPoint);
 
 						// Visit branch
 						this.auxPoint = null;
@@ -1694,643 +1617,617 @@ public class AnalyzeSkeleton implements PlugInFilter
 						branchLength += length;
 
 						// Increase number of branches
-						if(length != 0)
-						{				
-							if(this.auxPoint == null)
+						if (length != 0) {
+							if (this.auxPoint == null)
 								this.auxPoint = nextPoint;
-							
+
 							this.numberOfBranches[iTree]++;
-						
+
 							// Initial vertex
 							Vertex initialVertex = null;
-							for(int k = 0; k < this.junctionVertex[iTree].length; k++)
-								if(this.junctionVertex[iTree][k].isVertexPoint(junctionCoord))
-								{
+							for (int k = 0; k < this.junctionVertex[iTree].length; k++)
+								if (this.junctionVertex[iTree][k].isVertexPoint(junctionCoord)) {
 									initialVertex = this.junctionVertex[iTree][k];
 									break;
 								}
-							
-							
-							// If the final point is a slab, then we add the path to the
-							// neighbor junction voxel not belonging to the initial vertex
+
+							// If the final point is a slab, then we add the
+							// path to the
+							// neighbor junction voxel not belonging to the
+							// initial vertex
 							// (unless it is a self loop)
-							if(isSlab(this.auxPoint))
-							{
+							if (isSlab(this.auxPoint)) {
 								final Point aux = this.auxPoint;
-								//IJ.log("Looking for " + this.auxPoint + " in the list of vertices...");
+								// IJ.log("Looking for " + this.auxPoint + " in
+								// the list of vertices...");
 								this.auxPoint = getVisitedJunctionNeighbor(this.auxPoint, initialVertex);
 								this.auxFinalVertex = findPointVertex(this.junctionVertex[iTree], this.auxPoint);
-								if(this.auxPoint == null)
-								{
-									//IJ.log("Point "+ aux + " has not neighbor end junction! (inner loop)");
+								if (this.auxPoint == null) {
+									// IJ.log("Point "+ aux + " has not neighbor
+									// end junction! (inner loop)");
 									// Inner loop
 									this.auxFinalVertex = initialVertex;
 									this.auxPoint = aux;
 								}
 								length += calculateDistance(this.auxPoint, aux);
 							}
-							
-							if(debug)
-								IJ.log("increased number of branches, length = " + length + " (last point = " + this.auxPoint + ")");
+
+							if (debug)
+								IJ.log("increased number of branches, length = " + length + " (last point = "
+										+ this.auxPoint + ")");
 							// update maximum branch length
-							if(length > this.maximumBranchLength[iTree])
-							{
+							if (length > this.maximumBranchLength[iTree]) {
 								this.maximumBranchLength[iTree] = length;
 							}
 
-							// Add the distance between the main vertex of the junction 
-							// and the initial junction vertex of the branch (this prevents from
-							// having branches in the graph larger than the calculated branch length)
+							// Add the distance between the main vertex of the
+							// junction
+							// and the initial junction vertex of the branch
+							// (this prevents from
+							// having branches in the graph larger than the
+							// calculated branch length)
 							length += calculateDistance(initialVertex.getPoints().get(0), junctionCoord);
-							
-							// Create graph branch							
+
+							// Create graph branch
 							// Add branch to graph
-							if(debug)
-								IJ.log("adding branch from " + initialVertex.getPoints().get(0) + " to " + this.auxFinalVertex.getPoints().get(0));							
-							this.graph[iTree].addEdge(new Edge(initialVertex, this.auxFinalVertex, this.slabList, length));												
+							if (debug)
+								IJ.log("adding branch from " + initialVertex.getPoints().get(0) + " to "
+										+ this.auxFinalVertex.getPoints().get(0));
+							this.graph[iTree]
+									.addEdge(new Edge(initialVertex, this.auxFinalVertex, this.slabList, length));
 						}
-					}
-					else
+					} else
 						setVisited(nextPoint, true);
 
 					nextPoint = getNextUnvisitedVoxel(junctionCoord);
 				}
-			}				
+			}
 		}
-		
-		if(debug)
-			IJ.log( " --------------------------- ");
-		
-		// Finally visit branches starting at slabs (special case for circular trees)
-		if(this.startingSlabTree[iTree].size() == 1)
-		{			
-			if(debug)
+
+		if (debug)
+			IJ.log(" --------------------------- ");
+
+		// Finally visit branches starting at slabs (special case for circular
+		// trees)
+		if (this.startingSlabTree[iTree].size() == 1) {
+			if (debug)
 				IJ.log("visit from slabs");
-					
+
 			final Point startCoord = this.startingSlabTree[iTree].get(0);
-			
+
 			// Create circular graph (only one vertex)
 			final Vertex v1 = new Vertex();
-			v1.addPoint(startCoord);			
+			v1.addPoint(startCoord);
 			this.graph[iTree].addVertex(v1);
-			
-			
+
 			this.slabList = new ArrayList<Point>();
 			this.slabList.add(startCoord);
-			
+
 			this.numberOfSlabs[iTree]++;
-			
+
 			// visit branch until finding visited voxel.
 			final double length = visitBranch(startCoord, iTree);
-						
-			if(length != 0)
-			{				
+
+			if (length != 0) {
 				// increase number of branches
 				this.numberOfBranches[iTree]++;
-				branchLength += length;				
-				
+				branchLength += length;
+
 				// update maximum branch length
-				if(length > this.maximumBranchLength[iTree])
-				{
+				if (length > this.maximumBranchLength[iTree]) {
 					this.maximumBranchLength[iTree] = length;
 				}
 			}
-			
+
 			// Create circular edge
 			this.graph[iTree].addEdge(new Edge(v1, v1, this.slabList, length));
-		}						
+		}
 
-		if(debug)
-			IJ.log( " --------------------------- ");
-		
-		if(this.numberOfBranches[iTree] == 0)
+		if (debug)
+			IJ.log(" --------------------------- ");
+
+		if (this.numberOfBranches[iTree] == 0)
 			return;
 		// Average length
 		this.averageBranchLength[iTree] = branchLength / this.numberOfBranches[iTree];
-		
-		if(debug)
-		{
-			IJ.log("Num of vertices = " + this.graph[iTree].getVertices().size() + " num of edges = " + this.graph[iTree].getEdges().size());
-			for(int i = 0; i < this.graph[iTree].getVertices().size(); i++)
-			{
-				Vertex v = this.graph[iTree].getVertices().get(i);
+
+		if (debug) {
+			IJ.log("Num of vertices = " + this.graph[iTree].getVertices().size() + " num of edges = "
+					+ this.graph[iTree].getEdges().size());
+			for (int i = 0; i < this.graph[iTree].getVertices().size(); i++) {
+				final Vertex v = this.graph[iTree].getVertices().get(i);
 				IJ.log(" vertex " + v.getPoints().get(0) + " has neighbors: ");
-				for(int j = 0; j < v.getBranches().size(); j++)
-				{
+				for (int j = 0; j < v.getBranches().size(); j++) {
 					final Vertex v1 = v.getBranches().get(j).getV1();
-					final Vertex oppositeVertex = v1.equals(v) ? v.getBranches().get(j).getV2() : v1 ;
+					final Vertex oppositeVertex = v1.equals(v) ? v.getBranches().get(j).getV2() : v1;
 					IJ.log(j + ": " + oppositeVertex.getPoints().get(0));
 				}
 
 			}
 
-			IJ.log( " --------------------------- ");
-			for(int i = 0; i < this.junctionVertex[iTree].length; i ++)
-			{
+			IJ.log(" --------------------------- ");
+			for (int i = 0; i < this.junctionVertex[iTree].length; i++) {
 				IJ.log("Junction #" + i + " is formed by: ");
-				for(int j = 0; j < this.junctionVertex[iTree][i].getPoints().size(); j++)
+				for (int j = 0; j < this.junctionVertex[iTree][i].getPoints().size(); j++)
 					IJ.log(j + ": " + this.junctionVertex[iTree][i].getPoints().get(j));
 			}
 		}
-		
+
 	} // end visitSkeleton
-	
-	/* -----------------------------------------------------------------------*/
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Color the different trees in the skeleton.
-	 * 
+	 *
 	 * @param taggedImage
-	 * 
-	 * @return image with every tree tagged with a different number 
+	 *
+	 * @return image with every tree tagged with a different number
 	 */
-	private ImageStack markTrees(ImageStack taggedImage) 
-	{
-		if(debug)
+	private ImageStack markTrees(final ImageStack taggedImage) {
+		if (debug)
 			IJ.log("=== Mark Trees ===");
 		// Create output image
-		ImageStack outputImage = new ImageStack( this.width, this.height );	
-		for (int z = 0; z < depth; z++)
-		{
-			outputImage.addSlice(taggedImage.getSliceLabel(z+1), new FloatProcessor(this.width, this.height));	
+		final ImageStack outputImage = new ImageStack(this.width, this.height);
+		for (int z = 0; z < depth; z++) {
+			outputImage.addSlice(taggedImage.getSliceLabel(z + 1), new FloatProcessor(this.width, this.height));
 		}
-	
+
 		this.numOfTrees = 0;
-				
+
 		int color = 0;
-	
+
 		// Visit trees starting at end points
-		for(int i = 0; i < this.totalNumberOfEndPoints; i++)
-		{			
-			Point endPointCoord = this.listOfEndPoints.get(i);
-			
-			if(isVisited(endPointCoord))
+		for (int i = 0; i < this.totalNumberOfEndPoints; i++) {
+			final Point endPointCoord = this.listOfEndPoints.get(i);
+
+			if (isVisited(endPointCoord))
 				continue;
-			
+
 			color++;
-			
-			if(color == Integer.MAX_VALUE)
-			{
-				IJ.error("More than " + (Integer.MAX_VALUE-1) +
-						" skeletons in the image. AnalyzeSkeleton can only process up to "+ (Integer.MAX_VALUE-1));
+
+			if (color == Integer.MAX_VALUE) {
+				IJ.error("More than " + (Integer.MAX_VALUE - 1)
+						+ " skeletons in the image. AnalyzeSkeleton can only process up to " + (Integer.MAX_VALUE - 1));
 				return null;
 			}
-		
-			if(debug)
+
+			if (debug)
 				IJ.log("-- Visit tree from end-point:");
-			// Visit the entire tree.			
-			int numOfVoxelsInTree = visitTree(endPointCoord, outputImage, color);
-			
-			// increase number of trees			
+			// Visit the entire tree.
+			final int numOfVoxelsInTree = visitTree(endPointCoord, outputImage, color);
+
+			// increase number of trees
 			this.numOfTrees++;
 		}
-		
-		// Visit trees starting at junction points 
+
+		// Visit trees starting at junction points
 		// (some circular trees do not have end points)
 		// Visit trees starting at end points
-		for(int i = 0; i < this.totalNumberOfJunctionVoxels; i++)
-		{			
-			Point junctionCoord = this.listOfJunctionVoxels.get(i);
-			if(isVisited(junctionCoord))
+		for (int i = 0; i < this.totalNumberOfJunctionVoxels; i++) {
+			final Point junctionCoord = this.listOfJunctionVoxels.get(i);
+			if (isVisited(junctionCoord))
 				continue;
-			
+
 			color++;
-			
-			if(color == Short.MAX_VALUE)
-			{
-				IJ.error("More than " + (Short.MAX_VALUE-1) + " skeletons in the image. AnalyzeSkeleton can only process up to 255");
+
+			if (color == Short.MAX_VALUE) {
+				IJ.error("More than " + (Short.MAX_VALUE - 1)
+						+ " skeletons in the image. AnalyzeSkeleton can only process up to 255");
 				return null;
 			}
-		
-			if(debug)
+
+			if (debug)
 				IJ.log("-- Visit tree from junction:");
-			
+
 			// else, visit branch until next junction or end point.
-			int length = visitTree(junctionCoord, outputImage, color);
-						
-			if(length == 0)
-			{
+			final int length = visitTree(junctionCoord, outputImage, color);
+
+			if (length == 0) {
 				color--; // the color was not used
 				continue;
 			}
-			
-			// increase number of trees			
+
+			// increase number of trees
 			this.numOfTrees++;
 		}
-		
+
 		// Check for unvisited slab voxels
 		// (just in case there are circular trees without junctions)
-		for(int i = 0; i < this.listOfSlabVoxels.size(); i++)
-		{
-			Point p = (Point) this.listOfSlabVoxels.get(i);
-			if(isVisited(p) == false)
-			{
+		for (int i = 0; i < this.listOfSlabVoxels.size(); i++) {
+			final Point p = this.listOfSlabVoxels.get(i);
+			if (isVisited(p) == false) {
 				// Mark that voxel as the start point of the circular skeleton
 				this.listOfStartingSlabVoxels.add(p);
-				
+
 				color++;
-				
-				if(color == Short.MAX_VALUE)
-				{
-					IJ.error("More than " + (Short.MAX_VALUE-1) + " skeletons in the image. AnalyzeSkeleton can only process up to 255");
+
+				if (color == Short.MAX_VALUE) {
+					IJ.error("More than " + (Short.MAX_VALUE - 1)
+							+ " skeletons in the image. AnalyzeSkeleton can only process up to 255");
 					return null;
 				}
-			
-				if(debug)
+
+				if (debug)
 					IJ.log("-- Visit tree from slab:");
-				
+
 				// else, visit branch until next junction or end point.
-				int length = visitTree(p, outputImage, color);
-							
-				if(length == 0)
-				{
+				final int length = visitTree(p, outputImage, color);
+
+				if (length == 0) {
 					color--; // the color was not used
 					continue;
 				}
-				
-				// increase number of trees			
+
+				// increase number of trees
 				this.numOfTrees++;
 			}
 		}
-		
-		
-		
-		//System.out.println("Number of trees = " + this.numOfTrees);
+
+		// System.out.println("Number of trees = " + this.numOfTrees);
 
 		// Show tree image.
-		if(debug)
-		{
-			ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
+		if (debug) {
+			final ImagePlus treesIP = new ImagePlus("Trees skeleton", outputImage);
 			treesIP.show();
-			
+
 			// Set same calibration as the input image
 			treesIP.setCalibration(this.imRef.getCalibration());
-			
-			// We apply the Fire LUT and reset the min and max to be between 0-255.
+
+			// We apply the Fire LUT and reset the min and max to be between
+			// 0-255.
 			IJ.run("Fire");
-			
-			//IJ.resetMinAndMax();
+
+			// IJ.resetMinAndMax();
 			treesIP.resetDisplayRange();
 			treesIP.updateAndDraw();
 		}
-		
+
 		// Reset visited variable
 		resetVisited();
-		
-		//IJ.log("Number of trees: " + this.numOfTrees + ", # colors = " + color);
-		
+
+		// IJ.log("Number of trees: " + this.numOfTrees + ", # colors = " +
+		// color);
+
 		return outputImage;
-		
+
 	} /* end markTrees */
 
-	
 	// --------------------------------------------------------------
 	/**
 	 * Visit tree marking the voxels with a reference tree color.
-	 * 
-	 * @param startingPoint starting tree point
-	 * @param outputImage 3D image to visit
-	 * @param color reference tree color
+	 *
+	 * @param startingPoint
+	 *            starting tree point
+	 * @param outputImage
+	 *            3D image to visit
+	 * @param color
+	 *            reference tree color
 	 * @return number of voxels in the tree
 	 */
-	private int visitTree(Point startingPoint, ImageStack outputImage,
-			int color) 
-	{					
+	private int visitTree(final Point startingPoint, final ImageStack outputImage, final int color) {
 		int numOfVoxels = 0;
-		
-		if(debug)
+
+		if (debug)
 			IJ.log("visiting " + startingPoint + " color = " + color);
-		
-		if(isVisited(startingPoint))	
-			return 0;				
-		
+
+		if (isVisited(startingPoint))
+			return 0;
+
 		// Set pixel color
 		this.setPixel(outputImage, startingPoint.x, startingPoint.y, startingPoint.z, color);
 		setVisited(startingPoint, true);
-		
-		ArrayList <Point> toRevisit = new ArrayList <Point>();
-		
+
+		final ArrayList<Point> toRevisit = new ArrayList<Point>();
+
 		// Add starting point to revisit list if it is a junction
-		if(isJunction(startingPoint))
+		if (isJunction(startingPoint))
 			toRevisit.add(startingPoint);
-		
+
 		Point nextPoint = getNextUnvisitedVoxel(startingPoint);
-		
-		while(nextPoint != null || toRevisit.size() != 0)
-		{
-			if(nextPoint != null)
-			{
-				if(!isVisited(nextPoint))
-				{
+
+		while (nextPoint != null || toRevisit.size() != 0) {
+			if (nextPoint != null) {
+				if (!isVisited(nextPoint)) {
 					numOfVoxels++;
-					if(debug)
-						IJ.log("visiting " + nextPoint+ " color = " + color);
-					
+					if (debug)
+						IJ.log("visiting " + nextPoint + " color = " + color);
+
 					// Set color and visit flat
 					this.setPixel(outputImage, nextPoint.x, nextPoint.y, nextPoint.z, color);
 					setVisited(nextPoint, true);
-					
+
 					// If it is a junction, add it to the revisit list
-					if(isJunction(nextPoint))
-						toRevisit.add(nextPoint);					
-					
+					if (isJunction(nextPoint))
+						toRevisit.add(nextPoint);
+
 					// Calculate next point to visit
 					nextPoint = getNextUnvisitedVoxel(nextPoint);
-				}				
-			}
-			else // revisit list
-			{				
+				}
+			} else // revisit list
+			{
 				nextPoint = toRevisit.get(0);
-				if(debug)
-					IJ.log("visiting " + nextPoint+ " color = " + color);
-												
+				if (debug)
+					IJ.log("visiting " + nextPoint + " color = " + color);
+
 				// Calculate next point to visit
 				nextPoint = getNextUnvisitedVoxel(nextPoint);
 				// Maintain junction in the list until there is no more branches
 				if (nextPoint == null)
-					toRevisit.remove(0);									
-			}				
+					toRevisit.remove(0);
+			}
 		}
-		
+
 		return numOfVoxels;
 	} // end method visitTree
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Visit a branch and calculate length.
-	 * 
-	 * @param startingPoint starting coordinates
+	 *
+	 * @param startingPoint
+	 *            starting coordinates
 	 * @return branch length
-	 * 
+	 *
 	 * @deprecated
 	 */
-	private double visitBranch(Point startingPoint) 
-	{
+	@Deprecated
+	private double visitBranch(final Point startingPoint) {
 		double length = 0;
-		
+
 		// mark starting point as visited
 		setVisited(startingPoint, true);
-		
+
 		// Get next unvisited voxel
 		Point nextPoint = getNextUnvisitedVoxel(startingPoint);
-		
+
 		if (nextPoint == null)
 			return 0;
-		
+
 		Point previousPoint = startingPoint;
-		
+
 		// We visit the branch until we find an end point or a junction
-		while(nextPoint != null && isSlab(nextPoint))
-		{
+		while (nextPoint != null && isSlab(nextPoint)) {
 			// Add length
 			length += calculateDistance(previousPoint, nextPoint);
-			
+
 			// Mark as visited
 			setVisited(nextPoint, true);
-			
+
 			// Move in the graph
-			previousPoint = nextPoint;			
-			nextPoint = getNextUnvisitedVoxel(previousPoint);			
+			previousPoint = nextPoint;
+			nextPoint = getNextUnvisitedVoxel(previousPoint);
 		}
-		
-		
-		if(nextPoint != null)
-		{
+
+		if (nextPoint != null) {
 			// Add distance to last point
 			length += calculateDistance(previousPoint, nextPoint);
-		
+
 			// Mark last point as visited
 			setVisited(nextPoint, true);
 		}
-		
+
 		this.auxPoint = previousPoint;
-		
+
 		return length;
 	}// end visitBranch
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Visit a branch and calculate length in a specific tree
-	 * 
-	 * @param startingPoint starting coordinates
-	 * @param iTree tree index
+	 *
+	 * @param startingPoint
+	 *            starting coordinates
+	 * @param iTree
+	 *            tree index
 	 * @return branch length
 	 */
-	private double visitBranch(Point startingPoint, int iTree) 
-	{
-		//IJ.log("startingPoint = (" + startingPoint.x + ", " + startingPoint.y + ", " + startingPoint.z + ")");
+	private double visitBranch(final Point startingPoint, final int iTree) {
+		// IJ.log("startingPoint = (" + startingPoint.x + ", " + startingPoint.y
+		// + ", " + startingPoint.z + ")");
 		double length = 0;
-		
+
 		// mark starting point as visited
 		setVisited(startingPoint, true);
-		
+
 		// Get next unvisited voxel
 		Point nextPoint = getNextUnvisitedVoxel(startingPoint);
-		
+
 		if (nextPoint == null)
 			return 0;
-		
+
 		Point previousPoint = startingPoint;
-		
+
 		// We visit the branch until we find an end point or a junction
-		while(nextPoint != null && isSlab(nextPoint))
-		{			
+		while (nextPoint != null && isSlab(nextPoint)) {
 			this.numberOfSlabs[iTree]++;
-		
+
 			// Add slab voxel to the edge
 			this.slabList.add(nextPoint);
-			
+
 			// Add length
 			length += calculateDistance(previousPoint, nextPoint);
-			
+
 			// Mark as visited
 			setVisited(nextPoint, true);
-			
+
 			// Move in the graph
-			previousPoint = nextPoint;			
+			previousPoint = nextPoint;
 			if (debug)
 				IJ.log("visiting " + previousPoint);
-			nextPoint = getNextUnvisitedVoxel(previousPoint);			
+			nextPoint = getNextUnvisitedVoxel(previousPoint);
 		}
-		
+
 		// If we find an unvisited end-point or junction, we set it
 		// as final vertex of the branch
-		if(nextPoint != null)
-		{
+		if (nextPoint != null) {
 			// Add distance to last point
 			length += calculateDistance(previousPoint, nextPoint);
-		
+
 			// Mark last point as visited
 			setVisited(nextPoint, true);
-			
+
 			// Mark final vertex
-			if(isEndPoint(nextPoint))
-			{
-				if(debug)
+			if (isEndPoint(nextPoint)) {
+				if (debug)
 					IJ.log("found unvisited end point: " + nextPoint);
 				this.auxFinalVertex = new Vertex();
 				this.auxFinalVertex.addPoint(nextPoint);
-			}
-			else if(isJunction(nextPoint))
-			{
-				if(debug)
+			} else if (isJunction(nextPoint)) {
+				if (debug)
 					IJ.log("found unvisited junction point: " + nextPoint);
 				this.auxFinalVertex = findPointVertex(this.junctionVertex[iTree], nextPoint);
-				// Add the length to the first point of the vertex (to prevent later from having
+				// Add the length to the first point of the vertex (to prevent
+				// later from having
 				// euclidean distances larger than the actual distance)
 				length += calculateDistance(auxFinalVertex.getPoints().get(0), nextPoint);
 				/*
-				int j = 0;
-				for(j = 0; j < this.junctionVertex[iTree].length; j++)
-					if(this.junctionVertex[iTree][j].isVertexPoint(nextPoint))
-					{
-						this.auxFinalVertex = this.junctionVertex[iTree][j];
-						IJ.log(" " + nextPoint + " belongs to junction " + this.auxFinalVertex.getPoints().get(0));
-						break;
-					}
-				if(j == this.junctionVertex[iTree].length)
-					IJ.log("point " + nextPoint + " was not found in vertex list!");
-					*/
+				 * int j = 0; for(j = 0; j < this.junctionVertex[iTree].length;
+				 * j++)
+				 * if(this.junctionVertex[iTree][j].isVertexPoint(nextPoint)) {
+				 * this.auxFinalVertex = this.junctionVertex[iTree][j]; IJ.log(
+				 * " " + nextPoint + " belongs to junction " +
+				 * this.auxFinalVertex.getPoints().get(0)); break; } if(j ==
+				 * this.junctionVertex[iTree].length) IJ.log("point " +
+				 * nextPoint + " was not found in vertex list!");
+				 */
 			}
-			
+
 			this.auxPoint = nextPoint;
-		}
-		else
+		} else
 			this.auxPoint = previousPoint;
-		
-		//IJ.log("finalPoint = (" + nextPoint.x + ", " + nextPoint.y + ", " + nextPoint.z + ")");
+
+		// IJ.log("finalPoint = (" + nextPoint.x + ", " + nextPoint.y + ", " +
+		// nextPoint.z + ")");
 		return length;
-	} // end visitBranch	
-	
+	} // end visitBranch
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Find vertex in an array given a specific vertex point.
-	 * 
-	 * @param vertex array of search
-	 * @param p vertex point
+	 *
+	 * @param vertex
+	 *            array of search
+	 * @param p
+	 *            vertex point
 	 * @return vertex containing that point
 	 */
-	public Vertex findPointVertex(Vertex[] vertex, Point p)
-	{
+	public Vertex findPointVertex(final Vertex[] vertex, final Point p) {
 		int j = 0;
-		for(j = 0; j < vertex.length; j++)
-			if(vertex[j].isVertexPoint(p))
-			{		
-				if(debug)
+		for (j = 0; j < vertex.length; j++)
+			if (vertex[j].isVertexPoint(p)) {
+				if (debug)
 					IJ.log(" " + p + " belongs to junction " + vertex[j].getPoints().get(0));
 				return vertex[j];
 			}
-		if(debug)
-			IJ.log("point " + p + " was not found in vertex list! (vertex.length= " + vertex.length +")");
+		if (debug)
+			IJ.log("point " + p + " was not found in vertex list! (vertex.length= " + vertex.length + ")");
 		return null;
 	}
-	
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Calculate distance between two points in 3D.
-	 * 
-	 * @param point1 first point coordinates
-	 * @param point2 second point coordinates
+	 *
+	 * @param point1
+	 *            first point coordinates
+	 * @param point2
+	 *            second point coordinates
 	 * @return distance (in the corresponding units)
 	 */
-	private double calculateDistance(Point point1, Point point2) 
-	{		
-		return Math.sqrt(  Math.pow( (point1.x - point2.x) * this.imRef.getCalibration().pixelWidth, 2) 
-				          + Math.pow( (point1.y - point2.y) * this.imRef.getCalibration().pixelHeight, 2)
-				          + Math.pow( (point1.z - point2.z) * this.imRef.getCalibration().pixelDepth, 2));
+	private double calculateDistance(final Point point1, final Point point2) {
+		return Math.sqrt(Math.pow((point1.x - point2.x) * this.imRef.getCalibration().pixelWidth, 2)
+				+ Math.pow((point1.y - point2.y) * this.imRef.getCalibration().pixelHeight, 2)
+				+ Math.pow((point1.z - point2.z) * this.imRef.getCalibration().pixelDepth, 2));
 	}
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Calculate number of junction skipping neighbor junction voxels
-	 * 
-	 * @param treeIS tree stack
+	 *
+	 * @param treeIS
+	 *            tree stack
 	 */
-	private void groupJunctions(ImageStack treeIS) 
-	{
+	private void groupJunctions(final ImageStack treeIS) {
 		// Mark all unvisited
 		resetVisited();
-		
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{
+
+		for (int iTree = 0; iTree < this.numOfTrees; iTree++) {
 			// Visit list of junction voxels
-			for(int i = 0; i < this.numberOfJunctionVoxels[iTree]; i ++)
-			{
-				Point pi = this.junctionVoxelTree[iTree].get(i);
-				
-				if(! isVisited(pi))
+			for (int i = 0; i < this.numberOfJunctionVoxels[iTree]; i++) {
+				final Point pi = this.junctionVoxelTree[iTree].get(i);
+
+				if (!isVisited(pi))
 					fusionNeighborJunction(pi, this.listOfSingleJunctions[iTree]);
 			}
-		}		
-				
+		}
+
 		// Count number of single junctions for every tree in the image
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{
-			if(debug)
-				IJ.log("this.listOfSingleJunctions["+iTree+"].size() = " + this.listOfSingleJunctions[iTree].size());
-			
+		for (int iTree = 0; iTree < this.numOfTrees; iTree++) {
+			if (debug)
+				IJ.log("this.listOfSingleJunctions[" + iTree + "].size() = "
+						+ this.listOfSingleJunctions[iTree].size());
+
 			this.numberOfJunctions[iTree] = this.listOfSingleJunctions[iTree].size();
-			
+
 			// Create array of junction vertices for the graph
 			this.junctionVertex[iTree] = new Vertex[this.listOfSingleJunctions[iTree].size()];
-			
-			for(int j = 0 ; j < this.listOfSingleJunctions[iTree].size(); j++)
-			{
+
+			for (int j = 0; j < this.listOfSingleJunctions[iTree].size(); j++) {
 				final ArrayList<Point> list = this.listOfSingleJunctions[iTree].get(j);
 				this.junctionVertex[iTree][j] = new Vertex();
-				for(final Point p : list)
+				for (final Point p : list)
 					this.junctionVertex[iTree][j].addPoint(p);
-				
+
 			}
 		}
-				
+
 		// Mark all unvisited
 		resetVisited();
-	}	
+	}
 
 	// -----------------------------------------------------------------------
 	/**
 	 * Reset visit variable and set it to false.
 	 */
-	private void resetVisited()
-	{
+	private void resetVisited() {
 		// Reset visited variable
 		this.visited = null;
 		this.visited = new boolean[this.width][this.height][this.depth];
 		/*
-		for(int i = 0; i < this.width; i ++)
-			for(int j = 0; j < this.height; j++)
-				for(int k = 0; k < this.depth; k++)
-					this.visited[i][j][k] = false;
-		*/
+		 * for(int i = 0; i < this.width; i ++) for(int j = 0; j < this.height;
+		 * j++) for(int k = 0; k < this.depth; k++) this.visited[i][j][k] =
+		 * false;
+		 */
 	}
-	
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Fusion neighbor junctions voxels into the same list.
-	 * 
-	 * @param startingPoint starting junction voxel
-	 * @param singleJunctionsList list of single junctions
+	 *
+	 * @param startingPoint
+	 *            starting junction voxel
+	 * @param singleJunctionsList
+	 *            list of single junctions
 	 */
-	private void fusionNeighborJunction(Point startingPoint,
-			ArrayList<ArrayList<Point>> singleJunctionsList) 
-	{
+	private void fusionNeighborJunction(final Point startingPoint,
+			final ArrayList<ArrayList<Point>> singleJunctionsList) {
 		// Create new group of junctions
-		ArrayList <Point> newGroup = new ArrayList<Point>();
+		final ArrayList<Point> newGroup = new ArrayList<Point>();
 		newGroup.add(startingPoint);
-		
+
 		// Mark the starting junction as visited
 		setVisited(startingPoint, true);
-		
+
 		// Look for neighbor junctions and add them to the new group
-		ArrayList <Point> toRevisit = new ArrayList <Point>();
+		final ArrayList<Point> toRevisit = new ArrayList<Point>();
 		toRevisit.add(startingPoint);
-		
+
 		Point nextPoint = getNextUnvisitedJunctionVoxel(startingPoint);
-		
-		while(nextPoint != null || toRevisit.size() != 0)
-		{
-			if(nextPoint != null && !isVisited(nextPoint))
-			{			
+
+		while (nextPoint != null || toRevisit.size() != 0) {
+			if (nextPoint != null && !isVisited(nextPoint)) {
 				// Add to the group
 				newGroup.add(nextPoint);
 				// Mark as visited
@@ -2340,406 +2237,418 @@ public class AnalyzeSkeleton implements PlugInFilter
 				toRevisit.add(nextPoint);
 
 				// Calculate next junction point to visit
-				nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);								
-			}
-			else // revisit list
-			{				
+				nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);
+			} else // revisit list
+			{
 				nextPoint = toRevisit.get(0);
-				//IJ.log("visiting " + nextPoint + " color = " + color);
-												
+				// IJ.log("visiting " + nextPoint + " color = " + color);
+
 				// Calculate next point to visit
 				nextPoint = getNextUnvisitedJunctionVoxel(nextPoint);
 				// Maintain junction in the list until there is no more branches
 				if (nextPoint == null)
-					toRevisit.remove(0);									
-			}				
+					toRevisit.remove(0);
+			}
 		}
-		
+
 		// Add group to the single junction list
 		singleJunctionsList.add(newGroup);
-		
+
 	}// end method fusionNeighborJunction
 
 	// -----------------------------------------------------------------------
 	/**
-	 *  Check if two groups of voxels are neighbors.
-	 *  
-	 * @param g1 first group
-	 * @param g2 second group
+	 * Check if two groups of voxels are neighbors.
 	 * 
+	 * @param g1
+	 *            first group
+	 * @param g2
+	 *            second group
+	 *
 	 * @return true if the groups have any neighbor voxel
 	 */
-	boolean checkNeighborGroups(ArrayList <Point> g1,  ArrayList <Point> g2)
-	{
-		for(int i =0 ; i  < g1.size(); i++)
-		{
-			Point pi = g1.get(i);
-			for(int j =0 ; j  < g2.size(); j++)
-			{
-				Point pj = g2.get(j);
-				if(isNeighbor(pi, pj))
+	boolean checkNeighborGroups(final ArrayList<Point> g1, final ArrayList<Point> g2) {
+		for (int i = 0; i < g1.size(); i++) {
+			final Point pi = g1.get(i);
+			for (int j = 0; j < g2.size(); j++) {
+				final Point pj = g2.get(j);
+				if (isNeighbor(pi, pj))
 					return true;
 			}
-		}			
+		}
 		return false;
 	}
-	
-	
+
 	// -----------------------------------------------------------------------
 	/**
-	 * Calculate number of triple and quadruple points in the skeleton. Triple and 
-	 * quadruple points are junctions with exactly 3 and 4 branches respectively.
+	 * Calculate number of triple and quadruple points in the skeleton. Triple
+	 * and quadruple points are junctions with exactly 3 and 4 branches
+	 * respectively.
 	 */
-	private void calculateTripleAndQuadruplePoints() 
-	{
-		for (int iTree = 0; iTree < this.numOfTrees; iTree++)
-		{			
+	private void calculateTripleAndQuadruplePoints() {
+		for (int iTree = 0; iTree < this.numOfTrees; iTree++) {
 			// Visit the groups of junction voxels
-			for(int i = 0; i < this.numberOfJunctions[iTree]; i ++)
-			{
+			for (int i = 0; i < this.numberOfJunctions[iTree]; i++) {
 
-				ArrayList <Point> groupOfJunctions = this.listOfSingleJunctions[iTree].get(i);
+				final ArrayList<Point> groupOfJunctions = this.listOfSingleJunctions[iTree].get(i);
 
-				// Count the number of slab and end-points neighbors of every voxel in the group
+				// Count the number of slab and end-points neighbors of every
+				// voxel in the group
 				int nBranch = 0;
-				for(int j = 0; j < groupOfJunctions.size(); j++)
-				{
-					Point pj = groupOfJunctions.get(j);
+				for (int j = 0; j < groupOfJunctions.size(); j++) {
+					final Point pj = groupOfJunctions.get(j);
 
 					// Get neighbors and check the slabs or end-points
-					byte[] neighborhood = this.getNeighborhood(this.taggedImage, pj.x, pj.y, pj.z);
-					for(int k = 0; k < 27; k++)
-						if (neighborhood[k] == AnalyzeSkeleton.SLAB 
-							|| neighborhood[k] == AnalyzeSkeleton.END_POINT)
+					final byte[] neighborhood = this.getNeighborhood(this.taggedImage, pj.x, pj.y, pj.z);
+					for (int k = 0; k < 27; k++)
+						if (neighborhood[k] == AnalyzeSkeleton.SLAB || neighborhood[k] == AnalyzeSkeleton.END_POINT)
 							nBranch++;
 				}
-				// If the junction has only 3 slab/end-point neighbors, then it is a triple point
-				if (nBranch == 3)	
-					this.numberOfTriplePoints[iTree] ++;
-				else if(nBranch == 4) // quadruple point if 4
-					this.numberOfQuadruplePoints[iTree] ++;
-			}		
-				
-		}
-		
-	}// end calculateTripleAndQuadruplePoints
-	
+				// If the junction has only 3 slab/end-point neighbors, then it
+				// is a triple point
+				if (nBranch == 3)
+					this.numberOfTriplePoints[iTree]++;
+				else if (nBranch == 4) // quadruple point if 4
+					this.numberOfQuadruplePoints[iTree]++;
+			}
 
-	/* -----------------------------------------------------------------------*/
+		}
+
+	}// end calculateTripleAndQuadruplePoints
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Calculate if two points are neighbors.
-	 * 
-	 * @param point1 first point
-	 * @param point2 second point
+	 *
+	 * @param point1
+	 *            first point
+	 * @param point2
+	 *            second point
 	 * @return true if the points are neighbors (26-pixel neighborhood)
 	 */
-	private boolean isNeighbor(Point point1, Point point2) 
-	{		
-		return Math.sqrt(  Math.pow( (point1.x - point2.x), 2) 
-		          + Math.pow( (point1.y - point2.y), 2)
-		          + Math.pow( (point1.z - point2.z), 2)) <= Math.sqrt(3);
+	private boolean isNeighbor(final Point point1, final Point point2) {
+		return Math.sqrt(Math.pow((point1.x - point2.x), 2) + Math.pow((point1.y - point2.y), 2)
+				+ Math.pow((point1.z - point2.z), 2)) <= Math.sqrt(3);
 	}
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Check if the point is slab.
-	 *  
-	 * @param point actual point
+	 * 
+	 * @param point
+	 *            actual point
 	 * @return true if the point has slab status
 	 */
-	private boolean isSlab(Point point) 
-	{		
+	private boolean isSlab(final Point point) {
 		return getPixel(this.taggedImage, point.x, point.y, point.z) == AnalyzeSkeleton.SLAB;
 	}
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Check if the point is a junction.
-	 *  
-	 * @param point actual point
+	 * 
+	 * @param point
+	 *            actual point
 	 * @return true if the point has slab status
 	 */
-	private boolean isJunction(Point point) 
-	{		
+	private boolean isJunction(final Point point) {
 		return getPixel(this.taggedImage, point.x, point.y, point.z) == AnalyzeSkeleton.JUNCTION;
-	}	
-	
-	/* -----------------------------------------------------------------------*/
+	}
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Check if the point is an end point.
-	 *  
-	 * @param point actual point
+	 * 
+	 * @param point
+	 *            actual point
 	 * @return true if the point has slab status
 	 */
-	private boolean isEndPoint(Point point) 
-	{		
+	private boolean isEndPoint(final Point point) {
 		return getPixel(this.taggedImage, point.x, point.y, point.z) == AnalyzeSkeleton.END_POINT;
-	}	
-	
-	/* -----------------------------------------------------------------------*/
+	}
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Check if the point is a junction.
-	 *  
-	 * @param x x- voxel coordinate
-	 * @param y y- voxel coordinate
-	 * @param z z- voxel coordinate
+	 * 
+	 * @param x
+	 *            x- voxel coordinate
+	 * @param y
+	 *            y- voxel coordinate
+	 * @param z
+	 *            z- voxel coordinate
 	 * @return true if the point has slab status
 	 */
-	private boolean isJunction(int x, int y, int z) 
-	{		
+	private boolean isJunction(final int x, final int y, final int z) {
 		return getPixel(this.taggedImage, x, y, z) == AnalyzeSkeleton.JUNCTION;
-	}	
-	
-	/* -----------------------------------------------------------------------*/
+	}
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get next unvisited neighbor voxel.
-	 * 
-	 * @param point starting point
+	 *
+	 * @param point
+	 *            starting point
 	 * @return unvisited neighbor or null if all neighbors are visited
 	 */
-	private Point getNextUnvisitedVoxel(Point point) 
-	{
+	private Point getNextUnvisitedVoxel(final Point point) {
 		Point unvisitedNeighbor = null;
 
 		// Check neighbors status
-		for(int x = -1; x < 2; x++)
-			for(int y = -1; y < 2; y++)
-				for(int z = -1; z < 2; z++)
-				{
-					if(x == 0 && y == 0 && z == 0)
+		for (int x = -1; x < 2; x++)
+			for (int y = -1; y < 2; y++)
+				for (int z = -1; z < 2; z++) {
+					if (x == 0 && y == 0 && z == 0)
 						continue;
-					
-					if(getPixel(this.inputImage, point.x + x, point.y + y, point.z + z) != 0
-						&& isVisited(point.x + x, point.y + y, point.z + z) == false)						
-					{					
+
+					if (getPixel(this.inputImage, point.x + x, point.y + y, point.z + z) != 0
+							&& isVisited(point.x + x, point.y + y, point.z + z) == false) {
 						unvisitedNeighbor = new Point(point.x + x, point.y + y, point.z + z);
 						break;
 					}
-					
+
 				}
-		
+
 		return unvisitedNeighbor;
 	}// end getNextUnvisitedVoxel
-	
-	/* -----------------------------------------------------------------------*/
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get next unvisited junction neighbor voxel.
-	 * 
-	 * @param point starting point
+	 *
+	 * @param point
+	 *            starting point
 	 * @return unvisited neighbor or null if all neighbors are visited
 	 */
-	private Point getNextUnvisitedJunctionVoxel(Point point) 
-	{
+	private Point getNextUnvisitedJunctionVoxel(final Point point) {
 		Point unvisitedNeighbor = null;
 
 		// Check neighbors status
-		for(int x = -1; x < 2; x++)
-			for(int y = -1; y < 2; y++)
-				for(int z = -1; z < 2; z++)
-				{
-					if(x == 0 && y == 0 && z == 0)
+		for (int x = -1; x < 2; x++)
+			for (int y = -1; y < 2; y++)
+				for (int z = -1; z < 2; z++) {
+					if (x == 0 && y == 0 && z == 0)
 						continue;
-					
-					if(getPixel(this.inputImage, point.x + x, point.y + y, point.z + z) != 0
-						&& isVisited(point.x + x, point.y + y, point.z + z) == false 
-						&& isJunction(point.x + x, point.y + y, point.z + z))						
-					{					
+
+					if (getPixel(this.inputImage, point.x + x, point.y + y, point.z + z) != 0
+							&& isVisited(point.x + x, point.y + y, point.z + z) == false
+							&& isJunction(point.x + x, point.y + y, point.z + z)) {
 						unvisitedNeighbor = new Point(point.x + x, point.y + y, point.z + z);
 						break;
 					}
-					
+
 				}
-		
+
 		return unvisitedNeighbor;
-	}// end getNextUnvisitedJunctionVoxel 
+	}// end getNextUnvisitedJunctionVoxel
 
 	// -----------------------------------------------------------------------
 	/**
-	 * Get next visited junction neighbor voxel excluding the ones belonging
-	 * to a give vertex
-	 * 
-	 * @param point starting point
-	 * @param exclude exclusion vertex
+	 * Get next visited junction neighbor voxel excluding the ones belonging to
+	 * a give vertex
+	 *
+	 * @param point
+	 *            starting point
+	 * @param exclude
+	 *            exclusion vertex
 	 * @return unvisited neighbor or null if all neighbors are visited
 	 */
-	private Point getVisitedJunctionNeighbor(Point point, Vertex exclude) 
-	{
+	private Point getVisitedJunctionNeighbor(final Point point, final Vertex exclude) {
 		Point finalNeighbor = null;
 
 		// Check neighbors status
-		for(int x = -1; x < 2; x++)
-			for(int y = -1; y < 2; y++)
-				for(int z = -1; z < 2; z++)
-				{
-					if(x == 0 && y == 0 && z == 0)
+		for (int x = -1; x < 2; x++)
+			for (int y = -1; y < 2; y++)
+				for (int z = -1; z < 2; z++) {
+					if (x == 0 && y == 0 && z == 0)
 						continue;
-					
-					final Point neighbor = new Point( point.x + x, point.y + y, point.z + z);
-					
-					if(getPixel(this.inputImage, neighbor) != 0
-						&& isVisited(neighbor)
-						&& isJunction(neighbor)
-						&& ! exclude.getPoints().contains(neighbor))						
-					{					
+
+					final Point neighbor = new Point(point.x + x, point.y + y, point.z + z);
+
+					if (getPixel(this.inputImage, neighbor) != 0 && isVisited(neighbor) && isJunction(neighbor)
+							&& !exclude.getPoints().contains(neighbor)) {
 						finalNeighbor = neighbor;
 						break;
 					}
-					
+
 				}
-		
+
 		return finalNeighbor;
-	}// end getNextUnvisitedJunctionVoxel 	
-	
+	}// end getNextUnvisitedJunctionVoxel
+
 	// -----------------------------------------------------------------------
 	/**
-	 * Check if a voxel is visited taking into account the borders. 
-	 * Out of range voxels are considered as visited. 
-	 * 
+	 * Check if a voxel is visited taking into account the borders. Out of range
+	 * voxels are considered as visited.
+	 *
 	 * @param point
 	 * @return true if the voxel is visited
 	 */
-	private boolean isVisited(Point point) 
-	{
+	private boolean isVisited(final Point point) {
 		return isVisited(point.x, point.y, point.z);
 	}
-	
-	/* -----------------------------------------------------------------------*/
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
-	 * Check if a voxel is visited taking into account the borders. 
-	 * Out of range voxels are considered as visited. 
-	 * 
-	 * @param x x- voxel coordinate
-	 * @param y y- voxel coordinate
-	 * @param z z- voxel coordinate
+	 * Check if a voxel is visited taking into account the borders. Out of range
+	 * voxels are considered as visited.
+	 *
+	 * @param x
+	 *            x- voxel coordinate
+	 * @param y
+	 *            y- voxel coordinate
+	 * @param z
+	 *            z- voxel coordinate
 	 * @return true if the voxel is visited
 	 */
-	private boolean isVisited(int x, int y, int z) 
-	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
+	private boolean isVisited(final int x, final int y, final int z) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
 			return this.visited[x][y][z];
 		return true;
 	}
-	
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Set value in the visited flags matrix.
-	 * 
-	 * @param x x- voxel coordinate
-	 * @param y y- voxel coordinate
-	 * @param z z- voxel coordinate
+	 *
+	 * @param x
+	 *            x- voxel coordinate
+	 * @param y
+	 *            y- voxel coordinate
+	 * @param z
+	 *            z- voxel coordinate
 	 * @param b
 	 */
-	private void setVisited(int x, int y, int z, boolean b) 
-	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			this.visited[x][y][z] = b;		
+	private void setVisited(final int x, final int y, final int z, final boolean b) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
+			this.visited[x][y][z] = b;
 	}
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Set value in the visited flags matrix.
-	 * 
-	 * @param point voxel coordinates
-	 * @param b visited flag value
+	 *
+	 * @param point
+	 *            voxel coordinates
+	 * @param b
+	 *            visited flag value
 	 */
-	private void setVisited(Point point, boolean b) 
-	{
-		int x = point.x;
-		int y = point.y;
-		int z = point.z;
-		
- 		setVisited(x, y, z, b);	
+	private void setVisited(final Point point, final boolean b) {
+		final int x = point.x;
+		final int y = point.y;
+		final int z = point.z;
+
+		setVisited(x, y, z, b);
 	}
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Tag skeleton dividing the voxels between end points, junctions and slabs.
-	 *  
-	 * @param inputImage2 skeleton image to be tagged
+	 * 
+	 * @param inputImage2
+	 *            skeleton image to be tagged
 	 * @return tagged skeleton image
 	 */
-	private ImageStack tagImage(ImageStack inputImage2) 
-	{
+	private ImageStack tagImage(final ImageStack inputImage2) {
 		// Create output image
-		ImageStack outputImage = new ImageStack(this.width, this.height, inputImage2.getColorModel());
-			
+		final ImageStack outputImage = new ImageStack(this.width, this.height, inputImage2.getColorModel());
+
 		// Tag voxels
-		for (int z = 0; z < depth; z++)
-		{
-			outputImage.addSlice(inputImage2.getSliceLabel(z+1), new ByteProcessor(this.width, this.height));			
-			for (int x = 0; x < width; x++) 
-				for (int y = 0; y < height; y++)
-				{
-					if(getPixel(inputImage2, x, y, z) != 0)
-					{
-						int numOfNeighbors = getNumberOfNeighbors(inputImage2, x, y, z);
-						if(numOfNeighbors < 2)
-						{
+		for (int z = 0; z < depth; z++) {
+			outputImage.addSlice(inputImage2.getSliceLabel(z + 1), new ByteProcessor(this.width, this.height));
+			for (int x = 0; x < width; x++)
+				for (int y = 0; y < height; y++) {
+					if (getPixel(inputImage2, x, y, z) != 0) {
+						final int numOfNeighbors = getNumberOfNeighbors(inputImage2, x, y, z);
+						if (numOfNeighbors < 2) {
 							setPixel(outputImage, x, y, z, AnalyzeSkeleton.END_POINT);
 							this.totalNumberOfEndPoints++;
-							Point endPoint = new Point(x, y, z);
-							this.listOfEndPoints.add(endPoint);							
-						}
-						else if(numOfNeighbors > 2)
-						{
+							final Point endPoint = new Point(x, y, z);
+							this.listOfEndPoints.add(endPoint);
+						} else if (numOfNeighbors > 2) {
 							setPixel(outputImage, x, y, z, AnalyzeSkeleton.JUNCTION);
-							Point junction = new Point(x, y, z);
-							this.listOfJunctionVoxels.add(junction);	
+							final Point junction = new Point(x, y, z);
+							this.listOfJunctionVoxels.add(junction);
 							this.totalNumberOfJunctionVoxels++;
-						}
-						else
-						{
+						} else {
 							setPixel(outputImage, x, y, z, AnalyzeSkeleton.SLAB);
-							Point slab = new Point(x, y, z);
+							final Point slab = new Point(x, y, z);
 							this.listOfSlabVoxels.add(slab);
 							this.totalNumberOfSlabs++;
 						}
-					}					
+					}
 				}
 		}
-		
-		return outputImage;
-	}// end method tagImage 
 
-	/* -----------------------------------------------------------------------*/
+		return outputImage;
+	}// end method tagImage
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get number of neighbors of a voxel in a 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image (ImageStack)
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
+	 *
+	 * @param image
+	 *            3D image (ImageStack)
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private int getNumberOfNeighbors(ImageStack image, int x, int y, int z)
-	{
+	private int getNumberOfNeighbors(final ImageStack image, final int x, final int y, final int z) {
 		int n = 0;
-		byte[] neighborhood = getNeighborhood(image, x, y, z);
-		
-		for(int i = 0; i < 27; i ++)
-			if(neighborhood[i] != 0)
+		final byte[] neighborhood = getNeighborhood(image, x, y, z);
+
+		for (int i = 0; i < 27; i++)
+			if (neighborhood[i] != 0)
 				n++;
 		// We return n-1 because neighborhood includes the actual voxel.
-		return (n-1);			
+		return (n - 1);
 	}// end method getNumberOfNeighbors
-	
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Get average 3x3x3 neighborhood pixel value of a given point
-	 * 
-	 * @param image input image
-	 * @param p image coordinates
+	 *
+	 * @param image
+	 *            input image
+	 * @param p
+	 *            image coordinates
 	 */
-	private double getAverageNeighborhoodValue(ImageStack image, Point p)
-	{
-		byte[] neighborhood = getNeighborhood(image, p);
-		
+	private double getAverageNeighborhoodValue(final ImageStack image, final Point p) {
+		final byte[] neighborhood = getNeighborhood(image, p);
+
 		double avg = 0;
-		for(int i = 0; i < neighborhood.length; i++)
-			avg += (double) (neighborhood[i] & 0xFF);
-		if(neighborhood.length > 0)
-			return avg / (double) neighborhood.length;
+		for (int i = 0; i < neighborhood.length; i++)
+			avg += neighborhood[i] & 0xFF;
+		if (neighborhood.length > 0)
+			return avg / neighborhood.length;
 		else
 			return 0;
 	}// end method getAverageNeighborhoodValue
@@ -2747,270 +2656,294 @@ public class AnalyzeSkeleton implements PlugInFilter
 	// -----------------------------------------------------------------------
 	/**
 	 * Get average neighborhood pixel value of a given point.
-	 * 
-	 * @param image input image
-	 * @param p image coordinates
-	 * @param x_offset x- neighborhood offset
-	 * @param y_offset y- neighborhood offset
-	 * @param z_offset z- neighborhood offset
-	 * @return average neighborhood pixel value 
+	 *
+	 * @param image
+	 *            input image
+	 * @param p
+	 *            image coordinates
+	 * @param x_offset
+	 *            x- neighborhood offset
+	 * @param y_offset
+	 *            y- neighborhood offset
+	 * @param z_offset
+	 *            z- neighborhood offset
+	 * @return average neighborhood pixel value
 	 */
-	public static double getAverageNeighborhoodValue(
-			final ImageStack image, 
-			final Point p,
-			final int x_offset,
-			final int y_offset,
-			final int z_offset)
-	{
-		byte[] neighborhood = getNeighborhood(image, p, x_offset, y_offset, z_offset);
-		
+	public static double getAverageNeighborhoodValue(final ImageStack image, final Point p, final int x_offset,
+			final int y_offset, final int z_offset) {
+		final byte[] neighborhood = getNeighborhood(image, p, x_offset, y_offset, z_offset);
+
 		double avg = 0;
-		for(int i = 0; i < neighborhood.length; i++)
-			avg += (double) (neighborhood[i] & 0xFF);
-		if(neighborhood.length > 0)
-			return avg / (double) neighborhood.length;
+		for (int i = 0; i < neighborhood.length; i++)
+			avg += neighborhood[i] & 0xFF;
+		if (neighborhood.length > 0)
+			return avg / neighborhood.length;
 		else
 			return 0;
 	}// end method getAverageNeighborhoodValue
-	
-	
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Get neighborhood of a pixel in a 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image (ImageStack)
-	 * @param p point coordinates
-	 * @param x_offset x- neighborhood offset
-	 * @param y_offset y- neighborhood offset
-	 * @param z_offset z- neighborhood offset
+	 *
+	 * @param image
+	 *            3D image (ImageStack)
+	 * @param p
+	 *            point coordinates
+	 * @param x_offset
+	 *            x- neighborhood offset
+	 * @param y_offset
+	 *            y- neighborhood offset
+	 * @param z_offset
+	 *            z- neighborhood offset
 	 * @return corresponding neighborhood (0 if out of image)
 	 */
-	public static byte[] getNeighborhood(
-			final ImageStack image, 
-			final Point p, 
-			final int x_offset, 
-			final int y_offset, 
-			final int z_offset)
-	{
-		final byte[] neighborhood = new byte[(2*x_offset+1) * (2*y_offset+1) * (2*z_offset+1)];
-		
-		for(int l= 0, k = p.z - z_offset; k <= p.z + z_offset; k++)
-			for(int j = p.y - y_offset; j <= p.y + y_offset; j++)
-				for(int i = p.x - x_offset; i <= p.x + x_offset; i++, l++)							
-					neighborhood[l] = getPixel(image, i,   j,   k);				
+	public static byte[] getNeighborhood(final ImageStack image, final Point p, final int x_offset, final int y_offset,
+			final int z_offset) {
+		final byte[] neighborhood = new byte[(2 * x_offset + 1) * (2 * y_offset + 1) * (2 * z_offset + 1)];
+
+		for (int l = 0, k = p.z - z_offset; k <= p.z + z_offset; k++)
+			for (int j = p.y - y_offset; j <= p.y + y_offset; j++)
+				for (int i = p.x - x_offset; i <= p.x + x_offset; i++, l++)
+					neighborhood[l] = getPixel(image, i, j, k);
 		return neighborhood;
-	} // end getNeighborhood 
-	
+	} // end getNeighborhood
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Get neighborhood of a pixel in a 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image (ImageStack)
-	 * @param p 3D point coordinates
+	 *
+	 * @param image
+	 *            3D image (ImageStack)
+	 * @param p
+	 *            3D point coordinates
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private byte[] getNeighborhood(ImageStack image, Point p)
-	{
+	private byte[] getNeighborhood(final ImageStack image, final Point p) {
 		return getNeighborhood(image, p.x, p.y, p.z);
 	}
-			
+
 	// -----------------------------------------------------------------------
 	/**
 	 * Get neighborhood of a pixel in a 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image (ImageStack)
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
+	 *
+	 * @param image
+	 *            3D image (ImageStack)
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 27-pixels neighborhood (0 if out of image)
 	 */
-	private byte[] getNeighborhood(ImageStack image, int x, int y, int z)
-	{
-		byte[] neighborhood = new byte[27];
-		
-		neighborhood[ 0] = getPixel(image, x-1, y-1, z-1);
-		neighborhood[ 1] = getPixel(image, x  , y-1, z-1);
-		neighborhood[ 2] = getPixel(image, x+1, y-1, z-1);
-		
-		neighborhood[ 3] = getPixel(image, x-1, y,   z-1);
-		neighborhood[ 4] = getPixel(image, x,   y,   z-1);
-		neighborhood[ 5] = getPixel(image, x+1, y,   z-1);
-		
-		neighborhood[ 6] = getPixel(image, x-1, y+1, z-1);
-		neighborhood[ 7] = getPixel(image, x,   y+1, z-1);
-		neighborhood[ 8] = getPixel(image, x+1, y+1, z-1);
-		
-		neighborhood[ 9] = getPixel(image, x-1, y-1, z  );
-		neighborhood[10] = getPixel(image, x,   y-1, z  );
-		neighborhood[11] = getPixel(image, x+1, y-1, z  );
-		
-		neighborhood[12] = getPixel(image, x-1, y,   z  );
-		neighborhood[13] = getPixel(image, x,   y,   z  );
-		neighborhood[14] = getPixel(image, x+1, y,   z  );
-		
-		neighborhood[15] = getPixel(image, x-1, y+1, z  );
-		neighborhood[16] = getPixel(image, x,   y+1, z  );
-		neighborhood[17] = getPixel(image, x+1, y+1, z  );
-		
-		neighborhood[18] = getPixel(image, x-1, y-1, z+1);
-		neighborhood[19] = getPixel(image, x,   y-1, z+1);
-		neighborhood[20] = getPixel(image, x+1, y-1, z+1);
-		
-		neighborhood[21] = getPixel(image, x-1, y,   z+1);
-		neighborhood[22] = getPixel(image, x,   y,   z+1);
-		neighborhood[23] = getPixel(image, x+1, y,   z+1);
-		
-		neighborhood[24] = getPixel(image, x-1, y+1, z+1);
-		neighborhood[25] = getPixel(image, x,   y+1, z+1);
-		neighborhood[26] = getPixel(image, x+1, y+1, z+1);
-		
+	private byte[] getNeighborhood(final ImageStack image, final int x, final int y, final int z) {
+		final byte[] neighborhood = new byte[27];
+
+		neighborhood[0] = getPixel(image, x - 1, y - 1, z - 1);
+		neighborhood[1] = getPixel(image, x, y - 1, z - 1);
+		neighborhood[2] = getPixel(image, x + 1, y - 1, z - 1);
+
+		neighborhood[3] = getPixel(image, x - 1, y, z - 1);
+		neighborhood[4] = getPixel(image, x, y, z - 1);
+		neighborhood[5] = getPixel(image, x + 1, y, z - 1);
+
+		neighborhood[6] = getPixel(image, x - 1, y + 1, z - 1);
+		neighborhood[7] = getPixel(image, x, y + 1, z - 1);
+		neighborhood[8] = getPixel(image, x + 1, y + 1, z - 1);
+
+		neighborhood[9] = getPixel(image, x - 1, y - 1, z);
+		neighborhood[10] = getPixel(image, x, y - 1, z);
+		neighborhood[11] = getPixel(image, x + 1, y - 1, z);
+
+		neighborhood[12] = getPixel(image, x - 1, y, z);
+		neighborhood[13] = getPixel(image, x, y, z);
+		neighborhood[14] = getPixel(image, x + 1, y, z);
+
+		neighborhood[15] = getPixel(image, x - 1, y + 1, z);
+		neighborhood[16] = getPixel(image, x, y + 1, z);
+		neighborhood[17] = getPixel(image, x + 1, y + 1, z);
+
+		neighborhood[18] = getPixel(image, x - 1, y - 1, z + 1);
+		neighborhood[19] = getPixel(image, x, y - 1, z + 1);
+		neighborhood[20] = getPixel(image, x + 1, y - 1, z + 1);
+
+		neighborhood[21] = getPixel(image, x - 1, y, z + 1);
+		neighborhood[22] = getPixel(image, x, y, z + 1);
+		neighborhood[23] = getPixel(image, x + 1, y, z + 1);
+
+		neighborhood[24] = getPixel(image, x - 1, y + 1, z + 1);
+		neighborhood[25] = getPixel(image, x, y + 1, z + 1);
+		neighborhood[26] = getPixel(image, x + 1, y + 1, z + 1);
+
 		return neighborhood;
-	} // end getNeighborhood 
-	
-	
+	} // end getNeighborhood
+
 	// -----------------------------------------------------------------------
 	/**
-	 * Get pixel in 3D image (0 border conditions) 
-	 * 
-	 * @param image 3D image
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
+	 * Get pixel in 3D image (0 border conditions)
+	 *
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	public static byte getPixel(final ImageStack image, final int x, final int y, final int z)
-	{
+	public static byte getPixel(final ImageStack image, final int x, final int y, final int z) {
 		final int width = image.getWidth();
 		final int height = image.getHeight();
 		final int depth = image.getSize();
-				
-		if(x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth)
+
+		if (x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth)
 			return ((byte[]) image.getPixels(z + 1))[x + y * width];
-		else return 0;		
-	} // end getPixel 
-		
-	/* -----------------------------------------------------------------------*/
+		else
+			return 0;
+	} // end getPixel
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get pixel in 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
+	 *
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private float getFloatPixel(
-			ImageStack image, 
-			int x, 
-			int y, 
-			int z )
-	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			return ( (float[]) image.getPixels(z + 1) )[x + y * this.width];
-		else return 0;
+	private float getFloatPixel(final ImageStack image, final int x, final int y, final int z) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
+			return ((float[]) image.getPixels(z + 1))[x + y * this.width];
+		else
+			return 0;
 	} // end getFloatPixel
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get pixel in 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image
-	 * @param point point to be evaluated
+	 *
+	 * @param image
+	 *            3D image
+	 * @param point
+	 *            point to be evaluated
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private float getFloatPixel(
-			ImageStack image, 
-			Point point )
-	{
-		return getFloatPixel( image, point.x, point.y, point.z );
-	} // end getFloatPixel	
-	
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Get pixel in 3D image (0 border conditions).
-	 * 
-	 * @param image 3D image
-	 * @param point point to be evaluated
-	 * @return corresponding pixel (0 if out of image)
-	 */
-	private byte getPixel(ImageStack image, Point point)
-	{
-		return getPixel(image, point.x, point.y, point.z);
-	} // end getPixel 
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Set pixel in 3D image.
-	 * 
-	 * @param image 3D image
-	 * @param p point coordinates
-	 * @param value pixel value
-	 */
-	private void setPixel(ImageStack image, Point p, byte value)
-	{
-		if(p.x >= 0 && p.x < this.width && p.y >= 0 && p.y < this.height && p.z >= 0 && p.z < this.depth)
-			((byte[]) image.getPixels(p.z + 1))[p.x + p.y * this.width] = value;
-	} // end setPixel 
-	
-	/* -----------------------------------------------------------------------*/
-	/**
-	 * Set pixel in 3D image.
-	 * 
-	 * @param image 3D image
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
-	 * @param value pixel value
-	 */
-	private void setPixel(ImageStack image, int x, int y, int z, byte value)
-	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
-			((byte[]) image.getPixels(z + 1))[x + y * this.width] = value;
-	} // end setPixel 
+	private float getFloatPixel(final ImageStack image, final Point point) {
+		return getFloatPixel(image, point.x, point.y, point.z);
+	} // end getFloatPixel
 
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
+	/**
+	 * Get pixel in 3D image (0 border conditions).
+	 *
+	 * @param image
+	 *            3D image
+	 * @param point
+	 *            point to be evaluated
+	 * @return corresponding pixel (0 if out of image)
+	 */
+	private byte getPixel(final ImageStack image, final Point point) {
+		return getPixel(image, point.x, point.y, point.z);
+	} // end getPixel
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
+	/**
+	 * Set pixel in 3D image.
+	 *
+	 * @param image
+	 *            3D image
+	 * @param p
+	 *            point coordinates
+	 * @param value
+	 *            pixel value
+	 */
+	private void setPixel(final ImageStack image, final Point p, final byte value) {
+		if (p.x >= 0 && p.x < this.width && p.y >= 0 && p.y < this.height && p.z >= 0 && p.z < this.depth)
+			((byte[]) image.getPixels(p.z + 1))[p.x + p.y * this.width] = value;
+	} // end setPixel
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
+	/**
+	 * Set pixel in 3D image.
+	 *
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @param value
+	 *            pixel value
+	 */
+	private void setPixel(final ImageStack image, final int x, final int y, final int z, final byte value) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
+			((byte[]) image.getPixels(z + 1))[x + y * this.width] = value;
+	} // end setPixel
+
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Set pixel in 3D (short) image.
-	 * 
-	 * @param image 3D image
-	 * @param x x- coordinate
-	 * @param y y- coordinate
-	 * @param z z- coordinate (in image stacks the indexes start at 1)
-	 * @param value pixel value
+	 *
+	 * @param image
+	 *            3D image
+	 * @param x
+	 *            x- coordinate
+	 * @param y
+	 *            y- coordinate
+	 * @param z
+	 *            z- coordinate (in image stacks the indexes start at 1)
+	 * @param value
+	 *            pixel value
 	 */
-	private void setPixel(ImageStack image, int x, int y, int z, float value)
-	{
-		if(x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
+	private void setPixel(final ImageStack image, final int x, final int y, final int z, final float value) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
 			((float[]) image.getPixels(z + 1))[x + y * this.width] = value;
-	} // end setPixel 	
-	
+	} // end setPixel
 
-	
-	/* -----------------------------------------------------------------------*/
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Show plug-in information.
-	 * 
+	 *
 	 */
-	void showAbout() 
-	{
-		IJ.showMessage(
-						"About AnalyzeSkeleton...",
-						"This plug-in filter analyzes a 2D/3D image skeleton.\n");
-	} // end showAbout 
-	
+	void showAbout() {
+		IJ.showMessage("About AnalyzeSkeleton...", "This plug-in filter analyzes a 2D/3D image skeleton.\n");
+	} // end showAbout
 
 	/**
-	 * Determine the longest shortest path using the APSP (all pairs shortest path) 
-	 * warshall algorithm
-	 * 
-	 * @param graph the graph of a tree
-	 * @param shortestPathPoints list to store the longest shortest path points
+	 * Determine the longest shortest path using the APSP (all pairs shortest
+	 * path) warshall algorithm
+	 *
+	 * @param graph
+	 *            the graph of a tree
+	 * @param shortestPathPoints
+	 *            list to store the longest shortest path points
 	 * @return longest shortest path length
 	 * @author Huub Hovens
 	 */
-	private double warshallAlgorithm(Graph graph, ArrayList <Point> shortestPathPoints)
-	{
+	private double warshallAlgorithm(final Graph graph, final ArrayList<Point> shortestPathPoints) {
 		// local fields
 		/** vertex 1 of an edge */
 		Vertex v1 = null;
@@ -3027,87 +2960,90 @@ public class AnalyzeSkeleton implements PlugInFilter
 		/** column that contains the longest shortest path value */
 		int b = 0;
 
-		ArrayList< Edge > edgeList = graph.getEdges();
-		ArrayList< Vertex > vertexList = graph.getVertices();
+		final ArrayList<Edge> edgeList = graph.getEdges();
+		final ArrayList<Vertex> vertexList = graph.getVertices();
 
-		//create empty adjacency and predecessor matrix
+		// create empty adjacency and predecessor matrix
 
-		/** the matrix that contains the length of the shortest path from vertex a to vertex b */
-		double[][] adjacencyMatrix = new double[vertexList.size()][vertexList.size()];
-		/** the matrix that contains the predecessor vertex of vertex b in the shortest path from vertex a to b */
-		int[][] predecessorMatrix = new int[vertexList.size()][vertexList.size()];
+		/**
+		 * the matrix that contains the length of the shortest path from vertex
+		 * a to vertex b
+		 */
+		final double[][] adjacencyMatrix = new double[vertexList.size()][vertexList.size()];
+		/**
+		 * the matrix that contains the predecessor vertex of vertex b in the
+		 * shortest path from vertex a to b
+		 */
+		final int[][] predecessorMatrix = new int[vertexList.size()][vertexList.size()];
 
 		// initial conditions for both matrices
 		/*
 		 * create 2D-adjacency array with the distance between the nodes.
-		 * distance i --> i = 0
-		 * distance i -/> j = infinite (edge does not exist)
-		 * distance i --> j = length of branch
+		 * distance i --> i = 0 distance i -/> j = infinite (edge does not
+		 * exist) distance i --> j = length of branch
 		 */
 
 		/*
-		 * create 2D-predecessor array using interconnected vertices.
-		 * the predecessor matrix contains the predecessor of j in a path from node i to j.
-		 * distance i --> i = NIL (there is no edge between a single vertex)
-		 * distance i -/> j = NIL (there is no edge between the vertices)
-		 * distance i --> j = i (the initial matrix only contains paths with a single edge)
-		 * 
-		 * I'm using -1 as NIL since it cannot refer to an index (and thus a vertex)
+		 * create 2D-predecessor array using interconnected vertices. the
+		 * predecessor matrix contains the predecessor of j in a path from node
+		 * i to j. distance i --> i = NIL (there is no edge between a single
+		 * vertex) distance i -/> j = NIL (there is no edge between the
+		 * vertices) distance i --> j = i (the initial matrix only contains
+		 * paths with a single edge)
+		 *
+		 * I'm using -1 as NIL since it cannot refer to an index (and thus a
+		 * vertex)
 		 */
 
 		// applying initial conditions
-		for(int i = 0 ; i < vertexList.size(); i++)
-		{
-			for(int j = 0 ; j < vertexList.size(); j++)
-			{
-				adjacencyMatrix[i][j]= Double.POSITIVE_INFINITY;
-				predecessorMatrix[i][j]= -1;
+		for (int i = 0; i < vertexList.size(); i++) {
+			for (int j = 0; j < vertexList.size(); j++) {
+				adjacencyMatrix[i][j] = Double.POSITIVE_INFINITY;
+				predecessorMatrix[i][j] = -1;
 			}
 		}
 
-
-		for (Edge edge : edgeList)
-		{
+		for (final Edge edge : edgeList) {
 			v1 = edge.getV1();
 			v2 = edge.getV2();
 			// use the index of the vertices as the index in the matrix
 			row = vertexList.indexOf(v1);
-			if(row == -1)
-			{
+			if (row == -1) {
 				IJ.log("Vertex " + v1.getPoints().get(0) + " not found in the list of vertices!");
 				continue;
 			}
-			
+
 			column = vertexList.indexOf(v2);
-			if(column == -1)
-			{
+			if (column == -1) {
 				IJ.log("Vertex " + v2.getPoints().get(0) + " not found in the list of vertices!");
 				continue;
 			}
 
-			/* 
-			 * the diagonal is 0. 
-			 * 
-			 * Because not every vertex is a 'v1 vertex' 
-			 * the [column][column] statement is needed as well.
+			/*
+			 * the diagonal is 0.
 			 *
-			 * in an undirected graph the adjacencyMatrix is symmetric 
-			 * thus A = Transpose(A)
+			 * Because not every vertex is a 'v1 vertex' the [column][column]
+			 * statement is needed as well.
+			 *
+			 * in an undirected graph the adjacencyMatrix is symmetric thus A =
+			 * Transpose(A)
 			 */
 			adjacencyMatrix[row][row] = 0;
 			adjacencyMatrix[column][column] = 0;
 			adjacencyMatrix[row][column] = edge.getLength();
 			adjacencyMatrix[column][row] = edge.getLength();
 
-			/* 
-			 * the diagonal remains -1.
-			 * for the rest I use the index of the vertex so I can later refer to the vertexList
-			 * for the correct information
-			 * 
-			 * Determining what belongs where requires careful consideration of the definition
-			 * 
-			 * the array contains the predecessor of "column" in a path from "row" to "column"
-			 * therefore in the other statement it is the other way around.   
+			/*
+			 * the diagonal remains -1. for the rest I use the index of the
+			 * vertex so I can later refer to the vertexList for the correct
+			 * information
+			 *
+			 * Determining what belongs where requires careful consideration of
+			 * the definition
+			 *
+			 * the array contains the predecessor of "column" in a path from
+			 * "row" to "column" therefore in the other statement it is the
+			 * other way around.
 			 */
 			predecessorMatrix[row][row] = -1;
 			predecessorMatrix[column][column] = -1;
@@ -3116,34 +3052,27 @@ public class AnalyzeSkeleton implements PlugInFilter
 		}
 		// matrices now have their initial conditions
 
+		// the warshall algorithm with k as candidate vertex and i and j walk
+		// through the adjacencyMatrix
+		// the predecessor matrix is updated at the same time.
 
-		// the warshall algorithm with k as candidate vertex and i and j walk through the adjacencyMatrix
-		// the predecessor matrix is updated at the same time. 
-
-		for(int k = 0 ; k < vertexList.size(); k++)
-		{				
-			for(int i = 0 ; i < vertexList.size(); i++)
-			{								
-				for(int j = 0 ; j < vertexList.size(); j++)
-				{
-					if(adjacencyMatrix[i][k] + adjacencyMatrix[k][j] < adjacencyMatrix[i][j])
-					{
+		for (int k = 0; k < vertexList.size(); k++) {
+			for (int i = 0; i < vertexList.size(); i++) {
+				for (int j = 0; j < vertexList.size(); j++) {
+					if (adjacencyMatrix[i][k] + adjacencyMatrix[k][j] < adjacencyMatrix[i][j]) {
 						adjacencyMatrix[i][j] = adjacencyMatrix[i][k] + adjacencyMatrix[k][j];
 						predecessorMatrix[i][j] = predecessorMatrix[k][j];
 
-					}					
+					}
 				}
 			}
 		}
 
 		// find the maximum of all shortest paths
-		for(int i = 0; i < vertexList.size(); i++)
-		{
-			for(int j = 0; j < vertexList.size(); j++)
-			{
-				// sometimes infinities still remain				
-				if (adjacencyMatrix[i][j] > maxPath && adjacencyMatrix[i][j] != Double.POSITIVE_INFINITY)
-				{
+		for (int i = 0; i < vertexList.size(); i++) {
+			for (int j = 0; j < vertexList.size(); j++) {
+				// sometimes infinities still remain
+				if (adjacencyMatrix[i][j] > maxPath && adjacencyMatrix[i][j] != Double.POSITIVE_INFINITY) {
 					maxPath = adjacencyMatrix[i][j];
 					a = i;
 					b = j;
@@ -3160,104 +3089,104 @@ public class AnalyzeSkeleton implements PlugInFilter
 
 	}
 	// end method warshallAlgorithm
-	
+
 	/**
-	 * Reconstruction and visualisation of the longest shortest path found by the APSP warshall algorithm
-	 *  
-	 * @param predecessorMatrix the Matrix which contains the predecessor of vertex b in the shortest path from a to b
-	 * @param startIndex the index of the row which contains the longest shortest path
-	 * @param endIndex the index of the column which contains the longest shortest path
-	 * @param edgeList the list of edges 
-	 * @param vertexList the list of vertices
-	 * @param shortestPathPoints contains points of the longest shortest path for each graph
+	 * Reconstruction and visualisation of the longest shortest path found by
+	 * the APSP warshall algorithm
+	 * 
+	 * @param predecessorMatrix
+	 *            the Matrix which contains the predecessor of vertex b in the
+	 *            shortest path from a to b
+	 * @param startIndex
+	 *            the index of the row which contains the longest shortest path
+	 * @param endIndex
+	 *            the index of the column which contains the longest shortest
+	 *            path
+	 * @param edgeList
+	 *            the list of edges
+	 * @param vertexList
+	 *            the list of vertices
+	 * @param shortestPathPoints
+	 *            contains points of the longest shortest path for each graph
 	 * @author Huub Hovens
 	 */
-	private void reconstructPath(
-			int[][] predecessorMatrix, 
-			int startIndex, 
-			int endIndex, 
-			ArrayList<Edge> edgeList, 
-			ArrayList<Vertex> vertexList,
-			ArrayList<Point> shortestPathPoints)
-	{
-		// We know the first and last vertex of the longest shortest path, namely a and b
-		// using the predecessor matrix we can now determine the path that is taken from a to b
+	private void reconstructPath(final int[][] predecessorMatrix, final int startIndex, final int endIndex,
+			final ArrayList<Edge> edgeList, final ArrayList<Vertex> vertexList,
+			final ArrayList<Point> shortestPathPoints) {
+		// We know the first and last vertex of the longest shortest path,
+		// namely a and b
+		// using the predecessor matrix we can now determine the path that is
+		// taken from a to b
 		// remember a and b are indices and not the actual vertices.
 
 		int b = endIndex;
-		int a = startIndex;
+		final int a = startIndex;
 
-		while (b != a)
-		{
-			Vertex predecessor = vertexList.get(predecessorMatrix[a][b]);
-			Vertex endvertex = vertexList.get(b);
-			ArrayList< Edge > sp_edgeslist = new ArrayList< Edge >();
+		while (b != a) {
+			final Vertex predecessor = vertexList.get(predecessorMatrix[a][b]);
+			final Vertex endvertex = vertexList.get(b);
+			final ArrayList<Edge> sp_edgeslist = new ArrayList<Edge>();
 			Double lengthtest = Double.POSITIVE_INFINITY;
 			Edge shortestedge = null;
 
 			// search all edges for a combination of the two vertices
-			for (Edge edge : edgeList)
-			{
+			for (final Edge edge : edgeList) {
 
-				if ((edge.getV1()==predecessor && edge.getV2()==endvertex) || (edge.getV1()==endvertex && edge.getV2()==predecessor))
-				{
-					// sometimes there are multiple edges between two vertices so add them to a list
+				if ((edge.getV1() == predecessor && edge.getV2() == endvertex)
+						|| (edge.getV1() == endvertex && edge.getV2() == predecessor)) {
+					// sometimes there are multiple edges between two vertices
+					// so add them to a list
 					// for a second test
-					sp_edgeslist.add(edge);					
-				}			
+					sp_edgeslist.add(edge);
+				}
 
 			}
 			// the second test
-			// this test looks which edge has the shortest length in sp_edgeslist
-			for (Edge edge : sp_edgeslist)
-			{
-				if (edge.getLength() < lengthtest)
-				{
+			// this test looks which edge has the shortest length in
+			// sp_edgeslist
+			for (final Edge edge : sp_edgeslist) {
+				if (edge.getLength() < lengthtest) {
 					shortestedge = edge;
 					lengthtest = edge.getLength();
 				}
 
 			}
-			
+
 			// add slab points of the shortest edge to the list of points
-			for (Point p : shortestedge.getSlabs())
-			{
+			for (final Point p : shortestedge.getSlabs()) {
 				shortestPathPoints.add(p);
 				setPixel(this.shortPathImage, p.x, p.y, p.z, SHORTEST_PATH);
 			}
 
 			// add vertex points too
-			for (Point p : shortestedge.getV1().getPoints())
-			{
-				if( ! shortestPathPoints.contains( p ))
-				{
+			for (final Point p : shortestedge.getV1().getPoints()) {
+				if (!shortestPathPoints.contains(p)) {
 					shortestPathPoints.add(p);
-					//setPixel(this.shortPathImage, p.x, p.y, p.z, SHORTEST_PATH);
-				}
-			}
-			
-			for (Point p : shortestedge.getV2().getPoints())
-			{
-				if( ! shortestPathPoints.contains( p ))
-				{
-					shortestPathPoints.add(p);
-					//setPixel(this.shortPathImage, p.x, p.y, p.z, SHORTEST_PATH);
+					// setPixel(this.shortPathImage, p.x, p.y, p.z,
+					// SHORTEST_PATH);
 				}
 			}
 
-			// now make the index of the endvertex the index of the predecessor so that the path now goes from
+			for (final Point p : shortestedge.getV2().getPoints()) {
+				if (!shortestPathPoints.contains(p)) {
+					shortestPathPoints.add(p);
+					// setPixel(this.shortPathImage, p.x, p.y, p.z,
+					// SHORTEST_PATH);
+				}
+			}
+
+			// now make the index of the endvertex the index of the predecessor
+			// so that the path now goes from
 			// a to predecessor and repeat cycle
 			b = predecessorMatrix[a][b];
 		}
-		if (shortestPathPoints.size() != 0)
-		{
+		if (shortestPathPoints.size() != 0) {
 			this.spx = shortestPathPoints.get(0).x;
 			this.spy = shortestPathPoints.get(0).y;
 			this.spz = shortestPathPoints.get(0).z;
-		}		
+		}
 
 	}
 	// end method reconstructPath
-	
 
 }// end class AnalyzeSkeleton

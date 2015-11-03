@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  * Connectivity_ plugin for ImageJ
- * Copyright 2009 2010 Michael Doube 
+ * Copyright 2009 2010 Michael Doube
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,19 +28,19 @@ import org.doube.util.UsageReporter;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.plugin.PlugIn;
 import ij.macro.Interpreter;
 import ij.measure.Calibration;
+import ij.plugin.PlugIn;
 
 /**
  * <p>
  * Connectivity_
  * </p>
- * 
+ *
  * <p>
- * Calculate the Euler characteristic (&#967;) and connectivity index
- * (&#946;<sub>1</sub>) of a trabecular bone network. The connectivity index can
- * be thought of as "trabecular number".
+ * Calculate the Euler characteristic (&#967;) and connectivity index (&#946;
+ * <sub>1</sub>) of a trabecular bone network. The connectivity index can be
+ * thought of as "trabecular number".
  * </p>
  * <ol>
  * <li>Purify stack to contain only 1 connected bone phase and 1 connected
@@ -56,28 +56,29 @@ import ij.measure.Calibration;
  * <li>Calculate connectivity as &#946;<sub>1</sub> = 1 - &#916;&#967;</li>
  * <li>Calculate connectivity density as &#946;<sub>1</sub> / V</li>
  * </ol>
- * 
+ *
  * @author Michael Doube
- * 
- * @see <p>
+ *
+ * @see
+ * 		<p>
  *      Toriwaki J, Yonekura T (2002) Euler Number and Connectivity Indexes of a
- *      Three Dimensional Digital Picture. Forma 17: 183-209. <a
- *      href="http://www.scipress.org/journals/forma/abstract/1703/17030183.html"
- *      >http://www.scipress.org/journals/forma/abstract/1703/17030183.html</a>
+ *      Three Dimensional Digital Picture. Forma 17: 183-209. <a href=
+ *      "http://www.scipress.org/journals/forma/abstract/1703/17030183.html" >
+ *      http://www.scipress.org/journals/forma/abstract/1703/17030183.html</a>
  *      </p>
  *      <p>
  *      Odgaard A, Gundersen HJG (1993) Quantification of connectivity in
  *      cancellous bone, with special emphasis on 3-D reconstructions. Bone 14:
- *      173-182. <a
- *      href="http://dx.doi.org/10.1016/8756-3282(93)90245-6">doi:10.1016
+ *      173-182.
+ *      <a href="http://dx.doi.org/10.1016/8756-3282(93)90245-6">doi:10.1016
  *      /8756-3282(93)90245-6</a>
  *      </p>
  *      <p>
  *      Lee TC, Kashyap RL, Chu CN (1994) Building Skeleton Models via 3-D
  *      Medial Surface Axis Thinning Algorithms. CVGIP: Graphical Models and
- *      Image Processing 56: 462-478. <a
- *      href="http://dx.doi.org/10.1006/cgip.1994.1042"
- *      >doi:10.1006/cgip.1994.1042</a>
+ *      Image Processing 56: 462-478.
+ *      <a href="http://dx.doi.org/10.1006/cgip.1994.1042" >doi:10.1006/cgip.
+ *      1994.1042</a>
  *      </p>
  *      <p>
  *      Several of the methods are based on Ignacio Arganda-Carreras's
@@ -85,7 +86,7 @@ import ij.measure.Calibration;
  *      "http://imagejdocu.tudor.lu/doku.php?id=plugin:morphology:skeletonize3d:start"
  *      >Skeletonize3D homepage</a>
  *      </p>
- * 
+ *
  */
 public class Connectivity implements PlugIn {
 
@@ -98,37 +99,34 @@ public class Connectivity implements PlugIn {
 	/** working image depth */
 	private int depth = 0;
 
-	public void run(String arg) {
+	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
-		ImagePlus imp = IJ.getImage();
-		ImageCheck ic = new ImageCheck();
+		final ImagePlus imp = IJ.getImage();
+		final ImageCheck ic = new ImageCheck();
 		if (!ic.isBinary(imp)) {
 			IJ.error("Connectivity requires a binary image.");
 			return;
 		}
 
-		double sumEuler = getSumEuler(imp);
+		final double sumEuler = getSumEuler(imp);
 
-		double deltaChi = getDeltaChi(imp, sumEuler);
+		final double deltaChi = getDeltaChi(imp, sumEuler);
 
-		double connectivity = getConnectivity(deltaChi);
+		final double connectivity = getConnectivity(deltaChi);
 
-		double connDensity = getConnDensity(imp, connectivity);
+		final double connDensity = getConnDensity(imp, connectivity);
 
 		if (connectivity < 0 && !Interpreter.isBatchMode()) {
-			IJ.showMessage("Caution", "Connectivity is negative.\n\n"
-					+ "This usually happens if there are multiple\n"
-					+ "particles or enclosed cavities.\n\n"
-					+ "Try running Purify prior to Connectivity.");
+			IJ.showMessage("Caution", "Connectivity is negative.\n\n" + "This usually happens if there are multiple\n"
+					+ "particles or enclosed cavities.\n\n" + "Try running Purify prior to Connectivity.");
 		}
 
-		ResultInserter ri = ResultInserter.getInstance();
-		ri.setResultInRow(imp, "Euler ch.", (double) sumEuler);
+		final ResultInserter ri = ResultInserter.getInstance();
+		ri.setResultInRow(imp, "Euler ch.", sumEuler);
 		ri.setResultInRow(imp, "Δ(χ)", deltaChi);
 		ri.setResultInRow(imp, "Connectivity", connectivity);
-		ri.setResultInRow(imp, "Conn.D (" + imp.getCalibration().getUnit()
-				+ "^-3)", connDensity);
+		ri.setResultInRow(imp, "Conn.D (" + imp.getCalibration().getUnit() + "^-3)", connDensity);
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 		return;
@@ -136,70 +134,70 @@ public class Connectivity implements PlugIn {
 
 	/**
 	 * Calculate connectivity density
-	 * 
+	 *
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @param connectivity
 	 *            Result of getConnectivity()
 	 * @return
 	 */
-	public double getConnDensity(ImagePlus imp, double connectivity) {
+	public double getConnDensity(final ImagePlus imp, final double connectivity) {
 		setDimensions(imp);
-		Calibration cal = imp.getCalibration();
-		double vW = cal.pixelWidth;
-		double vH = cal.pixelHeight;
-		double vD = cal.pixelDepth;
-		double stackVolume = width * height * depth * vW * vH * vD;
-		double connDensity = connectivity / stackVolume;
+		final Calibration cal = imp.getCalibration();
+		final double vW = cal.pixelWidth;
+		final double vH = cal.pixelHeight;
+		final double vD = cal.pixelDepth;
+		final double stackVolume = width * height * depth * vW * vH * vD;
+		final double connDensity = connectivity / stackVolume;
 		return connDensity;
 	}
 
 	/**
 	 * Return the connectivity of the image, which is 1 - deltaChi.
-	 * 
+	 *
 	 * @param deltaChi
 	 *            result of getDeltaChi()
 	 * @return double connectivity
 	 */
-	public double getConnectivity(double deltaChi) {
-		double connectivity = 1 - deltaChi;
+	public double getConnectivity(final double deltaChi) {
+		final double connectivity = 1 - deltaChi;
 		return connectivity;
 	}
 
 	/**
 	 * Get the contribution of the stack's foreground particles to the Euler
 	 * characteristic of the universe the stack was cut from.
-	 * 
+	 *
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @param sumEuler
 	 *            (result of getSumEuler() )
 	 * @return delta Chi
 	 */
-	public double getDeltaChi(ImagePlus imp, double sumEuler) {
+	public double getDeltaChi(final ImagePlus imp, final double sumEuler) {
 		setDimensions(imp);
-		double deltaChi = sumEuler - correctForEdges(imp.getStack());
+		final double deltaChi = sumEuler - correctForEdges(imp.getStack());
 		return deltaChi;
 	}
 
 	/**
 	 * Calculate the Euler characteristic of the foreground in a binary stack
-	 * 
+	 *
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @return Euler characteristic of the foreground particles
 	 */
-	public double getSumEuler(ImagePlus imp) {
+	public double getSumEuler(final ImagePlus imp) {
 		setDimensions(imp);
 		final ImageStack stack = imp.getImageStack();
 
 		final int eulerLUT[] = new int[256];
 		fillEulerLUT(eulerLUT);
 
-		final int[] sumEulerInt = new int[depth+1];
+		final int[] sumEulerInt = new int[depth + 1];
 
 		final AtomicInteger ai = new AtomicInteger(0);
-		Thread[] threads = Multithreader.newThreads();
+		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
@@ -228,18 +226,20 @@ public class Connectivity implements PlugIn {
 		return sumEuler;
 	}
 
-	private void setDimensions(ImagePlus imp) {
+	private void setDimensions(final ImagePlus imp) {
 		this.width = imp.getWidth();
 		this.height = imp.getHeight();
 		this.depth = imp.getStackSize();
 		return;
 	}
 
-	/* ----------------------------------------------------------------------- */
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get octant of a vertex at (0,0,0) of a voxel (upper top left) in a 3D
 	 * image (0 border conditions)
-	 * 
+	 *
 	 * @param stack
 	 *            3D image (ImageStack)
 	 * @param x
@@ -250,9 +250,9 @@ public class Connectivity implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding 8-pixel octant (0 if out of image)
 	 */
-	private byte[] getOctant(final ImageStack stack, final int x, final int y,
-			final int z) {
-		byte[] octant = new byte[9]; // index 0 is counter to determine octant
+	private byte[] getOctant(final ImageStack stack, final int x, final int y, final int z) {
+		final byte[] octant = new byte[9]; // index 0 is counter to determine
+											// octant
 		// emptiness, index 8 is at (x,y,z)
 
 		octant[1] = getPixel(stack, x - 1, y - 1, z - 1);
@@ -270,10 +270,12 @@ public class Connectivity implements PlugIn {
 		return octant;
 	} /* end getNeighborhood */
 
-	/* ----------------------------------------------------------------------- */
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Get pixel in 3D image stack (0 border conditions)
-	 * 
+	 *
 	 * @param stack
 	 *            3D image
 	 * @param x
@@ -284,9 +286,8 @@ public class Connectivity implements PlugIn {
 	 *            z- coordinate (in image stacks the indexes start at 1)
 	 * @return corresponding pixel (0 if out of image)
 	 */
-	private byte getPixel(final ImageStack stack, int x, int y, int z) {
-		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0
-				&& z < this.depth)
+	private byte getPixel(final ImageStack stack, final int x, final int y, final int z) {
+		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
 			return ((byte[]) stack.getPixels(z + 1))[y * this.width + x];
 		else
 			return 0;
@@ -294,12 +295,12 @@ public class Connectivity implements PlugIn {
 
 	/**
 	 * Get delta euler value for an octant (~= vertex) from look up table
-	 * 
+	 *
 	 * Only use this method when there is at least one foreground voxel in
 	 * octant.
-	 * 
+	 *
 	 * In binary images, foreground is -1, background = 0
-	 * 
+	 *
 	 * @param octant
 	 *            9 element array containing nVoxels in zeroth element and 8
 	 *            voxel values
@@ -397,10 +398,9 @@ public class Connectivity implements PlugIn {
 
 	/*------------------------------------------------------------------------*/
 	/**
-	 * Check all vertices of stack and count if foreground (-1) this is
-	 * &#967;<sub>0</sub> from Odgaard and Gundersen (1993) and <i>f</i> in my
-	 * working
-	 * 
+	 * Check all vertices of stack and count if foreground (-1) this is &#967;
+	 * <sub>0</sub> from Odgaard and Gundersen (1993) and <i>f</i> in my working
+	 *
 	 * @param stack
 	 * @return number of voxel vertices intersecting with stack vertices
 	 */
@@ -422,7 +422,7 @@ public class Connectivity implements PlugIn {
 	/**
 	 * Count the number of foreground voxels on edges of stack, this is part of
 	 * &#967;<sub>1</sub> (<i>e</i> in my working)
-	 * 
+	 *
 	 * @param stack
 	 * @return number of voxel edges intersecting with stack edges
 	 */
@@ -475,7 +475,7 @@ public class Connectivity implements PlugIn {
 	/**
 	 * Count the number of foreground voxel faces intersecting with stack faces
 	 * This is part of &#967;<sub>2</sub> and is <i>c</i> in my working
-	 * 
+	 *
 	 * @param stack
 	 * @return number of voxel faces intersecting with stack faces
 	 */
@@ -531,7 +531,7 @@ public class Connectivity implements PlugIn {
 	/**
 	 * Count the number of voxel vertices intersecting stack faces. This
 	 * contributes to &#967;<sub>2</sub> (<i>a</i> in my working)
-	 * 
+	 *
 	 * @param stack
 	 * @return Number of voxel vertices intersecting stack faces
 	 */
@@ -603,7 +603,7 @@ public class Connectivity implements PlugIn {
 	/**
 	 * Count the number of intersections between voxel edges and stack faces.
 	 * This is part of &#967;<sub>2</sub>, in my working it's called <i>b</i>
-	 * 
+	 *
 	 * @param stack
 	 * @return number of intersections between voxel edges and stack faces
 	 */
@@ -695,7 +695,7 @@ public class Connectivity implements PlugIn {
 	/**
 	 * Count number of voxel vertices intersecting stack edges. It contributes
 	 * to &#967;<sub>1</sub>, and I call it <i>d</i> in my working
-	 * 
+	 *
 	 * @param stack
 	 * @return number of voxel vertices intersecting stack edges
 	 */
@@ -768,42 +768,45 @@ public class Connectivity implements PlugIn {
 	 * Subtract the returned value from the Euler number prior to calculation of
 	 * connectivity
 	 * </p>
-	 * 
+	 *
 	 * @param stack
 	 * @return edgeCorrection for subtraction from the stack's Euler number
 	 */
 	private double correctForEdges(final ImageStack stack) {
 
-		long f = getStackVertices(stack);
-		long e = getStackEdges(stack) + 3 * f;
-		long c = getStackFaces(stack) + 2 * e - 3 * f; // there are already 6 *
+		final long f = getStackVertices(stack);
+		final long e = getStackEdges(stack) + 3 * f;
+		final long c = getStackFaces(stack) + 2 * e - 3 * f; // there are
+																// already 6 *
 		// f in 2 * e, so remove
 		// 3 * f
-		long d = getEdgeVertices(stack) + f;
-		long a = getFaceVertices(stack);
-		long b = getFaceEdges(stack);
+		final long d = getEdgeVertices(stack) + f;
+		final long a = getFaceVertices(stack);
+		final long b = getFaceEdges(stack);
 
-		double chiZero = (double) f;
-		double chiOne = (double) d - (double) e;
-		double chiTwo = (double) a - (double) b + (double) c;
+		final double chiZero = f;
+		final double chiOne = (double) d - (double) e;
+		final double chiTwo = (double) a - (double) b + c;
 
-		double edgeCorrection = chiTwo / 2 + chiOne / 4 + chiZero / 8;
+		final double edgeCorrection = chiTwo / 2 + chiOne / 4 + chiZero / 8;
 
 		return edgeCorrection;
 	}/* end correctForEdges */
 
-	/* ----------------------------------------------------------------------- */
+	/*
+	 * -----------------------------------------------------------------------
+	 */
 	/**
 	 * Fill Euler LUT Only odd indices are needed because we only check object
 	 * voxels' neighbours, so there is always a 1 in each index.
-	 * 
+	 *
 	 * This is derived from Toriwaki & Yonekura (2002) Table 2 for 26-connected
 	 * images.
-	 * 
+	 *
 	 * @param LUT
 	 *            Euler LUT
 	 */
-	private final void fillEulerLUT(int[] LUT) {
+	private final void fillEulerLUT(final int[] LUT) {
 		LUT[1] = 1;
 		LUT[3] = 0;
 		LUT[5] = 0;

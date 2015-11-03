@@ -2,7 +2,7 @@ package org.doube.geometry;
 
 /**
  * Provides simple trigonometric calculations
- * 
+ *
  * @author Michael Doube
  */
 public class Trig {
@@ -10,26 +10,26 @@ public class Trig {
 	/**
 	 * <p>
 	 * Calculate the distance between 2 3D points p and q using Pythagoras'
-	 * theorem, <i>a</i><sup>2</sup> = <i>b</i><sup>2</sup> +
-	 * <i>c</i><sup>2</sup>
+	 * theorem, <i>a</i><sup>2</sup> = <i>b</i><sup>2</sup> + <i>c</i>
+	 * <sup>2</sup>
 	 * </p>
-	 * 
+	 *
 	 * @param p
 	 *            a 3 element array
 	 * @param q
 	 *            another 3 element array
 	 * @return distance between <i>p</i> and <i>q</i>
 	 */
-	public static double distance3D(double[] p, double[] q) {
+	public static double distance3D(final double[] p, final double[] q) {
 		return distance3D(p[0], p[1], p[2], q[0], q[1], q[2]);
 	}
 
 	/**
 	 * <p>
-	 * Calculate the distance between 2 3D points <i>p</i>(x, y, z) and
-	 * <i>q</i>(x, y, z) using Pythagoras' theorem
+	 * Calculate the distance between 2 3D points <i>p</i>(x, y, z) and <i>q</i>
+	 * (x, y, z) using Pythagoras' theorem
 	 * </p>
-	 * 
+	 *
 	 * @param px
 	 *            x-coordinate of first point
 	 * @param py
@@ -44,8 +44,8 @@ public class Trig {
 	 *            z-coordinate of second point
 	 * @return
 	 */
-	public static double distance3D(double px, double py, double pz, double qx,
-			double qy, double qz) {
+	public static double distance3D(final double px, final double py, final double pz, final double qx, final double qy,
+			final double qz) {
 		return distance3D(px - qx, py - qy, pz - qz);
 	}
 
@@ -54,24 +54,24 @@ public class Trig {
 	 * Calculate the distance to the origin, (0,0,0). Given 3 orthogonal
 	 * vectors, calculates the vector sum
 	 * </p>
-	 * 
+	 *
 	 * @param x
 	 * @param y
 	 * @param z
 	 * @return
 	 */
-	public static double distance3D(double x, double y, double z) {
+	public static double distance3D(final double x, final double y, final double z) {
 		return Math.sqrt(x * x + y * y + z * z);
 	}
 
-	public static double distance3D(double[] v) {
+	public static double distance3D(final double[] v) {
 		return distance3D(v[0], v[1], v[2]);
 	}
 
 	/**
 	 * Caculate the angle between two vectors joined at their tails at the point
 	 * (xv, yv, zv)
-	 * 
+	 *
 	 * @param x0
 	 *            x-coordinate of the head of vector 0
 	 * @param y0
@@ -90,11 +90,10 @@ public class Trig {
 	 *            y-coordinate of the mutual tail point
 	 * @param zv
 	 *            z-coordinate of the mutual tail point
-	 * @return
-	 * 		angle formed by 0-V-1
+	 * @return angle formed by 0-V-1
 	 */
-	public static double angle3D(double x0, double y0, double z0, double x1,
-			double y1, double z1, double xv, double yv, double zv) {
+	public static double angle3D(double x0, double y0, double z0, double x1, double y1, double z1, final double xv,
+			final double yv, final double zv) {
 
 		x0 -= xv;
 		y0 -= yv;
@@ -103,11 +102,11 @@ public class Trig {
 		y1 -= yv;
 		z1 -= zv;
 
-		double dot = x0 * x1 + y0 * y1 + z0 * z1;
-		double d0 = distance3D(x0, y0, z0);
-		double d1 = distance3D(x1, y1, z1);
+		final double dot = x0 * x1 + y0 * y1 + z0 * z1;
+		final double d0 = distance3D(x0, y0, z0);
+		final double d1 = distance3D(x1, y1, z1);
 
-		double cosTheta = dot / (d0 * d1);
+		final double cosTheta = dot / (d0 * d1);
 
 		return Math.acos(cosTheta);
 	}

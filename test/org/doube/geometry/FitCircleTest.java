@@ -1,6 +1,7 @@
 package org.doube.geometry;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -14,17 +15,13 @@ public class FitCircleTest {
 	/** expected result */
 	final static double[] expected = { x, y, r };
 	/** Equally-spaced points on a full circle, without noise */
-	final static double[][] points = FitCircle
-			.getTestCircle(x, y, r, 1000, 0.0);
+	final static double[][] points = FitCircle.getTestCircle(x, y, r, 1000, 0.0);
 	/** Equally-spaced points on a full circle, with noise */
-	final static double[][] noisyPoints = FitCircle.getTestCircle(x, y, r,
-			1000, 0.001);
+	final static double[][] noisyPoints = FitCircle.getTestCircle(x, y, r, 1000, 0.001);
 	/** Equally-spaced points on a circular arc, without noise */
-	final static double[][] arcPoints = FitCircle.getTestCircle(x, y, r, 100,
-			1, 1.5, 0.0);
+	final static double[][] arcPoints = FitCircle.getTestCircle(x, y, r, 100, 1, 1.5, 0.0);
 	/** Equally-spaced points on a circular arc, with noise */
-	final static double[][] noisyArcPoints = FitCircle.getTestCircle(x, y, r,
-			100, 1, 1.5, 0.001);
+	final static double[][] noisyArcPoints = FitCircle.getTestCircle(x, y, r, 100, 1, 1.5, 0.001);
 
 	@Test
 	public void testKasaFit() {

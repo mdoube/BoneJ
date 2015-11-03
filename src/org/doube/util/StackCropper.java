@@ -9,19 +9,19 @@ import ij.plugin.frame.RoiManager;
 
 /**
  * Implements the stack cropping method from RoiMan as a plugin
- * 
+ *
  * @author Michael Doube
- * 
+ *
  */
 public class StackCropper implements PlugIn {
 
-	public void run(String arg) {
-		ImagePlus imp = WindowManager.getCurrentImage();
-		RoiManager roiMan = RoiManager.getInstance();
+	public void run(final String arg) {
+		final ImagePlus imp = WindowManager.getCurrentImage();
+		final RoiManager roiMan = RoiManager.getInstance();
 		if (imp == null || roiMan == null)
 			return;
 
-		GenericDialog gd = new GenericDialog("Crop Stack by ROI");
+		final GenericDialog gd = new GenericDialog("Crop Stack by ROI");
 		gd.addCheckbox("Replace Original", false);
 		gd.addCheckbox("Fill outside", false);
 		gd.addNumericField("Fill_value", 0, 0, 6, "");
@@ -29,17 +29,16 @@ public class StackCropper implements PlugIn {
 		gd.showDialog();
 		if (gd.wasCanceled())
 			return;
-		boolean doReplace = gd.getNextBoolean();
-		boolean doFill = gd.getNextBoolean();
-		int fillValue = (int) gd.getNextNumber();
-		int padding = (int) gd.getNextNumber();
-		ImageStack stack = RoiMan.cropStack(roiMan, imp.getImageStack(),
-				doFill, fillValue, padding);
+		final boolean doReplace = gd.getNextBoolean();
+		final boolean doFill = gd.getNextBoolean();
+		final int fillValue = (int) gd.getNextNumber();
+		final int padding = (int) gd.getNextNumber();
+		final ImageStack stack = RoiMan.cropStack(roiMan, imp.getImageStack(), doFill, fillValue, padding);
 		if (doReplace) {
 			imp.setStack(stack);
 			imp.show();
 		} else {
-			ImagePlus out = new ImagePlus(imp.getTitle() + "-crop");
+			final ImagePlus out = new ImagePlus(imp.getTitle() + "-crop");
 			out.setStack(stack);
 			out.show();
 		}

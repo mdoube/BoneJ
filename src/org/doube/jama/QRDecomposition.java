@@ -19,31 +19,31 @@ public class QRDecomposition implements java.io.Serializable {
 	 */
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
 	/**
 	 * Array for internal storage of decomposition.
-	 * 
+	 *
 	 * @serial internal array storage.
 	 */
-	private double[][] QR;
+	private final double[][] QR;
 
 	/**
 	 * Row and column dimensions.
-	 * 
+	 *
 	 * @serial column dimension.
 	 * @serial row dimension.
 	 */
-	private int m, n;
+	private final int m, n;
 
 	/**
 	 * Array for internal storage of diagonal of R.
-	 * 
+	 *
 	 * @serial diagonal of R.
 	 */
-	private double[] Rdiag;
+	private final double[] Rdiag;
 
 	/*
 	 * ------------------------ Constructor ------------------------
@@ -51,13 +51,13 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * QR Decomposition, computed by Householder reflections.
-	 * 
+	 *
 	 * @param A
 	 *            Rectangular matrix
 	 * @return Structure to access R and the Householder vectors and compute Q.
 	 */
 
-	public QRDecomposition(Matrix A) {
+	public QRDecomposition(final Matrix A) {
 		// Initialize.
 		QR = A.getArrayCopy();
 		m = A.getRowDimension();
@@ -104,7 +104,7 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * Is the matrix full rank?
-	 * 
+	 *
 	 * @return true if R, and hence A, has full rank.
 	 */
 
@@ -118,13 +118,13 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the Householder vectors
-	 * 
+	 *
 	 * @return Lower trapezoidal matrix whose columns define the reflections
 	 */
 
 	public Matrix getH() {
-		Matrix X = new Matrix(m, n);
-		double[][] H = X.getArray();
+		final Matrix X = new Matrix(m, n);
+		final double[][] H = X.getArray();
 		for (int i = 0; i < m; i++) {
 			for (int j = 0; j < n; j++) {
 				if (i >= j) {
@@ -139,13 +139,13 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the upper triangular factor
-	 * 
+	 *
 	 * @return R
 	 */
 
 	public Matrix getR() {
-		Matrix X = new Matrix(n, n);
-		double[][] R = X.getArray();
+		final Matrix X = new Matrix(n, n);
+		final double[][] R = X.getArray();
 		for (int i = 0; i < n; i++) {
 			for (int j = 0; j < n; j++) {
 				if (i < j) {
@@ -162,13 +162,13 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * Generate and return the (economy-sized) orthogonal factor
-	 * 
+	 *
 	 * @return Q
 	 */
 
 	public Matrix getQ() {
-		Matrix X = new Matrix(m, n);
-		double[][] Q = X.getArray();
+		final Matrix X = new Matrix(m, n);
+		final double[][] Q = X.getArray();
 		for (int k = n - 1; k >= 0; k--) {
 			for (int i = 0; i < m; i++) {
 				Q[i][k] = 0.0;
@@ -192,7 +192,7 @@ public class QRDecomposition implements java.io.Serializable {
 
 	/**
 	 * Least squares solution of A*X = B
-	 * 
+	 *
 	 * @param B
 	 *            A Matrix with as many rows as A and any number of columns.
 	 * @return X that minimizes the two norm of Q*R*X-B.
@@ -202,18 +202,17 @@ public class QRDecomposition implements java.io.Serializable {
 	 *                Matrix is rank deficient.
 	 */
 
-	public Matrix solve(Matrix B) {
+	public Matrix solve(final Matrix B) {
 		if (B.getRowDimension() != m) {
-			throw new IllegalArgumentException(
-					"Matrix row dimensions must agree.");
+			throw new IllegalArgumentException("Matrix row dimensions must agree.");
 		}
 		if (!this.isFullRank()) {
 			throw new RuntimeException("Matrix is rank deficient.");
 		}
 
 		// Copy right hand side
-		int nx = B.getColumnDimension();
-		double[][] X = B.getArrayCopy();
+		final int nx = B.getColumnDimension();
+		final double[][] X = B.getArrayCopy();
 
 		// Compute Y = transpose(Q)*B
 		for (int k = 0; k < n; k++) {

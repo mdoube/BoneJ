@@ -2,7 +2,7 @@ package org.doube.bonej;
 
 /**
  *  StructureModelIndex Copyright 2010 2015 Michael Doube
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -25,6 +25,12 @@ import java.util.List;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.Vectors;
+import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
+import org.doube.util.UsageReporter;
+
+import customnode.CustomTriangleMesh;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
@@ -33,27 +39,20 @@ import ij3d.Image3DUniverse;
 import isosurface.MeshEditor;
 import marchingcubes.MCTriangulator;
 
-import org.doube.bonej.Dilate;
-import org.doube.geometry.Vectors;
-import org.doube.util.ImageCheck;
-import org.doube.util.ResultInserter;
-import org.doube.util.UsageReporter;
-
-import customnode.CustomTriangleMesh;
-
 /**
  * Calculates the structure model index (SMI), a measure of how plate-like or
  * rod-like a structure is.
- * 
+ *
  * @author Michael Doube
- * @see <p>
+ * @see
+ * 		<p>
  *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
  *      with the Structure Model Index. Comput Methods Biomech Biomed Engin
- *      1997;1(1):15-23. <a
- *      href="http://dx.doi.org/10.1080/01495739708936692">doi:
+ *      1997;1(1):15-23.
+ *      <a href="http://dx.doi.org/10.1080/01495739708936692">doi:
  *      10.1080/01495739708936692</a>
  *      </p>
- * 
+ *
  */
 public class StructureModelIndex implements PlugIn {
 
@@ -61,23 +60,23 @@ public class StructureModelIndex implements PlugIn {
 	private static List<Point3f> mesh;
 	private static List<Color3f> colours;
 
-	public void run(String arg) {
+	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
 		}
-		ImagePlus imp = IJ.getImage();
+		final ImagePlus imp = IJ.getImage();
 		if (null == imp) {
 			IJ.noImage();
 			return;
 		}
-		ImageCheck ic = new ImageCheck();
+		final ImageCheck ic = new ImageCheck();
 		if (!ic.isBinary(imp)) {
 			IJ.error("SMI needs a binary image.");
 			return;
 		}
 
-		GenericDialog gd = new GenericDialog("Mesh Parameters");
-		String[] smiMethods = { "Hildebrand & Rüegsegger", "SkyScan" };
+		final GenericDialog gd = new GenericDialog("Mesh Parameters");
+		final String[] smiMethods = { "Hildebrand & Rüegsegger", "SkyScan" };
 		gd.addChoice("SMI Method", smiMethods, smiMethods[0]);
 		gd.addNumericField("Voxel resampling", 6, 0, 5, "voxels");
 		gd.addNumericField("Mesh smoothing (0-1)", 0.5, 3, 5, "");
@@ -88,14 +87,15 @@ public class StructureModelIndex implements PlugIn {
 			return;
 		}
 
-		IJ.showMessage("Do not use SMI for science", "<html><p>SMI is strongly confounded by the amount of surface that is concave.</p>"
-				+ "<p>Please <b>do not</b> use SMI for scientific research.</p>"
-				+ "<p>For more details see:</p>"
-				+ "<p>Salmon PL et al. (2015) Structure model index does not measure rods and plates in trabecular bone <a href=\"http://dx.doi.org/10.3389/fendo.2015.00162\">http://dx.doi.org/10.3389/fendo.2015.00162</a></p></html>");
-		
-		String smiMethod = gd.getNextChoice();
-		int voxelResampling = (int) Math.floor(gd.getNextNumber());
-		float meshSmoothing = (float) gd.getNextNumber();
+		IJ.showMessage("Do not use SMI for science",
+				"<html><p>SMI is strongly confounded by the amount of surface that is concave.</p>"
+						+ "<p>Please <b>do not</b> use SMI for scientific research.</p>"
+						+ "<p>For more details see:</p>"
+						+ "<p>Salmon PL et al. (2015) Structure model index does not measure rods and plates in trabecular bone <a href=\"http://dx.doi.org/10.3389/fendo.2015.00162\">http://dx.doi.org/10.3389/fendo.2015.00162</a></p></html>");
+
+		final String smiMethod = gd.getNextChoice();
+		final int voxelResampling = (int) Math.floor(gd.getNextNumber());
+		final float meshSmoothing = (float) gd.getNextNumber();
 		do3D = gd.getNextBoolean();
 
 		if (do3D) {
@@ -109,15 +109,15 @@ public class StructureModelIndex implements PlugIn {
 		} else {
 			smi = hildRueg(imp, voxelResampling, meshSmoothing);
 		}
-		ResultInserter ri = ResultInserter.getInstance();
+		final ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "SMI", smi);
 		ri.updateTable();
 		UsageReporter.reportEvent(this).send();
 
 		if (do3D) {
-			Image3DUniverse universe = new Image3DUniverse();
+			final Image3DUniverse universe = new Image3DUniverse();
 
-			CustomTriangleMesh triangles = new CustomTriangleMesh(mesh);
+			final CustomTriangleMesh triangles = new CustomTriangleMesh(mesh);
 
 			triangles.setColor(colours);
 
@@ -137,7 +137,7 @@ public class StructureModelIndex implements PlugIn {
 	 * as <br/>
 	 * smi = 6 * (s<sub>2</sub>-s<sub>1</sub>)*v / s<sub>1</sub><sup>2</sup>
 	 * </p>
-	 * 
+	 *
 	 * @param imp
 	 *            binary ImagePlus
 	 * @param voxelResampling
@@ -152,28 +152,25 @@ public class StructureModelIndex implements PlugIn {
 	 *      description of measured parameters</a>
 	 */
 	@SuppressWarnings("unchecked")
-	public static double skyScan(ImagePlus imp, int voxelResampling,
-			float meshSmoothing) {
-		int threshold = 128;
+	public static double skyScan(final ImagePlus imp, final int voxelResampling, final float meshSmoothing) {
+		final int threshold = 128;
 		final boolean[] channels = { true, false, false };
-		MCTriangulator mct = new MCTriangulator();
+		final MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
-		List<Point3f> points = mct.getTriangles(imp, threshold, channels,
-				voxelResampling);
+		List<Point3f> points = mct.getTriangles(imp, threshold, channels, voxelResampling);
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		IJ.showStatus("Creating surface mesh...");
-		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour,
-				0.0f);
+		CustomTriangleMesh surface = new CustomTriangleMesh(points, colour, 0.0f);
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
-		double v = Math.abs(surface.getVolume());
+		final double v = Math.abs(surface.getVolume());
 
-		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
+		final double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 
 		IJ.showStatus("Dilating voxel model...");
-		Dilate d = new Dilate();
-		ImagePlus imp2 = d.dilate(imp, 255);
+		final Dilate d = new Dilate();
+		final ImagePlus imp2 = d.dilate(imp, 255);
 
 		IJ.showStatus("Finding surface points...");
 		points = mct.getTriangles(imp2, threshold, channels, voxelResampling);
@@ -183,8 +180,8 @@ public class StructureModelIndex implements PlugIn {
 		surface = new CustomTriangleMesh(points, colour, 0.0f);
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
-		double s2 = MeasureSurface.getSurfaceArea(surface.getMesh());
-		double smi = 6 * ((s2 - s1) * v / (s1 * s1));
+		final double s2 = MeasureSurface.getSurfaceArea(surface.getMesh());
+		final double smi = 6 * ((s2 - s1) * v / (s1 * s1));
 		IJ.showStatus("SMI calculated.");
 		return smi;
 	}
@@ -195,20 +192,21 @@ public class StructureModelIndex implements PlugIn {
 	 * Hildebrand and Rüegsegger. Creates a surface model, dilates it by a small
 	 * increment and compares the areas before and after dilation.
 	 * </p>
-	 * 
+	 *
 	 * <p>
 	 * This method is preferred to voxel-dilating methods, like skyScan() in
 	 * this class
 	 * </p>
-	 * 
-	 * @see <p>
+	 *
+	 * @see
+	 * 		<p>
 	 *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
 	 *      with the Structure Model Index. Comput Methods Biomech Biomed Engin
-	 *      1997;1(1):15-23. <a
-	 *      href="http://dx.doi.org/10.1080/01495739708936692">doi:
+	 *      1997;1(1):15-23.
+	 *      <a href="http://dx.doi.org/10.1080/01495739708936692">doi:
 	 *      10.1080/01495739708936692</a>
 	 *      </p>
-	 * 
+	 *
 	 * @param imp
 	 *            binary 3D image
 	 * @param voxelResampling
@@ -218,42 +216,39 @@ public class StructureModelIndex implements PlugIn {
 	 * @return SMI
 	 */
 	@SuppressWarnings("unchecked")
-	public static double hildRueg(ImagePlus imp, int voxelResampling,
-			float meshSmoothing) {
-		int threshold = 128;
+	public static double hildRueg(final ImagePlus imp, final int voxelResampling, final float meshSmoothing) {
+		final int threshold = 128;
 		final boolean[] channels = { true, false, false };
 		final double r = imp.getCalibration().pixelWidth / 100;
 		final Point3f origin = new Point3f(0.0f, 0.0f, 0.0f);
-		MCTriangulator mct = new MCTriangulator();
+		final MCTriangulator mct = new MCTriangulator();
 		IJ.showStatus("Finding surface points...");
-		List<Point3f> triangles = mct.getTriangles(imp, threshold, channels,
-				voxelResampling);
+		final List<Point3f> triangles = mct.getTriangles(imp, threshold, channels, voxelResampling);
 		final Color3f colour = new Color3f(0.0f, 0.0f, 0.0f);
 		IJ.showStatus("Creating surface mesh...");
-		CustomTriangleMesh surface = new CustomTriangleMesh(triangles, colour,
-				0.0f);
+		final CustomTriangleMesh surface = new CustomTriangleMesh(triangles, colour, 0.0f);
 		IJ.showStatus("Smoothing surface mesh...");
 		MeshEditor.smooth(surface, meshSmoothing);
 		IJ.showStatus("Calculating volume...");
-		double v = Math.abs(surface.getVolume());
+		final double v = Math.abs(surface.getVolume());
 
-		double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
+		final double s1 = MeasureSurface.getSurfaceArea(surface.getMesh());
 
 		// get all the unique vertices
 		// associate each unique vertex with the triangles around it
-		Hashtable<Point3f, ArrayList<Integer>> vertexHash = new Hashtable<Point3f, ArrayList<Integer>>();
+		final Hashtable<Point3f, ArrayList<Integer>> vertexHash = new Hashtable<Point3f, ArrayList<Integer>>();
 		ArrayList<Integer> locations = new ArrayList<Integer>();
 		final int nPoints = triangles.size();
 		for (int p = 0; p < nPoints; p++) {
 			IJ.showStatus("Finding vertices...");
 			IJ.showProgress(p + 1, nPoints);
-			Point3f testPoint = triangles.get(p);
+			final Point3f testPoint = triangles.get(p);
 			if (vertexHash.get(testPoint) == null) {
-				ArrayList<Integer> points = new ArrayList<Integer>();
+				final ArrayList<Integer> points = new ArrayList<Integer>();
 				points.add(p);
 				vertexHash.put(testPoint, points);
 			} else {
-				locations = (ArrayList<Integer>) vertexHash.get(testPoint);
+				locations = vertexHash.get(testPoint);
 				locations.add(p);
 				vertexHash.put(testPoint, locations);
 			}
@@ -261,14 +256,14 @@ public class StructureModelIndex implements PlugIn {
 
 		// get the normals of the triangles around each vertex
 		// and calculate the normal of the vertex as the mean triangle normal
-		Hashtable<Point3f, Point3f> normalsHash = new Hashtable<Point3f, Point3f>();
+		final Hashtable<Point3f, Point3f> normalsHash = new Hashtable<Point3f, Point3f>();
 		Point3f vert = new Point3f();
-		Enumeration<Point3f> e = vertexHash.keys();
+		final Enumeration<Point3f> e = vertexHash.keys();
 		while (e.hasMoreElements()) {
 			IJ.showStatus("Calculating vertex normals...");
-			vert = (Point3f) e.nextElement();
-			locations = (ArrayList<Integer>) vertexHash.get(vert);
-			Point3f sumNormals = new Point3f();
+			vert = e.nextElement();
+			locations = vertexHash.get(vert);
+			final Point3f sumNormals = new Point3f();
 			final int vT = locations.size();
 			for (int i = 0; i < vT; i++) {
 				final int pointIndex = locations.get(i);
@@ -293,14 +288,13 @@ public class StructureModelIndex implements PlugIn {
 					point2 = triangles.get(pointIndex);
 					break;
 				}
-				Point3f surfaceNormal = Vectors.crossProduct(point0, point1,
-						point2);
+				final Point3f surfaceNormal = Vectors.crossProduct(point0, point1, point2);
 				sumNormals.x += surfaceNormal.x;
 				sumNormals.y += surfaceNormal.y;
 				sumNormals.z += surfaceNormal.z;
 			}
 
-			Point3f normal = new Point3f();
+			final Point3f normal = new Point3f();
 			normal.x = sumNormals.x / vT;
 			normal.y = sumNormals.y / vT;
 			normal.z = sumNormals.z / vT;
@@ -315,13 +309,13 @@ public class StructureModelIndex implements PlugIn {
 		}
 
 		// move all the points by the unit normal * small increment r
-		ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
+		final ArrayList<Point3f> movedTriangles = new ArrayList<Point3f>();
 		for (int t = 0; t < nPoints; t++) {
 			IJ.showStatus("Dilating surface mesh...");
 			IJ.showProgress(t + 1, nPoints);
-			Point3f point = triangles.get(t);
-			Point3f newPoint = (Point3f) point.clone();
-			Point3f normal = (Point3f) normalsHash.get(point);
+			final Point3f point = triangles.get(t);
+			final Point3f newPoint = (Point3f) point.clone();
+			final Point3f normal = normalsHash.get(point);
 			newPoint.x += normal.x * r;
 			newPoint.y += normal.y * r;
 			newPoint.z += normal.z * r;
@@ -338,19 +332,16 @@ public class StructureModelIndex implements PlugIn {
 			Point3f point0 = triangles.get(i);
 			Point3f point1 = triangles.get(i + 1);
 			Point3f point2 = triangles.get(i + 2);
-			double area1 = 0.5 * Vectors.crossProduct(point0, point1, point2)
-					.distance(origin);
+			final double area1 = 0.5 * Vectors.crossProduct(point0, point1, point2).distance(origin);
 			point0 = movedTriangles.get(i);
 			point1 = movedTriangles.get(i + 1);
 			point2 = movedTriangles.get(i + 2);
-			double area2 = 0.5 * Vectors.crossProduct(point0, point1, point2)
-					.distance(origin);
+			final double area2 = 0.5 * Vectors.crossProduct(point0, point1, point2).distance(origin);
 
-			double deltaArea = area2 - area1;
+			final double deltaArea = area2 - area1;
 
 			if (do3D)
-				addTo3DUniverse(point0, point1, point2, area1, deltaArea, s1,
-						v, r);
+				addTo3DUniverse(point0, point1, point2, area1, deltaArea, s1, v, r);
 
 			if (deltaArea >= 0) {
 				convexDelta += deltaArea;
@@ -361,37 +352,36 @@ public class StructureModelIndex implements PlugIn {
 			}
 		}
 
-		double concaveFraction = concaveArea / (concaveArea + convexArea);
+		final double concaveFraction = concaveArea / (concaveArea + convexArea);
 		IJ.log("Fraction of surface area that is concave: " + concaveFraction);
-		double sRconvex = convexDelta / r;
-		double sRconcave = concaveDelta / r;
-		double convexSMI = 6 * sRconvex * v / (s1 * s1);
-		double concaveSMI = 6 * sRconcave * v / (s1 * s1);
+		final double sRconvex = convexDelta / r;
+		final double sRconcave = concaveDelta / r;
+		final double convexSMI = 6 * sRconvex * v / (s1 * s1);
+		final double concaveSMI = 6 * sRconcave * v / (s1 * s1);
 		IJ.log("Convex SMI = " + convexSMI);
 		IJ.log("Concave SMI = " + concaveSMI);
 
-		ResultInserter ri = ResultInserter.getInstance();
+		final ResultInserter ri = ResultInserter.getInstance();
 		ri.setResultInRow(imp, "Concave", concaveFraction);
 		ri.setResultInRow(imp, "SMI+", convexSMI);
 		ri.setResultInRow(imp, "SMI-", concaveSMI);
 
-		double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
-		double sR = (s2 - s1) / r;
-		double smi = 6 * sR * v / (s1 * s1);
+		final double s2 = MeasureSurface.getSurfaceArea(movedTriangles);
+		final double sR = (s2 - s1) / r;
+		final double smi = 6 * sR * v / (s1 * s1);
 		IJ.showStatus("SMI calculated.");
 		IJ.showProgress(1.0);
 		return smi;
 	}
 
-	private static void addTo3DUniverse(Point3f point0, Point3f point1,
-			Point3f point2, double area1, double deltaArea, double s1,
-			double v, double r) {
+	private static void addTo3DUniverse(final Point3f point0, final Point3f point1, final Point3f point2,
+			final double area1, final double deltaArea, final double s1, final double v, final double r) {
 
 		mesh.add(point0);
 		mesh.add(point1);
 		mesh.add(point2);
 
-		double af = deltaArea / area1;
+		final double af = deltaArea / area1;
 
 		float red = 1.0f;
 		float green = 1.0f;
@@ -404,7 +394,7 @@ public class StructureModelIndex implements PlugIn {
 			green -= (float) Math.pow(-af, 0.333) * 9;
 		}
 
-		Color3f colour = new Color3f(red, green, blue);
+		final Color3f colour = new Color3f(red, green, blue);
 		colours.add(colour);
 		colours.add(colour);
 		colours.add(colour);
