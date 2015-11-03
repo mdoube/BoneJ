@@ -794,8 +794,8 @@ public abstract class RoiSelector {
 			distanceFromCentreOfLimb[i] = Math.pow(softPoints[0] - bones.get(i)[0], 2.0)
 					+ Math.pow(softPoints[1] - bones.get(i)[1],
 							2.0); /*
-									 * Square root omitted, as it does not affect
-									 * the order...
+									 * Square root omitted, as it does not
+									 * affect the order...
 									 */
 		}
 		return distanceFromCentreOfLimb;
