@@ -34,7 +34,7 @@ public class ImageCheck {
 	 * @param imp
 	 * @return true if image is binary
 	 */
-	public boolean isBinary(ImagePlus imp) {
+	public static boolean isBinary(ImagePlus imp) {
 		if (imp == null) {
 			IJ.noImage();
 			return false;
@@ -54,7 +54,7 @@ public class ImageCheck {
 	 * @param imp
 	 * @return true if the image has >= 2 slices
 	 */
-	public boolean isMultiSlice(ImagePlus imp) {
+	public static boolean isMultiSlice(ImagePlus imp) {
 		if (imp == null) {
 			IJ.noImage();
 			return false;
@@ -75,7 +75,7 @@ public class ImageCheck {
 	 *            tolerated fractional deviation from equal length
 	 * @return true if voxel width == height == depth
 	 */
-	public boolean isVoxelIsotropic(ImagePlus imp, double tolerance) {
+	public static boolean isVoxelIsotropic(ImagePlus imp, double tolerance) {
 		if (imp == null) {
 			IJ.noImage();
 			return false;
@@ -105,7 +105,7 @@ public class ImageCheck {
 	 *            input image
 	 * @return false if voxel dimensions are not equal
 	 */
-	public boolean isVoxelIsotropic(ImagePlus imp) {
+	public static boolean isVoxelIsotropic(ImagePlus imp) {
 		return isVoxelIsotropic(imp, 0);
 	}
 
@@ -116,7 +116,7 @@ public class ImageCheck {
 	 * @return voxel thickness based on DICOM header information. Returns -1 if
 	 *         there is no DICOM slice position information.
 	 */
-	public double dicomVoxelDepth(ImagePlus imp) {
+	public static double dicomVoxelDepth(ImagePlus imp) {
 		Calibration cal = imp.getCalibration();
 		double vD = cal.pixelDepth;
 
@@ -169,7 +169,7 @@ public class ImageCheck {
 	 *            , in 0000,0000 format.
 	 * @return the value associated with the tag
 	 */
-	private String getDicomAttribute(ImagePlus imp, int slice, String tag) {
+	private static String getDicomAttribute(ImagePlus imp, int slice, String tag) {
 		ImageStack stack = imp.getImageStack();
 		String header = stack.getSliceLabel(slice);
 		// tag must be in format 0000,0000
