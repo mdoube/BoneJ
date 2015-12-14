@@ -77,7 +77,7 @@ public class ImageCheck {
 	 */
 	public static boolean isVoxelIsotropic(ImagePlus imp, double tolerance) {
 		if (imp == null) {
-			IJ.noImage();
+			IJ.error("No image", "Image is null");
 			return false;
 		}
 		Calibration cal = imp.getCalibration();

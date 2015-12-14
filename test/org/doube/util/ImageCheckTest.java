@@ -17,6 +17,12 @@ import ij.measure.Calibration;
  */
 public class ImageCheckTest {
     @Test
+    public void testIsVoxelIsotropicReturnsFalseIfImageIsNull() throws Exception {
+        boolean result = ImageCheck.isVoxelIsotropic(null);
+        assertFalse("Null image should not be isotropic", result);
+    }
+
+    @Test
     public void testIsVoxelIsotropic() throws Exception {
         ImagePlus testImage = mock(ImagePlus.class);
         Calibration anisotropicCalibration = new Calibration();
