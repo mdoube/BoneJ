@@ -43,6 +43,7 @@ public class ResultInserter {
 	public static ResultInserter getInstance() {
 		rt = ResultsTable.getResultsTable();
 		final String table = "Results";
+		rt.setNaNEmptyCells(true);
 		rt.show(table);
 		return INSTANCE;
 	}
@@ -73,11 +74,6 @@ public class ResultInserter {
 				if (!rt.columnExists(rt.getColumnIndex(colHeading))) {
 					// in which case, just insert the value
 					rt.setValue(colHeading, row, value);
-					// and fill all other newly created cells with NaN
-					for (int r = 0; r < rt.getCounter(); r++) {
-						if (r != row)
-							rt.setValue(colHeading, r, Double.NaN);
-					}
 					return;
 				} else {
 					// but if there is, it might or might not have data in it
@@ -85,10 +81,8 @@ public class ResultInserter {
 					if (currentValue.equals(Double.NaN)) {
 						rt.setValue(colHeading, row, value);
 						return;
-					} else {
-						// look for another row with the right title
-						continue;
 					}
+					// look for another row with the right title
 				}
 			}
 		}
@@ -98,15 +92,6 @@ public class ResultInserter {
 		rt.incrementCounter();
 		rt.addLabel(label, title);
 		rt.addValue(colHeading, value);
-		// set all the other values in the row to Double.NaN
-		// (IJ has set them to 0, which is unhelpful, and we can't use null)
-		final int row = rt.getCounter() - 1;
-		for (int c = 0; c <= rt.getLastColumn(); c++) {
-			if (!rt.getColumnHeading(c).equals(colHeading) && !rt.getColumnHeading(c).equals(label)) {
-				rt.setValue(c, row, Double.NaN);
-			}
-		}
-		return;
 	}
 
 	/**
