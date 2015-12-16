@@ -36,16 +36,16 @@ public class ImageCheck {
 	 */
 	public static boolean isBinary(ImagePlus imp) {
 		if (imp == null) {
-			IJ.noImage();
+			IJ.error("Image is null");
 			return false;
 		}
-		if (imp.getType() != ImagePlus.GRAY8)
+
+		if (imp.getType() != ImagePlus.GRAY8) {
 			return false;
+		}
 
 		ImageStatistics stats = imp.getStatistics();
-		if (stats.histogram[0] + stats.histogram[255] != stats.pixelCount)
-			return false;
-		return true;
+		return stats.histogram[0] + stats.histogram[255] == stats.pixelCount;
 	}
 
 	/**
