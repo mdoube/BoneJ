@@ -78,16 +78,15 @@ public class Thickness implements PlugIn {
 	private float[][] sNew;
 
 	public void run(final String arg) {
-		final ImageCheck ic = new ImageCheck();
 		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
-		if (!ic.isBinary(imp)) {
+		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
 			return;
 		}
 
-		if (!ic.isVoxelIsotropic(imp, 1E-3)) {
+		if (!ImageCheck.isVoxelIsotropic(imp, 1E-3)) {
 			if (IJ.showMessageWithCancel("Anisotropic voxels",
 					"This image contains anisotropic voxels, which will\n"
 							+ "result in incorrect thickness calculation.\n\n"
@@ -169,7 +168,6 @@ public class Thickness implements PlugIn {
 		final double duration = ((double) System.currentTimeMillis() - (double) startTime) / 1000;
 		IJ.log("Duration = " + IJ.d2s(duration, 3) + " s");
 		UsageReporter.reportEvent(this).send();
-		return;
 	}
 
 	// Modified from ImageJ code by Wayne Rasband
@@ -294,7 +292,7 @@ public class Thickness implements PlugIn {
 	}
 
 	class Step1Thread extends Thread {
-		int thread, nThreads, w, h, d, thresh;
+		int thread, nThreads, w, h, d;
 		float[][] s;
 		byte[][] data;
 		boolean inv;
@@ -674,8 +672,6 @@ public class Thickness implements PlugIn {
 			} // j
 		} // k
 		IJ.showStatus("Distance Ridge complete");
-		// replace work array s with result of the method, sNew
-		s = sNew;
 	}
 
 	/*
@@ -804,7 +800,6 @@ public class Thickness implements PlugIn {
 				for (int i = 0; i < w; i++) {
 					ind = i + wj;
 					if (sk[ind] > 0) {
-						;
 						iRidgeK[iR] = i;
 						jRidgeK[iR] = j;
 						rRidgeK[iR++] = sk[ind];
@@ -846,11 +841,10 @@ public class Thickness implements PlugIn {
 			}
 		}
 		IJ.showStatus("Local Thickness complete");
-		return;
 	}
 
 	class LTThread extends Thread {
-		int thread, nThreads, w, h, d, nR;
+		int thread, nThreads, w, h, d;
 		float[][] s;
 		int[] nRidge;
 		int[][] iRidge, jRidge;
@@ -1296,7 +1290,6 @@ public class Thickness implements PlugIn {
 			ri.setResultInRow(imp, "Tb.Sp Max (" + units + ")", maxThick);
 		}
 		ri.updateTable();
-		return;
 	}
 
 	/**
@@ -1315,7 +1308,7 @@ public class Thickness implements PlugIn {
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
 	public ImagePlus getLocalThickness(final ImagePlus imp, final boolean inv, final boolean doMask) {
-		if (!(new ImageCheck()).isVoxelIsotropic(imp, 1E-3)) {
+		if (!ImageCheck.isVoxelIsotropic(imp, 1E-3)) {
 			IJ.log("Warning: voxels are anisotropic. Local thickness results will be inaccurate");
 		}
 		final float[][] s = geometryToDistanceMap(imp, inv);
@@ -1344,7 +1337,7 @@ public class Thickness implements PlugIn {
 	}
 
 	/**
-	 * Reduce error in thickness quantitation by trimming the one pixel overhang
+	 * Reduce error in thickness quantization by trimming the one pixel overhang
 	 * in the thickness map
 	 *
 	 * @param imp
