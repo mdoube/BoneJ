@@ -17,7 +17,7 @@ public class ImageCheck {
 	/**
 	 * Minimal ImageJ version required by BoneJ
 	 */
-	public static final String requiredIJVersion = "1.49q";
+	public static final String requiredIJVersion = "1.49u";
 
 	/**
 	 * ImageJ releases known to produce errors or bugs with BoneJ. Daily builds
