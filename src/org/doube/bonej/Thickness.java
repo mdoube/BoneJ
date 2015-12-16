@@ -131,6 +131,7 @@ public class Thickness implements PlugIn {
 				impLTC = getLocalThickness(imp, inverse, doMask);
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
+			backgroundToNaN(impLTC, 0x00);
 			final double[] stats = StackStats.meanStdDev(impLTC);
 			insertResults(imp, stats, inverse);
 			if (doGraphic && !Interpreter.isBatchMode()) {
@@ -153,6 +154,7 @@ public class Thickness implements PlugIn {
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
+			backgroundToNaN(impLTCi, 0x00);
 			final double[] stats = StackStats.meanStdDev(impLTCi);
 			insertResults(imp, stats, inverse);
 			if (doGraphic && !Interpreter.isBatchMode()) {
@@ -1378,5 +1380,29 @@ public class Thickness implements PlugIn {
 			}
 		}
 		return impLTC;
+	}
+
+
+	/**
+	 * Sets the value of the background pixels in the given image to Float.NaN.
+	 *
+	 * @param image
+	 *            A 32-bit floating point image
+	 * @param backgroundColor
+	 *            The color used to identify background pixel (usually 0x00)
+	 */
+	private static void backgroundToNaN(final ImagePlus image, final int backgroundColor) {
+		final int depth = image.getNSlices();
+		final int pixelsPerSlice = image.getWidth() * image.getHeight();
+		final ImageStack stack = image.getStack();
+
+		for (int z = 1; z <= depth; z++) {
+			final float pixels[] = (float[]) stack.getPixels(z);
+			for (int i = 0; i < pixelsPerSlice; i++) {
+				if (Float.compare(pixels[i], backgroundColor) == 0) {
+					pixels[i] = Float.NaN;
+				}
+			}
+		}
 	}
 }
