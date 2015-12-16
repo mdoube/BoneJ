@@ -68,7 +68,7 @@ public class RoiMan {
      * number is out of bounds
      */
     public static ArrayList<Roi> getSliceRoi(RoiManager roiMan, ImageStack stack, int sliceNumber) {
-        ArrayList<Roi> roiList = new ArrayList<>();
+        ArrayList<Roi> roiList = new ArrayList<Roi>();
 
         if (roiMan == null || stack == null) {
             return roiList;
