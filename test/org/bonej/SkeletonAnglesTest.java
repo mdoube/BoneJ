@@ -1,6 +1,7 @@
 package org.bonej;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNull;
 
 import org.doube.geometry.TestDataMaker;
 import org.junit.Test;
@@ -12,7 +13,7 @@ public class SkeletonAnglesTest {
 	private final double pi4 = Math.PI / 4;
 	private final double pi2 = Math.PI / 2;
 	/** Not quite pi / 2 because vertex isn't exactly at corner */
-	private final double pi2ish = 1.58555518815571;
+	private final double pi2ish = 1.5904976894727854;
 
 	private final double[][][] circleCrossResult = {
 			{ { pi4, pi4, pi2 }, null, { pi4, pi2, pi4 }, { pi4, pi2, pi4 }, { pi4, pi4, pi2 } } };
@@ -63,5 +64,13 @@ public class SkeletonAnglesTest {
 		for (int g = 0; g < boxFrameResultNth.length; g++)
 			for (int v = 0; v < boxFrameResultNth[g].length; v++)
 				assertArrayEquals(boxFrameResultNth[g][v], result[g][v], 1e-12);
+	}
+
+	@Test
+	public void testCalculateTriplePointAnglesReturnsNullIfImageCannotBeSkeletonized() {
+		final ImagePlus imp = TestDataMaker.brick(10, 10, 10);
+		final double[][][] result = (new SkeletonAngles()).calculateTriplePointAngles(imp,
+				SkeletonAngles.VERTEX_TO_VERTEX);
+		assertNull("Result should be null if image cannot be skeletonized", result);
 	}
 }
