@@ -22,11 +22,7 @@ import java.util.ArrayList;
 
 import org.doube.geometry.Centroid;
 import org.doube.geometry.Trig;
-import org.doube.skeleton.AnalyzeSkeleton;
-import org.doube.skeleton.Edge;
-import org.doube.skeleton.Graph;
-import org.doube.skeleton.Point;
-import org.doube.skeleton.Vertex;
+import org.doube.skeleton.*;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
@@ -67,9 +63,13 @@ public class SkeletonAngles implements PlugIn {
 			nthPixel = VERTEX_TO_VERTEX;
 		}
 
-		final ResultInserter ri = ResultInserter.getInstance();
-
 		final double[][][] result = calculateTriplePointAngles(imp, nthPixel);
+
+		if (result == null) {
+			return;
+		}
+
+		final ResultInserter ri = ResultInserter.getInstance();
 
 		for (int g = 0; g < result.length; g++) {
 			for (int v = 0; v < result[g].length; v++) {
@@ -88,24 +88,33 @@ public class SkeletonAngles implements PlugIn {
 
 	/**
 	 * Calculate the three angles formed by the branches at every triple point
-	 * in the skeleton. Assumes the image has been skeletonized. Angles can be
-	 * calculated between opposite vertices or an arbitrary number of points
-	 * from the triple point.
+	 * in the skeleton. Angles can be calculated between opposite vertices or an
+	 * arbitrary number of points from the triple point.
 	 *
 	 * @param imp
-	 *            Skeletonized image with the skeleton in the foreground
+	 *            A binary 8-bit image
 	 * @param nthPixel
 	 *            Number of points along the edge away from the triple point to
 	 *            use for angle calculation. Set to
 	 *            SkeletonAngles.VERTEX_TO_VERTEX to use opposite vertices
 	 * @return 3D array containing 3 angles (in radians) for each triple point
 	 *         in each skeleton in the image
+	 *         Null if triple points could not be calculated
 	 */
 	public double[][][] calculateTriplePointAngles(final ImagePlus imp, final int nthPixel) {
+		final Skeletonize3D skeletonizer = new Skeletonize3D();
+		ImagePlus skeletonizedImage = skeletonizer.getSkeleton(imp);
+
 		final AnalyzeSkeleton skeletonAnalyzer = new AnalyzeSkeleton();
-		skeletonAnalyzer.setup("", imp);
+		skeletonAnalyzer.setup("", skeletonizedImage);
 		skeletonAnalyzer.run();
 		final Graph[] graphs = skeletonAnalyzer.getGraphs();
+
+		if (graphs == null || graphs.length == 0) {
+			IJ.error("Cannot calculate angles: image could not be skeletonized");
+			return null;
+		}
+
 		final double[][][] angleList = new double[graphs.length][][];
 		int g = 0;
 		for (final Graph graph : graphs) {
