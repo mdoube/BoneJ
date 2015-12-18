@@ -43,7 +43,6 @@ public class ResultInserter {
 	public static ResultInserter getInstance() {
 		rt = ResultsTable.getResultsTable();
 		final String table = "Results";
-		rt.show(table);
 		return INSTANCE;
 	}
 
