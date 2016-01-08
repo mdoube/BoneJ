@@ -92,12 +92,15 @@ public class SelectSoftROI extends RoiSelector{
 			byte[] subCutaneousFat = null;
 			for (int i = 0;i< 3;++i){
 				muscleSieve = erode(muscleSieve);
+				//Changed 2016/01/08
+				/*
 				if (i == 0){
-					/*Add subcut fat sieve... Skin has already been removed by eroding one layer of pixels-> remove muscle later on*/
+					//Add subcut fat sieve... Skin has already been removed by eroding one layer of pixels-> remove muscle later on
 					subCutaneousFat = (byte[]) muscleSieve.clone();
 				}
+				*/
 			}
-
+			subCutaneousFat = (byte[]) muscleSieve.clone();
 			/*Remove everything other than the selected limb from the image*/
 			for (int i = 0; i<muscleSieve.length;++i){
 				if (muscleSieve[i] < 1){
@@ -229,6 +232,9 @@ public class SelectSoftROI extends RoiSelector{
 			
 			/*Wipe muscle area +1 layer of pixels away from subcut.*/
 			byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
+			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+			//Added 2016/01/08
+			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 			dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 			for (int i = 0;i<tempMuscleSieve.length;++i){
 				if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}

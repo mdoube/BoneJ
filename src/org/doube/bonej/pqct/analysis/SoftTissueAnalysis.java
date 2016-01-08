@@ -20,6 +20,7 @@
 
 package org.doube.bonej.pqct.analysis;
 import org.doube.bonej.pqct.selectroi.*;	//ROI selection..
+import java.util.Arrays;
 
 public class SoftTissueAnalysis{
 	public double MuA;
@@ -33,6 +34,7 @@ public class SoftTissueAnalysis{
 	public double TotalMuD;
 	public double FatD;
 	public double SubCutFatD;
+	public double SubCutFatDMedian;
 	public double LimbD;
 	public double FatPercentage;
 	public SoftTissueAnalysis(SelectSoftROI roi){
@@ -83,6 +85,16 @@ public class SoftTissueAnalysis{
 		LimbA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
 		FatD/=FatA;
 		FatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
+		//Added SubCutFatDMedian 2016/01/08
+		double[] subCFatPixels = new double[(int) SubCutFatA];
+		int cnt =0;
+		for (int i =0;i<roi.width*roi.height;i++){
+			if (roi.softSieve[i] ==5){ //subCutFat
+				subCFatPixels[cnt]+=roi.softScaledImage[i];
+				++cnt;
+			}
+		}
+		SubCutFatDMedian = median(subCFatPixels);		
 		SubCutFatD/=SubCutFatA;
 		SubCutFatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
 		MuD/=MuA;
@@ -92,5 +104,21 @@ public class SoftTissueAnalysis{
 		IntraMuFatD/=IntraMuFatA;
 		IntraMuFatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
 		FatPercentage = (weightedFatArea/weightedLimbArea)*100.0;
+	}
+	
+	double median(double[] a) {
+		if (a.length < 1){
+			return 0d;
+		}
+		if (a.length ==1){
+			return a[0];
+		}
+		Arrays.sort(a);
+		int middle = a.length / 2;
+		if (a.length % 2 == 0){
+		  return (a[middle - 1] + a[middle]) / 2;
+		}else{
+		  return a[middle];
+		}
 	}
 }
