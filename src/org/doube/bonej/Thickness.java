@@ -1,5 +1,6 @@
 package org.doube.bonej;
 
+import ij.Prefs;
 import org.doube.util.ImageCheck;
 import org.doube.util.ResultInserter;
 import org.doube.util.RoiMan;
@@ -77,6 +78,12 @@ import java.awt.*;
  *
  */
 public class Thickness implements PlugIn {
+	private static final String THICKNESS_PREFERENCE_KEY = "bonej.localThickness.doThickness";
+	private static final String SPACING_PREFERENCE_KEY = "bonej.localThickness.doSpacing";
+	private static final String GRAPHIC_PREFERENCE_KEY = "bonej.localThickness.doGraphic";
+	private static final String ROI_PREFERENCE_KEY = "bonej.localThickness.doRoi";
+	private static final String MASK_PREFERENCE_KEY = "bonej.localThickness.doMask";
+
 	private static final boolean THICKNESS_DEFAULT = true;
 	private static final boolean SPACING_DEFAULT = false;
 	private static final boolean GRAPHIC_DEFAULT = true;
@@ -114,6 +121,7 @@ public class Thickness implements PlugIn {
 
 		roiManager = RoiManager.getInstance();
 
+		loadSettings();
 		createSetupDialog();
 		setupDialog.showDialog();
 		if (setupDialog.wasCanceled()) {
@@ -125,6 +133,8 @@ public class Thickness implements PlugIn {
 			IJ.error("Nothing to process, exiting plugin.");
 			return;
 		}
+
+		saveSettings();
 
 		final long startTime = System.currentTimeMillis();
 		final String title = stripExtension(imp.getTitle());
@@ -217,6 +227,24 @@ public class Thickness implements PlugIn {
 		doGraphic = setupDialog.getNextBoolean();
 		doRoi = setupDialog.getNextBoolean();
 		doMask = setupDialog.getNextBoolean();
+	}
+
+	private void loadSettings()
+	{
+		doThickness = Prefs.get(THICKNESS_PREFERENCE_KEY, THICKNESS_DEFAULT);
+		doSpacing = Prefs.get(SPACING_PREFERENCE_KEY, SPACING_DEFAULT);
+		doGraphic = Prefs.get(GRAPHIC_PREFERENCE_KEY, GRAPHIC_DEFAULT);
+		doRoi = Prefs.get(ROI_PREFERENCE_KEY, ROI_DEFAULT);
+		doMask = Prefs.get(MASK_PREFERENCE_KEY, MASK_DEFAULT);
+	}
+
+	private void saveSettings()
+	{
+		Prefs.set(THICKNESS_PREFERENCE_KEY, doThickness);
+		Prefs.set(SPACING_PREFERENCE_KEY, doSpacing);
+		Prefs.set(GRAPHIC_PREFERENCE_KEY, doGraphic);
+		Prefs.set(ROI_PREFERENCE_KEY, doRoi);
+		Prefs.set(MASK_PREFERENCE_KEY, doMask);
 	}
 
 	/**
