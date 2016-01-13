@@ -17,6 +17,8 @@ import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 
+import java.awt.*;
+
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
 
@@ -71,11 +73,24 @@ import ij.process.ImageProcessor;
  *
  * @author Bob Dougherty
  * @author Michael Doube (refactoring for BoneJ)
+ * @author Richard Domander (refactoring for BoneJ)
  *
  */
 public class Thickness implements PlugIn {
-	// public static final int THRESHOLD = 128;
+	private static final boolean THICKNESS_DEFAULT = true;
+	private static final boolean SPACING_DEFAULT = false;
+	private static final boolean GRAPHIC_DEFAULT = true;
+	private static final boolean ROI_DEFAULT = false;
+	private static final boolean MASK_DEFAULT = true;
+
 	private float[][] sNew;
+	private GenericDialog setupDialog = null;
+	private RoiManager roiManager = null;
+	private boolean doThickness = THICKNESS_DEFAULT;
+	private boolean doSpacing = SPACING_DEFAULT;
+	private boolean doGraphic = GRAPHIC_DEFAULT;
+	private boolean doRoi = ROI_DEFAULT;
+	private boolean doMask = MASK_DEFAULT;
 
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -96,33 +111,30 @@ public class Thickness implements PlugIn {
 				return;
 
 		}
-		final GenericDialog gd = new GenericDialog("Options");
-		gd.addCheckbox("Thickness", true);
-		gd.addCheckbox("Spacing", false);
-		gd.addCheckbox("Graphic Result", true);
-		gd.addCheckbox("Use_ROI_Manager", false);
-		gd.addCheckbox("Mask thickness map", true);
-		gd.addHelp("http://bonej.org/thickness");
-		gd.showDialog();
-		if (gd.wasCanceled()) {
+
+		roiManager = RoiManager.getInstance();
+
+		createSetupDialog();
+		setupDialog.showDialog();
+		if (setupDialog.wasCanceled()) {
 			return;
 		}
-		final boolean doThickness = gd.getNextBoolean();
-		final boolean doSpacing = gd.getNextBoolean();
-		final boolean doGraphic = gd.getNextBoolean();
-		final boolean doRoi = gd.getNextBoolean();
-		final boolean doMask = gd.getNextBoolean();
+		getProcessingSettingsFromDialog();
+
+		if (!doThickness && !doSpacing) {
+			IJ.error("Nothing to process, exiting plugin.");
+			return;
+		}
 
 		final long startTime = System.currentTimeMillis();
 		final String title = stripExtension(imp.getTitle());
 
-		final RoiManager roiMan = RoiManager.getInstance();
 		// calculate trabecular thickness (Tb.Th)
 		if (doThickness) {
 			final boolean inverse = false;
 			ImagePlus impLTC = new ImagePlus();
-			if (doRoi && roiMan != null) {
-				final ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 0, 1);
+			if (doRoi && roiManager != null) {
+				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 0, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTC = getLocalThickness(crop, inverse, doMask);
@@ -143,8 +155,8 @@ public class Thickness implements PlugIn {
 		if (doSpacing) {
 			final boolean inverse = true;
 			ImagePlus impLTCi = new ImagePlus();
-			if (doRoi && roiMan != null) {
-				final ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 255, 1);
+			if (doRoi && roiManager != null) {
+				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 255, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTCi = getLocalThickness(crop, inverse, doMask);
@@ -178,6 +190,26 @@ public class Thickness implements PlugIn {
 				name = name.substring(0, dotIndex);
 		}
 		return name;
+	}
+
+	private void createSetupDialog()
+	{
+		setupDialog = new GenericDialog("Plugin options");
+		setupDialog.addCheckbox("Thickness", doThickness);
+		setupDialog.addCheckbox("Spacing", doSpacing);
+		setupDialog.addCheckbox("Graphic Result", doGraphic);
+		setupDialog.addCheckbox("Crop using ROI Manager", doRoi);
+		setupDialog.addCheckbox("Mask thickness map", doMask);
+		setupDialog.addHelp("http://bonej.org/thickness");
+	}
+
+	private void getProcessingSettingsFromDialog()
+	{
+		doThickness = setupDialog.getNextBoolean();
+		doSpacing = setupDialog.getNextBoolean();
+		doGraphic = setupDialog.getNextBoolean();
+		doRoi = setupDialog.getNextBoolean();
+		doMask = setupDialog.getNextBoolean();
 	}
 
 	/**
