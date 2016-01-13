@@ -198,7 +198,14 @@ public class Thickness implements PlugIn {
 		setupDialog.addCheckbox("Thickness", doThickness);
 		setupDialog.addCheckbox("Spacing", doSpacing);
 		setupDialog.addCheckbox("Graphic Result", doGraphic);
+
 		setupDialog.addCheckbox("Crop using ROI Manager", doRoi);
+		if (roiManager == null) {
+			Checkbox cropCheckbox = (Checkbox) setupDialog.getCheckboxes().elementAt(3);
+			cropCheckbox.setState(false);
+			cropCheckbox.setEnabled(false);
+		}
+
 		setupDialog.addCheckbox("Mask thickness map", doMask);
 		setupDialog.addHelp("http://bonej.org/thickness");
 	}
