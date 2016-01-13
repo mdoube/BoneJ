@@ -1,22 +1,16 @@
 package org.doube.bonej;
 
-import ij.Prefs;
-import org.doube.util.ImageCheck;
-import org.doube.util.ResultInserter;
-import org.doube.util.RoiMan;
-import org.doube.util.StackStats;
-import org.doube.util.UsageReporter;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.Prefs;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
-import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import org.doube.util.*;
 
 import java.awt.*;
 
@@ -100,8 +94,10 @@ public class Thickness implements PlugIn {
 	private boolean doMask = MASK_DEFAULT;
 
 	public void run(final String arg) {
-		if (!ImageCheck.checkEnvironment())
+		if (!ImageCheck.checkEnvironment()) {
 			return;
+		}
+
 		final ImagePlus imp = IJ.getImage();
 		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
@@ -109,14 +105,14 @@ public class Thickness implements PlugIn {
 		}
 
 		if (!ImageCheck.isVoxelIsotropic(imp, 1E-3)) {
-			if (IJ.showMessageWithCancel("Anisotropic voxels",
+			boolean cancel = !IJ.showMessageWithCancel("Anisotropic voxels",
 					"This image contains anisotropic voxels, which will\n"
 							+ "result in incorrect thickness calculation.\n\n"
 							+ "Consider rescaling your data so that voxels are isotropic\n" + "(Image > Scale...).\n\n"
-							+ "Continue anyway?")) {
-			} else
+							+ "Continue anyway?");
+			if (cancel) {
 				return;
-
+			}
 		}
 
 		roiManager = RoiManager.getInstance();
@@ -142,14 +138,15 @@ public class Thickness implements PlugIn {
 		// calculate trabecular thickness (Tb.Th)
 		if (doThickness) {
 			final boolean inverse = false;
-			ImagePlus impLTC = new ImagePlus();
+			ImagePlus impLTC;
 			if (doRoi && roiManager != null) {
 				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 0, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTC = getLocalThickness(crop, inverse, doMask);
-			} else
+			} else {
 				impLTC = getLocalThickness(imp, inverse, doMask);
+			}
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			backgroundToNaN(impLTC, 0x00);
@@ -164,14 +161,15 @@ public class Thickness implements PlugIn {
 		}
 		if (doSpacing) {
 			final boolean inverse = true;
-			ImagePlus impLTCi = new ImagePlus();
+			ImagePlus impLTCi;
 			if (doRoi && roiManager != null) {
 				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 255, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTCi = getLocalThickness(crop, inverse, doMask);
-			} else
+			} else {
 				impLTCi = getLocalThickness(imp, inverse, doMask);
+			}
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
@@ -1388,22 +1386,6 @@ public class Thickness implements PlugIn {
 	}
 
 	/**
-	 * Get a local thickness map from an ImagePlus, without masking correction
-	 *
-	 * @see getLocalThickness(ImagePlus imp, boolean inv, boolean doMask) :
-	 *      ImagePlus
-	 * @param imp
-	 *            Binary ImagePlus
-	 * @param inv
-	 *            false if you want the thickness of the foreground and true if
-	 *            you want the thickness of the background
-	 * @return 32-bit ImagePlus containing a local thickness map
-	 */
-	public ImagePlus getLocalThickness(final ImagePlus imp, final boolean inv) {
-		return getLocalThickness(imp, inv, false);
-	}
-
-	/**
 	 * Reduce error in thickness quantization by trimming the one pixel overhang
 	 * in the thickness map
 	 *
@@ -1425,8 +1407,8 @@ public class Thickness implements PlugIn {
 		final ImageStack mapStack = impLTC.getImageStack();
 
 		final int keepValue = inv ? 0 : 255;
-		ImageProcessor ip = new ByteProcessor(w, h);
-		ImageProcessor map = new FloatProcessor(w, h);
+		ImageProcessor ip;
+		ImageProcessor map;
 		for (int z = 1; z <= d; z++) {
 			IJ.showStatus("Masking thickness map...");
 			IJ.showProgress(z, d);
