@@ -1386,6 +1386,21 @@ public class Thickness implements PlugIn {
 	}
 
 	/**
+	 * Get a local thickness map from an ImagePlus, without masking correction
+	 *
+	 * @see #getLocalThickness(ImagePlus imp, boolean inv, boolean doMask)
+	 * @param imp
+	 *            Binary ImagePlus
+	 * @param inv
+	 *            false if you want the thickness of the foreground and true if
+	 *            you want the thickness of the background
+	 * @return 32-bit ImagePlus containing a local thickness map
+	 */
+	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
+		return getLocalThickness(imp, inv, false);
+	}
+
+	/**
 	 * Reduce error in thickness quantization by trimming the one pixel overhang
 	 * in the thickness map
 	 *
