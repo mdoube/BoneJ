@@ -330,10 +330,10 @@ public class RoiMan {
 	}
 
 	private static int clamp(final int value, final int min, final int max) {
-		if (Integer.compare(value, min) < 0) {
+		if (value < min) {
 			return min;
 		}
-		if (Integer.compare(value, max) > 0) {
+		if (value > max) {
 			return max;
 		}
 		return value;
