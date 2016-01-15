@@ -98,6 +98,7 @@ public class Thickness implements PlugIn {
 	private boolean doRoi = ROI_DEFAULT;
 	private boolean doMask = MASK_DEFAULT;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -110,7 +111,7 @@ public class Thickness implements PlugIn {
 		}
 
 		if (!ImageCheck.isVoxelIsotropic(imp, 1E-3)) {
-			boolean cancel = !IJ.showMessageWithCancel("Anisotropic voxels",
+			final boolean cancel = !IJ.showMessageWithCancel("Anisotropic voxels",
 					"This image contains anisotropic voxels, which will\n"
 							+ "result in incorrect thickness calculation.\n\n"
 							+ "Consider rescaling your data so that voxels are isotropic\n" + "(Image > Scale...).\n\n"
@@ -205,8 +206,7 @@ public class Thickness implements PlugIn {
 		return name;
 	}
 
-	private void createSetupDialog()
-	{
+	private void createSetupDialog() {
 		setupDialog = new GenericDialog("Plugin options");
 		setupDialog.addCheckbox("Thickness", doThickness);
 		setupDialog.addCheckbox("Spacing", doSpacing);
@@ -214,7 +214,7 @@ public class Thickness implements PlugIn {
 
 		setupDialog.addCheckbox("Crop using ROI Manager", doRoi);
 		if (roiManager == null) {
-			Checkbox cropCheckbox = (Checkbox) setupDialog.getCheckboxes().elementAt(3);
+			final Checkbox cropCheckbox = (Checkbox) setupDialog.getCheckboxes().elementAt(3);
 			cropCheckbox.setState(false);
 			cropCheckbox.setEnabled(false);
 		}
@@ -223,8 +223,7 @@ public class Thickness implements PlugIn {
 		setupDialog.addHelp("http://bonej.org/thickness");
 	}
 
-	private void getProcessingSettingsFromDialog()
-	{
+	private void getProcessingSettingsFromDialog() {
 		doThickness = setupDialog.getNextBoolean();
 		doSpacing = setupDialog.getNextBoolean();
 		doGraphic = setupDialog.getNextBoolean();
@@ -232,8 +231,7 @@ public class Thickness implements PlugIn {
 		doMask = setupDialog.getNextBoolean();
 	}
 
-	private void loadSettings()
-	{
+	private void loadSettings() {
 		doThickness = Prefs.get(THICKNESS_PREFERENCE_KEY, THICKNESS_DEFAULT);
 		doSpacing = Prefs.get(SPACING_PREFERENCE_KEY, SPACING_DEFAULT);
 		doGraphic = Prefs.get(GRAPHIC_PREFERENCE_KEY, GRAPHIC_DEFAULT);
@@ -241,8 +239,7 @@ public class Thickness implements PlugIn {
 		doMask = Prefs.get(MASK_PREFERENCE_KEY, MASK_DEFAULT);
 	}
 
-	private void saveSettings()
-	{
+	private void saveSettings() {
 		Prefs.set(THICKNESS_PREFERENCE_KEY, doThickness);
 		Prefs.set(SPACING_PREFERENCE_KEY, doSpacing);
 		Prefs.set(GRAPHIC_PREFERENCE_KEY, doGraphic);
@@ -608,7 +605,7 @@ public class Thickness implements PlugIn {
 	 * @param imp
 	 *            3D Distance map (32-bit stack)
 	 */
-	private void distanceMaptoDistanceRidge(final ImagePlus imp, float[][] s) {
+	private void distanceMaptoDistanceRidge(final ImagePlus imp, final float[][] s) {
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
@@ -1401,7 +1398,7 @@ public class Thickness implements PlugIn {
 	 *            you want the thickness of the background
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
-	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
+	public ImagePlus getLocalThickness(final ImagePlus imp, final boolean inv) {
 		return getLocalThickness(imp, inv, false);
 	}
 
@@ -1443,7 +1440,6 @@ public class Thickness implements PlugIn {
 		}
 		return impLTC;
 	}
-
 
 	/**
 	 * Sets the value of the background pixels in the given image to Float.NaN.

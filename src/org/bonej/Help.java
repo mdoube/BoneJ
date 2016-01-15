@@ -27,6 +27,7 @@ public class Help implements PlugIn {
 	 */
 	public static final String bonejVersion = "1.4.1" + branch;
 
+	@Override
 	public void run(final String arg) {
 		if (arg.equals("about")) {
 			showAbout();
@@ -45,6 +46,7 @@ public class Help implements PlugIn {
 		htmlPane.setEditable(false);
 		htmlPane.setOpaque(false);
 		htmlPane.addHyperlinkListener(new HyperlinkListener() {
+			@Override
 			public void hyperlinkUpdate(final HyperlinkEvent e) {
 				if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType()))
 					try {

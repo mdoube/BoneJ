@@ -19,6 +19,7 @@ public class RoiInterpolator implements PlugIn {
 	int[][] idt;
 	int w, h;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;

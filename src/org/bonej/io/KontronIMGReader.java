@@ -50,6 +50,7 @@ public class KontronIMGReader implements PlugIn {
 	/** 128-byte header */
 	private static final int HEADER_LENGTH = 128;
 
+	@Override
 	public void run(final String arg) {
 
 		final OpenDialog od = new OpenDialog("Open IMG...", arg);

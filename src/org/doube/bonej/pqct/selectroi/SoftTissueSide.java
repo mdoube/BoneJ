@@ -55,7 +55,7 @@ public class SoftTissueSide {
 	 * Divide the soft tissue into two halves by the line, which connects the
 	 * bone centres Find the rotation angle to vertical Check on which side a
 	 * given pixel resides in, taking the rotation into account
-	 * 
+	 *
 	 */
 	byte[] fillSides(final SelectROI roi) {
 

@@ -40,6 +40,7 @@ import ij.plugin.frame.RoiManager;
  */
 public class EllipsoidFitter implements PlugIn {
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -49,7 +50,7 @@ public class EllipsoidFitter implements PlugIn {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isMultiSlice(imp)) {
+		if (!ImageCheck.isMultiSlice(imp)) {
 			IJ.error("Stack required");
 			return;
 		}
@@ -59,7 +60,7 @@ public class EllipsoidFitter implements PlugIn {
 			IJ.run("ROI Manager...");
 			return;
 		}
-		if (!ic.isVoxelIsotropic(imp, 0.05)) {
+		if (!ImageCheck.isVoxelIsotropic(imp, 0.05)) {
 			if (!IJ.showMessageWithCancel("Voxel depth problem",
 					"Voxels are anisotropic." + "\nWidth = " + imp.getCalibration().pixelWidth + "\nHeight = "
 							+ imp.getCalibration().pixelHeight + "\nDepth = " + imp.getCalibration().pixelDepth

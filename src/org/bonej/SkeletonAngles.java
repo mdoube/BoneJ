@@ -22,7 +22,12 @@ import java.util.ArrayList;
 
 import org.doube.geometry.Centroid;
 import org.doube.geometry.Trig;
-import org.doube.skeleton.*;
+import org.doube.skeleton.AnalyzeSkeleton;
+import org.doube.skeleton.Edge;
+import org.doube.skeleton.Graph;
+import org.doube.skeleton.Point;
+import org.doube.skeleton.Skeletonize3D;
+import org.doube.skeleton.Vertex;
 import org.doube.util.ResultInserter;
 import org.doube.util.UsageReporter;
 
@@ -37,6 +42,7 @@ public class SkeletonAngles implements PlugIn {
 	/** Measure angles between vertices */
 	public static final int VERTEX_TO_VERTEX = -1;
 
+	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null) {
@@ -98,12 +104,12 @@ public class SkeletonAngles implements PlugIn {
 	 *            use for angle calculation. Set to
 	 *            SkeletonAngles.VERTEX_TO_VERTEX to use opposite vertices
 	 * @return 3D array containing 3 angles (in radians) for each triple point
-	 *         in each skeleton in the image
-	 *         Null if triple points could not be calculated
+	 *         in each skeleton in the image Null if triple points could not be
+	 *         calculated
 	 */
 	public double[][][] calculateTriplePointAngles(final ImagePlus imp, final int nthPixel) {
 		final Skeletonize3D skeletonizer = new Skeletonize3D();
-		ImagePlus skeletonizedImage = skeletonizer.getSkeleton(imp);
+		final ImagePlus skeletonizedImage = skeletonizer.getSkeleton(imp);
 
 		final AnalyzeSkeleton skeletonAnalyzer = new AnalyzeSkeleton();
 		skeletonAnalyzer.setup("", skeletonizedImage);

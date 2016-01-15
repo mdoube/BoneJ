@@ -79,6 +79,7 @@ import ij3d.Image3DUniverse;
  */
 public class Anisotropy implements PlugIn, DialogListener {
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -89,11 +90,11 @@ public class Anisotropy implements PlugIn, DialogListener {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
+		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
 			return;
 		}
-		if (!ic.isMultiSlice(imp) || imp.getStackSize() < 5) {
+		if (!ImageCheck.isMultiSlice(imp) || imp.getStackSize() < 5) {
 			IJ.error("Stack with at least 5 slices required");
 			return;
 		}
@@ -560,6 +561,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					for (int v = ai.getAndIncrement(); v < nVectors; v = ai.getAndIncrement()) {
 						double nIntercepts = 0;
@@ -732,6 +734,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 		return result;
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		final Vector<?> checkboxes = gd.getCheckboxes();
 		final Vector<?> nFields = gd.getNumericFields();

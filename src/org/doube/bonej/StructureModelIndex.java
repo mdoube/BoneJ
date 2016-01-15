@@ -60,6 +60,7 @@ public class StructureModelIndex implements PlugIn {
 	private static List<Point3f> mesh;
 	private static List<Color3f> colours;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -70,7 +71,7 @@ public class StructureModelIndex implements PlugIn {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
+		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("SMI needs a binary image.");
 			return;
 		}

@@ -226,6 +226,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *            currently active image
 	 * @return flag word that specifies the filters capabilities
 	 */
+	@Override
 	public int setup(final String arg, final ImagePlus imp) {
 		this.imRef = imp;
 
@@ -245,6 +246,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *
 	 * @see ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)
 	 */
+	@Override
 	public void run(final ImageProcessor ip) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -326,7 +328,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/**
 	 * This method is intended for non-interactively using this plugin.
 	 * <p>
-	 * 
+	 *
 	 * @param pruneIndex
 	 *            The pruneIndex, as asked by the initial gui dialog.
 	 * @param pruneEnds
@@ -449,7 +451,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/**
 	 * This method is intended for non-interactively using this plugin.
 	 * <p>
-	 * 
+	 *
 	 * @param pruneIndex
 	 *            The pruneIndex, as asked by the initial gui dialog.
 	 * @param thresholdLength
@@ -570,7 +572,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 	/**
 	 * Get the graphs of the current skeletons
-	 * 
+	 *
 	 * @return array of graphs (one per tree/skeleton)
 	 */
 	public Graph[] getGraphs() {
@@ -580,7 +582,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/**
 	 * Get the list of points (including junctions and end points) of the
 	 * largest shortest paths in the skeleton image (one per tree).
-	 * 
+	 *
 	 * @return array with the lists of points of the shortest paths
 	 */
 	public ArrayList<Point>[] getShortestPathPoints() {
@@ -816,7 +818,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	// ---------------------------------------------------------------------------
 	/**
 	 * Calculate the neighborhood size based on the calibration of the image.
-	 * 
+	 *
 	 * @param calibration
 	 *            image calibration
 	 */
@@ -1254,6 +1256,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 			// Edge comparator (by branch length)
 			final Comparator<Edge> comp = new Comparator<Edge>() {
+				@Override
 				public int compare(final Edge o1, final Edge o2) {
 					final double diff = o1.getLength() - o2.getLength();
 					if (diff < 0)
@@ -2259,7 +2262,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	// -----------------------------------------------------------------------
 	/**
 	 * Check if two groups of voxels are neighbors.
-	 * 
+	 *
 	 * @param g1
 	 *            first group
 	 * @param g2
@@ -2338,7 +2341,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 */
 	/**
 	 * Check if the point is slab.
-	 * 
+	 *
 	 * @param point
 	 *            actual point
 	 * @return true if the point has slab status
@@ -2352,7 +2355,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 */
 	/**
 	 * Check if the point is a junction.
-	 * 
+	 *
 	 * @param point
 	 *            actual point
 	 * @return true if the point has slab status
@@ -2366,7 +2369,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 */
 	/**
 	 * Check if the point is an end point.
-	 * 
+	 *
 	 * @param point
 	 *            actual point
 	 * @return true if the point has slab status
@@ -2380,7 +2383,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 */
 	/**
 	 * Check if the point is a junction.
-	 * 
+	 *
 	 * @param x
 	 *            x- voxel coordinate
 	 * @param y
@@ -2566,7 +2569,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 */
 	/**
 	 * Tag skeleton dividing the voxels between end points, junctions and slabs.
-	 * 
+	 *
 	 * @param inputImage2
 	 *            skeleton image to be tagged
 	 * @return tagged skeleton image
@@ -3093,7 +3096,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/**
 	 * Reconstruction and visualisation of the longest shortest path found by
 	 * the APSP warshall algorithm
-	 * 
+	 *
 	 * @param predecessorMatrix
 	 *            the Matrix which contains the predecessor of vertex b in the
 	 *            shortest path from a to b

@@ -6,13 +6,14 @@ import ij.plugin.PlugIn;
 
 public class VoxelDepthChecker implements PlugIn {
 
+	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = IJ.getImage();
 		if (null == imp)
 			return;
 
 		final ImageCheck ic = new ImageCheck();
-		ic.dicomVoxelDepth(imp);
+		ImageCheck.dicomVoxelDepth(imp);
 		UsageReporter.reportEvent(this).send();
 		return;
 	}

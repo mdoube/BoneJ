@@ -52,6 +52,7 @@ public class FractalBoxCounter implements PlugIn {
 	boolean autoParam = true;
 
 	// TODO split run method into more sensible methods
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -61,7 +62,7 @@ public class FractalBoxCounter implements PlugIn {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
+		if (!ImageCheck.isBinary(imp)) {
 			IJ.showMessage("Fractal Count requires a binary image.");
 			return;
 		}

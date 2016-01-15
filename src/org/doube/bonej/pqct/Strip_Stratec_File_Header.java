@@ -42,6 +42,7 @@ public class Strip_Stratec_File_Header implements PlugIn {
 
 	// Overriding the abstract runnable run method. Apparently plugins run in
 	// threads
+	@Override
 	public void run(final String arg) {
 		final GenericDialog dialog = new GenericDialog("Strip Stratec Header");
 		/* MeasInfo,PatBirth,PatMenoAge,PatName,PatTitle&Comment */

@@ -322,7 +322,7 @@ public abstract class RoiSelector {
 		 * for (int i = 0; i<edges.size();++i){ System.out.println("RoiArea "
 		 * +edges.get(i).area); } System.out.println("RoiChoice "+roiChoice+
 		 * " selection "+selection+" lengthEdges "+edges.size());
-		 * 
+		 *
 		 * System.out.println("RoiChoice "+roiChoice+" selection "+selection+
 		 * " lengthEdges "+edges.size());
 		 */

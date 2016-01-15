@@ -90,6 +90,7 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 
 	private boolean fieldUpdated = false;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -99,7 +100,7 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isMultiSlice(imp)) {
+		if (!ImageCheck.isMultiSlice(imp)) {
 			IJ.error("A stack must be open");
 			return;
 		}
@@ -532,6 +533,7 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 		return;
 	}
 
+	@Override
 	public void mousePressed(final MouseEvent e) {
 		final ImagePlus imp = IJ.getImage();
 		final Calibration cal = imp.getCalibration();
@@ -543,21 +545,26 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 		calculateAngles(imp, neckPoint);
 	}
 
+	@Override
 	public void mouseReleased(final MouseEvent e) {
 	}
 
+	@Override
 	public void mouseExited(final MouseEvent e) {
 	}
 
+	@Override
 	public void mouseClicked(final MouseEvent e) {
 	}
 
+	@Override
 	public void mouseEntered(final MouseEvent e) {
 	}
 
 	public void mouseMoved(final MouseEvent e) {
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

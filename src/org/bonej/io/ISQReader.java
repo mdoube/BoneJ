@@ -144,6 +144,7 @@ public class ISQReader implements PlugIn {
 	private int bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
 
+	@Override
 	public void run(final String arg) {
 
 		// the ISQ-File is selected
@@ -547,7 +548,7 @@ public class ISQReader implements PlugIn {
 
 	/**
 	 * Get the ISQ creation date as a string
-	 * 
+	 *
 	 * @param path
 	 * @return date in yyyy-MM-dd HH:mm:ss format
 	 */
@@ -560,7 +561,7 @@ public class ISQReader implements PlugIn {
 
 	/**
 	 * Get the pixel size of the image
-	 * 
+	 *
 	 * @param path
 	 * @return {x, y, z} image size in pixels
 	 */
@@ -571,7 +572,7 @@ public class ISQReader implements PlugIn {
 
 	/**
 	 * Get the real size of the image
-	 * 
+	 *
 	 * @param path
 	 * @return {x, y, z} image size in metric units
 	 */

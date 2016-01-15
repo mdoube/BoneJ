@@ -47,7 +47,7 @@ public class Graph {
 	// --------------------------------------------------------------------------
 	/**
 	 * Add edge to the graph.
-	 * 
+	 *
 	 * @param e
 	 *            edge to be added
 	 * @return false if the edge could not be added, true otherwise
@@ -69,7 +69,7 @@ public class Graph {
 	// --------------------------------------------------------------------------
 	/**
 	 * Add vertex to the graph.
-	 * 
+	 *
 	 * @param v
 	 *            vertex to be added
 	 * @return false if the vertex could not be added, true otherwise
@@ -86,7 +86,7 @@ public class Graph {
 
 	/**
 	 * Get list of vertices in the graph.
-	 * 
+	 *
 	 * @return list of vertices in the graph
 	 */
 	public ArrayList<Vertex> getVertices() {
@@ -96,7 +96,7 @@ public class Graph {
 	// --------------------------------------------------------------------------
 	/**
 	 * Get list of edges in the graph.
-	 * 
+	 *
 	 * @return list of edges in the graph
 	 */
 	public ArrayList<Edge> getEdges() {
@@ -114,7 +114,7 @@ public class Graph {
 	// --------------------------------------------------------------------------
 	/**
 	 * Get root vertex.
-	 * 
+	 *
 	 * @return root vertex of the graph
 	 */
 	public Vertex getRoot() {

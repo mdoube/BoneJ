@@ -65,6 +65,7 @@ public class Distribution_Analysis implements PlugIn {
 	double resolution;
 	boolean alphaOn;
 
+	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null)

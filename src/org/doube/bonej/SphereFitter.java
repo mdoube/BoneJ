@@ -53,6 +53,7 @@ import ij.process.ImageProcessor;
  */
 public class SphereFitter implements PlugIn, DialogListener {
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -62,7 +63,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isMultiSlice(imp)) {
+		if (!ImageCheck.isMultiSlice(imp)) {
 			IJ.error("Stack required");
 			return;
 		}
@@ -383,6 +384,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 		}
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

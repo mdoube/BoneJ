@@ -36,6 +36,7 @@ import ij.text.TextPanel;
 public class Export_Header implements PlugIn {
 	String imageInfo;
 
+	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null)

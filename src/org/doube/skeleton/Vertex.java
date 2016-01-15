@@ -47,7 +47,7 @@ public class Vertex {
 	// --------------------------------------------------------------------------
 	/**
 	 * Add point to the vertex.
-	 * 
+	 *
 	 * @param p
 	 *            input point
 	 */
@@ -58,7 +58,7 @@ public class Vertex {
 	// --------------------------------------------------------------------------
 	/**
 	 * Check if a point belongs to the vertex list of points.
-	 * 
+	 *
 	 * @param p
 	 *            input points
 	 * @return true if the point is in the vertex point list
@@ -72,7 +72,7 @@ public class Vertex {
 	// --------------------------------------------------------------------------
 	/**
 	 * Convert list of points to String.
-	 * 
+	 *
 	 * @return printable version of the list of points
 	 */
 	public String pointsToString() {
@@ -86,7 +86,7 @@ public class Vertex {
 	// --------------------------------------------------------------------------
 	/**
 	 * Get list of points.
-	 * 
+	 *
 	 * @return list of points
 	 */
 	public ArrayList<Point> getPoints() {
@@ -139,7 +139,7 @@ public class Vertex {
 
 	/**
 	 * Check visit status.
-	 * 
+	 *
 	 * @return true if the vertex was already visited (DFS)
 	 */
 	public boolean isVisited() {
@@ -148,7 +148,7 @@ public class Vertex {
 
 	/**
 	 * Set predecessor (for DFS).
-	 * 
+	 *
 	 * @param pred
 	 *            predecessor edge in DFS visit.
 	 */
@@ -158,7 +158,7 @@ public class Vertex {
 
 	/**
 	 * Get predecessor edge.
-	 * 
+	 *
 	 * @return predecessor edge.
 	 */
 	public Edge getPredecessor() {
@@ -167,7 +167,7 @@ public class Vertex {
 
 	/**
 	 * Get DFS visit order.
-	 * 
+	 *
 	 * @return visit order
 	 */
 	public int getVisitOrder() {

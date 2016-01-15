@@ -63,6 +63,7 @@ import ij.plugin.PlugIn;
  */
 public class Skeletonize3D implements PlugIn {
 
+	@Override
 	public void run(final String run) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -72,7 +73,7 @@ public class Skeletonize3D implements PlugIn {
 			return;
 		}
 		final ImageCheck ic = new ImageCheck();
-		if (!ic.isBinary(imp)) {
+		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("Skeletonise 3D requires a binary image");
 			return;
 		}

@@ -20,21 +20,21 @@ public class CholeskyDecomposition implements java.io.Serializable {
 
 	/**
 	 * Array for internal storage of decomposition.
-	 * 
+	 *
 	 * @serial internal array storage.
 	 */
 	private final double[][] L;
 
 	/**
 	 * Row and column dimension (square matrix).
-	 * 
+	 *
 	 * @serial matrix dimension.
 	 */
 	private final int n;
 
 	/**
 	 * Symmetric and positive definite flag.
-	 * 
+	 *
 	 * @serial is symmetric and positive definite flag.
 	 */
 	private boolean isspd;
@@ -45,7 +45,7 @@ public class CholeskyDecomposition implements java.io.Serializable {
 
 	/**
 	 * Cholesky algorithm for symmetric and positive definite matrix.
-	 * 
+	 *
 	 * @param A
 	 *            Square, symmetric matrix.
 	 * @return Structure to access L and isspd flag.
@@ -84,7 +84,7 @@ public class CholeskyDecomposition implements java.io.Serializable {
 	/*
 	 * ------------------------ Temporary, experimental code.
 	 * ------------------------ *\
-	 * 
+	 *
 	 * \** Right Triangular Cholesky Decomposition. <P> For a symmetric,
 	 * positive definite matrix A, the Right Cholesky decomposition is an upper
 	 * triangular matrix R so that A = R'*R. This constructor computes R with
@@ -92,18 +92,18 @@ public class CholeskyDecomposition implements java.io.Serializable {
 	 * MATLAB. In Java, we suspect a row oriented, lower triangular
 	 * decomposition is faster. We have temporarily included this constructor
 	 * here until timing experiments confirm this suspicion. \
-	 * 
+	 *
 	 * \** Array for internal storage of right triangular decomposition. **\
 	 * private transient double[][] R;
-	 * 
+	 *
 	 * \** Cholesky algorithm for symmetric and positive definite matrix.
-	 * 
+	 *
 	 * @param A Square, symmetric matrix.
-	 * 
+	 *
 	 * @param rightflag Actual value ignored.
-	 * 
+	 *
 	 * @return Structure to access R and isspd flag. \
-	 * 
+	 *
 	 * public CholeskyDecomposition (Matrix Arg, int rightflag) { // Initialize.
 	 * double[][] A = Arg.getArray(); n = Arg.getColumnDimension(); R = new
 	 * double[n][n]; isspd = (Arg.getColumnDimension() == n); // Main loop. for
@@ -113,13 +113,13 @@ public class CholeskyDecomposition implements java.io.Serializable {
 	 * (A[k][j] == A[j][k]); } d = A[j][j] - d; isspd = isspd & (d > 0.0);
 	 * R[j][j] = Math.sqrt(Math.max(d,0.0)); for (int k = j+1; k < n; k++) {
 	 * R[k][j] = 0.0; } } }
-	 * 
+	 *
 	 * \** Return upper triangular factor.
-	 * 
+	 *
 	 * @return R \
-	 * 
+	 *
 	 * public Matrix getR () { return new Matrix(R,n,n); }
-	 * 
+	 *
 	 * \* ------------------------ End of temporary code.
 	 * ------------------------
 	 */
@@ -130,7 +130,7 @@ public class CholeskyDecomposition implements java.io.Serializable {
 
 	/**
 	 * Is the matrix symmetric and positive definite?
-	 * 
+	 *
 	 * @return true if A is symmetric and positive definite.
 	 */
 
@@ -140,7 +140,7 @@ public class CholeskyDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return triangular factor.
-	 * 
+	 *
 	 * @return L
 	 */
 
@@ -150,7 +150,7 @@ public class CholeskyDecomposition implements java.io.Serializable {
 
 	/**
 	 * Solve A*X = B
-	 * 
+	 *
 	 * @param B
 	 *            A Matrix with as many rows as A and any number of columns.
 	 * @return X so that L*L'*X = B

@@ -66,13 +66,14 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	/** Number of cycles of dilation to apply */
 	private int nDilates = 0;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
 		final ImagePlus imp = IJ.getImage();
 		final ImageProcessor ip = imp.getProcessor();
 		final ImageCheck ic = new ImageCheck();
-		if (ic.isBinary(imp)) {
+		if (ImageCheck.isBinary(imp)) {
 			IJ.error("Can't threshold a binary image");
 			return;
 		}
@@ -84,7 +85,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 			return;
 		}
 
-		if (!ic.isVoxelIsotropic(imp, 0.05)) {
+		if (!ImageCheck.isVoxelIsotropic(imp, 0.05)) {
 			if (!Interpreter.isBatchMode())
 				IJ.run("Properties...");
 		}
@@ -126,6 +127,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					for (int z = ai.getAndIncrement(); z <= d; z = ai.getAndIncrement()) {
 						// byte[] slice = new byte[nPixels];
@@ -385,6 +387,7 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		}
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

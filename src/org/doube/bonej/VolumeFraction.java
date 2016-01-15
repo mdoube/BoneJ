@@ -55,6 +55,7 @@ import marchingcubes.MCTriangulator;
 
 public class VolumeFraction implements PlugIn, DialogListener {
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -151,6 +152,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final RoiManager roiMan = RoiManager.getInstance();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					for (int s = ai.getAndIncrement(); s <= nSlices; s = ai.getAndIncrement()) {
 						final ImageProcessor ipSlice = stack.getProcessor(s);
@@ -283,6 +285,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					for (int s = ai.getAndIncrement(); s < di + zm; s = ai.getAndIncrement()) {
 						IJ.showStatus("Creating binary templates...");
@@ -368,7 +371,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 	private double[] setThreshold(final ImagePlus imp) {
 		final double[] thresholds = new double[2];
 		final ImageCheck ic = new ImageCheck();
-		if (ic.isBinary(imp)) {
+		if (ImageCheck.isBinary(imp)) {
 			thresholds[0] = 128;
 			thresholds[1] = 255;
 		} else {
@@ -380,6 +383,7 @@ public class VolumeFraction implements PlugIn, DialogListener {
 		return thresholds;
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

@@ -8,6 +8,7 @@ import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 
 public class DeleteSliceRange implements PlugIn {
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;

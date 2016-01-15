@@ -141,7 +141,7 @@ public class Centroid {
 
 	/**
 	 * Calculate the centroid of a list of 3D Points
-	 * 
+	 *
 	 * @param points
 	 * @return
 	 */

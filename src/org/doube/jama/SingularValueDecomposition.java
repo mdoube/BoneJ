@@ -24,7 +24,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Arrays for internal storage of U and V.
-	 * 
+	 *
 	 * @serial internal storage of U.
 	 * @serial internal storage of V.
 	 */
@@ -32,14 +32,14 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Array for internal storage of singular values.
-	 * 
+	 *
 	 * @serial internal storage of singular values.
 	 */
 	private final double[] s;
 
 	/**
 	 * Row and column dimensions.
-	 * 
+	 *
 	 * @serial row dimension.
 	 * @serial column dimension.
 	 */
@@ -51,7 +51,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Construct the singular value decomposition
-	 * 
+	 *
 	 * @param A
 	 *            Rectangular matrix
 	 * @return Structure to access U, S and V.
@@ -487,7 +487,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the left singular vectors
-	 * 
+	 *
 	 * @return U
 	 */
 
@@ -497,7 +497,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the right singular vectors
-	 * 
+	 *
 	 * @return V
 	 */
 
@@ -507,7 +507,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the one-dimensional array of singular values
-	 * 
+	 *
 	 * @return diagonal of S.
 	 */
 
@@ -517,7 +517,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Return the diagonal matrix of singular values
-	 * 
+	 *
 	 * @return S
 	 */
 
@@ -535,7 +535,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Two norm
-	 * 
+	 *
 	 * @return max(S)
 	 */
 
@@ -545,7 +545,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Two norm condition number
-	 * 
+	 *
 	 * @return max(S)/min(S)
 	 */
 
@@ -555,7 +555,7 @@ public class SingularValueDecomposition implements java.io.Serializable {
 
 	/**
 	 * Effective numerical matrix rank
-	 * 
+	 *
 	 * @return Number of nonnegligible singular values.
 	 */
 

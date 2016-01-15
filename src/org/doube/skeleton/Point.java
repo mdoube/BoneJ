@@ -56,7 +56,7 @@ public class Point {
 
 	/**
 	 * Override equals method to compare points.
-	 * 
+	 *
 	 * @param o
 	 *            input object
 	 * @return true if the input object is equal to this Point

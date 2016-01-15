@@ -552,6 +552,7 @@ public class Orienteer extends PlugInFrame
 		Prefs.saveLocation(LOC_KEY, getLocation());
 	}
 
+	@Override
 	public void adjustmentValueChanged(final AdjustmentEvent e) {
 		if (e.getSource().equals(slider)) {
 			rotateTo(slider.getValue() * Math.PI / 180);
@@ -559,6 +560,7 @@ public class Orienteer extends PlugInFrame
 		}
 	}
 
+	@Override
 	public void itemStateChanged(final ItemEvent e) {
 		final Object source = e.getSource();
 		if (source.equals(axis0Choice)) {
@@ -600,6 +602,7 @@ public class Orienteer extends PlugInFrame
 		}
 	}
 
+	@Override
 	public void textValueChanged(final TextEvent e) {
 		final TextField field = (TextField) e.getSource();
 		double value = Double.parseDouble(field.getText());
@@ -612,6 +615,7 @@ public class Orienteer extends PlugInFrame
 		rotateTo(value);
 	}
 
+	@Override
 	public void mouseWheelMoved(final MouseWheelEvent e) {
 		final int oldPos = slider.getValue();
 		int newPos = oldPos + e.getWheelRotation();

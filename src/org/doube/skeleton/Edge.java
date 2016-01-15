@@ -48,7 +48,7 @@ public class Edge {
 
 	/**
 	 * Create an edge of specific vertices and list of slab voxels.
-	 * 
+	 *
 	 * @param v1
 	 *            first vertex
 	 * @param v2
@@ -67,7 +67,7 @@ public class Edge {
 
 	/**
 	 * Get first vertex.
-	 * 
+	 *
 	 * @return first vertex of the edge
 	 */
 	public Vertex getV1() {
@@ -76,7 +76,7 @@ public class Edge {
 
 	/**
 	 * Get second vertex.
-	 * 
+	 *
 	 * @return second vertex of the edge
 	 */
 	public Vertex getV2() {
@@ -85,7 +85,7 @@ public class Edge {
 
 	/**
 	 * Get list of slab voxels belonging to the edge.
-	 * 
+	 *
 	 * @return list of slab voxels
 	 */
 	public ArrayList<Point> getSlabs() {
@@ -94,7 +94,7 @@ public class Edge {
 
 	/**
 	 * Set DFS type (BACK or TREE)
-	 * 
+	 *
 	 * @param type
 	 *            DFS classification (BACK or TREE)
 	 */
@@ -104,7 +104,7 @@ public class Edge {
 
 	/**
 	 * Get DFS edge type
-	 * 
+	 *
 	 * @return DFS classification type
 	 */
 	public int getType() {
@@ -113,7 +113,7 @@ public class Edge {
 
 	/**
 	 * Get opposite vertex from a given one.
-	 * 
+	 *
 	 * @param v
 	 *            input vertex
 	 * @return opposite vertex in the edge
@@ -129,7 +129,7 @@ public class Edge {
 
 	/**
 	 * Set edge length
-	 * 
+	 *
 	 * @param length
 	 *            calibrated edge length
 	 */
@@ -139,7 +139,7 @@ public class Edge {
 
 	/**
 	 * Get edge length
-	 * 
+	 *
 	 * @return calibrated edge length
 	 */
 	public double getLength() {

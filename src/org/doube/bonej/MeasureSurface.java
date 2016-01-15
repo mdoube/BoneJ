@@ -55,6 +55,7 @@ import marchingcubes.MCTriangulator;
  */
 public class MeasureSurface implements PlugIn {
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -66,7 +67,7 @@ public class MeasureSurface implements PlugIn {
 		}
 		int threshold = 128;
 		final ImageCheck ic = new ImageCheck();
-		if (ic.isBinary(imp)) {
+		if (ImageCheck.isBinary(imp)) {
 			threshold = 128;
 		} else if (imp.getBitDepth() == 8) {
 			threshold = imp.getProcessor().getAutoThreshold(StackStats.getStackHistogram(imp));

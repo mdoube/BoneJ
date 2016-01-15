@@ -65,6 +65,7 @@ public class Moments implements PlugIn, DialogListener {
 	private boolean fieldUpdated = false;
 	private Calibration cal;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -918,6 +919,7 @@ public class Moments implements PlugIn, DialogListener {
 		return;
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
