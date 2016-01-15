@@ -1,21 +1,18 @@
 package org.doube.bonej;
 
-import org.doube.util.ImageCheck;
-import org.doube.util.ResultInserter;
-import org.doube.util.RoiMan;
-import org.doube.util.StackStats;
-import org.doube.util.UsageReporter;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.Prefs;
 import ij.gui.GenericDialog;
 import ij.macro.Interpreter;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
-import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import org.doube.util.*;
+
+import java.awt.*;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
@@ -71,15 +68,36 @@ import ij.process.ImageProcessor;
  *
  * @author Bob Dougherty
  * @author Michael Doube (refactoring for BoneJ)
+ * @author Richard Domander (refactoring for BoneJ)
  *
  */
 public class Thickness implements PlugIn {
-	// public static final int THRESHOLD = 128;
+	private static final String THICKNESS_PREFERENCE_KEY = "bonej.localThickness.doThickness";
+	private static final String SPACING_PREFERENCE_KEY = "bonej.localThickness.doSpacing";
+	private static final String GRAPHIC_PREFERENCE_KEY = "bonej.localThickness.doGraphic";
+	private static final String ROI_PREFERENCE_KEY = "bonej.localThickness.doRoi";
+	private static final String MASK_PREFERENCE_KEY = "bonej.localThickness.doMask";
+
+	private static final boolean THICKNESS_DEFAULT = true;
+	private static final boolean SPACING_DEFAULT = false;
+	private static final boolean GRAPHIC_DEFAULT = true;
+	private static final boolean ROI_DEFAULT = false;
+	private static final boolean MASK_DEFAULT = true;
+
 	private float[][] sNew;
+	private GenericDialog setupDialog = null;
+	private RoiManager roiManager = null;
+	private boolean doThickness = THICKNESS_DEFAULT;
+	private boolean doSpacing = SPACING_DEFAULT;
+	private boolean doGraphic = GRAPHIC_DEFAULT;
+	private boolean doRoi = ROI_DEFAULT;
+	private boolean doMask = MASK_DEFAULT;
 
 	public void run(final String arg) {
-		if (!ImageCheck.checkEnvironment())
+		if (!ImageCheck.checkEnvironment()) {
 			return;
+		}
+
 		final ImagePlus imp = IJ.getImage();
 		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
@@ -87,47 +105,48 @@ public class Thickness implements PlugIn {
 		}
 
 		if (!ImageCheck.isVoxelIsotropic(imp, 1E-3)) {
-			if (IJ.showMessageWithCancel("Anisotropic voxels",
+			boolean cancel = !IJ.showMessageWithCancel("Anisotropic voxels",
 					"This image contains anisotropic voxels, which will\n"
 							+ "result in incorrect thickness calculation.\n\n"
 							+ "Consider rescaling your data so that voxels are isotropic\n" + "(Image > Scale...).\n\n"
-							+ "Continue anyway?")) {
-			} else
+							+ "Continue anyway?");
+			if (cancel) {
 				return;
-
+			}
 		}
-		final GenericDialog gd = new GenericDialog("Options");
-		gd.addCheckbox("Thickness", true);
-		gd.addCheckbox("Spacing", false);
-		gd.addCheckbox("Graphic Result", true);
-		gd.addCheckbox("Use_ROI_Manager", false);
-		gd.addCheckbox("Mask thickness map", true);
-		gd.addHelp("http://bonej.org/thickness");
-		gd.showDialog();
-		if (gd.wasCanceled()) {
+
+		roiManager = RoiManager.getInstance();
+
+		loadSettings();
+		createSetupDialog();
+		setupDialog.showDialog();
+		if (setupDialog.wasCanceled()) {
 			return;
 		}
-		final boolean doThickness = gd.getNextBoolean();
-		final boolean doSpacing = gd.getNextBoolean();
-		final boolean doGraphic = gd.getNextBoolean();
-		final boolean doRoi = gd.getNextBoolean();
-		final boolean doMask = gd.getNextBoolean();
+		getProcessingSettingsFromDialog();
+
+		if (!doThickness && !doSpacing) {
+			IJ.error("Nothing to process, exiting plugin.");
+			return;
+		}
+
+		saveSettings();
 
 		final long startTime = System.currentTimeMillis();
 		final String title = stripExtension(imp.getTitle());
 
-		final RoiManager roiMan = RoiManager.getInstance();
 		// calculate trabecular thickness (Tb.Th)
 		if (doThickness) {
 			final boolean inverse = false;
-			ImagePlus impLTC = new ImagePlus();
-			if (doRoi && roiMan != null) {
-				final ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 0, 1);
+			ImagePlus impLTC;
+			if (doRoi && roiManager != null) {
+				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 0, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTC = getLocalThickness(crop, inverse, doMask);
-			} else
+			} else {
 				impLTC = getLocalThickness(imp, inverse, doMask);
+			}
 			impLTC.setTitle(title + "_Tb.Th");
 			impLTC.setCalibration(imp.getCalibration());
 			backgroundToNaN(impLTC, 0x00);
@@ -142,14 +161,15 @@ public class Thickness implements PlugIn {
 		}
 		if (doSpacing) {
 			final boolean inverse = true;
-			ImagePlus impLTCi = new ImagePlus();
-			if (doRoi && roiMan != null) {
-				final ImageStack stack = RoiMan.cropStack(roiMan, imp.getStack(), true, 255, 1);
+			ImagePlus impLTCi;
+			if (doRoi && roiManager != null) {
+				final ImageStack stack = RoiMan.cropStack(roiManager, imp.getStack(), true, 255, 1);
 				final ImagePlus crop = new ImagePlus(imp.getTitle(), stack);
 				crop.setCalibration(imp.getCalibration());
 				impLTCi = getLocalThickness(crop, inverse, doMask);
-			} else
+			} else {
 				impLTCi = getLocalThickness(imp, inverse, doMask);
+			}
 			// check marrow cavity size (i.e. trabcular separation, Tb.Sp)
 			impLTCi.setTitle(title + "_Tb.Sp");
 			impLTCi.setCalibration(imp.getCalibration());
@@ -178,6 +198,51 @@ public class Thickness implements PlugIn {
 				name = name.substring(0, dotIndex);
 		}
 		return name;
+	}
+
+	private void createSetupDialog()
+	{
+		setupDialog = new GenericDialog("Plugin options");
+		setupDialog.addCheckbox("Thickness", doThickness);
+		setupDialog.addCheckbox("Spacing", doSpacing);
+		setupDialog.addCheckbox("Graphic Result", doGraphic);
+
+		setupDialog.addCheckbox("Crop using ROI Manager", doRoi);
+		if (roiManager == null) {
+			Checkbox cropCheckbox = (Checkbox) setupDialog.getCheckboxes().elementAt(3);
+			cropCheckbox.setState(false);
+			cropCheckbox.setEnabled(false);
+		}
+
+		setupDialog.addCheckbox("Mask thickness map", doMask);
+		setupDialog.addHelp("http://bonej.org/thickness");
+	}
+
+	private void getProcessingSettingsFromDialog()
+	{
+		doThickness = setupDialog.getNextBoolean();
+		doSpacing = setupDialog.getNextBoolean();
+		doGraphic = setupDialog.getNextBoolean();
+		doRoi = setupDialog.getNextBoolean();
+		doMask = setupDialog.getNextBoolean();
+	}
+
+	private void loadSettings()
+	{
+		doThickness = Prefs.get(THICKNESS_PREFERENCE_KEY, THICKNESS_DEFAULT);
+		doSpacing = Prefs.get(SPACING_PREFERENCE_KEY, SPACING_DEFAULT);
+		doGraphic = Prefs.get(GRAPHIC_PREFERENCE_KEY, GRAPHIC_DEFAULT);
+		doRoi = Prefs.get(ROI_PREFERENCE_KEY, ROI_DEFAULT);
+		doMask = Prefs.get(MASK_PREFERENCE_KEY, MASK_DEFAULT);
+	}
+
+	private void saveSettings()
+	{
+		Prefs.set(THICKNESS_PREFERENCE_KEY, doThickness);
+		Prefs.set(SPACING_PREFERENCE_KEY, doSpacing);
+		Prefs.set(GRAPHIC_PREFERENCE_KEY, doGraphic);
+		Prefs.set(ROI_PREFERENCE_KEY, doRoi);
+		Prefs.set(MASK_PREFERENCE_KEY, doMask);
 	}
 
 	/**
@@ -1323,8 +1388,7 @@ public class Thickness implements PlugIn {
 	/**
 	 * Get a local thickness map from an ImagePlus, without masking correction
 	 *
-	 * @see getLocalThickness(ImagePlus imp, boolean inv, boolean doMask) :
-	 *      ImagePlus
+	 * @see #getLocalThickness(ImagePlus imp, boolean inv, boolean doMask)
 	 * @param imp
 	 *            Binary ImagePlus
 	 * @param inv
@@ -1332,7 +1396,7 @@ public class Thickness implements PlugIn {
 	 *            you want the thickness of the background
 	 * @return 32-bit ImagePlus containing a local thickness map
 	 */
-	public ImagePlus getLocalThickness(final ImagePlus imp, final boolean inv) {
+	public ImagePlus getLocalThickness(ImagePlus imp, boolean inv) {
 		return getLocalThickness(imp, inv, false);
 	}
 
@@ -1358,8 +1422,8 @@ public class Thickness implements PlugIn {
 		final ImageStack mapStack = impLTC.getImageStack();
 
 		final int keepValue = inv ? 0 : 255;
-		ImageProcessor ip = new ByteProcessor(w, h);
-		ImageProcessor map = new FloatProcessor(w, h);
+		ImageProcessor ip;
+		ImageProcessor map;
 		for (int z = 1; z <= d; z++) {
 			IJ.showStatus("Masking thickness map...");
 			IJ.showProgress(z, d);
