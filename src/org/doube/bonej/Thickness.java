@@ -1,5 +1,13 @@
 package org.doube.bonej;
 
+import java.awt.Checkbox;
+
+import org.doube.util.ImageCheck;
+import org.doube.util.ResultInserter;
+import org.doube.util.RoiMan;
+import org.doube.util.StackStats;
+import org.doube.util.UsageReporter;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
@@ -10,9 +18,6 @@ import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import org.doube.util.*;
-
-import java.awt.*;
 
 /* Bob Dougherty 8/10/2007
  Perform all of the steps for the local thickness calculation
