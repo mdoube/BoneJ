@@ -214,6 +214,8 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	/** debugging flag */
 	private static final boolean debug = false;
 
+	private GenericDialog settingsDialog = null;
+
 	/*
 	 * -----------------------------------------------------------------------
 	 */
@@ -248,22 +250,13 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	public void run(final ImageProcessor ip) {
 		if (!ImageCheck.checkEnvironment())
 			return;
-		final GenericDialog gd = new GenericDialog("Analyze Skeleton");
-		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
-				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
-		gd.addCheckbox("Prune ends", pruneEnds);
-		gd.addCheckbox("Calculate largest shortest path", calculateShortestPath);
-		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
-		gd.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
-		gd.showDialog();
 
-		// Exit when canceled
-		if (gd.wasCanceled())
+		createSettingsDialog();
+		settingsDialog.showDialog();
+		if (settingsDialog.wasCanceled()) {
 			return;
-		pruneIndex = gd.getNextChoiceIndex();
-		pruneEnds = gd.getNextBoolean();
-		calculateShortestPath = gd.getNextBoolean();
-		AnalyzeSkeleton.verbose = gd.getNextBoolean();
+		}
+		setSettingsFromDialog();
 
 		// pre-checking if another image is needed and also setting bPruneCycles
 		ImagePlus origIP = null;
@@ -322,6 +315,23 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		UsageReporter.reportEvent(this).send();
 
 	} // end run method
+
+	private void createSettingsDialog() {
+		settingsDialog = new GenericDialog("Analyze Skeleton");
+		settingsDialog.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
+				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
+		settingsDialog.addCheckbox("Prune ends", pruneEnds);
+		settingsDialog.addCheckbox("Calculate largest shortest path", calculateShortestPath);
+		settingsDialog.addCheckbox("Show detailed info", verbose);
+		settingsDialog.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
+	}
+
+	private void setSettingsFromDialog() {
+		pruneIndex = settingsDialog.getNextChoiceIndex();
+		pruneEnds = settingsDialog.getNextBoolean();
+		calculateShortestPath = settingsDialog.getNextBoolean();
+		verbose = settingsDialog.getNextBoolean();
+	}
 
 	/**
 	 * This method is intended for non-interactively using this plugin.
