@@ -1162,7 +1162,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *            tag image to be diplayed
 	 */
 	void displayTagImage(final ImageStack taggedImage) {
-		final ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
+		final ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage.duplicate());
 		tagIP.show();
 
 		// Set same calibration as the input image
