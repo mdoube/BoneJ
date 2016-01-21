@@ -226,9 +226,10 @@ public class Orienteer extends PlugInFrame
 		if (IJ.isMacOSX())
 			setResizable(false);
 		setVisible(true);
+		if (WindowManager.getImageCount() == 0)
+			return;
 		final ImagePlus imp = WindowManager.getCurrentImage();
-		if (imp != null)
-			setup(imp);
+		setup(imp);
 	}
 
 	private void setup(final ImagePlus imp) {
@@ -275,6 +276,10 @@ public class Orienteer extends PlugInFrame
 	}
 
 	private void update() {
+		if (WindowManager.getImageCount() == 0){
+			instance.setTitle("Orientation - No Images Open");
+			return;
+		}
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		activeImpID = new Integer(imp.getID());
 		instance.setTitle("Orientation - " + imp.getTitle());
@@ -363,6 +368,8 @@ public class Orienteer extends PlugInFrame
 	 * @return orientation of the axis in radians clockwise from 12 o'clock
 	 */
 	public double getOrientation(final String direction) {
+		if (WindowManager.getImageCount() == 0)
+	         return 0;
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		return getOrientation(imp, direction);
 	}
@@ -465,6 +472,8 @@ public class Orienteer extends PlugInFrame
 	 *            anti-clockwise)
 	 */
 	public void rotate(final double deltaTheta) {
+		if (WindowManager.getImageCount() == 0)
+			return;
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		this.activeImpID = new Integer(imp.getID());
 		final AffineTransform transform = new AffineTransform();
@@ -489,10 +498,14 @@ public class Orienteer extends PlugInFrame
 	public void rotateTo(final double newTheta) {
 		rotate(newTheta - this.theta);
 		this.theta = newTheta;
+		if (WindowManager.getImageCount() == 0)
+			return;
 		thetaHash.put(activeImpID, newTheta);
 	}
 
 	private void addLabels() {
+		if (WindowManager.getImageCount() == 0)
+			return;
 		final ImagePlus imp = WindowManager.getImage(activeImpID);
 		scale = imp.getCanvas().getMagnification();
 		final Font font = new Font("SansSerif", Font.PLAIN, (int) (fontSize / scale));
@@ -505,6 +518,8 @@ public class Orienteer extends PlugInFrame
 	}
 
 	private void updateDirections() {
+		if (WindowManager.getImageCount() == 0)
+			return;
 		directions = getDirections(WindowManager.getImage(activeImpID));
 		rotate(0);
 	}
@@ -535,6 +550,8 @@ public class Orienteer extends PlugInFrame
 	public void close() {
 		super.close();
 		instance = null;
+		if (WindowManager.getImageCount() == 0)
+			return;
 		for (final Integer i : thetaHash.keySet())
 			WindowManager.getImage(i.intValue()).setOverlay(null);
 	}
@@ -559,6 +576,9 @@ public class Orienteer extends PlugInFrame
 	}
 
 	public void itemStateChanged(final ItemEvent e) {
+		boolean isImageOpen = true;
+		if (WindowManager.getImageCount() == 0)
+			isImageOpen = false;
 		final Object source = e.getSource();
 		if (source.equals(axis0Choice)) {
 			final int i = axis0Choice.getSelectedIndex();
@@ -569,7 +589,8 @@ public class Orienteer extends PlugInFrame
 			}
 			axis0 = i;
 			final int[] axes = { axis0, axis1 };
-			axisHash.put(activeImpID, axes.clone());
+			if (isImageOpen)
+				axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (source.equals(axis1Choice)) {
 			final int i = axis1Choice.getSelectedIndex();
@@ -580,21 +601,25 @@ public class Orienteer extends PlugInFrame
 			}
 			axis1 = i;
 			final int[] axes = { axis0, axis1 };
-			axisHash.put(activeImpID, axes.clone());
+			if (isImageOpen)
+			    axisHash.put(activeImpID, axes.clone());
 			updateDirections();
 		} else if (source.equals(reflect0)) {
 			isReflected0 = reflect0.getState();
 			final boolean[] reflectors = { isReflected0, isReflected1 };
-			reflectHash.put(activeImpID, reflectors.clone());
+			if (isImageOpen)
+			    reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		} else if (source.equals(reflect1)) {
 			isReflected1 = reflect1.getState();
 			final boolean[] reflectors = { isReflected0, isReflected1 };
-			reflectHash.put(activeImpID, reflectors.clone());
+			if (isImageOpen)
+			    reflectHash.put(activeImpID, reflectors.clone());
 			updateDirections();
 		} else if (source.equals(deg) || source.equals(rad)) {
 			final boolean[] units = { deg.getState(), rad.getState() };
-			unitHash.put(activeImpID, units);
+			if (isImageOpen)
+			    unitHash.put(activeImpID, units);
 			updateTextbox();
 		}
 	}
