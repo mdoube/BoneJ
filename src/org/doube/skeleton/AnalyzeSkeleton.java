@@ -6,13 +6,10 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.ListIterator;
 
+import ij.*;
 import org.doube.util.ImageCheck;
 import org.doube.util.UsageReporter;
 
-import ij.IJ;
-import ij.ImagePlus;
-import ij.ImageStack;
-import ij.WindowManager;
 import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -53,6 +50,15 @@ import ij.process.ImageProcessor;
  *
  */
 public class AnalyzeSkeleton implements PlugInFilter {
+	private static final String PRUNE_MODE_INDEX_KEY = "org.doube.analyzeSkeleton.pruneModeIndex";
+	private static final String PRUNE_ENDS_KEY = "org.doube.analyzeSkeleton.pruneEnds";
+	private static final String CALCULATE_PATH_KEY = "org.doube.analyzeSkeleton.shortestPath";
+	private static final String VERBOSE_KEY = "org.doube.analyzeSkeleton.showDetailedInfo";
+	private static final int DEFAULT_PRUNE_MODE_INDEX = AnalyzeSkeleton.NONE;
+	private static final boolean DEFAULT_PRUNE_ENDS = false;
+	private static final boolean DEFAULT_CALCULATE_SHORTEST_PATH = false;
+	private static final boolean DEFAULT_VERBOSE = false;
+
 	/** end point flag */
 	public static byte END_POINT = 30;
 	/** junction flag */
@@ -167,10 +173,10 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	private boolean bPruneCycles = true;
 
 	/** dead-end pruning option */
-	public static boolean pruneEnds = false;
+	public static boolean pruneEnds = DEFAULT_PRUNE_ENDS;
 
 	/** calculate largest shortest path option */
-	public static boolean calculateShortestPath = false;
+	public static boolean calculateShortestPath = DEFAULT_CALCULATE_SHORTEST_PATH;
 
 	/** array of graphs (one per tree) */
 	private Graph[] graph = null;
@@ -196,7 +202,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	private ImageStack originalImage = null;
 
 	/** prune cycle options index */
-	public static int pruneIndex = AnalyzeSkeleton.NONE;
+	public static int pruneIndex = DEFAULT_PRUNE_MODE_INDEX;
 
 	/** x- neighborhood offset */
 	private int x_offset = 1;
@@ -206,13 +212,15 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	private int z_offset = 1;
 
 	/** boolean flag to display extra information in result tables */
-	public static boolean verbose = false;
+	public static boolean verbose = DEFAULT_VERBOSE;
 
 	/** silent run flag, to distinguish between GUI and plugin calls */
 	protected boolean silent = false;
 
 	/** debugging flag */
 	private static final boolean debug = false;
+
+	private GenericDialog settingsDialog = null;
 
 	/*
 	 * -----------------------------------------------------------------------
@@ -248,22 +256,15 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	public void run(final ImageProcessor ip) {
 		if (!ImageCheck.checkEnvironment())
 			return;
-		final GenericDialog gd = new GenericDialog("Analyze Skeleton");
-		gd.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
-				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
-		gd.addCheckbox("Prune ends", pruneEnds);
-		gd.addCheckbox("Calculate largest shortest path", calculateShortestPath);
-		gd.addCheckbox("Show detailed info", AnalyzeSkeleton.verbose);
-		gd.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
-		gd.showDialog();
 
-		// Exit when canceled
-		if (gd.wasCanceled())
+		loadDialogSettings();
+		createSettingsDialog();
+		settingsDialog.showDialog();
+		if (settingsDialog.wasCanceled()) {
 			return;
-		pruneIndex = gd.getNextChoiceIndex();
-		pruneEnds = gd.getNextBoolean();
-		calculateShortestPath = gd.getNextBoolean();
-		AnalyzeSkeleton.verbose = gd.getNextBoolean();
+		}
+		setSettingsFromDialog();
+		saveDialogSettings();
 
 		// pre-checking if another image is needed and also setting bPruneCycles
 		ImagePlus origIP = null;
@@ -322,6 +323,39 @@ public class AnalyzeSkeleton implements PlugInFilter {
 		UsageReporter.reportEvent(this).send();
 
 	} // end run method
+
+	private void loadDialogSettings() {
+		// get String because Prefs.getInt fails to find the key
+		String index = Prefs.get(PRUNE_MODE_INDEX_KEY, String.valueOf(DEFAULT_PRUNE_MODE_INDEX));
+		pruneIndex = Integer.parseInt(index);
+		pruneEnds = Prefs.get(PRUNE_ENDS_KEY, DEFAULT_PRUNE_ENDS);
+		calculateShortestPath = Prefs.get(CALCULATE_PATH_KEY, DEFAULT_CALCULATE_SHORTEST_PATH);
+		verbose = Prefs.get(VERBOSE_KEY, DEFAULT_VERBOSE);
+	}
+
+	private void createSettingsDialog() {
+		settingsDialog = new GenericDialog("Analyze Skeleton");
+		settingsDialog.addChoice("Prune cycle method: ", AnalyzeSkeleton.pruneCyclesModes,
+				AnalyzeSkeleton.pruneCyclesModes[pruneIndex]);
+		settingsDialog.addCheckbox("Prune ends", pruneEnds);
+		settingsDialog.addCheckbox("Calculate largest shortest path", calculateShortestPath);
+		settingsDialog.addCheckbox("Show detailed info", verbose);
+		settingsDialog.addHelp("http://fiji.sc/wiki/index.php/AnalyzeSkeleton");
+	}
+
+	private void setSettingsFromDialog() {
+		pruneIndex = settingsDialog.getNextChoiceIndex();
+		pruneEnds = settingsDialog.getNextBoolean();
+		calculateShortestPath = settingsDialog.getNextBoolean();
+		verbose = settingsDialog.getNextBoolean();
+	}
+
+	private void saveDialogSettings() {
+		Prefs.set(PRUNE_MODE_INDEX_KEY, String.valueOf(pruneIndex));
+		Prefs.set(PRUNE_ENDS_KEY, pruneEnds);
+		Prefs.set(CALCULATE_PATH_KEY, calculateShortestPath);
+		Prefs.set(VERBOSE_KEY, verbose);
+	}
 
 	/**
 	 * This method is intended for non-interactively using this plugin.
@@ -1128,7 +1162,7 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *            tag image to be diplayed
 	 */
 	void displayTagImage(final ImageStack taggedImage) {
-		final ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage);
+		final ImagePlus tagIP = new ImagePlus("Tagged skeleton", taggedImage.duplicate());
 		tagIP.show();
 
 		// Set same calibration as the input image
