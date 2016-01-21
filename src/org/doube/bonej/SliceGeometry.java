@@ -227,7 +227,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addCheckbox("3D_Annotation", false);
 		gd.addCheckbox("Process_Stack", false);
 		gd.addCheckbox("Clear_results", false);
-		gd.addCheckbox("Use Orientation", (orienteer != null));
+		gd.addCheckbox("Use_Orientation", (orienteer != null));
 		// String[] analyses = { "Weighted", "Unweighted", "Both" };
 		// gd.addChoice("Calculate: ", analyses, analyses[1]);
 		gd.addCheckbox("HU_Calibrated", ImageCheck.huCalibrated(imp));
