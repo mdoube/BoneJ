@@ -204,13 +204,13 @@ public class SkeletonAngles implements PlugIn {
 		if (startAtZero) {
 			if (nthPoint < edgePoints.size())
 				return edgePoints.get(nthPoint);
-			else
-				return edgePoints.get(edgePoints.size() - 1);
-		} else {
-			if (nthPoint < edgePoints.size())
-				return edgePoints.get(edgePoints.size() - nthPoint - 1);
-			else
-				return edgePoints.get(0);
+
+			return edgePoints.get(edgePoints.size() - 1);
 		}
+		
+		if (nthPoint < edgePoints.size())
+			return edgePoints.get(edgePoints.size() - nthPoint - 1);
+		
+		return edgePoints.get(0);
 	}
 }

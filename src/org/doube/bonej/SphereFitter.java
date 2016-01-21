@@ -206,8 +206,7 @@ public class SphereFitter implements PlugIn, DialogListener {
 					final double distance = Math.sqrt(dX * dX + dY2 + dZ2);
 					if (distance > maxRad)
 						continue;
-					else
-						targetIP.set(x - startX, tY, ip.get(x, y));
+					targetIP.set(x - startX, tY, ip.get(x, y));
 				}
 			}
 		}

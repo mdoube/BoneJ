@@ -342,20 +342,19 @@ public class Moments implements PlugIn, DialogListener {
 					final double testPixel = ip.get(x, y);
 					if (testPixel < min || testPixel > max) {
 						continue;
-					} else {
-						sumVoxVol += voxVol;
-						final double voxMass = voxelDensity(testPixel, m, c, factor) * voxVol;
-						sumVoxMass += voxMass;
-						final double xvWcX = x * vW - cX;
-						final double yvHcY = y * vH - cY;
-						final double zvDcZ = z * vD - cZ;
-						Icxx += (yvHcY * yvHcY + zvDcZ * zvDcZ + voxVhVd) * voxMass;
-						Icyy += (xvWcX * xvWcX + zvDcZ * zvDcZ + voxVwVd) * voxMass;
-						Iczz += (yvHcY * yvHcY + xvWcX * xvWcX + voxVhVw) * voxMass;
-						Icxy += xvWcX * yvHcY * voxMass;
-						Icxz += xvWcX * zvDcZ * voxMass;
-						Icyz += yvHcY * zvDcZ * voxMass;
-					}
+					} 
+					sumVoxVol += voxVol;
+					final double voxMass = voxelDensity(testPixel, m, c, factor) * voxVol;
+					sumVoxMass += voxMass;
+					final double xvWcX = x * vW - cX;
+					final double yvHcY = y * vH - cY;
+					final double zvDcZ = z * vD - cZ;
+					Icxx += (yvHcY * yvHcY + zvDcZ * zvDcZ + voxVhVd) * voxMass;
+					Icyy += (xvWcX * xvWcX + zvDcZ * zvDcZ + voxVwVd) * voxMass;
+					Iczz += (yvHcY * yvHcY + xvWcX * xvWcX + voxVhVw) * voxMass;
+					Icxy += xvWcX * yvHcY * voxMass;
+					Icxz += xvWcX * zvDcZ * voxMass;
+					Icyz += yvHcY * zvDcZ * voxMass;
 				}
 			}
 		}
@@ -649,11 +648,9 @@ public class Moments implements PlugIn, DialogListener {
 						final int yA = (int) Math.floor((yAlign + dYc) / vH);
 						final int zA = (int) Math.floor((zAlign + dZc) / vD);
 
-						if (xA < rX || xA >= rW || yA < rY || yA >= rH || zA < this.startSlice || zA > this.endSlice) {
+						if (xA < rX || xA >= rW || yA < rY || yA >= rH || zA < this.startSlice || zA > this.endSlice)
 							continue;
-						} else {
-							targetIP.set(x, y, this.sliceProcessors[zA].get(xA, yA));
-						}
+						targetIP.set(x, y, this.sliceProcessors[zA].get(xA, yA));
 					}
 				}
 			}
@@ -729,26 +726,23 @@ public class Moments implements PlugIn, DialogListener {
 					final double pixel = ip.get(x, y);
 					if (pixel < min || pixel > max)
 						continue;
-					else {
-						// distance from centroid in
-						// original coordinate system
-						// xCx, yCx, zCx
-						final double xCx = x * vW - xC;
 
-						// now transform each coordinate
-						// transformed coordinate is dot product of original
-						// coordinates
-						// and eigenvectors
-						final double xT = xCx * v00 + yCyv10 + zCzv20;
-						final double yT = xCx * v01 + yCyv11 + zCzv21;
-						final double zT = xCx * v02 + yCyv12 + zCzv22;
-
-						// keep the biggest value to find the greatest distance
-						// in x, y and z
-						xTmax = Math.max(xTmax, Math.abs(xT));
-						yTmax = Math.max(yTmax, Math.abs(yT));
-						zTmax = Math.max(zTmax, Math.abs(zT));
-					}
+					// distance from centroid in
+					// original coordinate system
+					// xCx, yCx, zCx
+					final double xCx = x * vW - xC;
+					// now transform each coordinate
+					// transformed coordinate is dot product of original
+					// coordinates
+					// and eigenvectors
+					final double xT = xCx * v00 + yCyv10 + zCzv20;
+					final double yT = xCx * v01 + yCyv11 + zCzv21;
+					final double zT = xCx * v02 + yCyv12 + zCzv22;
+					// keep the biggest value to find the greatest distance
+					// in x, y and z
+					xTmax = Math.max(xTmax, Math.abs(xT));
+					yTmax = Math.max(yTmax, Math.abs(yT));
+					zTmax = Math.max(zTmax, Math.abs(zT));
 				}
 			}
 		}

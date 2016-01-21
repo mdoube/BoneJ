@@ -364,25 +364,26 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		gd.addHelp("http://bonej.org/threshold");
 		gd.addDialogListener(this);
 		gd.showDialog();
-		if (gd.wasCanceled()) {
+		
+		if (gd.wasCanceled())
 			return false;
-		} else {
-			thresholdOnly = gd.getNextBoolean();
-			applyThreshold = gd.getNextBoolean();
-			doPlot = gd.getNextBoolean();
-			testCount = (int) Math.floor(gd.getNextNumber());
-			if (testCount <= 1)
-				thresholdOnly = true;
-			testRange = gd.getNextNumber();
-			if (testRange < 0)
-				testRange = 0;
-			if (testRange > 0.5)
-				testRange = 0.5;
-			subVolume = (int) Math.floor(gd.getNextNumber());
-			nErodes = (int) Math.floor(gd.getNextNumber());
-			nDilates = (int) Math.floor(gd.getNextNumber());
-			return true;
-		}
+
+		thresholdOnly = gd.getNextBoolean();
+		applyThreshold = gd.getNextBoolean();
+		doPlot = gd.getNextBoolean();
+		testCount = (int) Math.floor(gd.getNextNumber());
+		if (testCount <= 1)
+			thresholdOnly = true;
+		testRange = gd.getNextNumber();
+		if (testRange < 0)
+			testRange = 0;
+		if (testRange > 0.5)
+			testRange = 0.5;
+		subVolume = (int) Math.floor(gd.getNextNumber());
+		nErodes = (int) Math.floor(gd.getNextNumber());
+		nDilates = (int) Math.floor(gd.getNextNumber());
+		return true;
+
 	}
 
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {

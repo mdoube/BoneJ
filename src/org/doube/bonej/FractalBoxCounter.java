@@ -292,8 +292,8 @@ public class FractalBoxCounter implements PlugIn {
 			final int d) {
 		if (x >= 0 && x < w && y >= 0 && y < h && z >= 0 && z < d)
 			return ((byte[]) image.getPixels(z + 1))[x + y * w];
-		else
-			return (byte) 255;
+
+		return (byte) 255;
 	} /* end getPixel */
 
 	private void drawGraph(final double[] params, final double[] boxSizes, final double[] boxCountSums) {

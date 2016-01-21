@@ -389,11 +389,10 @@ public class Orienteer extends PlugInFrame
 	public double getOrientation(final ImagePlus imp) {
 		final Integer id = new Integer(imp.getID());
 		final Double o = thetaHash.get(id);
-		if (o == null) {
+		if (o == null)
 			throw new IllegalArgumentException();
-		} else {
-			return o.doubleValue();
-		}
+		
+		return o.doubleValue();
 	}
 
 	public double getOrientation(final ImagePlus imp, final String direction) {
@@ -423,9 +422,10 @@ public class Orienteer extends PlugInFrame
 		}
 
 		if (orientation > 2 * Math.PI)
+
 			return orientation - 2 * Math.PI;
-		else
-			return orientation;
+		
+		return orientation;
 	}
 
 	/**

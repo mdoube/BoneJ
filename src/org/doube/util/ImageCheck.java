@@ -261,14 +261,12 @@ public class ImageCheck {
 	public static boolean checkMemory(final long memoryRequirement) {
 		if (memoryRequirement > IJ.maxMemory()) {
 			final String message = "You might not have enough memory to run this job.\n" + "Do you want to continue?";
-			if (IJ.showMessageWithCancel("Memory Warning", message)) {
+			if (IJ.showMessageWithCancel("Memory Warning", message))
 				return true;
-			} else {
-				return false;
-			}
-		} else {
-			return true;
+			
+			return false;
 		}
+		return true;
 	}
 
 	public static boolean checkMemory(final ImagePlus imp, final double ratio) {
@@ -301,10 +299,10 @@ public class ImageCheck {
 		final Calibration cal = imp.getCalibration();
 		final double[] coeff = cal.getCoefficients();
 		if (!cal.calibrated() || cal == null || (cal.getCValue(0) == 0 && coeff[1] == 1)
-				|| (cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1)) {
+				|| (cal.getCValue(0) == Short.MIN_VALUE && coeff[1] == 1))
 			return false;
-		} else
-			return true;
+		
+		return true;
 	}
 
 	/**

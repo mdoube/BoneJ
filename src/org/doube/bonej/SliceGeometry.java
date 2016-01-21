@@ -1010,15 +1010,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				this.principalDiameter[s] = Double.NaN;
 				this.secondaryDiameter[s] = Double.NaN;
 				continue;
-			} else {
-				final int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
-				final PolygonRoi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
-				feretValues = roi.getFeretValues();
-				this.feretMin[s] = feretValues[2] * this.vW;
-				this.feretAngle[s] = feretValues[1] * Math.PI / 180;
-				this.feretMax[s] = feretValues[0] * this.vW;
-				this.perimeter[s] = roi.getLength() * this.vW;
 			}
+			
+			final int type = Wand.allPoints() ? Roi.FREEROI : Roi.TRACED_ROI;
+			final PolygonRoi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, type);
+			feretValues = roi.getFeretValues();
+			this.feretMin[s] = feretValues[2] * this.vW;
+			this.feretAngle[s] = feretValues[1] * Math.PI / 180;
+			this.feretMax[s] = feretValues[0] * this.vW;
+			this.perimeter[s] = roi.getLength() * this.vW;
+			
 			if (this.doOriented && orienteer != null) {
 				final double[][] points = new double[w.npoints][2];
 				for (int i = 0; i < w.npoints; i++) {

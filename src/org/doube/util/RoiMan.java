@@ -160,10 +160,10 @@ public class RoiMan {
 		if (noZRoi) {
 			final int[] limits = { xMin, xMax, yMin, yMax, DEFAULT_Z_MIN, DEFAULT_Z_MAX };
 			return limits;
-		} else {
-			final int[] limits = { xMin, xMax, yMin, yMax, zMin, zMax };
-			return limits;
 		}
+		
+		final int[] limits = { xMin, xMax, yMin, yMax, zMin, zMax };
+		return limits;
 	}
 
 	public static boolean isActiveOnAllSlices(final RoiManager roiManager, final Roi roi) {

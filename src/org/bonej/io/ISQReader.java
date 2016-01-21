@@ -398,8 +398,7 @@ public class ISQReader implements PlugIn {
 		final short[] pixels = readPixels(in, width, height);
 		if (eofErrorCount > 0)
 			return null;
-		else
-			return pixels;
+		return pixels;
 	}
 
 	/**
@@ -503,8 +502,7 @@ public class ISQReader implements PlugIn {
 	public boolean isScancoISQ(final String path) {
 		if (getMagic(path).equals(MAGIC))
 			return true;
-		else
-			return false;
+		return false;
 	}
 
 	/**

@@ -1361,12 +1361,11 @@ public class ParticleCounter implements PlugIn, DialogListener {
 					newLabel[i] = i;
 					minLabel++;
 					continue;
-				} else {
-					newLabel[i] = minLabel;
-					particleSizes[minLabel] = particleSizes[i];
-					particleSizes[i] = 0;
-					minLabel++;
 				}
+				newLabel[i] = minLabel;
+				particleSizes[minLabel] = particleSizes[i];
+				particleSizes[i] = 0;
+				minLabel++;
 			}
 		}
 		// now replace labels
@@ -2432,8 +2431,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			final int d) {
 		if (withinBounds(x, y, z, w, h, d))
 			return image[z][x + y * w];
-		else
-			return 0;
+		
+		return 0;
 	} /* end getPixel */
 
 	/**

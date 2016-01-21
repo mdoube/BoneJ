@@ -567,10 +567,9 @@ public class FitCircle {
 				if (fTemp < f && ParTemp.get(0, 2) > 0) {
 					lambda_sqrt /= 2;
 					break;
-				} else {
-					lambda_sqrt *= 2;
-					continue;
-				}
+				} 
+				lambda_sqrt *= 2;
+				continue;
 			}
 			if (progress < epsilon) {
 				break;
@@ -701,10 +700,10 @@ public class FitCircle {
 				if (fTemp < f) {
 					lambda_sqrt /= 2;
 					break;
-				} else {
-					lambda_sqrt *= 2;
-					continue;
-				}
+				} 
+				lambda_sqrt *= 2;
+				continue;
+
 			}
 			if (progress < epsilon) {
 				break;

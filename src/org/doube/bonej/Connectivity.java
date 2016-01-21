@@ -289,8 +289,8 @@ public class Connectivity implements PlugIn {
 	private byte getPixel(final ImageStack stack, final int x, final int y, final int z) {
 		if (x >= 0 && x < this.width && y >= 0 && y < this.height && z >= 0 && z < this.depth)
 			return ((byte[]) stack.getPixels(z + 1))[y * this.width + x];
-		else
-			return 0;
+		
+		return 0;
 	} /* end getPixel */
 
 	/**

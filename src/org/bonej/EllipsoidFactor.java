@@ -1569,8 +1569,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private boolean isOutOfBounds(final int x, final int y, final int z, final int w, final int h, final int d) {
 		if (x < 0 || x >= w || y < 0 || y >= h || z < 0 || z >= d)
 			return true;
-		else
-			return false;
+
+		return false;
 	}
 
 	private int[][] skeletonPoints(final ImagePlus imp) {

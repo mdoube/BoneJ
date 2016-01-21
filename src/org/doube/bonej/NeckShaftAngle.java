@@ -146,18 +146,17 @@ public class NeckShaftAngle implements PlugIn, MouseListener, DialogListener {
 			IJ.run("ROI Manager...");
 			IJ.error("Please populate ROI Manager with point ROIs\n" + "placed on the boundary of the femoral head");
 			return;
-		} else {
-			final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
-			try {
-				this.headCentre = FitSphere.fitSphere(points);
-			} catch (final IllegalArgumentException ia) {
-				IJ.showMessage(ia.getMessage());
-				return;
-			} catch (final RuntimeException re) {
-				IJ.showMessage(
-						"Can't fit sphere to points.\n" + "Add more point ROI's to the ROI Manager and try again.");
-				return;
-			}
+		}
+		final double[][] points = RoiMan.getRoiManPoints(imp, roiMan);
+		try {
+			this.headCentre = FitSphere.fitSphere(points);
+		} catch (final IllegalArgumentException ia) {
+			IJ.showMessage(ia.getMessage());
+			return;
+		} catch (final RuntimeException re) {
+			IJ.showMessage(
+				"Can't fit sphere to points.\n" + "Add more point ROI's to the ROI Manager and try again.");
+			return;
 		}
 		final ImageWindow win = imp.getWindow();
 		this.canvas = win.getCanvas();
