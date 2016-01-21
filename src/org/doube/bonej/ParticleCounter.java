@@ -122,7 +122,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 	private int labelMethod = MAPPED;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -2637,7 +2636,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
-				@Override
 				public void run() {
 					for (int z = ai.getAndIncrement(); z < endZ; z = ai.getAndIncrement()) {
 						for (int i = 0; i < s; i++)
@@ -2736,7 +2734,6 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		return;
 	}
 
-	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

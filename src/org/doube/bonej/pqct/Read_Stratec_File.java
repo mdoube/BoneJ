@@ -93,7 +93,6 @@ public class Read_Stratec_File extends ImagePlus implements PlugIn {
 
 	// Overriding the abstract runnable run method. Apparently plugins run in
 	// threads
-	@Override
 	public void run(final String arg) {
 		String directory;
 

@@ -226,7 +226,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *            currently active image
 	 * @return flag word that specifies the filters capabilities
 	 */
-	@Override
 	public int setup(final String arg, final ImagePlus imp) {
 		this.imRef = imp;
 
@@ -246,7 +245,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 	 *
 	 * @see ij.plugin.filter.PlugInFilter#run(ij.process.ImageProcessor)
 	 */
-	@Override
 	public void run(final ImageProcessor ip) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -1256,7 +1254,6 @@ public class AnalyzeSkeleton implements PlugInFilter {
 
 			// Edge comparator (by branch length)
 			final Comparator<Edge> comp = new Comparator<Edge>() {
-				@Override
 				public int compare(final Edge o1, final Edge o2) {
 					final double diff = o1.getLength() - o2.getLength();
 					if (diff < 0)

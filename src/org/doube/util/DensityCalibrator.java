@@ -9,7 +9,6 @@ import ij.util.DicomTools;
 
 public class DensityCalibrator implements PlugIn {
 
-	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null) {

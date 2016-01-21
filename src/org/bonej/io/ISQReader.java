@@ -144,7 +144,6 @@ public class ISQReader implements PlugIn {
 	private int bufferSize, byteCount, nPixels;
 	private int eofErrorCount;
 
-	@Override
 	public void run(final String arg) {
 
 		// the ISQ-File is selected

@@ -99,7 +99,6 @@ public class Connectivity implements PlugIn {
 	/** working image depth */
 	private int depth = 0;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -201,7 +200,6 @@ public class Connectivity implements PlugIn {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
-				@Override
 				public void run() {
 					long deltaEuler = 0;
 					for (int z = ai.getAndIncrement(); z <= depth; z = ai.getAndIncrement()) {

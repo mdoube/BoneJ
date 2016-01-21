@@ -42,7 +42,6 @@ public class SkeletonAngles implements PlugIn {
 	/** Measure angles between vertices */
 	public static final int VERTEX_TO_VERTEX = -1;
 
-	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null) {

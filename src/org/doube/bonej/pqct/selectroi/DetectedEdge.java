@@ -40,7 +40,6 @@ public class DetectedEdge implements Comparable<DetectedEdge> {
 		this.area = area;
 	}
 
-	@Override
 	public int compareTo(final DetectedEdge o) {
 		final int returnValue = 0;
 		if (o == null || this == null) {

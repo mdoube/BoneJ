@@ -17,7 +17,6 @@ public class ReporterOptions implements PlugIn {
 	public static final String SESSIONKEY = "bonej.report.bonejsession";
 	public static final String IJSESSIONKEY = "bonej.report.ijsession";
 
-	@Override
 	public void run(final String arg) {
 
 		final GenericDialog dialog = new GenericDialog("BoneJ");

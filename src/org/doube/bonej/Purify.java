@@ -69,7 +69,6 @@ import ij.plugin.PlugIn;
  */
 public class Purify implements PlugIn, DialogListener {
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -315,8 +314,7 @@ public class Purify implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
-				@Override
-				public void run() {
+					public void run() {
 					if (phase == fg) {
 						// go through work array and turn all
 						// smaller foreground particles into background (0)
@@ -379,7 +377,6 @@ public class Purify implements PlugIn, DialogListener {
 		return;
 	}
 
-	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

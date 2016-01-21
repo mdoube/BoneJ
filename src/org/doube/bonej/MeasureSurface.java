@@ -55,7 +55,6 @@ import marchingcubes.MCTriangulator;
  */
 public class MeasureSurface implements PlugIn {
 
-	@Override
 	@SuppressWarnings("unchecked")
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())

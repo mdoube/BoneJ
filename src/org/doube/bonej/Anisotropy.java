@@ -79,7 +79,6 @@ import ij3d.Image3DUniverse;
  */
 public class Anisotropy implements PlugIn, DialogListener {
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;
@@ -561,7 +560,6 @@ public class Anisotropy implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
-				@Override
 				public void run() {
 					for (int v = ai.getAndIncrement(); v < nVectors; v = ai.getAndIncrement()) {
 						double nIntercepts = 0;
@@ -734,7 +732,6 @@ public class Anisotropy implements PlugIn, DialogListener {
 		return result;
 	}
 
-	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		final Vector<?> checkboxes = gd.getCheckboxes();
 		final Vector<?> nFields = gd.getNumericFields();

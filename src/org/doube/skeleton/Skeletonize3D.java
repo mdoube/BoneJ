@@ -63,7 +63,6 @@ import ij.plugin.PlugIn;
  */
 public class Skeletonize3D implements PlugIn {
 
-	@Override
 	public void run(final String run) {
 		if (!ImageCheck.checkEnvironment())
 			return;

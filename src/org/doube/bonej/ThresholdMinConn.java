@@ -66,7 +66,6 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 	/** Number of cycles of dilation to apply */
 	private int nDilates = 0;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -127,7 +126,6 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		final Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
-				@Override
 				public void run() {
 					for (int z = ai.getAndIncrement(); z <= d; z = ai.getAndIncrement()) {
 						// byte[] slice = new byte[nPixels];
@@ -387,7 +385,6 @@ public class ThresholdMinConn implements PlugIn, DialogListener {
 		}
 	}
 
-	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

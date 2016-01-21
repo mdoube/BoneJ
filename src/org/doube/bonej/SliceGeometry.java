@@ -185,7 +185,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	/** Use the masked version of thickness, which trims the 1px overhang */
 	private boolean doMask;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -1037,7 +1036,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return;
 	}
 
-	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;

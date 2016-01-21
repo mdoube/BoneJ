@@ -15,7 +15,6 @@ import ij.plugin.frame.RoiManager;
  */
 public class StackCropper implements PlugIn {
 
-	@Override
 	public void run(final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
 		final RoiManager roiMan = RoiManager.getInstance();

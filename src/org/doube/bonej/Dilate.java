@@ -31,7 +31,6 @@ public class Dilate implements PlugIn {
 	private byte[][] pixels_in;
 	private byte[][] pixels_out;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;

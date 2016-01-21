@@ -60,7 +60,6 @@ public class StructureModelIndex implements PlugIn {
 	private static List<Point3f> mesh;
 	private static List<Color3f> colours;
 
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment()) {
 			return;

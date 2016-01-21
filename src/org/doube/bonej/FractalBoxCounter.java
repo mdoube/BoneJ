@@ -52,7 +52,6 @@ public class FractalBoxCounter implements PlugIn {
 	boolean autoParam = true;
 
 	// TODO split run method into more sensible methods
-	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
