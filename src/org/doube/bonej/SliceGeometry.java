@@ -331,7 +331,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				rt.addValue("Mean Thick 2D (" + units + ")", this.meanCortThick2D[s]);
 				rt.addValue("SD Thick 2D (" + units + ")", this.stdevCortThick2D[s]);
 			}
-			if (this.doOriented && orienteer != null) {
+			if (this.doOriented && orienteer != null && orienteer.getDirections(imp) != null) {
 				final String[] dirs = orienteer.getDirections(imp);
 				rt.addValue(dirs[0] + " (rad)", orienteer.getOrientation(imp, dirs[0]));
 				rt.addValue(dirs[2] + " (rad)", orienteer.getOrientation(imp, dirs[2]));
