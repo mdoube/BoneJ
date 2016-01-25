@@ -28,6 +28,8 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Set;
 
 import org.doube.util.UsageReporter;
 
@@ -278,6 +280,7 @@ public class Orienteer extends PlugInFrame
 	private void update() {
 		if (WindowManager.getImageCount() == 0){
 			instance.setTitle("Orientation - No Images Open");
+			clearHashes();
 			return;
 		}
 		final ImagePlus imp = WindowManager.getCurrentImage();
@@ -287,6 +290,7 @@ public class Orienteer extends PlugInFrame
 			setup(imp);
 			return;
 		}
+		checkHash();
 		this.p = centreHash.get(activeImpID);
 		this.theta = thetaHash.get(activeImpID);
 		final int[] axes = axisHash.get(activeImpID);
@@ -307,6 +311,43 @@ public class Orienteer extends PlugInFrame
 		rad.setState(units[1]);
 		updateTextbox();
 		updateDirections();
+	}
+
+	/**
+	 * Keep hash lists up to date by removing keys of closed windows
+	 */
+	private void checkHash() {
+		Set<Integer> idset = thetaHash.keySet();
+		for (Integer i : idset){
+			if (WindowManager.getImage(i.intValue()) == null)
+				clearHashes(i);
+		}
+	}
+
+	/**
+	 * Remove all image IDs from the hashes.
+	 */
+	private void clearHashes() {
+		thetaHash.clear();
+		reflectHash.clear();
+		pathHash.clear();
+		unitHash.clear();
+		axisHash.clear();
+		centreHash.clear();
+		lengthHash.clear();
+	}
+	
+	/**
+	 * Remove a single image ID from the hashes.
+	 */
+	private void clearHashes(Integer i) {
+		thetaHash.remove(i);
+		reflectHash.remove(i);
+		pathHash.remove(i);
+		unitHash.remove(i);
+		axisHash.remove(i);
+		centreHash.remove(i);
+		lengthHash.remove(i);
 	}
 
 	/**
@@ -552,8 +593,10 @@ public class Orienteer extends PlugInFrame
 		instance = null;
 		if (WindowManager.getImageCount() == 0)
 			return;
-		for (final Integer i : thetaHash.keySet())
-			WindowManager.getImage(i.intValue()).setOverlay(null);
+		//clear the orientation overlay from open images
+		for (final Integer i : thetaHash.keySet()){
+			  WindowManager.getImage(i.intValue()).setOverlay(null);
+		}
 	}
 
 	@Override
