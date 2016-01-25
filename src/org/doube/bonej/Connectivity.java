@@ -406,16 +406,19 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getStackVertices(final ImageStack stack) {
 		long nStackVertices = 0;
-		for (int z = 0; z < stack.getSize(); z += stack.getSize() - 1) {
-			for (int y = 0; y < stack.getHeight(); y += stack.getHeight() - 1) {
-				for (int x = 0; x < stack.getWidth(); x += stack.getWidth() - 1) {
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
+
+		for (int z = 0; z < depth; z += zInc) {
+			for (int y = 0; y < height; y += yInc) {
+				for (int x = 0; x < width; x += xInc) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackVertices++;
 				}
 			}
-			if (stack.getSize() == 1)
-				break;
 		}
+
 		return nStackVertices;
 	}/* end getStackVertices */
 
@@ -428,43 +431,40 @@ public class Connectivity implements PlugIn {
 	 */
 	private long getStackEdges(final ImageStack stack) {
 		long nStackEdges = 0;
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
 
 		// vertex voxels contribute 3 edges
 		// this could be taken out into a variable to avoid recalculating it
 		// nStackEdges += getStackVertices(stack) * 3; = f * 3;
 
 		// left to right stack edges
-		for (int z = 0; z < depth; z += depth - 1) {
-			for (int y = 0; y < height; y += height - 1) {
+		for (int z = 0; z < depth; z += zInc) {
+			for (int y = 0; y < height; y += yInc) {
 				for (int x = 1; x < width - 1; x++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackEdges++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// back to front stack edges
-		for (int z = 0; z < depth; z += depth - 1) {
-			for (int x = 0; x < width; x += width - 1) {
+		for (int z = 0; z < depth; z += zInc) {
+			for (int x = 0; x < width; x += xInc) {
 				for (int y = 1; y < height - 1; y++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackEdges++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// top to bottom stack edges
-		for (int y = 0; y < height; y += height - 1) {
-			for (int x = 0; x < width; x += width - 1) {
+		for (int y = 0; y < height; y += yInc) {
+			for (int x = 0; x < width; x += xInc) {
 				for (int z = 1; z < depth - 1; z++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackEdges++;
-					if (depth == 1)
-						break;
 				}
 			}
 		}
@@ -480,6 +480,9 @@ public class Connectivity implements PlugIn {
 	 * @return number of voxel faces intersecting with stack faces
 	 */
 	private long getStackFaces(final ImageStack stack) {
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
 		long nStackFaces = 0;
 
 		// vertex voxels contribute 3 faces
@@ -491,37 +494,31 @@ public class Connectivity implements PlugIn {
 		// nStackFaces += getStackEdges(stack) * 2;
 
 		// top and bottom faces
-		for (int z = 0; z < depth; z += depth - 1) {
+		for (int z = 0; z < depth; z += zInc) {
 			for (int y = 1; y < height - 1; y++) {
 				for (int x = 1; x < width - 1; x++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackFaces++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// back and front faces
-		for (int y = 0; y < height; y += height - 1) {
+		for (int y = 0; y < height; y += yInc) {
 			for (int z = 1; z < depth - 1; z++) {
 				for (int x = 1; x < width - 1; x++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackFaces++;
 				}
-				if (depth == 1)
-					break;
 			}
 		}
 
 		// left and right faces
-		for (int x = 0; x < width; x += width - 1) {
+		for (int x = 0; x < width; x += xInc) {
 			for (int y = 1; y < height - 1; y++) {
 				for (int z = 1; z < depth - 1; z++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nStackFaces++;
-					if (depth == 1)
-						break;
 				}
 			}
 		}
@@ -536,10 +533,13 @@ public class Connectivity implements PlugIn {
 	 * @return Number of voxel vertices intersecting stack faces
 	 */
 	private long getFaceVertices(final ImageStack stack) {
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
 		long nFaceVertices = 0;
 
 		// top and bottom faces (all 4 edges)
-		for (int z = 0; z < depth; z += depth - 1) {
+		for (int z = 0; z < depth; z += zInc) {
 			for (int y = 0; y <= height; y++) {
 				for (int x = 0; x <= width; x++) {
 					// if the voxel or any of its neighbours are foreground, the
@@ -554,12 +554,10 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// left and right faces (2 vertical edges)
-		for (int x = 0; x < width; x += width - 1) {
+		for (int x = 0; x < width; x += xInc) {
 			for (int y = 0; y <= height; y++) {
 				for (int z = 1; z < depth; z++) {
 					// if the voxel or any of its neighbours are foreground, the
@@ -572,14 +570,12 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceVertices++;
-					if (depth == 1)
-						break;
 				}
 			}
 		}
 
 		// back and front faces (0 vertical edges)
-		for (int y = 0; y < height; y += height - 1) {
+		for (int y = 0; y < height; y += yInc) {
 			for (int x = 1; x < width; x++) {
 				for (int z = 1; z < depth; z++) {
 					// if the voxel or any of its neighbours are foreground, the
@@ -592,8 +588,6 @@ public class Connectivity implements PlugIn {
 						nFaceVertices++;
 					else if (getPixel(stack, x - 1, y, z) == -1)
 						nFaceVertices++;
-					if (depth == 1)
-						break;
 				}
 			}
 		}
@@ -608,11 +602,14 @@ public class Connectivity implements PlugIn {
 	 * @return number of intersections between voxel edges and stack faces
 	 */
 	private long getFaceEdges(final ImageStack stack) {
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
 		long nFaceEdges = 0;
 
 		// top and bottom faces (all 4 edges)
 		// check 2 edges per voxel
-		for (int z = 0; z < depth; z += depth - 1) {
+		for (int z = 0; z < depth; z += zInc) {
 			for (int y = 0; y <= height; y++) {
 				for (int x = 0; x <= width; x++) {
 					// if the voxel or any of its neighbours are foreground, the
@@ -629,12 +626,10 @@ public class Connectivity implements PlugIn {
 					}
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// back and front faces, horizontal edges
-		for (int y = 0; y < height; y += height - 1) {
+		for (int y = 0; y < height; y += yInc) {
 			for (int z = 1; z < depth; z++) {
 				for (int x = 0; x < width; x++) {
 					if (getPixel(stack, x, y, z) == -1)
@@ -642,13 +637,11 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceEdges++;
 				}
-				if (depth == 1)
-					break;
 			}
 		}
 
 		// back and front faces, vertical edges
-		for (int y = 0; y < height; y += height - 1) {
+		for (int y = 0; y < height; y += yInc) {
 			for (int z = 0; z < depth; z++) {
 				for (int x = 0; x <= width; x++) {
 					if (getPixel(stack, x, y, z) == -1)
@@ -656,13 +649,11 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x - 1, y, z) == -1)
 						nFaceEdges++;
 				}
-				if (depth == 1)
-					break;
 			}
 		}
 
 		// left and right stack faces, horizontal edges
-		for (int x = 0; x < width; x += width - 1) {
+		for (int x = 0; x < width; x += xInc) {
 			for (int z = 1; z < depth; z++) {
 				for (int y = 0; y < height; y++) {
 					if (getPixel(stack, x, y, z) == -1)
@@ -670,13 +661,11 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nFaceEdges++;
 				}
-				if (depth == 1)
-					break;
 			}
 		}
 
 		// left and right stack faces, vertical voxel edges
-		for (int x = 0; x < width; x += width - 1) {
+		for (int x = 0; x < width; x += xInc) {
 			for (int z = 0; z < depth; z++) {
 				for (int y = 1; y < height; y++) {
 					if (getPixel(stack, x, y, z) == -1)
@@ -684,8 +673,6 @@ public class Connectivity implements PlugIn {
 					else if (getPixel(stack, x, y - 1, z) == -1)
 						nFaceEdges++;
 				}
-				if (depth == 1)
-					break;
 			}
 		}
 		return nFaceEdges;
@@ -700,6 +687,9 @@ public class Connectivity implements PlugIn {
 	 * @return number of voxel vertices intersecting stack edges
 	 */
 	private long getEdgeVertices(final ImageStack stack) {
+		int xInc = Math.max(1, width - 1);
+		int yInc = Math.max(1, height - 1);
+		int zInc = Math.max(1, depth - 1);
 		long nEdgeVertices = 0;
 
 		// vertex voxels contribute 1 edge vertex each
@@ -707,8 +697,8 @@ public class Connectivity implements PlugIn {
 		// nEdgeVertices += getStackVertices(stack);
 
 		// left->right edges
-		for (int z = 0; z < depth; z += depth - 1) {
-			for (int y = 0; y < height; y += height - 1) {
+		for (int z = 0; z < depth; z += zInc) {
+			for (int y = 0; y < height; y += yInc) {
 				for (int x = 1; x < width; x++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nEdgeVertices++;
@@ -716,13 +706,11 @@ public class Connectivity implements PlugIn {
 						nEdgeVertices++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// back->front edges
-		for (int z = 0; z < depth; z += depth - 1) {
-			for (int x = 0; x < width; x += width - 1) {
+		for (int z = 0; z < depth; z += zInc) {
+			for (int x = 0; x < width; x += xInc) {
 				for (int y = 1; y < height; y++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nEdgeVertices++;
@@ -730,20 +718,16 @@ public class Connectivity implements PlugIn {
 						nEdgeVertices++;
 				}
 			}
-			if (depth == 1)
-				break;
 		}
 
 		// top->bottom edges
-		for (int x = 0; x < width; x += width - 1) {
-			for (int y = 0; y < height; y += height - 1) {
+		for (int x = 0; x < width; x += xInc) {
+			for (int y = 0; y < height; y += yInc) {
 				for (int z = 1; z < depth; z++) {
 					if (getPixel(stack, x, y, z) == -1)
 						nEdgeVertices++;
 					else if (getPixel(stack, x, y, z - 1) == -1)
 						nEdgeVertices++;
-					if (depth == 1)
-						break;
 				}
 			}
 		}
