@@ -11,7 +11,6 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Random;
