@@ -67,7 +67,6 @@ public class StructureModelIndex implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-		final ImageCheck ic = new ImageCheck();
 		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("SMI needs a binary image.");
 			return;
@@ -196,14 +195,15 @@ public class StructureModelIndex implements PlugIn {
 	 * this class
 	 * </p>
 	 *
-	 * @see
-	 * 		<p>
+	 *<p>
 	 *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
 	 *      with the Structure Model Index. Comput Methods Biomech Biomed Engin
 	 *      1997;1(1):15-23.
-	 *      <a href="http://dx.doi.org/10.1080/01495739708936692">doi:
-	 *      10.1080/01495739708936692</a>
 	 *      </p>
+	 *
+	 * @see
+	 * 		<a href="http://dx.doi.org/10.1080/01495739708936692">doi:
+	 *      10.1080/01495739708936692</a>
 	 *
 	 * @param imp
 	 *            binary 3D image
@@ -339,7 +339,7 @@ public class StructureModelIndex implements PlugIn {
 			final double deltaArea = area2 - area1;
 
 			if (do3D)
-				addTo3DUniverse(point0, point1, point2, area1, deltaArea, s1, v, r);
+				addTo3DUniverse(point0, point1, point2, area1, deltaArea);
 
 			if (deltaArea >= 0) {
 				convexDelta += deltaArea;
@@ -374,7 +374,7 @@ public class StructureModelIndex implements PlugIn {
 	}
 
 	private static void addTo3DUniverse(final Point3f point0, final Point3f point1, final Point3f point2,
-			final double area1, final double deltaArea, final double s1, final double v, final double r) {
+			final double area1, final double deltaArea) {
 
 		mesh.add(point0);
 		mesh.add(point1);
