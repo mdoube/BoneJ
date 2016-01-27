@@ -65,7 +65,6 @@ public class MeasureSurface implements PlugIn {
 			return;
 		}
 		int threshold = 128;
-		final ImageCheck ic = new ImageCheck();
 		if (ImageCheck.isBinary(imp)) {
 			threshold = 128;
 		} else if (imp.getBitDepth() == 8) {
