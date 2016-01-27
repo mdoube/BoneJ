@@ -1,7 +1,7 @@
 package org.doube.bonej;
 
 /**
- *  StructureModelIndex Copyright 2010 2015 Michael Doube
+ *  StructureModelIndex Copyright 2010 2015 2016 Michael Doube
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,18 +40,16 @@ import isosurface.MeshEditor;
 import marchingcubes.MCTriangulator;
 
 /**
- * Calculates the structure model index (SMI), a measure of how plate-like or
- * rod-like a structure is.
- *
+ * <p>Calculates the structure model index (SMI), a measure of how plate-like or
+ * rod-like a structure is.</p>
+ * 
+ * <p> Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
+ * with the Structure Model Index. Comput Methods Biomech Biomed Engin
+ * 1997;1(1):15-23.</p>
+ *      
  * @author Michael Doube
- * @see
- * 		<p>
- *      Hildebrand T, Rüegsegger P. Quantification of Bone Microarchitecture
- *      with the Structure Model Index. Comput Methods Biomech Biomed Engin
- *      1997;1(1):15-23.
- *      <a href="http://dx.doi.org/10.1080/01495739708936692">doi:
+ * @see	<a href="http://doi.org/10.1080/01495739708936692">doi:
  *      10.1080/01495739708936692</a>
- *      </p>
  *
  */
 public class StructureModelIndex implements PlugIn {
