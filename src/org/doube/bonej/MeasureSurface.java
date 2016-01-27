@@ -224,16 +224,4 @@ public class MeasureSurface implements PlugIn {
 					"Something went wrong writing your STL file." + "\nTry updating your 3D Viewer.");
 		}
 	}
-
-	private static Point3f unitNormal(final Point3f p0, final Point3f p1, final Point3f p2) {
-		float nx = (p1.y - p0.y) * (p2.z - p0.z) - (p1.z - p0.z) * (p2.y - p0.y);
-		float ny = (p1.z - p0.z) * (p2.x - p0.x) - (p1.x - p0.x) * (p2.z - p0.z);
-		float nz = (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x);
-
-		final float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
-		nx /= length;
-		ny /= length;
-		nz /= length;
-		return new Point3f(nx, ny, nz);
-	}
 }
