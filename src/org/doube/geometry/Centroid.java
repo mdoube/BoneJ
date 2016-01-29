@@ -159,4 +159,34 @@ public class Centroid {
 		final double[] centroid = { xsum / n, ysum / n, zsum / n };
 		return centroid;
 	}
+
+	/**
+	 * Returns the centroid Point of the given Points
+	 *
+	 * NB Might not be the exact centroid, because Point coordinates are integers.
+	 *
+	 * @return	The centroid Point
+	 * 			Returns null if the given list is null or empty
+	 */
+	public static Point getCentroidPoint(ArrayList<Point> points) {
+		if (points == null || points.isEmpty()) {
+			return null;
+		}
+
+		double xSum = 0.0;
+		double ySum = 0.0;
+		double zSum = 0.0;
+
+		for (Point p : points) {
+			xSum += p.x;
+			ySum += p.y;
+			zSum += p.z;
+		}
+
+		double n = points.size();
+		int x = (int) Math.round(xSum / n);
+		int y = (int) Math.round(ySum / n);
+		int z = (int) Math.round(zSum / n);
+		return new Point(x, y, z);
+	}
 }

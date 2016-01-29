@@ -184,6 +184,14 @@ public class SkeletonAngles implements PlugIn {
 	private Point getNthPoint(final Vertex vertex, final Edge edge, final int nthPoint) {
 		final ArrayList<Point> vertexPoints = vertex.getPoints();
 		final ArrayList<Point> edgePoints = edge.getSlabs();
+
+		if (edgePoints.isEmpty()) {
+			// No slabs, edge has only an end-point and a junction point
+			ArrayList<Point> oppositeVertexPoints = edge.getOppositeVertex(vertex).getPoints();
+			Point oppositeVertexCentroid = Centroid.getCentroidPoint(oppositeVertexPoints);
+			return oppositeVertexCentroid;
+		}
+
 		boolean startAtZero = false;
 		outerloop: for (final Point v : vertexPoints) {
 			final Point p0 = edgePoints.get(0);
