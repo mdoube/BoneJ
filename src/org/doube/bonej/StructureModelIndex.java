@@ -84,9 +84,10 @@ public class StructureModelIndex implements PlugIn {
 			return;
 		}
 
-		IJ.showMessage("Do not use SMI for science",
+		if (!IJ.macroRunning())
+		IJ.showMessage("SMI does not reliably measure rods and plates",
 				"<html><p>SMI is strongly confounded by the amount of surface that is concave.</p>"
-						+ "<p>Please <b>do not</b> use SMI for scientific research.</p>"
+						+ "<p>Please use <b>caution</b> if measuring SMI for scientific research.</p>"
 						+ "<p>For more details see:</p>"
 						+ "<p>Salmon PL et al. (2015) Structure model index does not measure rods and plates in trabecular bone <a href=\"http://dx.doi.org/10.3389/fendo.2015.00162\">http://dx.doi.org/10.3389/fendo.2015.00162</a></p></html>");
 
