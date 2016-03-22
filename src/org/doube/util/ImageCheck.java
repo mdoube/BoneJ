@@ -225,12 +225,20 @@ public class ImageCheck {
 	}
 
 	/**
-	 * Show a message a return false if any requirement of the environment is
+	 * Show a message and return false if any requirement of the environment is
 	 * missing
 	 *
 	 * @return
 	 */
 	public static boolean checkEnvironment() {
+		try {
+			Class.forName("org.scijava.vecmath.Point3f");
+		} catch (final ClassNotFoundException e) {
+			IJ.showMessage("Java 3D is too new.\n" + 
+		"Please disable the Java-8 update site (Help > Update... > Manage Update Sites)");
+			return false;
+		}
+		
 		try {
 			Class.forName("javax.media.j3d.VirtualUniverse");
 		} catch (final ClassNotFoundException e) {

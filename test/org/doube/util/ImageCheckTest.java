@@ -11,6 +11,7 @@ import ij.ImagePlus;
 import ij.measure.Calibration;
 import ij.process.ImageStatistics;
 
+
 /**
  * Unit tests for the org.doube.util.ImageCheck class
  *
