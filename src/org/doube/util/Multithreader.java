@@ -1,5 +1,7 @@
 package org.doube.util;
 
+import ij.Prefs;
+
 /**
  * MultiThreading copyright 2007 Stephan Preibisch
  * 
@@ -47,7 +49,7 @@ public class Multithreader {
 	}
 
 	public static Thread[] newThreads() {
-		int nthread = Runtime.getRuntime().availableProcessors();
+		int nthread = Prefs.getThreads();
 		return new Thread[nthread];
 	}
 

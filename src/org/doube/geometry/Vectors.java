@@ -138,15 +138,25 @@ public class Vectors {
 	 */
 	public static double[][] randomVectors(int nVectors) {
 		double[][] randomVectors = new double[nVectors][3];
-		for (int n = 0; n < nVectors; n++) {
-			final double z = 2 * Math.random() - 1;
-			double rho = Math.sqrt(1 - z * z);
-			double phi = Math.PI * (2 * Math.random() - 1);
-			randomVectors[n][0] = rho * Math.cos(phi);
-			randomVectors[n][1] = rho * Math.sin(phi);
-			randomVectors[n][2] = z;
-		}
+		
+		for (int n = 0; n < nVectors; n++)
+			randomVectors[n] = randomVector();
+		
 		return randomVectors;
+	}
+	
+	/**
+	 * Generate a single randomly-oriented vector on the unit sphere
+	 * 
+	 * @return 3-element double array containing [x y z]^T
+	 */
+	public static double[] randomVector(){
+		final double z = 2 * Math.random() - 1;
+		final double rho = Math.sqrt(1 - z * z);
+		final double phi = Math.PI * (2 * Math.random() - 1);
+		final double x = rho * Math.cos(phi);
+		final double y = rho * Math.sin(phi);
+		return new double[]{x, y, z};
 	}
 
 	/**
@@ -175,5 +185,12 @@ public class Vectors {
 			vectors[k] = vector;
 		}
 		return vectors;
+	}
+
+	public static Point3f normalise(Point3f n) {
+		final double d = Trig.distance3D(n.x, n.y, n.z);
+		Point3f o = new Point3f((float) (n.x / d), (float) (n.y / d),
+				(float) (n.z / d));
+		return o;
 	}
 }

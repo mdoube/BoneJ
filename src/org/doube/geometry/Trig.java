@@ -46,10 +46,7 @@ public class Trig {
 	 */
 	public static double distance3D(double px, double py, double pz, double qx,
 			double qy, double qz) {
-		final double pqx = px - qx;
-		final double pqy = py - qy;
-		final double pqz = pz - qz;
-		return Math.sqrt(pqx * pqx + pqy * pqy + pqz * pqz);
+		return distance3D(px - qx, py - qy, pz - qz);
 	}
 
 	/**
@@ -64,11 +61,11 @@ public class Trig {
 	 * @return
 	 */
 	public static double distance3D(double x, double y, double z) {
-		return distance3D(x, y, z, 0, 0, 0);
+		return Math.sqrt(x * x + y * y + z * z);
 	}
 
 	public static double distance3D(double[] v) {
-		return distance3D(v[0], v[1], v[2], 0, 0, 0);
+		return distance3D(v[0], v[1], v[2]);
 	}
 
 	/**

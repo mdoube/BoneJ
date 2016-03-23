@@ -42,6 +42,9 @@ public class Ellipsoid {
 	/** 3x3 matrix describing shape of ellipsoid */
 	private double[][] eh;
 
+	/** ID field for tracking this particular ellipsoid */
+	public int id;
+
 	/**
 	 * Instantiate an ellipsoid from the result of FitEllipsoid
 	 * 
@@ -128,7 +131,7 @@ public class Ellipsoid {
 	/**
 	 * Method based on the inequality
 	 * 
-	 * (X-X0)H(X-X0)^T <= 1
+	 * (X-X0)^T H (X-X0) <= 1
 	 * 
 	 * Where X is the test point, X0 is the centroid, H is the ellipsoid's 3x3
 	 * matrix
@@ -145,16 +148,20 @@ public class Ellipsoid {
 		final double vy = y - cy;
 		final double vz = z - cz;
 
+		double[] radii = getSortedRadii();
+		final double maxRadius = radii[2];
+
+		// if further than maximal sphere's bounding box, must be outside
+		if (Math.abs(vx) > maxRadius || Math.abs(vy) > maxRadius
+				|| Math.abs(vz) > maxRadius)
+			return false;
+
 		// calculate distance from centroid
 		final double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-		// double[] radii = { ra, rb, rc };
-		// Arrays.sort(radii);
-		double[] radii = getSortedRadii();
-
 		// if further from centroid than major semiaxis length
 		// must be outside
-		if (length > radii[2])
+		if (length > maxRadius)
 			return false;
 
 		// if length closer than minor semiaxis length
@@ -183,33 +190,33 @@ public class Ellipsoid {
 	 * @return radii in ascending order
 	 */
 	public double[] getSortedRadii() {
-		
+
 		double a = this.ra;
 		double b = this.rb;
 		double c = this.rc;
 		double temp = 0;
-		
-		if (a > b){
+
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-		if (b > c){
+		if (b > c) {
 			temp = b;
 			b = c;
 			c = temp;
 		}
-		if (a > b){
+		if (a > b) {
 			temp = a;
 			a = b;
 			b = temp;
 		}
-			
+
 		double[] sortedRadii = { a, b, c };
 
 		return sortedRadii;
 	}
-	
+
 	public double[] getCentre() {
 		double[] centre = { cx, cy, cz };
 		return centre.clone();
@@ -226,14 +233,18 @@ public class Ellipsoid {
 	public double[][] getSurfacePoints(final double[][] vectors) {
 		final int nPoints = vectors.length;
 		for (int p = 0; p < nPoints; p++) {
+			final double[] v = vectors[p];
+
 			// stretch the unit sphere into an ellipsoid
-			final double x = ra * vectors[p][0];
-			final double y = rb * vectors[p][1];
-			final double z = rc * vectors[p][2];
+			final double x = ra * v[0];
+			final double y = rb * v[1];
+			final double z = rc * v[2];
 			// rotate and translate the ellipsoid into position
-			vectors[p][0] = x * ev[0][0] + y * ev[0][1] + z * ev[0][2] + cx;
-			vectors[p][1] = x * ev[1][0] + y * ev[1][1] + z * ev[1][2] + cy;
-			vectors[p][2] = x * ev[2][0] + y * ev[2][1] + z * ev[2][2] + cz;
+			final double vx = x * ev[0][0] + y * ev[0][1] + z * ev[0][2] + cx;
+			final double vy = x * ev[1][0] + y * ev[1][1] + z * ev[1][2] + cy;
+			final double vz = x * ev[2][0] + y * ev[2][1] + z * ev[2][2] + cz;
+			
+			vectors[p] = new double[]{vx, vy, vz};
 		}
 		return vectors;
 	}
@@ -376,13 +387,120 @@ public class Ellipsoid {
 	}
 
 	/**
+	 * Calculate the minimal and maximal x values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal x values
+	 */
+	public double[] getXMinAndMax() {
+		final double m11 = ev[0][0] * ra;
+		final double m12 = ev[0][1] * rb;
+		final double m13 = ev[0][2] * rc;
+		final double d = Math.sqrt(m11 * m11 + m12 * m12 + m13 * m13);
+		double[] minMax = { cx - d, cx + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal and maximal y values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal y values
+	 */
+	public double[] getYMinAndMax() {
+		final double m21 = ev[1][0] * ra;
+		final double m22 = ev[1][1] * rb;
+		final double m23 = ev[1][2] * rc;
+		final double d = Math.sqrt(m21 * m21 + m22 * m22 + m23 * m23);
+		double[] minMax = { cy - d, cy + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal and maximal z values bounding this ellipsoid
+	 * 
+	 * @return array containing minimal and maximal z values
+	 */
+	public double[] getZMinAndMax() {
+		final double m31 = ev[2][0] * ra;
+		final double m32 = ev[2][1] * rb;
+		final double m33 = ev[2][2] * rc;
+		final double d = Math.sqrt(m31 * m31 + m32 * m32 + m33 * m33);
+		double[] minMax = { cz - d, cz + d };
+		return minMax;
+	}
+
+	/**
+	 * Calculate the minimal axis-aligned bounding box of this ellipsoid
+	 * 
+	 * Thanks to Tavian Barnes for the simplification of the maths
+	 * http://tavianator.com/2014/06/exact-bounding-boxes-for-spheres-ellipsoids
+	 * 
+	 * 
+	 * @return 6-element array containing x min, x max, y min, y max, z min, z
+	 *         max
+	 */
+	public double[] getAxisAlignedBoundingBox() {
+		final double[] x = getXMinAndMax();
+		final double[] y = getYMinAndMax();
+		final double[] z = getZMinAndMax();
+		final double[] boundingBox = { x[0], x[1], y[0], y[1], z[0], z[1] };
+		return boundingBox;
+	}
+
+	/**
+	 * Get the 9 variables a - k of the equation
+	 * <p>
+	 * <i>ax</i><sup>2</sup> + <i>by</i><sup>2</sup> + <i>cz</i><sup>2</sup> +
+	 * 2<i>dxy</i> + 2<i>fxz</i> + 2<i>gyz</i> + 2<i>hx</i> + 2<i>jy</i> +
+	 * 2<i>kz</i> = 1
+	 * </p>
+	 * 
+	 * Thanks to Alessandro Felder for pointing out how this can be determined
+	 * trivially by multiplying out the elements of the matrix relation
+	 * 
+	 * <p>
+	 * [X - X<sub>0</sub>]<sup><i>T</i></sup> <i>H</i> [X - X<sub>0</sub>]
+	 * </p>
+	 * 
+	 * @return 9-element array containing the ellipsoid equation variables a-k
+	 * 
+	 * @see http://en.wikipedia.org/wiki/Matrix_multiplication#Row_vector.2
+	 *      C_square_matrix.2C_and_column_vector
+	 */
+	public double[] getEquation() {
+		final double h2112 = eh[1][0] + eh[0][1];
+		final double h3113 = eh[2][0] + eh[0][2];
+		final double h3223 = eh[2][1] + eh[1][2];
+		final double h11 = eh[0][0];
+		final double h22 = eh[1][1];
+		final double h33 = eh[2][2];
+		final double p = h11 * cx * cx + h22 * cy * cy + h33 * cz * cz + h2112
+				* cx * cy + h3113 * cx * cz + h3223 * cy * cz;
+		final double q = 1 - p;
+		final double twoQ = 2 * q;
+
+		final double a = h11 / q;
+		final double b = h22 / q;
+		final double c = h33 / q;
+		final double d = h2112 / twoQ;
+		final double f = h3113 / twoQ;
+		final double g = h3223 / twoQ;
+		final double h = (-2 * cx * h11 - cy * h2112 - cz * h3113) / twoQ;
+		final double j = (-2 * cy * h22 - cx * h2112 - cz * h3223) / twoQ;
+		final double k = (-2 * cz * h33 - cx * h3113 - cy * h3223) / twoQ;
+
+		double[] equation = { a, b, c, d, f, g, h, j, k };
+
+		return equation;
+	}
+
+	/**
 	 * High performance 3x3 matrix multiplier with no bounds or error checking
 	 * 
-	 * @param a
-	 * @param b
+	 * @param a 3x3 matrix
+	 * @param b 3x3 matrix
 	 * @return result of matrix multiplication, c = ab
 	 */
-	private double[][] times(double[][] a, double[][] b) {
+	private static double[][] times(double[][] a, double[][] b) {
 		final double a00 = a[0][0];
 		final double a01 = a[0][1];
 		final double a02 = a[0][2];

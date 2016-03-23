@@ -18,9 +18,6 @@ package org.bonej;
  *along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.awt.AWTEvent;
-import java.awt.Checkbox;
-import java.awt.TextField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,17 +35,15 @@ import ij.ImageStack;
 import ij.plugin.PlugIn;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.gui.DialogListener;
 import ij.gui.GenericDialog;
 import ij.gui.Plot;
 import ij.measure.Calibration;
-import ij.measure.ResultsTable;
+//import ij.measure.ResultsTable;
 import ij3d.Image3DUniverse;
 
 import org.doube.geometry.Trig;
 import org.doube.geometry.Vectors;
 import org.doube.geometry.Ellipsoid;
-import org.doube.jama.Matrix;
 import org.doube.skeleton.Skeletonize3D;
 import org.doube.util.ArrayHelper;
 import org.doube.util.ImageCheck;
@@ -66,15 +61,23 @@ import customnode.CustomPointMesh;
  * <p>
  * ImageJ plugin to describe the local geometry of a binary image in an
  * oblate/prolate spheroid space. Uses Skeletonize3D to generate a 3D skeleton,
- * the points of which are used as centres for star volumes. Local geometry is
- * determined by the ratio between the first and second eigenvalues and first
- * and third eigenvalues of each star volume.
+ * the points of which are used as centres for maximally inscribed ellipsoids.
+ * The ellipsoid factor (EF) is a method for the local determination of the rod-
+ * or plate-like nature of porous or spongy continua. EF at a point within a 3D
+ * structure is defined as the difference in axis ratios of the greatest
+ * ellipsoid that fits inside the structure and that contains the point of
+ * interest, and ranges from −1 for strongly oblate (discus-shaped) ellipsoids,
+ * to +1 for strongly prolate (javelin-shaped) ellipsoids. For an ellipsoid with
+ * axes a ≤ b ≤ c, EF = a/b − b/c.
  * </p>
  * 
+ * @see http://dx.doi.org/10.3389/fendo.2015.00015
+ *      "The ellipsoid factor for quantification of rods, plates, and intermediate forms in 3D geometries"
+ *      Frontiers in Endocrinology (2015)
  * @author Michael Doube
  * 
  */
-public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogListener {
+public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	private int nVectors = 100;
 
 	/**
@@ -97,10 +100,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 * diagonal length
 	 */
 	private double maxDrift = Math.sqrt(3);
-	private ResultsTable rt;
+	// private ResultsTable rt;
 	private Image3DUniverse universe;
 
 	private double stackVolume;
+
+	private double[][] regularVectors;
 
 	public void run(String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -127,27 +132,26 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 				* imp.getStackSize();
 		GenericDialog gd = new GenericDialog("Setup");
 		gd.addMessage("Sampling options");
-		gd.addNumericField("Sampling increment", vectorIncrement, 3, 8, units);
+		gd.addNumericField("Sampling_increment", vectorIncrement, 3, 8, units);
 		gd.addNumericField("Vectors", nVectors, 0, 8, "");
-		gd.addNumericField("Skeleton points per ellipsoid", skipRatio, 0);
+		gd.addNumericField("Skeleton_points per ellipsoid", skipRatio, 0);
 		gd.addNumericField("Contact sensitivity", contactSensitivity, 0, 4, "");
-		gd.addNumericField("Maximum iterations", maxIterations, 0);
-		gd.addNumericField("Maximum drift", maxDrift, 5, 8, units);
+		gd.addNumericField("Maximum_iterations", maxIterations, 0);
+		gd.addNumericField("Maximum_drift", maxDrift, 5, 8, units);
 
 		gd.addMessage("\nOutput options");
-		gd.addCheckbox("EF image", true);
-		gd.addCheckbox("Ellipsoid ID image", false);
-		gd.addCheckbox("Volume image", false);
-		gd.addCheckbox("Axis ratio images", false);
-		gd.addCheckbox("Flinn peak plot", true);
-		gd.addNumericField("Gaussian sigma", 2, 0, 4, "px");
-		gd.addCheckbox("Flinn plot", false);
+		gd.addCheckbox("EF_image", true);
+		gd.addCheckbox("Ellipsoid_ID_image", false);
+		gd.addCheckbox("Volume_image", false);
+		gd.addCheckbox("Axis_ratio_images", false);
+		gd.addCheckbox("Flinn_peak_plot", true);
+		gd.addNumericField("Gaussian_sigma", 2, 0, 4, "px");
+		gd.addCheckbox("Flinn_plot", false);
 
 		gd.addMessage("Ellipsoid Factor is beta software.\n"
 				+ "Please report your experiences to the user group:\n"
 				+ "http://bit.ly/bonej-group");
 		gd.addHelp("http://bonej.org/ef");
-		gd.addDialogListener(this);
 		gd.showDialog();
 
 		if (gd.wasCanceled())
@@ -172,6 +176,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		// }
 
 		final double[][] unitVectors = Vectors.regularVectors(nVectors);
+		regularVectors = unitVectors.clone();
+
 		int[][] skeletonPoints = skeletonPoints(imp);
 
 		IJ.log("Found " + skeletonPoints.length + " skeleton points");
@@ -189,7 +195,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		IJ.log("Found " + ellipsoids.length + " ellipsoids in "
 				+ (stop - start) + " ms");
 
+		start = System.currentTimeMillis();
 		int[][] maxIDs = findMaxID(imp, ellipsoids);
+		stop = System.currentTimeMillis();
+
+		IJ.log("Found maximal ellipsoids in " + (stop - start) + " ms");
 
 		double fractionFilled = calculateFillingEfficiency(maxIDs);
 		IJ.log(IJ.d2s((fractionFilled * 100), 3)
@@ -237,15 +247,16 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		}
 
 		if (doFlinnPeakPlot) {
-			ImagePlus flinnPeaks = drawFlinnPeakPlot(imp.getTitle(), imp,
-					maxIDs, ellipsoids, gaussianSigma, 512);
+			ImagePlus flinnPeaks = drawFlinnPeakPlot(
+					"FlinnPeaks_" + imp.getTitle(), imp, maxIDs, ellipsoids,
+					gaussianSigma, 512);
 			flinnPeaks.show();
 		}
 
 		// ResultInserter ri = ResultInserter.getInstance();
 		// ri.updateTable();
-		if (IJ.debugMode)
-			rt.show("Ellipsoid volumes");
+		// if (IJ.debugMode)
+		// rt.show("Ellipsoid volumes");
 		UsageReporter.reportEvent(this).send();
 		IJ.showStatus("Ellipsoid Factor completed");
 	}
@@ -428,9 +439,9 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		Calibration cal = new Calibration();
 		cal.setXUnit("b/c");
 		cal.setYUnit("a/b");
-		cal.yOrigin = size;
 		cal.pixelWidth = 1.0 / (double) size;
-		cal.pixelHeight = -1.0 / (double) size;
+		cal.pixelHeight = 1.0 / (double) size;
+		cal.setInvertY(true);
 		ImagePlus plot = new ImagePlus(title, fp);
 		plot.setCalibration(cal);
 		return plot;
@@ -689,13 +700,52 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 						int[] bigSlice = biggest[z];
 						Arrays.fill(bigSlice, -ellipsoids.length);
 						final double zvD = z * vD;
+
+						// find the subset of ellipsoids whose bounding box
+						// intersects with z
+						ArrayList<Ellipsoid> nearEllipsoids = new ArrayList<Ellipsoid>();
+						final int n = ellipsoids.length;
+						for (int i = 0; i < n; i++) {
+							Ellipsoid e = ellipsoids[i];
+							double[] zMinMax = e.getZMinAndMax();
+							if (zvD >= zMinMax[0] && zvD <= zMinMax[1]) {
+								Ellipsoid f = e.copy();
+								f.id = i;
+								nearEllipsoids.add(f);
+							}
+						}
+						final int o = nearEllipsoids.size();
+						Ellipsoid[] ellipsoidSubSet = new Ellipsoid[o];
+						for (int i = 0; i < o; i++) {
+							ellipsoidSubSet[i] = nearEllipsoids.get(i);
+						}
+
+						final int q = ellipsoidSubSet.length;
 						for (int y = 0; y < h; y++) {
-							final int offset = y * w;
 							final double yvH = y * vH;
+							// find the subset of ellipsoids whose bounding box
+							// intersects with y
+							ArrayList<Ellipsoid> yEllipsoids = new ArrayList<Ellipsoid>();
+							for (int i = 0; i < q; i++) {
+								Ellipsoid e = ellipsoidSubSet[i];
+								double[] yMinMax = e.getYMinAndMax();
+								if (yvH >= yMinMax[0] && yvH <= yMinMax[1]) {
+									yEllipsoids.add(e);
+								}
+							}
+
+							final int r = yEllipsoids.size();
+							Ellipsoid[] ellipsoidSubSubSet = new Ellipsoid[r];
+							for (int i = 0; i < r; i++) {
+								ellipsoidSubSubSet[i] = yEllipsoids.get(i);
+							}
+
+							final int offset = y * w;
 							for (int x = 0; x < w; x++) {
 								if (slicePixels[offset + x] == -1) {
 									bigSlice[offset + x] = biggestEllipsoid(
-											ellipsoids, x * vW, yvH, zvD);
+											ellipsoidSubSubSet, x * vW, yvH,
+											zvD);
 								}
 							}
 						}
@@ -713,6 +763,12 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 * ellipsoid which contains the point x, y, z
 	 * 
 	 * @param ellipsoids
+	 *            sorted in order of descending size and with id set to the sort
+	 *            position of the whole set. This means that subsets may be
+	 *            searched in sorted order and the ID which is returned is the
+	 *            index of the ellipsoid in the full array of ellipsoids rather
+	 *            than its index in the subset. The advantage is much faster
+	 *            searching.
 	 * @param x
 	 * @param y
 	 * @param z
@@ -724,7 +780,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		final int l = ellipsoids.length;
 		for (int i = 0; i < l; i++) {
 			if (ellipsoids[i].contains(x, y, z))
-				return i;
+				return ellipsoids[i].id;
 		}
 		return -1;
 	}
@@ -748,6 +804,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		Arrays.fill(ellipsoids, null);
 
 		final AtomicInteger ai = new AtomicInteger(0);
+		final AtomicInteger counter = new AtomicInteger(0);
 		Thread[] threads = Multithreader.newThreads();
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
@@ -756,6 +813,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 							.getAndAdd(skipRatio)) {
 						ellipsoids[i] = optimiseEllipsoid(imp,
 								skeletonPoints[i], unitVectors, i);
+						IJ.showProgress(counter.getAndAdd(skipRatio), nPoints);
+						IJ.showStatus("Optimising ellipsoids...");
 					}
 				}
 			});
@@ -783,8 +842,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 */
 	private Ellipsoid optimiseEllipsoid(final ImagePlus imp,
 			int[] skeletonPoint, double[][] unitVectors, final int index) {
-
-		IJ.showStatus("Optimising ellipsoids...");
 
 		long start = System.currentTimeMillis();
 
@@ -999,17 +1056,18 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 					px, py, pz, px + " " + py + " " + pz);
 
 			// add history to the ResultsTable
-			for (int i = 0; i < volumeHistory.size(); i++) {
-				rt.setValue("" + index, i, volumeHistory.get(i));
-			}
+			// for (int i = 0; i < volumeHistory.size(); i++) {
+			// rt.setValue("" + index, i, volumeHistory.get(i));
+			// }
 		}
 
 		long stop = System.currentTimeMillis();
 
-		IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
-				+ totalIterations + " iterations ("
-				+ IJ.d2s((double) (stop - start) / totalIterations, 3)
-				+ " ms/iteration)");
+		if (IJ.debugMode)
+			IJ.log("Optimised ellipsoid in " + (stop - start) + " ms after "
+					+ totalIterations + " iterations ("
+					+ IJ.d2s((double) (stop - start) / totalIterations, 3)
+					+ " ms/iteration)");
 
 		return ellipsoid;
 	}
@@ -1127,12 +1185,56 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		CustomLineMesh torqueLine = new CustomLineMesh(torqueList);
 		Color3f blue = new Color3f((float) 0.0, (float) 0.0, (float) 1.0);
 		torqueLine.setColor(blue);
+
+		// Axis-aligned bounding box
+		double[] box = ellipsoid.getAxisAlignedBoundingBox();
+		float[] b = { (float) box[0], (float) box[1], (float) box[2],
+				(float) box[3], (float) box[4], (float) box[5] };
+		List<Point3f> aabb = new ArrayList<Point3f>();
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+
+		aabb.add(new Point3f(b[0], b[2], b[4]));
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[3], b[5]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
+		aabb.add(new Point3f(b[0], b[2], b[5]));
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[3], b[4]));
+
+		aabb.add(new Point3f(b[1], b[2], b[4]));
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+
+		aabb.add(new Point3f(b[1], b[2], b[5]));
+		aabb.add(new Point3f(b[1], b[3], b[5]));
+
 		try {
 			universe.addCustomMesh(mesh, "Point cloud " + name).setLocked(true);
 			universe.addCustomMesh(contactPointMesh,
 					"Contact points of " + name).setLocked(true);
 			universe.addCustomMesh(torqueLine, "Torque of " + name).setLocked(
 					true);
+			universe.addLineMesh(aabb, new Color3f(1.0f, 0.0f, 0.0f),
+					"AABB of " + name, false).setLocked(true);
 
 		} catch (Exception e) {
 			IJ.log("Something went wrong adding meshes to 3D viewer:\n"
@@ -1179,26 +1281,38 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 */
 	private double[] contactPointUnitVector(Ellipsoid ellipsoid,
 			ArrayList<double[]> contactPoints) {
-		if (contactPoints.size() < 1)
+
+		final int nPoints = contactPoints.size();
+
+		if (nPoints < 1)
 			throw new IllegalArgumentException(
 					"Need at least one contact point");
-		double[] summedVector = new double[3];
-		final double[] c = ellipsoid.getCentre();
-		for (double[] p : contactPoints) {
-			final double l = Trig.distance3D(p, c);
-			double[] unitVector = { (p[0] - c[0]) / l, (p[1] - c[1]) / l,
-					(p[2] - c[2]) / l };
-			summedVector[0] += unitVector[0];
-			summedVector[1] += unitVector[1];
-			summedVector[2] += unitVector[2];
-		}
-		double[] unitVector = new double[3];
-		unitVector[0] = summedVector[0] / contactPoints.size();
-		unitVector[1] = summedVector[1] / contactPoints.size();
-		unitVector[2] = summedVector[2] / contactPoints.size();
 
-		unitVector = Vectors.norm(unitVector);
-		return unitVector;
+		final double[] c = ellipsoid.getCentre();
+		final double cx = c[0];
+		final double cy = c[1];
+		final double cz = c[2];
+		double xSum = 0;
+		double ySum = 0;
+		double zSum = 0;
+		for (int i = 0; i < nPoints; i++) {
+			final double[] p = contactPoints.get(i);
+			final double x = p[0] - cx;
+			final double y = p[1] - cy;
+			final double z = p[2] - cz;
+			final double l = Trig.distance3D(x, y, z);
+
+			xSum += x / l;
+			ySum += y / l;
+			zSum += z / l;
+		}
+
+		final double x = xSum / nPoints;
+		final double y = ySum / nPoints;
+		final double z = zSum / nPoints;
+		final double l = Trig.distance3D(x, y, z);
+
+		return new double[] { x / l, y / l, z / l };
 	}
 
 	/**
@@ -1226,13 +1340,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		final double u = 2 / (c * c);
 
 		final double[][] rot = ellipsoid.getRotation();
-		final double[][] inv = (new Matrix(rot)).inverse().getArrayCopy();
+		final double[][] inv = Ellipsoid.transpose(rot);
 
 		double t0 = 0;
 		double t1 = 0;
 		double t2 = 0;
 
-		for (double[] p : contactPoints) {
+		final int n = contactPoints.size();
+
+		for (int i = 0; i < n; i++) {
+			double[] p = contactPoints.get(i);
+
 			// translate point to centre on origin
 			final double px = p[0] - cx;
 			final double py = p[1] - cy;
@@ -1455,7 +1573,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		double[] zerothColumn = { a, b, c };
 
 		// form triangle in random plane
-		double[] vector = Vectors.randomVectors(1)[0];
+		double[] vector = Vectors.randomVector();
 
 		// first column, should be very close to [0, 1, 0]^T
 		double[] firstColumn = Vectors.norm(Vectors.crossProduct(zerothColumn,
@@ -1489,9 +1607,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 			ArrayList<double[]> contactPoints, byte[][] pixels,
 			final double pW, final double pH, final double pD, final int w,
 			final int h, final int d) {
-		final double[][] unitVectors = Vectors.regularVectors(nVectors);
-		return findContactPoints(ellipsoid, contactPoints, unitVectors, pixels,
-				pW, pH, pD, w, h, d);
+		// final double[][] unitVectors = Vectors.regularVectors(nVectors);
+		// final double[][] unitVectors = regularVectors;
+		return findContactPoints(ellipsoid, contactPoints,
+				regularVectors.clone(), pixels, pW, pH, pD, w, h, d);
 	}
 
 	private ArrayList<double[]> findContactPoints(Ellipsoid ellipsoid,
@@ -1501,9 +1620,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 		contactPoints.clear();
 		double[][] points = ellipsoid.getSurfacePoints(unitVectors);
 		final int nPoints = points.length;
-		double[] p = new double[3];
 		for (int i = 0; i < nPoints; i++) {
-			p = points[i];
+			final double[] p = points[i];
 			final int x = (int) Math.floor(p[0] / pW);
 			final int y = (int) Math.floor(p[1] / pH);
 			final int z = (int) Math.floor(p[2] / pD);
@@ -1624,18 +1742,6 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid>, DialogLis
 	 */
 	public int compare(Ellipsoid o1, Ellipsoid o2) {
 		return Double.compare(o2.getVolume(), o1.getVolume());
-	}
-
-	public boolean dialogItemChanged(GenericDialog gd, AWTEvent e) {
-		Vector<?> checkboxes = gd.getCheckboxes();
-		Vector<?> nFields = gd.getNumericFields();
-		Checkbox flinnPeakPlot = (Checkbox) checkboxes.get(4);
-		TextField sigma = (TextField) nFields.get(6);
-		if (flinnPeakPlot.getState())
-			sigma.setEnabled(true);
-		else
-			sigma.setEnabled(false);
-		return true;
 	}
 
 }
