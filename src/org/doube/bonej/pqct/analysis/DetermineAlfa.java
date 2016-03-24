@@ -88,12 +88,23 @@ public class DetermineAlfa{
 		if (details.rotationChoice.equals(details.rotationLabels[1])){
 			/*Calculate alfa from periosteal radii*/
 			double[] marrowCenter = new double[2];
-			for (int i = 0; i< roi.boneMarrowRoiI.size();i++){
-				marrowCenter[0]+=(double)roi.boneMarrowRoiI.get(i);
-				marrowCenter[1]+=(double)roi.boneMarrowRoiJ.get(i);
+			if (roi.boneMarrowRoiI.size() > 0){				
+				for (int i = 0; i< roi.boneMarrowRoiI.size();i++){
+					marrowCenter[0]+=(double)roi.boneMarrowRoiI.get(i);
+					marrowCenter[1]+=(double)roi.boneMarrowRoiJ.get(i);
+				}
+				marrowCenter[0] /=(double)roi.boneMarrowRoiI.size();
+				marrowCenter[1] /=(double)roi.boneMarrowRoiJ.size();
+			}else{
+				//If no marrow was found, use cortex centre
+				for (int i = 0; i< roi.cortexAreaRoiI.size();i++){
+					marrowCenter[0]+=(double)roi.cortexAreaRoiI.get(i);
+					marrowCenter[1]+=(double)roi.cortexAreaRoiJ.get(i);
+				}
+				marrowCenter[0] /=(double)roi.cortexAreaRoiI.size();
+				marrowCenter[1] /=(double)roi.cortexAreaRoiJ.size();
 			}
-			marrowCenter[0] /=(double)roi.boneMarrowRoiI.size();
-			marrowCenter[1] /=(double)roi.boneMarrowRoiJ.size();
+
 			double[] radii = new double[roi.edges.get(roi.selection).length];
 			for (int i = 0; i<roi.edges.get(roi.selection).length;++i){
 				radii[i] = Math.sqrt(Math.pow(roi.edges.get(roi.selection).iit.get(i)-marrowCenter[0],2)+Math.pow(roi.edges.get(roi.selection).jiit.get(i)-marrowCenter[1],2));
