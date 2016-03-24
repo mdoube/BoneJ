@@ -58,6 +58,13 @@ public class Distribution_Analysis implements PlugIn {
 		/*Set sector widths and division numbers*/
 		int[] sectorsAndDivisions = {10,3,10,10}; /*Distribution analysis sectorWidth, Distribution analysis sectors, Concentric distribution analysis sectorWidth, Concentric distribution analysis sectors*/
 		int[] filterSizes = {3,7};		//first is used for bone analysis filtering and second for soft tissue analysis filtering. ?x? median filter.
+		
+		//A ROI appears on the image every now and then, haven't figured out why -> remove any unwanted rois prior to soft-tissue analysis
+		byte removeROIs = 0;
+		if (imp.getRoi() == null){
+			removeROIs = 1;
+		}
+		
 		imageInfo = new Info().getImageInfo(imp,imp.getChannelProcessor());
 		/*Check image calibration*/
 		Calibration cal = imp.getCalibration();
@@ -164,9 +171,9 @@ public class Distribution_Analysis implements PlugIn {
 		middleLabels[2] = "Analyse_concentric_density_distribution";
 		middleDefaults[2] = false;
 		middleLabels[3] = "Analyse_density_distribution";
-		middleDefaults[3] = true;
+		middleDefaults[3] = false;//true;
 		middleLabels[4] = "Analyse_soft_tissues";
-		middleDefaults[4] = false;
+		middleDefaults[4] = true;//false;
 		middleLabels[5] = "Prevent_peeling_PVE_pixels";
 		middleDefaults[5] = false;
 		middleLabels[6] = "Allow_cleaving";
@@ -273,11 +280,18 @@ public class Distribution_Analysis implements PlugIn {
 																							filterSizes);
 			scaledImageData = new ScaledImageData(signedShort, imp.getWidth(), imp.getHeight(),resolution, imageAndAnalysisDetails.scalingFactor, imageAndAnalysisDetails.constant,3,imageAndAnalysisDetails.flipHorizontal,imageAndAnalysisDetails.flipVertical,imageAndAnalysisDetails.noFiltering);	//Scale and 3x3 median filter the data
 			RoiSelector roi = null;
+			
+			
+			
 			if(imageAndAnalysisDetails.cOn || imageAndAnalysisDetails.mOn || imageAndAnalysisDetails.conOn || imageAndAnalysisDetails.dOn){
 				roi = new SelectROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 			}
 			RoiSelector softRoi = null;
 			if(imageAndAnalysisDetails.stOn){
+				if (removeROIs ==1){
+					imp.setRoi(null,false);	//Remove unwanted ROIS
+				}
+			
 				softRoi = new SelectSoftROI(scaledImageData, imageAndAnalysisDetails,imp,imageAndAnalysisDetails.boneThreshold,true);
 				if (roi == null){
 					roi = softRoi;
@@ -322,12 +336,14 @@ public class Distribution_Analysis implements PlugIn {
 					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
 					results = resultsWriter.printSoftTissueResults(results,softTissueAnalysis);
 					if(makeImage && resultImage != null){
+						//IJ.log("Adding soft tissues");
 						resultImage = ResultsImage.addSoftTissueSieve(resultImage,softRoi.softSieve);
 						//System.out.println("ST image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 				}
 				//IJ.log("cON.");
 				if (imageAndAnalysisDetails.cOn){
+					//IJ.log("Adding cortical");
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
@@ -338,12 +354,14 @@ public class Distribution_Analysis implements PlugIn {
 				}
 				//IJ.log("mON.");
 				if (imageAndAnalysisDetails.mOn){
+					//IJ.log("Adding mass dist");
 					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printMassDistributionResults(results,massDistribution,imageAndAnalysisDetails);
 					//System.out.println("mON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 				}
 				//IJ.log("conON.");
 				if (imageAndAnalysisDetails.conOn){
+					//IJ.log("Adding concentric");
 					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printConcentricRingResults(results,concentricRingAnalysis,imageAndAnalysisDetails);
 					if(!imageAndAnalysisDetails.dOn && makeImage && resultImage != null){
@@ -355,6 +373,7 @@ public class Distribution_Analysis implements PlugIn {
 				
 				//IJ.log("dON.");
 				if (imageAndAnalysisDetails.dOn){
+					//IJ.log("Adding distribution");
 					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printDistributionResults(results,DistributionAnalysis,imageAndAnalysisDetails);
 					if (makeImage && resultImage != null){
@@ -367,6 +386,7 @@ public class Distribution_Analysis implements PlugIn {
 				//IJ.log("rotate.");
 				//IJ.log("Ready to rotate image "+(determineAlfa.alfa/Math.PI*180.0));
 				if ((imageAndAnalysisDetails.dOn || imageAndAnalysisDetails.conOn) && makeImage && resultImage != null){
+					//IJ.log("Adding rotation");
 					resultImage = ResultsImage.addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 					//System.out.println("rotate image "+resultImage.getWidth()+" height "+resultImage.getHeight()+" rotated "+(determineAlfa.alfa/Math.PI*180.0));
 				}
