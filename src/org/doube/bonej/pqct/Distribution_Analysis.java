@@ -336,12 +336,14 @@ public class Distribution_Analysis implements PlugIn {
 					SoftTissueAnalysis softTissueAnalysis = new SoftTissueAnalysis((SelectSoftROI) softRoi);
 					results = resultsWriter.printSoftTissueResults(results,softTissueAnalysis);
 					if(makeImage && resultImage != null){
+						//IJ.log("Adding soft tissues");
 						resultImage = ResultsImage.addSoftTissueSieve(resultImage,softRoi.softSieve);
 						//System.out.println("ST image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 					}
 				}
 				//IJ.log("cON.");
 				if (imageAndAnalysisDetails.cOn){
+					//IJ.log("Adding cortical");
 					CorticalAnalysis cortAnalysis =new CorticalAnalysis((SelectROI) roi);
 					results = resultsWriter.printCorticalResults(results,cortAnalysis);
 					if(makeImage && resultImage != null){
@@ -352,12 +354,14 @@ public class Distribution_Analysis implements PlugIn {
 				}
 				//IJ.log("mON.");
 				if (imageAndAnalysisDetails.mOn){
+					//IJ.log("Adding mass dist");
 					MassDistribution massDistribution =new MassDistribution((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printMassDistributionResults(results,massDistribution,imageAndAnalysisDetails);
 					//System.out.println("mON image "+resultImage.getWidth()+" height "+resultImage.getHeight());
 				}
 				//IJ.log("conON.");
 				if (imageAndAnalysisDetails.conOn){
+					//IJ.log("Adding concentric");
 					ConcentricRingAnalysis concentricRingAnalysis =new ConcentricRingAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printConcentricRingResults(results,concentricRingAnalysis,imageAndAnalysisDetails);
 					if(!imageAndAnalysisDetails.dOn && makeImage && resultImage != null){
@@ -369,6 +373,7 @@ public class Distribution_Analysis implements PlugIn {
 				
 				//IJ.log("dON.");
 				if (imageAndAnalysisDetails.dOn){
+					//IJ.log("Adding distribution");
 					DistributionAnalysis DistributionAnalysis = new DistributionAnalysis((SelectROI) roi,imageAndAnalysisDetails,determineAlfa);
 					results = resultsWriter.printDistributionResults(results,DistributionAnalysis,imageAndAnalysisDetails);
 					if (makeImage && resultImage != null){
@@ -381,6 +386,7 @@ public class Distribution_Analysis implements PlugIn {
 				//IJ.log("rotate.");
 				//IJ.log("Ready to rotate image "+(determineAlfa.alfa/Math.PI*180.0));
 				if ((imageAndAnalysisDetails.dOn || imageAndAnalysisDetails.conOn) && makeImage && resultImage != null){
+					//IJ.log("Adding rotation");
 					resultImage = ResultsImage.addRotate(resultImage,determineAlfa.alfa/Math.PI*180.0);
 					//System.out.println("rotate image "+resultImage.getWidth()+" height "+resultImage.getHeight()+" rotated "+(determineAlfa.alfa/Math.PI*180.0));
 				}
