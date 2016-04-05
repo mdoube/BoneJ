@@ -14,6 +14,7 @@ import javax.vecmath.Color3f;
 // for 3D plotting of coordinates
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.Ellipsoid;
 import org.doube.geometry.FitEllipsoid;
 import org.doube.geometry.Vectors;
 import org.doube.jama.EigenvalueDecomposition;
@@ -178,7 +179,8 @@ public class Anisotropy implements PlugIn, DialogListener {
 		ri.updateTable();
 
 		if (do3DResult) {
-			plotPoints3D(coOrdinates, "Intercept Lengths");
+			final EigenvalueDecomposition E = (EigenvalueDecomposition) result[2];
+			show3DMIL(coOrdinates, E);
 		}
 
 		if (doAlign) {
@@ -660,11 +662,11 @@ public class Anisotropy implements PlugIn, DialogListener {
 	 *
 	 * @param coOrdinates
 	 *            float[][] n x 3 array of 3D (x,y,z) coordinates
-	 * @param name
+	 * @param e
 	 *            String name of the dataset
 	 *
 	 */
-	private void plotPoints3D(final double[][] coOrdinates, final String name) {
+	private void show3DMIL(final double[][] coOrdinates, final EigenvalueDecomposition e) {
 		final int nPoints = coOrdinates.length;
 		// Create a CustomMesh from the coordinates
 		final List<Point3f> mesh = new ArrayList<Point3f>();
@@ -679,22 +681,49 @@ public class Anisotropy implements PlugIn, DialogListener {
 
 		final CustomPointMesh cm = new CustomPointMesh(mesh);
 		final CustomPointMesh cm2 = new CustomPointMesh(mesh2);
-
-		// Create a universe and show it
-		final Image3DUniverse univ = new Image3DUniverse();
-		univ.show();
-
-		// Add the mesh
-		final Content c = univ.addCustomMesh(cm, "heads");
-		final Content c2 = univ.addCustomMesh(cm2, "tails");
 		final Color3f green = new Color3f(0.0f, 0.5f, 0.0f);
 		final Color3f red = new Color3f(0.5f, 0.0f, 0.0f);
-		c.getColor();
-		c2.getColor();
 		cm.setColor(green);
 		cm2.setColor(red);
 		cm.setPointSize(1);
 
+		// Create a universe
+		final Image3DUniverse univ = new Image3DUniverse();
+		
+		// Add the MIL points
+		univ.addCustomMesh(cm, "heads").setLocked(true);
+		univ.addCustomMesh(cm2, "tails").setLocked(true);
+		
+		//create an ellipsoid from the eigendecomposition
+		double[][] eigenVectors = e.getV().getArrayCopy();
+		double[][] eigenValues = e.getD().getArrayCopy();
+		final double ra = 1/Math.sqrt(eigenValues[0][0]);
+		final double rb = 1/Math.sqrt(eigenValues[1][1]);
+		final double rc = 1/Math.sqrt(eigenValues[2][2]);
+		Ellipsoid ellipsoid = new Ellipsoid(ra, rb, rc, 0, 0, 0, eigenVectors);
+		
+		//add the ellipsoid to the universe
+		final double[][] pointCloud = ellipsoid.getSurfacePoints(1000);
+		final List<Point3f> pointList = new ArrayList<Point3f>();
+		for (int p = 0; p < pointCloud.length; p++) {
+			if (pointCloud[p] == null)
+				continue;
+			final Point3f ePoint = new Point3f();
+			ePoint.x = (float) pointCloud[p][0];
+			ePoint.y = (float) pointCloud[p][1];
+			ePoint.z = (float) pointCloud[p][2];
+			pointList.add(ePoint);
+		}
+
+		final CustomPointMesh ellipsoidMesh = new CustomPointMesh(pointList);
+		ellipsoidMesh.setPointSize(2.0f);
+		final Color3f cColour = new Color3f(0.0f, 0.5f, 1.0f);
+		ellipsoidMesh.setColor(cColour);
+		univ.addCustomMesh(ellipsoidMesh, "MIL Ellipsoid").setLocked(true);
+		
+		//show the universe
+		univ.show();
+		
 		// Have a look at the source code of CustomPointMesh
 		// for changing point size and anti-aliasing
 	}/* end plotPoints3D */
