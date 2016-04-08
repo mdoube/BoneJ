@@ -27,6 +27,7 @@ import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
 import ij.process.*;	//Debugging
+import java.util.concurrent.ExecutionException;
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public abstract class RoiSelector{
@@ -202,10 +203,14 @@ public abstract class RoiSelector{
 	}
 
 	/*DetectedEdges*/
-	public Vector<Object> getSieve(double[] tempScaledImage,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving){
+	public Vector<Object> getSieve(double[] tempScaledImage,double boneThreshold,String roiChoice, boolean guessStacked, boolean stacked, boolean guessFlip, boolean allowCleaving) throws ExecutionException{
 		Vector<Object> results = findEdge(tempScaledImage,boneThreshold,allowCleaving);	//Trace bone edges	
 		result = (byte[]) results.get(0);
 		Vector<DetectedEdge> edges	= (Vector<DetectedEdge>) results.get(1);
+		//IJ.log("Got edges "+edges.size());
+		if (edges.size() < 1){
+			throw new ExecutionException("Couldn't find a bone. The range of intensities in the file is "+min(tempScaledImage)+" to "+max(tempScaledImage)+". Set the Thresholds between these values", new Throwable());
+		}
 		
 		/*Select correct bone outline*/
 		int selection = 0;
@@ -772,44 +777,49 @@ public abstract class RoiSelector{
 		int initI,initJ;
 		initI = i;
 		initJ = j;
-		
+		//IJ.log("Init traceEdge W "+width+" H "+height+" i "+i+" j "+j);
 		while(true){
 			int counter = 0;
 			previousDirection = direction;
 			/*Handle going out of bounds by considering out of bounds to be  less than threshold*/
-			if (i+((int) Math.round(Math.cos(direction)))  >=0 && i+((int) Math.round(Math.cos(direction)))  < width
-				&& j+((int) Math.round(Math.sin(direction)))  >=0 && j+((int) Math.round(Math.sin(direction)))  < height
+			//IJ.log("Init traceEdge W "+width+" H "+height+" i "+i+" j "+j+" check i "+(i+((int) Math.round(Math.cos(direction-Math.PI/4.0))))+" check j "+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))+" bool "+((j+((int) Math.round(Math.sin(direction)))  >=0)));
+			if ((i+((int) Math.round(Math.cos(direction))))  >=0 && (i+((int) Math.round(Math.cos(direction)))  < width)
+				&& (j+((int) Math.round(Math.sin(direction)))  >=0) && (j+((int) Math.round(Math.sin(direction)))  < height)
 				&& scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] > threshold
 				 ){//Rotate counter clockwise
-				while((scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold 
-				)
-				&& counter < 8
+				 //IJ.log("traceEdge rotate counter W "+width+" H "+height+" i "+(i+((int) Math.round(Math.cos(direction-Math.PI/4.0))))+" j "+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))));
+				while(counter < 8
 				&& i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  >=0 && i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))  < width
 				&& j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  >=0 && j+((int) Math.round(Math.sin(direction-Math.PI/4.0)))  < height
+				&& scaledImage[i+((int) Math.round(Math.cos(direction-Math.PI/4.0)))+(j+((int) Math.round(Math.sin(direction-Math.PI/4.0))))*width] > threshold				
 				){
 					direction-=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
 						break;
 					}
-					
+					//IJ.log("traceEdge rotating counter W "+width+" H "+height+" i "+i+" j "+j);
 				}
 			}else{//Rotate clockwise
-				while((
-				i+((int) Math.round(Math.cos(direction)))  <0 || i+((int) Math.round(Math.cos(direction)))  >= width || 
-				j+((int) Math.round(Math.sin(direction)))  <0 || j+((int) Math.round(Math.sin(direction)))  >= height || 				
-				scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold				
-				) && counter < 8){
+				//IJ.log("traceEdge rotate clock W "+width+" H "+height+" i "+i+" j "+j);
+				while(
+					counter < 8 &&
+					(i+((int) Math.round(Math.cos(direction)))  <0 || i+((int) Math.round(Math.cos(direction)))  >= width || 
+					j+((int) Math.round(Math.sin(direction)))  <0 || j+((int) Math.round(Math.sin(direction)))  >= height || 				
+					scaledImage[i+((int) Math.round(Math.cos(direction)))+(j+((int) Math.round(Math.sin(direction))))*width] < threshold)				
+				){
 					direction+=Math.PI/4.0;
 					++counter;
 					if (Math.abs(direction-previousDirection) >= 180){
 						break;
 					}
+					//IJ.log("traceEdge rotating clock W "+width+" H "+height+" i "+i+" j "+j);
 				}
 
 			}
 			i += (int) Math.round(Math.cos(direction));
 			j += (int) Math.round(Math.sin(direction));
+			//IJ.log("In traceEdge W "+width+" H "+height+" i "+i+" j "+j);
 			if ((i == initI && j == initJ) || counter > 7 || scaledImage[i+j*width]<threshold || result[i+j*width] ==1 || result[i+j*width] >3){
 				for (int ii = 0; ii< result.length;++ii){
 					if(result[ii] > 1){result[ii]=1;}
@@ -819,6 +829,7 @@ public abstract class RoiSelector{
 				returnVector.add(iit);
 				returnVector.add(jiit);
 				/*tempImage.close();*/
+				//IJ.log("Return from roiSelector "+iit.size());
 				return returnVector;
 			}else{
 				if (result[i+j*width] == 0){
@@ -1179,5 +1190,19 @@ public abstract class RoiSelector{
 	
 	double min(double a,double b){
 		return (a < b) ? a : b;
+	}
+	
+	double min(double[] a){
+		Arrays.sort(a);
+		return a[0];
+	}
+	
+	double max(double a,double b){
+		return (a > b) ? a : b;
+	}
+	
+	double max(double[] a){
+		Arrays.sort(a);
+		return a[a.length-1];
 	}
 }

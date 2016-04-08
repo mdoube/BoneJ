@@ -27,13 +27,14 @@ import ij.*;		//ImagePlus
 import ij.gui.*;	//ImagePlus ROI
 import ij.text.*; 	//Debugging ...
 import ij.process.*;	//Debugging
+import java.util.concurrent.ExecutionException;
 
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectROI extends RoiSelector{
 	public Vector<DetectedEdge> edges;
 	//ImageJ constructor
-	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi){
+	public SelectROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi) throws ExecutionException{
 		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
 		//Select ROI
 		
@@ -65,49 +66,52 @@ public class SelectROI extends RoiSelector{
 				}
 			}
 		}
-
-		Vector<Object> boneMasks = getSieve(tempScaledImage,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
-		sieve							= (byte[]) boneMasks.get(0);
-		result	 						= (byte[]) boneMasks.get(1);
-		Vector<DetectedEdge> boneEdges	= (Vector<DetectedEdge>) boneMasks.get(2);
-		selection						= (Integer)	 boneMasks.get(3);
-		/*Add the roi to the image*/
-		if (setRoi){
-			int[] xcoordinates = new int[boneEdges.get(selection).iit.size()];
-			int[] ycoordinates = new int[boneEdges.get(selection).iit.size()];
-			for (int i = 0;i<boneEdges.get(selection).iit.size();++i){
-				xcoordinates[i] = boneEdges.get(selection).iit.get(i);
-				ycoordinates[i] = boneEdges.get(selection).jiit.get(i);
+		try{
+			Vector<Object> boneMasks = getSieve(tempScaledImage,boneThreshold,details.roiChoice,details.guessStacked,details.stacked,details.guessFlip,details.allowCleaving);
+			sieve							= (byte[]) boneMasks.get(0);
+			result	 						= (byte[]) boneMasks.get(1);
+			Vector<DetectedEdge> boneEdges	= (Vector<DetectedEdge>) boneMasks.get(2);
+			selection						= (Integer)	 boneMasks.get(3);
+			/*Add the roi to the image*/
+			if (setRoi){
+				int[] xcoordinates = new int[boneEdges.get(selection).iit.size()];
+				int[] ycoordinates = new int[boneEdges.get(selection).iit.size()];
+				for (int i = 0;i<boneEdges.get(selection).iit.size();++i){
+					xcoordinates[i] = boneEdges.get(selection).iit.get(i);
+					ycoordinates[i] = boneEdges.get(selection).jiit.get(i);
+				}
+				/*Flip the original image prior to adding the ROI, if scaled image is flipped*/
+				if ((details.flipHorizontal || details.flipVertical) && imp.getRoi() != null){
+					IJ.run(imp,"Select None","");	//Remove existing ROIs in order to flip the whole image...
+				}
+				if (details.flipHorizontal){imp.getProcessor().flipVertical(); imp.updateAndDraw();}
+				if (details.flipVertical){imp.getProcessor().flipHorizontal(); imp.updateAndDraw();}
+				ijROI = new PolygonRoi(xcoordinates,ycoordinates,boneEdges.get(selection).iit.size(),Roi.POLYGON);
+				imp.setRoi(ijROI);
 			}
-			/*Flip the original image prior to adding the ROI, if scaled image is flipped*/
-			if ((details.flipHorizontal || details.flipVertical) && imp.getRoi() != null){
-				IJ.run(imp,"Select None","");	//Remove existing ROIs in order to flip the whole image...
+			
+			for (int j = 0;j< height;j++){
+				for (int i = 0; i < width;i++){
+					if (scaledImage[i+j*width]<areaThreshold && sieve[i+j*width] > 0){
+						boneMarrowRoiI.add(i);
+						boneMarrowRoiJ.add(j);
+					}
+					if (scaledImage[i+j*width]>=areaThreshold && sieve[i+j*width] > 0){
+						cortexAreaRoiI.add(i);
+						cortexAreaRoiJ.add(j);
+					}
+					if (scaledImage[i+j*width]>=BMDthreshold && sieve[i+j*width] > 0){
+						cortexROI[i+j*width] = scaledImage[i+j*width];				
+						cortexRoiI.add(i);
+						cortexRoiJ.add(j);
+					} else {
+						cortexROI[i+j*width] = minimum;
+					}
+				}
 			}
-			if (details.flipHorizontal){imp.getProcessor().flipVertical(); imp.updateAndDraw();}
-			if (details.flipVertical){imp.getProcessor().flipHorizontal(); imp.updateAndDraw();}
-			ijROI = new PolygonRoi(xcoordinates,ycoordinates,boneEdges.get(selection).iit.size(),Roi.POLYGON);
-			imp.setRoi(ijROI);
+			edges = boneEdges;
+		}catch (ExecutionException err){
+			throw err;
 		}
-		
-		for (int j = 0;j< height;j++){
-			for (int i = 0; i < width;i++){
-				if (scaledImage[i+j*width]<areaThreshold && sieve[i+j*width] > 0){
-					boneMarrowRoiI.add(i);
-					boneMarrowRoiJ.add(j);
-				}
-				if (scaledImage[i+j*width]>=areaThreshold && sieve[i+j*width] > 0){
-					cortexAreaRoiI.add(i);
-					cortexAreaRoiJ.add(j);
-				}
-				if (scaledImage[i+j*width]>=BMDthreshold && sieve[i+j*width] > 0){
-					cortexROI[i+j*width] = scaledImage[i+j*width];				
-					cortexRoiI.add(i);
-					cortexRoiJ.add(j);
-				} else {
-					cortexROI[i+j*width] = minimum;
-				}
-			}
-		}
-		edges = boneEdges;
 	}	
 }
