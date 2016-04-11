@@ -601,11 +601,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			ImageProcessor ip = stack.getProcessor(s);
 			for (int y = r.y; y < roiYEnd; y++) {
 				for (int x = r.x; x < roiXEnd; x++) {
-					final double pixel = (double) ip.get(x, y);
+					final double pixel = ip.get(x, y);
 					if (pixel >= min && pixel <= max) {
 						count++;
 						final double areaFraction = doPartialVolume ? filledFraction(
-								pixel, this.background, this.foreground) : 1;
+								pixel) : 1;
 						sumAreaFractions += areaFraction;
 						sumX += areaFraction * x;
 						sumY += areaFraction * y;
@@ -672,12 +672,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				double sumAreaFractions = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
-						final double pixel = (double) ip.get(x, y);
+						final double pixel = ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
 							final double xVw = x * vW;
 							final double yVh = y * vH;
 							final double areaFraction = doPartialVolume ? filledFraction(
-									pixel, this.background, this.foreground)
+									pixel)
 									: 1;
 							sumAreaFractions += areaFraction;
 							// sum of distances from axis
@@ -792,10 +792,10 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				for (int y = r.y; y < roiYEnd; y++) {
 					final double yYc = y * vH - yC;
 					for (int x = r.x; x < roiXEnd; x++) {
-						final double pixel = (double) ip.get(x, y);
+						final double pixel = ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
 							final double areaFraction = doPartialVolume ? filledFraction(
-									pixel, this.background, this.foreground)
+									pixel)
 									: 1;
 							sumAreaFractions += areaFraction;
 							final double xXc = x * vW - xC;
@@ -1077,14 +1077,12 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 *            pixel value representing foreground
 	 * @return fraction of pixel 'size' occupied by foreground
 	 */
-	private double filledFraction(double pixel, double background,
-			double foreground) {
-		if (pixel > foreground)
+	private double filledFraction(double pixel) {
+		if (pixel > this.foreground)
 			return 1;
-		if (pixel < background)
+		if (pixel < this.background)
 			return 0;
-		else
-			return (pixel - background) / (foreground - background);
+		return (pixel - this.background) / (this.foreground - this.background);
 	}
 
 	private void roiMeasurements(ImagePlus imp, double min, double max) {
