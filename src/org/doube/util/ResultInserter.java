@@ -85,9 +85,8 @@ public class ResultInserter {
 		}
 		// we got to the end of the table without finding a space to insert
 		// the value, so make a new row for it
-		final String label = "Image";
 		rt.incrementCounter();
-		rt.addLabel(label, title);
+		rt.addLabel(title);
 		rt.addValue(colHeading, value);
 	}
 
