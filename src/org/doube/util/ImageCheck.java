@@ -121,6 +121,11 @@ public class ImageCheck {
 	 *         there is no DICOM slice position information.
 	 */
 	public static double dicomVoxelDepth(final ImagePlus imp) {
+		if (imp == null) {
+			IJ.error("Cannot check DICOM header of a null image");
+			return -1;
+		}
+
 		final Calibration cal = imp.getCalibration();
 		final double vD = cal.pixelDepth;
 
