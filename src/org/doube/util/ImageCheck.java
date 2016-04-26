@@ -144,13 +144,13 @@ public class ImageCheck {
 		else
 			return -1;
 
-		final double sliceSpacing = Math.abs((last - first) / (imp.getStackSize() - 1));
+		final double sliceSpacing = (Math.abs(last - first) + 1) / imp.getStackSize();
 
 		final String units = cal.getUnits();
 
 		final double error = Math.abs((sliceSpacing - vD) / sliceSpacing) * 100;
 
-		if (vD != sliceSpacing) {
+		if (Double.compare(vD, sliceSpacing) != 0) {
 			IJ.log(imp.getTitle() + ":\n" + "Current voxel depth disagrees by " + error
 					+ "% with DICOM header slice spacing.\n" + "Current voxel depth: " + IJ.d2s(vD, 6) + " " + units
 					+ "\n" + "DICOM slice spacing: " + IJ.d2s(sliceSpacing, 6) + " " + units + "\n"
