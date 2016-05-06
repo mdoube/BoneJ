@@ -116,8 +116,8 @@ public class SelectSoftROI extends RoiSelector{
 				int tempMuscleArea=0;
 				muscleSieve = new byte[softSieve.length];
 				int areaToAdd=0;
-				/*Include areas that contribute more than 1% on top of what is already included*/
-				while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.001 < muscleEdges.get(areaToAdd).area){
+				/*Include areas that contribute more than 1.0% on top of what is already included*/
+				while (areaToAdd< muscleEdges.size() && tempMuscleArea*0.01 < muscleEdges.get(areaToAdd).area){
 					byte[] tempMuscleSieve = fillSieve(muscleEdges.get(areaToAdd).iit, muscleEdges.get(areaToAdd).jiit,width,height,muscleImage,details.muscleThreshold);
 					for (int i = 0; i<tempMuscleSieve.length;++i){
 						if (tempMuscleSieve[i] > 0){muscleSieve[i] = tempMuscleSieve[i];}
@@ -183,13 +183,25 @@ public class SelectSoftROI extends RoiSelector{
 				ArrayList<Integer> seedii = new ArrayList<Integer>();
 				ArrayList<Integer> seedjj = new ArrayList<Integer>();
 				//Create list of seed coordinates
+				double tempR,tempR2;
+				int maxInd;
 				for (int i = 0;i<360;i=i+10){
-					seedii.add(edgeCoords[i][0]);
-					seedjj.add(edgeCoords[i][1]);
+					//Look for the furthest point in this bracket
+					maxInd = i;
+					tempR = Math.sqrt(Math.pow(edgeCoords[i][0]-softCentre[0],2d)+Math.pow(edgeCoords[i][1]-softCentre[1],2d));
+					for (int j = i+1;j<i+10;++j){
+						tempR2 = Math.sqrt(Math.pow(edgeCoords[j][0]-softCentre[0],2d)+Math.pow(edgeCoords[j][1]-softCentre[1],2d));
+						if (tempR2 > tempR){
+							maxInd =j;
+							tempR = tempR2;
+						}
+					}
+					seedii.add(edgeCoords[maxInd][0]);
+					seedjj.add(edgeCoords[maxInd][1]);
 				}
 				
 				//Loop livewire 6 times over here
-				for (int l = 0; l<6;++l){
+				for (int l = 0; l<6;++l){//details.edgeDivisions;++l){
 					edgeii.clear();
 					edgejj.clear();
 					LiveWireCosts lwc = new LiveWireCosts(pixels);
@@ -219,10 +231,22 @@ public class SelectSoftROI extends RoiSelector{
 					//Set new seeds
 					seedii.clear();
 					seedjj.clear();
-					double divisions = 36;
-					for (int i = (int) (0.5/divisions*edgeii.size());i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
-						seedii.add(edgeii.get(i));
-						seedjj.add(edgejj.get(i));
+					double divisions = details.edgeDivisions;
+					
+					//Get appropariate seeds, select the furthest point from the centre
+					for (int i = (int) (l*((edgeii.size()/divisions)/6.));i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
+						//Look for the furthest point in this bracket
+						maxInd = i;
+						tempR = Math.sqrt(Math.pow(edgeii.get(i)-softCentre[0],2d)+Math.pow(edgejj.get(i)-softCentre[1],2d));
+						for (int j = i+1;j<i+1d/divisions*edgeii.size();++j){
+							tempR2 = Math.sqrt(Math.pow(edgeii.get(j)-softCentre[0],2d)+Math.pow(edgejj.get(j)-softCentre[1],2d));
+							if (tempR2 > tempR){
+								maxInd =j;
+								tempR = tempR2;
+							}
+						}
+						seedii.add(edgeii.get(maxInd));
+						seedjj.add(edgejj.get(maxInd));
 					}
 				}
 				

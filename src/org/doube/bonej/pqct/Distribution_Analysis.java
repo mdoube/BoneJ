@@ -151,7 +151,8 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Marrow_threshold", 80, 4, 8, null);		//Anything above this is muscle or more dense
+		dialog.addNumericField("Edge_divisions", 36, 4, 8, null);		//Used with livewire to include intermuscular fat
+		dialog.addNumericField("Marrow_threshold", 80, 4, 8, null);		//Anything above this is bone
 		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
 		dialog.addNumericField("Area threshold", 550.0, 4, 8, null); 	//550.0
@@ -229,7 +230,7 @@ public class Distribution_Analysis implements PlugIn {
 			for (int i = 0; i<defaultTopValues.length;++i){
 				defaultTopValues[i] = dialog.getNextBoolean();
 			}
-			double[] thresholdsAndScaling = new double[10];
+			double[] thresholdsAndScaling = new double[11];
 			for (int i = 0; i<thresholdsAndScaling.length;++i){
 				thresholdsAndScaling[i]		= dialog.getNextNumber();
 			}

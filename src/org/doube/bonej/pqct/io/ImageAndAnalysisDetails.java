@@ -31,6 +31,7 @@ public class ImageAndAnalysisDetails{
 	public double airThreshold;		//Fat lower threshold
 	public double fatThreshold;		//Fat higher threshold
 	public double muscleThreshold;	//Muscle lower threshold
+	public double edgeDivisions;	//Used with livewire to include intermuscular fat
 	public double marrowThreshold;	//Marrow higher threshold
 	public double softThreshold;	//Soft tissues higher threshold
 	public double areaThreshold;	//For cortical AREA analyses (CoA, SSI, I) + peeling distal pixels
@@ -93,6 +94,7 @@ public class ImageAndAnalysisDetails{
 		this.airThreshold			= thresholdsAndScaling[i];++i;
 		this.fatThreshold	 		= thresholdsAndScaling[i];++i;
 		this.muscleThreshold 		= thresholdsAndScaling[i];++i;
+		this.edgeDivisions 			= thresholdsAndScaling[i];++i;
 		this.marrowThreshold 		= thresholdsAndScaling[i];++i;
 		this.softThreshold 			= thresholdsAndScaling[i];++i;	//Thresholding soft tissues + marrow from bone
 		this.rotationThreshold		= thresholdsAndScaling[i];++i;
