@@ -255,12 +255,11 @@ public class SelectSoftROI extends RoiSelector{
 				muscleSieve = dilateMuscleMask(muscleSieve,softScaledImage,width,height,muscleThreshold); //Dilate the sieve to include all muscle pixels
 				/*Re-segmenting done*/
 				
-				/*Wipe muscle area +1 layer of pixels away from subcut.*/
+				//Wipe muscle area +3 layer of pixels away from subcut.
 				byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
-				dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
-				//Added 2016/01/08
-				dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
-				dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
+				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 				for (int i = 0;i<tempMuscleSieve.length;++i){
 					if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
 				}
