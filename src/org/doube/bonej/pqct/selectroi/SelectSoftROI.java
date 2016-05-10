@@ -128,7 +128,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 
 				//Visualise muscleSieve
-				
+				/*
 				ImagePlus tempImage = NewImage.createByteImage("MuscleSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels = (byte[])tempImage.getProcessor().getPixels();
 				for (int i = 0;i<muscleSieve.length;++i){
@@ -138,7 +138,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				tempImage.setDisplayRange(0,10);
 				tempImage.show();
-				
+				*/
 				/**Re-segment soft-tissues using livewire based on the muscleSieve
 					1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
 					2) use livewire on the 360 edge pixels
@@ -244,10 +244,10 @@ public class SelectSoftROI extends RoiSelector{
 					
 					
 				}
-				addTrace(tempImage,edgeii,edgejj);
+				//addTrace(tempImage,edgeii,edgejj);
 				//Fill in muscle mask with inter-muscular fat 
 				muscleSieve = getByteMask(width,height,edgeii,edgejj);
-				
+				/*
 				//Visualise the segmentation result
 				ImagePlus muscleImage2 = NewImage.createByteImage("muscleImage",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels3 = (byte[])muscleImage2.getProcessor().getPixels();
@@ -258,7 +258,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				muscleImage2.setDisplayRange(0,1);
 				muscleImage2.show();
-				
+				*/
 				
 				muscleSieve = dilateMuscleMask(muscleSieve,softScaledImage,width,height,muscleThreshold); //Dilate the sieve to include all muscle pixels
 				/*Re-segmenting done*/
@@ -292,7 +292,7 @@ public class SelectSoftROI extends RoiSelector{
 						softSieve[i] = 6;	//Bone & marrow
 					}
 				}
-				
+				/*
 				//Visualise the segmentation result
 				ImagePlus softImage = NewImage.createByteImage("SoftSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels2 = (byte[])softImage.getProcessor().getPixels();
@@ -303,7 +303,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				softImage.setDisplayRange(0,6);
 				softImage.show();
-				
+				*/
 			}catch (ExecutionException err){
 				throw err;
 			}
@@ -431,7 +431,7 @@ public class SelectSoftROI extends RoiSelector{
 			mask[edgeii.get(i)+edgejj.get(i)*width] = (byte) 1;
 		}
 		int[] fillInitCoords = findMaskFillInit(mask,width,height,edgeii,edgejj);
-		IJ.log("Init x "+fillInitCoords[0]+" y "+fillInitCoords[1]);
+		//IJ.log("Init x "+fillInitCoords[0]+" y "+fillInitCoords[1]);
 		if (fillInitCoords != null){
 			return fillMask(fillInitCoords[0],fillInitCoords[1],mask,width,height);
 		}else{
