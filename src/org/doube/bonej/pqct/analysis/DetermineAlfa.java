@@ -130,39 +130,43 @@ public class DetermineAlfa{
 		/*Rotate unselected bone to right*/
 		if (details.rotationChoice.equals(details.rotationLabels[3]) || details.rotationChoice.equals(details.rotationLabels[4])){
 			/*Create temp roi for rotating using rotationThreshold..*/
-			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold,false);
-			/*Find the second biggest bone (could be bigger than the selected roi...*/
-			int[] twoBones = tempRoi.twoLargestBonesDetectedEdges(tempRoi.edges);
-			int otherBoneSelection = 0;
-			if (tempRoi.selection == twoBones[0]){
-				otherBoneSelection = twoBones[1];
-			}else{
-				otherBoneSelection = twoBones[0];
-			}
-			/*Fill a sieve with a second bone and acquire coordinates...*/
-			Vector<Integer> sRoiI = tempRoi.edges.get(otherBoneSelection).iit;
-			Vector<Integer> sRoiJ = tempRoi.edges.get(otherBoneSelection).jiit;
-
-			byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,tempRoi.scaledImage,details.rotationThreshold);
+			try{
+				SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,details.rotationThreshold,false);
 			
-			double[] selectedBoneCenter = calculateCenter(tempRoi.sieve, tempRoi.width, tempRoi.height);			/*Calculate selected bone centre*/
-			double[] otherBoneCenter = calculateCenter(secondBoneSieve, tempRoi.width, tempRoi.height);			/*Calculate other bone centre*/
-			double x = 0;
-			double y = 0;
-			//IJ.log(selectedBoneCenter[0]+" "+selectedBoneCenter[1]+" "+otherBoneCenter[0]+" "+otherBoneCenter[1]);
-			/*Rotate unselected bone to right*/
-			if (details.rotationChoice.equals(details.rotationLabels[3])){
-				x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
-				y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
-			}
-			/*Rotate selected bone to right*/
-			if (details.rotationChoice.equals(details.rotationLabels[4])){
-				x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
-				y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
-			}
-			alfa = -Math.atan2(y,x);
-			distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
-			//IJ.error(twoBones[0]+" "+twoBones[1]+" "+otherBoneSelection+" "+tempRoi.selection+" "+alfa*180.0/Math.PI+" "+tempRoi.length.size());
+				/*Find the second biggest bone (could be bigger than the selected roi...*/
+				int[] twoBones = tempRoi.twoLargestBonesDetectedEdges(tempRoi.edges);
+				int otherBoneSelection = 0;
+				if (tempRoi.selection == twoBones[0]){
+					otherBoneSelection = twoBones[1];
+				}else{
+					otherBoneSelection = twoBones[0];
+				}
+				/*Fill a sieve with a second bone and acquire coordinates...*/
+				Vector<Integer> sRoiI = tempRoi.edges.get(otherBoneSelection).iit;
+				Vector<Integer> sRoiJ = tempRoi.edges.get(otherBoneSelection).jiit;
+
+				byte[] secondBoneSieve = tempRoi.fillSieve(sRoiI, sRoiJ, tempRoi.width,tempRoi.height,tempRoi.scaledImage,details.rotationThreshold);
+			
+				double[] selectedBoneCenter = calculateCenter(tempRoi.sieve, tempRoi.width, tempRoi.height);			/*Calculate selected bone centre*/
+				double[] otherBoneCenter = calculateCenter(secondBoneSieve, tempRoi.width, tempRoi.height);			/*Calculate other bone centre*/
+				double x = 0;
+				double y = 0;
+				//IJ.log(selectedBoneCenter[0]+" "+selectedBoneCenter[1]+" "+otherBoneCenter[0]+" "+otherBoneCenter[1]);
+				/*Rotate unselected bone to right*/
+				if (details.rotationChoice.equals(details.rotationLabels[3])){
+					x = otherBoneCenter[0]-selectedBoneCenter[0];	//Use the selected bone as origin for rotation
+					y = otherBoneCenter[1]-selectedBoneCenter[1];	//Use the selected bone as origin for rotation
+				}
+				/*Rotate selected bone to right*/
+				if (details.rotationChoice.equals(details.rotationLabels[4])){
+					x = selectedBoneCenter[0]-otherBoneCenter[0];	//Use the other bone as origin for rotation
+					y = selectedBoneCenter[1]-otherBoneCenter[1];	//Use the other bone as origin for rotation
+				}
+				alfa = -Math.atan2(y,x);
+				distanceBetweenBones = Math.sqrt(Math.pow(x,2.0)+Math.pow(y,2.0))*roi.pixelSpacing;
+				//IJ.error(twoBones[0]+" "+twoBones[1]+" "+otherBoneSelection+" "+tempRoi.selection+" "+alfa*180.0/Math.PI+" "+tempRoi.length.size());
+		
+			}catch (Exception err){}
 		}
 		
 		

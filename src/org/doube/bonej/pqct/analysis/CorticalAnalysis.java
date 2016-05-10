@@ -187,23 +187,25 @@ public class CorticalAnalysis{
 		
 		//Calculate Stratec/Geanie compatible CoA and CoD, i.e. define a ROI larger than the bone and calculate
 		//CoD and CoA from the ROI independent of whether the cortex is continuous.
-		SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,roi.details.rotationThreshold,false);
-		CoD = 0;
-		CoA = 0;
-		int CoDcounter = 0;
-		cortexSieve = new byte[roi.scaledImage.length];
-		for (int j = 0;j< roi.scaledImage.length;++j){
-			if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.BMDthreshold){
-				CoD+=roi.scaledImage[j];
-				++CoDcounter;
-				cortexSieve[j] = 1;
+		try{
+			SelectROI tempRoi = new SelectROI(roi.scaledImageData, roi.details,roi.imp,roi.details.rotationThreshold,false);
+			CoD = 0;
+			CoA = 0;
+			int CoDcounter = 0;
+			cortexSieve = new byte[roi.scaledImage.length];
+			for (int j = 0;j< roi.scaledImage.length;++j){
+				if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.BMDthreshold){
+					CoD+=roi.scaledImage[j];
+					++CoDcounter;
+					cortexSieve[j] = 1;
+				}
+				if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.areaThreshold){
+					CoA+=1.0;
+				}
 			}
-			if (tempRoi.sieve[j] > 0 && roi.scaledImage[j] >=roi.areaThreshold){
-				CoA+=1.0;
-			}
-		}
-		CoD/=CoDcounter;
-		CoA*=roi.pixelSpacing*roi.pixelSpacing;
+			CoD/=CoDcounter;
+			CoA*=roi.pixelSpacing*roi.pixelSpacing;
+		}catch (Exception err){}
 	}
 
 }
