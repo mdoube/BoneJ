@@ -128,7 +128,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 
 				//Visualise muscleSieve
-				
+				/*
 				ImagePlus tempImage = NewImage.createByteImage("MuscleSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels = (byte[])tempImage.getProcessor().getPixels();
 				for (int i = 0;i<muscleSieve.length;++i){
@@ -138,7 +138,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				tempImage.setDisplayRange(0,10);
 				tempImage.show();
-				
+				*/
 				/**Re-segment soft-tissues using livewire based on the muscleSieve
 					1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
 					2) use livewire on the 360 edge pixels
@@ -203,7 +203,7 @@ public class SelectSoftROI extends RoiSelector{
 					edgeii.add(edgeCoords[i][0]);
 					edgejj.add(edgeCoords[i][1]);
 				}
-				addTrace(tempImage,edgeii,edgejj);
+				//addTrace(tempImage,edgeii,edgejj);
 				
 				
 				
@@ -242,7 +242,7 @@ public class SelectSoftROI extends RoiSelector{
 						edgejj.add((int) fromSeedToCursor[i][1]);
 					}
 					
-					addTrace(tempImage,edgeii,edgejj);
+					//addTrace(tempImage,edgeii,edgejj);
 				}
 				//Fill in muscle mask with inter-muscular fat 
 				muscleSieve = getByteMask(width,height,edgeii,edgejj);
@@ -278,7 +278,7 @@ public class SelectSoftROI extends RoiSelector{
 						softSieve[i] = 6;	//Bone & marrow
 					}
 				}
-				
+				/*
 				//Visualise the segmentation result
 				ImagePlus softImage = NewImage.createByteImage("SoftSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels2 = (byte[])softImage.getProcessor().getPixels();
@@ -289,7 +289,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				softImage.setDisplayRange(0,6);
 				softImage.show();
-				
+				*/
 			}catch (ExecutionException err){
 				throw err;
 			}
