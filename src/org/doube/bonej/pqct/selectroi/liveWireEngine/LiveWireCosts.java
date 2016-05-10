@@ -152,6 +152,7 @@ public class LiveWireCosts implements Runnable{
 
 		for(int i=1;i<rows-1;i++){
 			for(int j=1;j<columns-1;j++){
+				laplacian[i][j] = 0;
 				for (int j2=-1;j2<=1;++j2){
 					for (int i2=-1;i2<=1;++i2){
 						laplacian[i][j] += imagePixels[i+i2][j+j2]*laplacianKernel[i2+1][j2+1];
@@ -169,6 +170,7 @@ public class LiveWireCosts implements Runnable{
 		}		
 		/*Check pixel neighbourhoods for zero-crossings*/
 		int[][] neighbourhood = new int[8][2];	//8 connected neighbourhood
+		int[][] neighbourIndices = {{-1,-1},{-1,0},{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1}};
 		for(int i=1;i<rows-1;i++){
 			for(int j=1;j<columns-1;j++){
 				tempLap[i][j] = 1;	
@@ -177,8 +179,8 @@ public class LiveWireCosts implements Runnable{
 				}else{	/*Check neighbours*/
 					//Check 8-connected neighbour
 					for (int th = 0; th<8;++th){
-						neighbourhood[th][0] = i+(int) Math.round(Math.cos((double) th));
-						neighbourhood[th][1] = j+(int) Math.round(Math.sin((double) th));
+						neighbourhood[th][0] = i+neighbourIndices[th][0];
+						neighbourhood[th][1] = j+neighbourIndices[th][1];
 					}
 					int[] centre = {i,j};
 					tempLap = checkNeighbours(tempLap,neighbourhood,centre);
@@ -255,13 +257,14 @@ public class LiveWireCosts implements Runnable{
     	@param c target pixel y-coordinate
     */
     private void updateCosts(int r,int c,double mycost){
-		visited[r][c] = true;
+		
 		pixelCosts.poll();
 		int[][] neighbourhood = new int[8][2];	//8 connected neighbourhood
+		int[][] neighbourIndices = {{-1,-1},{-1,0},{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1}};
 		//Check 8-connected neighbour
 		for (int th = 0; th<8;++th){
-			neighbourhood[th][0] = r+(int) Math.round(Math.sin((double) th));
-			neighbourhood[th][1] = c+(int) Math.round(Math.cos((double) th));
+			neighbourhood[th][0] = r+neighbourIndices[th][0];//(int) Math.round(Math.sin((double) th));
+			neighbourhood[th][1] = c+neighbourIndices[th][1];//+(int) Math.round(Math.cos((double) th));
 		}
 		int[] coordinates;
         for (int i = 0;i<neighbourhood.length;++i){
@@ -277,8 +280,7 @@ public class LiveWireCosts implements Runnable{
 				pixelCosts.add(new PixelNode(pixelCoords, mycost+edgeCost(r,c,neighbourhood[i][0],neighbourhood[i][1]),fromCoords));	    
             }
         }
-
-			
+		visited[r][c] = true;			
     }
 
 	/**Returns the path from seed point to point r,c

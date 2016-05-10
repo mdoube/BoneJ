@@ -136,7 +136,7 @@ public class SelectSoftROI extends RoiSelector{
 						rPixels[i] = muscleSieve[i];
 					}
 				}
-				tempImage.setDisplayRange(0,1);
+				tempImage.setDisplayRange(0,10);
 				tempImage.show();
 				
 				/**Re-segment soft-tissues using livewire based on the muscleSieve
@@ -193,28 +193,28 @@ public class SelectSoftROI extends RoiSelector{
 				//Arraylists for edge, and livewire seed coordinates
 				ArrayList<Integer> edgeii = new ArrayList<Integer>();
 				ArrayList<Integer> edgejj = new ArrayList<Integer>();
-				ArrayList<Integer> seedii = new ArrayList<Integer>();
-				ArrayList<Integer> seedjj = new ArrayList<Integer>();
+				ArrayList<Integer> seedii;
+				ArrayList<Integer> seedjj;
+				
+				double lwSteps = 6;
+				
 				//Create list of seed coordinates
-				double tempR,tempR2;
-				int maxInd;
-				for (int i = 0;i<360;i=i+10){
-					//Look for the furthest point in this bracket
-					maxInd = i;
-					tempR = Math.sqrt(Math.pow(edgeCoords[i][0]-softCentre[0],2d)+Math.pow(edgeCoords[i][1]-softCentre[1],2d));
-					for (int j = i+1;j<i+10;++j){
-						tempR2 = Math.sqrt(Math.pow(edgeCoords[j][0]-softCentre[0],2d)+Math.pow(edgeCoords[j][1]-softCentre[1],2d));
-						if (tempR2 > tempR){
-							maxInd =j;
-							tempR = tempR2;
-						}
-					}
-					seedii.add(edgeCoords[maxInd][0]);
-					seedjj.add(edgeCoords[maxInd][1]);
+				for (int i = 0;i<360;++i){
+					edgeii.add(edgeCoords[i][0]);
+					edgejj.add(edgeCoords[i][1]);
 				}
+				addTrace(tempImage,edgeii,edgejj);
+				
+				
+				
 				
 				//Loop livewire 6 times over here
-				for (int l = 0; l<6;++l){//details.edgeDivisions;++l){
+				for (int l = 0; l< ((int) lwSteps);++l){//details.edgeDivisions;++l){
+					//Set new seeds
+					Vector<Object> tempVO = getSeedPoints(edgeii, edgejj, softCentre,details.edgeDivisions, lwSteps, (double) l);
+					seedii = (ArrayList<Integer>) tempVO.get(0);
+					seedjj = (ArrayList<Integer>) tempVO.get(1);
+				
 					edgeii.clear();
 					edgejj.clear();
 					LiveWireCosts lwc = new LiveWireCosts(pixels);
@@ -241,28 +241,9 @@ public class SelectSoftROI extends RoiSelector{
 						edgeii.add((int) fromSeedToCursor[i][0]);
 						edgejj.add((int) fromSeedToCursor[i][1]);
 					}
-					//Set new seeds
-					seedii.clear();
-					seedjj.clear();
-					double divisions = details.edgeDivisions;
 					
-					//Get appropriate seeds, select the furthest point from the centre
-					for (int i = (int) (l*((edgeii.size()/divisions)/6.));i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
-						//Look for the furthest point in this bracket
-						maxInd = i;
-						tempR = Math.sqrt(Math.pow(edgeii.get(i)-softCentre[0],2d)+Math.pow(edgejj.get(i)-softCentre[1],2d));
-						for (int j = i+1;j<i+1d/divisions*edgeii.size();++j){
-							tempR2 = Math.sqrt(Math.pow(edgeii.get(j)-softCentre[0],2d)+Math.pow(edgejj.get(j)-softCentre[1],2d));
-							if (tempR2 > tempR){
-								maxInd =j;
-								tempR = tempR2;
-							}
-						}
-						seedii.add(edgeii.get(maxInd));
-						seedjj.add(edgejj.get(maxInd));
-					}
+					addTrace(tempImage,edgeii,edgejj);
 				}
-				
 				//Fill in muscle mask with inter-muscular fat 
 				muscleSieve = getByteMask(width,height,edgeii,edgejj);
 				muscleSieve = dilateMuscleMask(muscleSieve,softScaledImage,width,height,muscleThreshold); //Dilate the sieve to include all muscle pixels
@@ -297,10 +278,57 @@ public class SelectSoftROI extends RoiSelector{
 						softSieve[i] = 6;	//Bone & marrow
 					}
 				}
+				
+				//Visualise the segmentation result
+				ImagePlus softImage = NewImage.createByteImage("SoftSieve",width,height,1, NewImage.FILL_BLACK);
+				byte[] rPixels2 = (byte[])softImage.getProcessor().getPixels();
+				for (int i = 0;i<softSieve.length;++i){
+					for (int c = 0;c<width;++c){
+						rPixels2[i] = softSieve[i];
+					}
+				}
+				softImage.setDisplayRange(0,6);
+				softImage.show();
+				
 			}catch (ExecutionException err){
 				throw err;
 			}
 		}
+	}
+	
+	/*Debugging*/	
+	public void addTrace(ImagePlus tempImage,ArrayList<Integer> edgeii,ArrayList<Integer> edgejj){
+		int[] tempii = new int[edgeii.size()];
+		int[] tempjj = new int[edgeii.size()];
+		for (int i = 0; i<edgeii.size();++i){
+			tempii[i] = edgeii.get(i);
+			tempjj[i] = edgejj.get(i);
+		}
+	
+		Polygon polygon = new Polygon(tempii,tempjj,tempii.length);
+		/*Create the ROI*/
+		PolygonRoi roi = new PolygonRoi(polygon,Roi.POLYGON);
+		/*Set roi color to differentiate ROIs from each other*/
+		/**Get the overlay or create one, if needed*/
+		Overlay over;
+		if (tempImage.getOverlay() == null){
+			over = new Overlay();
+			tempImage.setOverlay(over);
+		}else{
+			over = tempImage.getOverlay();
+		}
+		
+		int colorInd = over.size();
+		float[] colors = new float[]{
+										0.5f+0.5f*((float) Math.sin(2d*Math.PI*((double)(colorInd-5))/10.0)),	/*R*/
+										0.5f+0.5f*((float) Math.cos(2d*Math.PI*((double)colorInd)/10.0)), 	/*G*/
+										0.5f+0.5f*((float) Math.sin(2d*Math.PI*((double)colorInd)/10.0))	/*B*/
+									};
+		roi.setStrokeColor(new Color(colors[0],colors[1],colors[2]));
+		/*Add the roi to an overlay, and set the overlay active*/
+		tempImage.setRoi(roi,true);
+		over.add(roi);
+		tempImage.updateAndRepaintWindow();
 	}
 	
 	//Helper function to get seed points for livewire
