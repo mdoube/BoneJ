@@ -47,7 +47,7 @@ public class SelectROI extends RoiSelector{
 		boneMarrowRoiI = new Vector<Integer>();
 		boneMarrowRoiJ = new Vector<Integer>();
 		Roi ijROI = imp.getRoi();
-		double[] tempScaledImage = (double[]) scaledImage.clone();
+		double[] tempScaledImage = Arrays.copyOf(scaledImage,scaledImage.length);//(double[]) scaledImage.clone();
 		if (ijROI != null && details.manualRoi){	/*Set pixels outside the manually selected ROI to zero*/
 			/*Check whether pixel is within ROI, mark with bone threshold*/
 			for (int j = 0;j< height;j++){

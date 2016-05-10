@@ -151,7 +151,7 @@ public class Distribution_Analysis implements PlugIn {
 		dialog.addNumericField("Air_threshold", -40, 4, 8, null);	//Anything above this is fat or more dense
 		dialog.addNumericField("Fat threshold", 40, 4, 8, null);		//Anything between this and air threshold is fat
 		dialog.addNumericField("Muscle_threshold", 40, 4, 8, null);		//Anything above this is muscle or more dense
-		dialog.addNumericField("Edge_divisions", 36, 4, 8, null);		//Used with livewire to include intermuscular fat
+		dialog.addNumericField("Edge_divisions", 18, 4, 8, null);		//Used with livewire to include intermuscular fat
 		dialog.addNumericField("Marrow_threshold", 80, 4, 8, null);		//Anything above this is bone
 		dialog.addNumericField("Soft_tissue_threshold", 200.0, 4, 8, null);		//Anything  between this and muscle threshold is muscle
 		dialog.addNumericField("Rotation_threshold", 200.0, 4, 8, null);
@@ -179,15 +179,15 @@ public class Distribution_Analysis implements PlugIn {
 		String[] middleLabels = new String[10];
 		boolean[] middleDefaults = new boolean[10];
 		middleLabels[0] = "Analyse_cortical_results";
-		middleDefaults[0] = true;
+		middleDefaults[0] = false;//true;
 		middleLabels[1] = "Analyse_mass_distribution";
 		middleDefaults[1] = false;
 		middleLabels[2] = "Analyse_concentric_density_distribution";
 		middleDefaults[2] = false;
 		middleLabels[3] = "Analyse_density_distribution";
-		middleDefaults[3] = true;
+		middleDefaults[3] = false;//true;
 		middleLabels[4] = "Analyse_soft_tissues";
-		middleDefaults[4] = false;
+		middleDefaults[4] = true;//false;
 		middleLabels[5] = "Prevent_peeling_PVE_pixels";
 		middleDefaults[5] = false;
 		middleLabels[6] = "Allow_cleaving";

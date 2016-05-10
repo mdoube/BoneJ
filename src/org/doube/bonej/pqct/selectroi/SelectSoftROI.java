@@ -57,8 +57,8 @@ public class SelectSoftROI extends RoiSelector{
 
 			/**Ignore data outside manually selected ROI, if manualRoi has been selected*/
 			Roi ijROI = imp.getRoi();
-			double[] tempScaledImage = (double[]) softScaledImage.clone();
 			if (ijROI != null && details.manualRoi){	/*Set pixels outside the manually selected ROI to zero*/
+			double[] tempScaledImage = Arrays.copyOf(softScaledImage,softScaledImage.length);
 				/*Check whether pixel is within ROI, mark with bone threshold*/
 				for (int j = 0;j< height;j++){
 					for (int i = 0; i < width;i++){
@@ -88,9 +88,10 @@ public class SelectSoftROI extends RoiSelector{
 				/*Erode three layers of pixels from the fat sieve to get rid of higher density layer (i.e. skin)
 				on top of fat to enable finding muscle border
 				*/
-				byte[] muscleSieve = (byte[]) softSieve.clone();
-				double[] muscleImage = (double[]) softScaledImage.clone();
+				byte[] muscleSieve = Arrays.copyOf(softSieve,softSieve.length);
+				double[] muscleImage = Arrays.copyOf(softScaledImage,softScaledImage.length);
 				byte[] subCutaneousFat = null;
+				//Remove skin by eroding three layers of pixels
 				for (int i = 0;i< 3;++i){
 					muscleSieve = erode(muscleSieve);
 					//Changed 2016/01/08
@@ -101,7 +102,7 @@ public class SelectSoftROI extends RoiSelector{
 					}
 					*/
 				}
-				subCutaneousFat = (byte[]) muscleSieve.clone();
+				subCutaneousFat = Arrays.copyOf(muscleSieve,muscleSieve.length);
 				/*Remove everything other than the selected limb from the image*/
 				for (int i = 0; i<muscleSieve.length;++i){
 					if (muscleSieve[i] < 1){
@@ -126,6 +127,18 @@ public class SelectSoftROI extends RoiSelector{
 					areaToAdd++;
 				}
 
+				//Visualise muscleSieve
+				
+				ImagePlus tempImage = NewImage.createByteImage("MuscleSieve",width,height,1, NewImage.FILL_BLACK);
+				byte[] rPixels = (byte[])tempImage.getProcessor().getPixels();
+				for (int i = 0;i<muscleSieve.length;++i){
+					for (int c = 0;c<width;++c){
+						rPixels[i] = muscleSieve[i];
+					}
+				}
+				tempImage.setDisplayRange(0,1);
+				tempImage.show();
+				
 				/**Re-segment soft-tissues using livewire based on the muscleSieve
 					1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
 					2) use livewire on the 360 edge pixels
@@ -233,7 +246,7 @@ public class SelectSoftROI extends RoiSelector{
 					seedjj.clear();
 					double divisions = details.edgeDivisions;
 					
-					//Get appropariate seeds, select the furthest point from the centre
+					//Get appropriate seeds, select the furthest point from the centre
 					for (int i = (int) (l*((edgeii.size()/divisions)/6.));i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
 						//Look for the furthest point in this bracket
 						maxInd = i;
@@ -256,7 +269,7 @@ public class SelectSoftROI extends RoiSelector{
 				/*Re-segmenting done*/
 				
 				//Wipe muscle area +3 layer of pixels away from subcut.
-				byte[] tempMuscleSieve = (byte[]) muscleSieve.clone();
+				byte[] tempMuscleSieve = Arrays.copyOf(muscleSieve,muscleSieve.length);
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
@@ -288,6 +301,33 @@ public class SelectSoftROI extends RoiSelector{
 				throw err;
 			}
 		}
+	}
+	
+	//Helper function to get seed points for livewire
+	public Vector<Object> getSeedPoints(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre,double divisions, double steps, double l){
+		ArrayList<Integer> seedii = new ArrayList<Integer>();
+		ArrayList<Integer> seedjj = new ArrayList<Integer>();
+		double tempR,tempR2;
+		int maxInd;
+		//Get appropriate seeds, select the furthest point from the centre
+		for (int i = (int) (l*((edgeii.size()/divisions)/steps));i<(int) ((divisions-1d)/divisions*edgeii.size());i+=1d/divisions*edgeii.size()){
+			//Look for the furthest point in this bracket
+			maxInd = i;
+			tempR = Math.sqrt(Math.pow(edgeii.get(i)-softCentre[0],2d)+Math.pow(edgejj.get(i)-softCentre[1],2d));
+			for (int j = i+1;j<i+1d/divisions*edgeii.size();++j){
+				tempR2 = Math.sqrt(Math.pow(edgeii.get(j)-softCentre[0],2d)+Math.pow(edgejj.get(j)-softCentre[1],2d));
+				if (tempR2 > tempR){
+					maxInd =j;
+					tempR = tempR2;
+				}
+			}
+			seedii.add(edgeii.get(maxInd));
+			seedjj.add(edgejj.get(maxInd));
+		}
+		Vector<Object> returnVal = new Vector<Object>();
+		returnVal.add(seedii);
+		returnVal.add(seedjj);
+		return returnVal;		
 	}
 	
 	double max(double a,double b){

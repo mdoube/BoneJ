@@ -83,8 +83,8 @@ public abstract class RoiSelector{
 				this.scaledImageData = dataIn;
 		this.imp = imp;
 		details =detailsIn;
-		scaledImage = (double[])dataIn.scaledImage.clone();
-		softScaledImage = (double[])dataIn.softScaledImage.clone();
+		scaledImage = Arrays.copyOf(dataIn.scaledImage,dataIn.scaledImage.length);//(double[])dataIn.scaledImage.clone();
+		softScaledImage = Arrays.copyOf(dataIn.softScaledImage,dataIn.softScaledImage.length);//(double[])dataIn.softScaledImage.clone();
 		pixelSpacing = dataIn.pixelSpacing;
 		imageSavePath = details.imageSavePath;
 		width =dataIn.width;
@@ -590,7 +590,7 @@ public abstract class RoiSelector{
 	/*DetectedEdge*/
 	int selectRoiCentralBone(Vector<DetectedEdge> edges,double[] tempScaledImage,double fatThreshold){
 		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(edges,tempScaledImage,fatThreshold);
-		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		double[] temp = Arrays.copyOf(distanceFromCentreOfLimb,distanceFromCentreOfLimb.length);//(double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
 		while (distanceFromCentreOfLimb[counter] !=temp[0]){
@@ -602,7 +602,7 @@ public abstract class RoiSelector{
 	/*DetectedEdge*/
 	int selectRoiPeripheralBone(Vector<DetectedEdge> edges,double[] tempScaledImage,double fatThreshold){
 		double[] distanceFromCentreOfLimb = calcDistancesFromCentreOfLimb(edges,tempScaledImage,fatThreshold);
-		double[] temp = (double[]) distanceFromCentreOfLimb.clone();
+		double[] temp = Arrays.copyOf(distanceFromCentreOfLimb,distanceFromCentreOfLimb.length);//(double[]) distanceFromCentreOfLimb.clone();
 		Arrays.sort(temp);
 		int counter=0;
 		while (distanceFromCentreOfLimb[counter] !=temp[temp.length-1]){
@@ -713,7 +713,7 @@ public abstract class RoiSelector{
 			initialI.add(i);
 			initialJ.add(j);
 			sieveTemp[i+j*width] = 1;
-			byte[] sieveTemp2 = (byte[]) sieveTemp.clone();
+			byte[] sieveTemp2 = Arrays.copyOf(sieveTemp,sieveTemp.length);//(byte[]) sieveTemp.clone();
 			boolean noLeak = true;
 			while (initialI.size()>0){
 				i =initialI.lastElement();
@@ -751,7 +751,7 @@ public abstract class RoiSelector{
 				}			
 			}
 			if (noLeak){
-				sieveTemp = (byte[]) sieveTemp2.clone();
+				sieveTemp = Arrays.copyOf(sieveTemp2,sieveTemp2.length);//(byte[]) sieveTemp2.clone();
 			}
 		}
 		//return sieveTemp;
@@ -1056,7 +1056,7 @@ public abstract class RoiSelector{
 			/*Set initial fill pixel to the first pixel above threshold not on the border*/
 			/*Select the first pixel found*/
 			boolean possible = true;
-			byte[] tempResult = (byte[]) result.clone();
+			byte[] tempResult = Arrays.copyOf(result,result.length);//(byte[]) result.clone();
 
 			int[] tempCoordinates = findFillInit(tempResult, iit, jiit,scaledImage,threshold);
 			if (tempCoordinates == null){
@@ -1074,7 +1074,7 @@ public abstract class RoiSelector{
 			}
 
 			if (possible){
-				result = (byte[]) tempResult.clone();
+				result = (byte[]) Arrays.copyOf(tempResult,tempResult.length);//tempResult.clone();
 				Vector<Object> results = new Vector<Object>();
 				results.add(result);
 				results.add(iit);
