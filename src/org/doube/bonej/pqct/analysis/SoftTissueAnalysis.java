@@ -58,7 +58,7 @@ public class SoftTissueAnalysis{
 				LimbD +=roi.softScaledImage[i];
 				weightedLimbArea += roi.softScaledImage[i]+1000.0;
 			}
-			if (roi.softSieve[i] ==2 || roi.softSieve[i] ==5){ //Fat
+			if (roi.softSieve[i] ==2 || roi.softSieve[i] ==4 || roi.softSieve[i] ==5){ //Fat
 				FatA +=1;
 				FatD +=roi.softScaledImage[i];
 				weightedFatArea += roi.softScaledImage[i]+1000.0;
