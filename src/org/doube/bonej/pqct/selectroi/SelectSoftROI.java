@@ -128,7 +128,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 
 				//Visualise muscleSieve
-				
+				/*
 				ImagePlus tempImage = NewImage.createByteImage("MuscleSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels = (byte[])tempImage.getProcessor().getPixels();
 				for (int i = 0;i<muscleSieve.length;++i){
@@ -138,6 +138,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				tempImage.setDisplayRange(0,10);
 				tempImage.show();
+				*/
 				
 				/**Re-segment soft-tissues using livewire based on the muscleSieve
 					1) bring rays back from image edges to centre of soft-tissue mask 1 deg apart
@@ -222,6 +223,7 @@ public class SelectSoftROI extends RoiSelector{
 					int prevLength = 0;
 					for (int i = 0;i<seedii.size()-1; ++i){
 						lwc.setSeed(seedii.get(i),seedjj.get(i));
+						try{Thread.sleep(10);}catch(Exception e){}
 						while ((fromSeedToCursor = lwc.returnPath(seedii.get(i+1),seedjj.get(i+1))) == null){
 							try{Thread.sleep(1);}catch(Exception e){}
 						}
@@ -230,14 +232,14 @@ public class SelectSoftROI extends RoiSelector{
 							edgejj.add((int) fromSeedToCursor[iii][1]);
 						}
 						if (l == (((int) lwSteps)-1)){
-							IJ.log("Edge Length "+(edgeii.size()-prevLength)+" x "+seedii.get(i)+" y "+seedjj.get(i)+" to x "+seedii.get(i+1)+" y "+seedjj.get(i+1));
+							//IJ.log("Edge Length "+(edgeii.size()-prevLength)+" x "+seedii.get(i)+" y "+seedjj.get(i)+" to x "+seedii.get(i+1)+" y "+seedjj.get(i+1));
 						}
 						prevLength = edgeii.size();
 						
 					}
 					/*Connect the last bit*/
 					lwc.setSeed(seedii.get(seedii.size()-1),seedjj.get(seedjj.size()-1));
-					
+					try{Thread.sleep(10);}catch(Exception e){}
 					while ((fromSeedToCursor = lwc.returnPath(seedii.get(0),seedjj.get(0))) == null){
 						try{Thread.sleep(1);}catch(Exception e){}
 					}
@@ -248,13 +250,13 @@ public class SelectSoftROI extends RoiSelector{
 						edgejj.add((int) fromSeedToCursor[i][1]);
 					}
 					if (l == (((int) lwSteps)-1)){
-						IJ.log("Remainder Edge Length "+(edgeii.size()-prevLength)+" x "+seedii.get(seedii.size()-1)+" y "+seedjj.get(seedii.size()-1)+" to x "+seedii.get(0)+" y "+seedjj.get(0));
+						//IJ.log("Remainder Edge Length "+(edgeii.size()-prevLength)+" x "+seedii.get(seedii.size()-1)+" y "+seedjj.get(seedii.size()-1)+" to x "+seedii.get(0)+" y "+seedjj.get(0));
 					}
 					
 					
 				}
 				
-				
+				/*
 				IJ.log("Seed points");
 				for (int i = 0; i<seedii.size();++i){
 					IJ.log(seedii.get(i)+" "+seedjj.get(i));
@@ -267,9 +269,11 @@ public class SelectSoftROI extends RoiSelector{
 				
 				
 				addTrace(tempImage,edgeii,edgejj);
+				*/
 				//Fill in muscle mask with inter-muscular fat 
 				muscleSieve = getByteMask(width,height,edgeii,edgejj);
 				
+				/*
 				//Visualise the segmentation result
 				ImagePlus muscleImage2 = NewImage.createByteImage("muscleImage",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels3 = (byte[])muscleImage2.getProcessor().getPixels();
@@ -280,7 +284,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				muscleImage2.setDisplayRange(0,1);
 				muscleImage2.show();
-				
+				*/
 				
 				muscleSieve = dilateMuscleMask(muscleSieve,softScaledImage,width,height,muscleThreshold); //Dilate the sieve to include all muscle pixels
 				/*Re-segmenting done*/
@@ -315,6 +319,7 @@ public class SelectSoftROI extends RoiSelector{
 					}
 				}
 				
+				/*
 				//Visualise the segmentation result
 				ImagePlus softImage = NewImage.createByteImage("SoftSieve",width,height,1, NewImage.FILL_BLACK);
 				byte[] rPixels2 = (byte[])softImage.getProcessor().getPixels();
@@ -325,7 +330,7 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				softImage.setDisplayRange(0,6);
 				softImage.show();
-				
+				*/
 			}catch (ExecutionException err){
 				throw err;
 			}
@@ -371,22 +376,36 @@ public class SelectSoftROI extends RoiSelector{
 	public Vector<Object> getSeedPoints(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre,double divisions, double steps, double l){
 		ArrayList<Integer> seedii = new ArrayList<Integer>();
 		ArrayList<Integer> seedjj = new ArrayList<Integer>();
+		
+		//Pop edge into DetectedRadialEdge, sort by incrementing radius
+		Vector<DetectedRadialEdge> radialEdge = new Vector<DetectedRadialEdge>();
+		double theta;
+		double r;
+		double ii,jj;
+		for (int i =0; i<edgeii.size();++i){
+			ii = edgeii.get(i)-softCentre[0];
+			jj = edgejj.get(i)-softCentre[1];
+			radialEdge.add(new DetectedRadialEdge(edgeii.get(i),edgejj.get(i),Math.atan2(ii,jj),Math.sqrt(Math.pow(ii,2d)+Math.pow(jj,2d))));
+		}
+		Collections.sort(radialEdge);
+		
 		double tempR,tempR2;
 		int maxInd;
 		//Get appropriate seeds, select the furthest point from the centre
-		for (int i = (int) (l*(((double)edgeii.size())/divisions)/steps);i<(int) (edgeii.size()-(((double)edgeii.size())/divisions));i+=((int)(((double)edgeii.size())/divisions))){
+		for (int i = (int) (l*(((double)radialEdge.size())/divisions)/steps);i<(int) (radialEdge.size()-(((double)radialEdge.size())/divisions));i+=((int)(((double)radialEdge.size())/divisions))){
+			
 			//Look for the furthest point in this bracket
 			maxInd = i;
-			tempR = Math.sqrt(Math.pow(edgeii.get(i)-softCentre[0],2d)+Math.pow(edgejj.get(i)-softCentre[1],2d));
+			tempR = radialEdge.get(i).radius;
 			for (int j = i+1;j<i+((int) (((double)edgeii.size())/divisions));++j){
-				tempR2 = Math.sqrt(Math.pow(edgeii.get(j)-softCentre[0],2d)+Math.pow(edgejj.get(j)-softCentre[1],2d));
+				tempR2 = radialEdge.get(j).radius;
 				if (tempR2 > tempR){
 					maxInd =j;
 					tempR = tempR2;
 				}
 			}
-			seedii.add(edgeii.get(maxInd));
-			seedjj.add(edgejj.get(maxInd));
+			seedii.add(radialEdge.get(maxInd).ii);
+			seedjj.add(radialEdge.get(maxInd).jj);
 		}
 		Vector<Object> returnVal = new Vector<Object>();
 		returnVal.add(seedii);
@@ -453,7 +472,7 @@ public class SelectSoftROI extends RoiSelector{
 			mask[edgeii.get(i)+edgejj.get(i)*width] = (byte) 1;
 		}
 		int[] fillInitCoords = findMaskFillInit(mask,width,height,edgeii,edgejj);
-		IJ.log("Init x "+fillInitCoords[0]+" y "+fillInitCoords[1]);
+		//IJ.log("Init x "+fillInitCoords[0]+" y "+fillInitCoords[1]);
 		if (fillInitCoords != null){
 			return fillMask(fillInitCoords[0],fillInitCoords[1],mask,width,height);
 		}else{
