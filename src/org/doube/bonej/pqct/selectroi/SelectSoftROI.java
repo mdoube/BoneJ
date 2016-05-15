@@ -205,10 +205,12 @@ public class SelectSoftROI extends RoiSelector{
 					edgejj.add(edgeCoords[i][1]);
 				}
 				//addTrace(tempImage,edgeii,edgejj);
+				Vector<Object> tempVO = getLassoEdge(edgeii, edgejj, softCentre, muscleSieve);
+				edgeii = (ArrayList<Integer>) tempVO.get(0);
+				edgejj = (ArrayList<Integer>) tempVO.get(1);
 				
 				
-				
-				
+				/*
 				//Loop livewire 6 times over here
 				for (int l = 0; l< ((int) lwSteps);++l){//details.edgeDivisions;++l){
 					//Set new seeds
@@ -237,7 +239,7 @@ public class SelectSoftROI extends RoiSelector{
 						prevLength = edgeii.size();
 						
 					}
-					/*Connect the last bit*/
+					//Connect the last bit
 					lwc.setSeed(seedii.get(seedii.size()-1),seedjj.get(seedjj.size()-1));
 					try{Thread.sleep(10);}catch(Exception e){}
 					while ((fromSeedToCursor = lwc.returnPath(seedii.get(0),seedjj.get(0))) == null){
@@ -255,7 +257,7 @@ public class SelectSoftROI extends RoiSelector{
 					
 					
 				}
-				
+				*/
 				/*
 				IJ.log("Seed points");
 				for (int i = 0; i<seedii.size();++i){
@@ -392,6 +394,61 @@ public class SelectSoftROI extends RoiSelector{
 			coordinates.get(i).jj = Math.round(coordinates.get(i).jj);
 		}
 		return coordinates;
+	}
+	
+	public Vector<Object> getLassoEdge(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre, byte[] image){
+		ArrayList<Integer> seedii = new ArrayList<Integer>();
+		ArrayList<Integer> seedjj = new ArrayList<Integer>();
+		//Pop edge into DetectedRadialEdge, sort by incrementing radius
+		//Start the algorithm from the most distant point from the centre of area
+		Vector<DetectedRadialEdge> radialEdge = new Vector<DetectedRadialEdge>();
+		double theta;
+		double r;
+		double ii,jj;
+		for (int i =0; i<edgeii.size();++i){
+			ii = edgeii.get(i)-softCentre[0];
+			jj = edgejj.get(i)-softCentre[1];
+			radialEdge.add(new DetectedRadialEdge(edgeii.get(i),edgejj.get(i),Math.atan2(ii,jj),Math.sqrt(Math.pow(ii,2d)+Math.pow(jj,2d))));
+		}
+		
+		int currentI = 0;
+		int boundaryIndices = 0;
+		//Loop through the boundary pixels. Look for the furthest point which can be seen
+		//From the current point by checking if a line between the points has any roi
+		//points in it
+		while (currentI < 359){
+		  //Go through all point pairs from the furthest, select the first, which
+		  //can be seen. Check the next 179 points
+		  currentIndices = currentI:min([(currentI+179) 360]);
+		  sightIndice = 1;
+		  for (i = length(currentIndices):-1:1){
+			tempCoordinates = lineCoordinates(boundary(indices(currentI),:),boundary(indices(currentIndices(i)),:));
+			lineOfSight = 1;
+			for (int t = (size(tempCoordinates,1)-1):-1:2){
+			  if (image(tempCoordinates(t,1),tempCoordinates(t,2)) == 1){
+				lineOfSight = 0; %cannot see the point
+				break;
+			  }
+			}
+			if (lineOfSight == 1){
+			  %Line found
+			  sightIndice = i;
+			  break;    
+			}
+		  }
+		  currentI = currentI+sightIndice;
+		  if (currentI > 359){
+			%Break the loop here
+			currentI = 1;
+			boundaryIndices = [boundaryIndices, currentI];
+			plot(boundary(indices(boundaryIndices(end)),2),boundary(indices(boundaryIndices(end)),1),'ro');
+			break;
+		  }
+		  boundaryIndices = [boundaryIndices, currentI];
+		  
+		 }
+		
+		
 	}
 	
 	//Helper function to get seed points for livewire
