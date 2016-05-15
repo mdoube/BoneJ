@@ -372,6 +372,28 @@ public class SelectSoftROI extends RoiSelector{
 		tempImage.updateAndRepaintWindow();
 	}
 	
+	/*
+		Get the line coordinates from origin to target
+		Digital Differential Analyzer (DDA) algorithm for line
+		http://www.tutorialspoint.com/computer_graphics/line_generation_algorithm.htm
+	*/
+	private ArrayList<Coordinate> getLine(Coordinate origin, Coordiante target){
+		Coordinate difference = target.subtract(origin);
+		double steps = double difference.maxVal();
+		double[] increments = new double[]{difference.ii/ steps,difference.jj/steps};
+		ArrayList<Coordinate> coordinates = new ArrayList<Coordinate>();
+		coordinates.add(origin);
+		for (int i = 0;i<(int) steps;++i){
+			coordinates.add(new Coordinate(coordinates.get(coordinates.size()-1).ii+increments[0],coordinates.get(coordinates.size()-1).jj+increments[1]));
+		}
+		//round
+		for (int i = 0;i<coordinates.size();++i){
+			coordinates.get(i).ii = Math.round(coordinates.get(i).ii);
+			coordinates.get(i).jj = Math.round(coordinates.get(i).jj);
+		}
+		return coordinates;
+	}
+	
 	//Helper function to get seed points for livewire
 	public Vector<Object> getSeedPoints(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre,double divisions, double steps, double l){
 		ArrayList<Integer> seedii = new ArrayList<Integer>();
@@ -412,6 +434,8 @@ public class SelectSoftROI extends RoiSelector{
 		returnVal.add(seedjj);
 		return returnVal;		
 	}
+	
+	
 	
 	double max(double a,double b){
 		return a >= b ? a:b;
