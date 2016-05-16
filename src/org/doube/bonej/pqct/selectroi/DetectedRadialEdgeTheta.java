@@ -19,32 +19,20 @@
 */
 
 package org.doube.bonej.pqct.selectroi;
-public class Coordinate{
-	public double ii;
-	public double jj;
-	/*Constructors*/
-	public Coordinate(){
-		this(-1,-1);
-	}
-	
-	public Coordinate(double ii,double jj){
-		this.ii = ii;
-		this.jj = jj;
-	}
-	
-	public Coordinate subtract(Coordinate a){
-		return new Coordinate(this.ii-a.ii,this.jj-a.jj);
-	}
-	
+import java.util.*;	//Vector, Collections
 
-	
-	public double maxVal(){
-		return max(Math.abs(ii),Math.abs(jj));
+public class DetectedRadialEdgeTheta extends DetectedRadialEdge{
+	public int index;
+
+	public DetectedRadialEdgeTheta(int ii,int jj, double theta, double radius, int index){
+		super(ii,jj,theta,radius);
+		this.index = index;
 	}
 	
-	private double max(double a,double b){
-		return a >= b ? a:b;
-	}
-	
-	
+	public int compareTo(DetectedRadialEdgeTheta o){
+		int returnValue = 0;
+		if (o == null || this == null) {throw new NullPointerException();}
+		if (this.radius == o.radius) {return 0;}
+		return this.radius < o.radius ? -1 : 1;		
+	}	
 }

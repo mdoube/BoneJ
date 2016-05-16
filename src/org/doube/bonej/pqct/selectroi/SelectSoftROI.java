@@ -379,9 +379,9 @@ public class SelectSoftROI extends RoiSelector{
 		Digital Differential Analyzer (DDA) algorithm for line
 		http://www.tutorialspoint.com/computer_graphics/line_generation_algorithm.htm
 	*/
-	private ArrayList<Coordinate> getLine(Coordinate origin, Coordiante target){
+	private ArrayList<Coordinate> getLine(Coordinate origin, Coordinate target){
 		Coordinate difference = target.subtract(origin);
-		double steps = double difference.maxVal();
+		double steps = difference.maxVal();
 		double[] increments = new double[]{difference.ii/ steps,difference.jj/steps};
 		ArrayList<Coordinate> coordinates = new ArrayList<Coordinate>();
 		coordinates.add(origin);
@@ -397,58 +397,130 @@ public class SelectSoftROI extends RoiSelector{
 	}
 	
 	public Vector<Object> getLassoEdge(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre, byte[] image){
-		ArrayList<Integer> seedii = new ArrayList<Integer>();
-		ArrayList<Integer> seedjj = new ArrayList<Integer>();
-		//Pop edge into DetectedRadialEdge, sort by incrementing radius
+		//IJ.log("Lasso");
+		int sectorToConsider = 50;
+		/*
+		//Visualise the segmentation result
+		ImagePlus muscleImage2 = NewImage.createByteImage("muscleImage",width,height,1, NewImage.FILL_BLACK);
+		byte[] rPixels3 = (byte[])muscleImage2.getProcessor().getPixels();
+		for (int i = 0;i<image.length;++i){
+				rPixels3[i] = image[i];
+		}
+		muscleImage2.setDisplayRange(0,10);
+		muscleImage2.show();
+		*/
+		//addTrace(muscleImage2,edgeii,edgejj);
+		
+		
+		//Pop edge into DetectedRadialEdgeTheta, sort by incrementing radius
 		//Start the algorithm from the most distant point from the centre of area
-		Vector<DetectedRadialEdge> radialEdge = new Vector<DetectedRadialEdge>();
+		Vector<DetectedRadialEdgeTheta> radialEdge = new Vector<DetectedRadialEdgeTheta>();
 		double theta;
 		double r;
 		double ii,jj;
 		for (int i =0; i<edgeii.size();++i){
 			ii = edgeii.get(i)-softCentre[0];
 			jj = edgejj.get(i)-softCentre[1];
-			radialEdge.add(new DetectedRadialEdge(edgeii.get(i),edgejj.get(i),Math.atan2(ii,jj),Math.sqrt(Math.pow(ii,2d)+Math.pow(jj,2d))));
+			radialEdge.add(new DetectedRadialEdgeTheta(edgeii.get(i),edgejj.get(i),Math.atan2(ii,jj),Math.sqrt(Math.pow(ii,2d)+Math.pow(jj,2d)),i));
 		}
-		
+		//IJ.log("Calculated radii");
+		//Get maximal radius, and it's location
+		Collections.sort(radialEdge);
+		int maxIndex = radialEdge.get(radialEdge.size()-1).index;
+		//IJ.log("maxIndex "+maxIndex);
+		int[] indices = new int[360];
+		int count = 0;
+		for (int i = maxIndex;i<360;++i){
+			indices[count] = i;
+			++count;
+		}
+		for (int i = 0;i< maxIndex;++i){
+			indices[count] = i;
+			++count;
+		}
+		//IJ.log("sorted indices");
 		int currentI = 0;
-		int boundaryIndices = 0;
+		ArrayList<Integer> boundaryIndices = new ArrayList<Integer>();
+		ArrayList<Integer> currentIndices = new ArrayList<Integer>();
 		//Loop through the boundary pixels. Look for the furthest point which can be seen
 		//From the current point by checking if a line between the points has any roi
 		//points in it
+		boundaryIndices.add(0);
 		while (currentI < 359){
+			//IJ.log("Start of loop "+currentI);
 		  //Go through all point pairs from the furthest, select the first, which
 		  //can be seen. Check the next 179 points
-		  currentIndices = currentI:min([(currentI+179) 360]);
-		  sightIndice = 1;
-		  for (i = length(currentIndices):-1:1){
-			tempCoordinates = lineCoordinates(boundary(indices(currentI),:),boundary(indices(currentIndices(i)),:));
-			lineOfSight = 1;
-			for (int t = (size(tempCoordinates,1)-1):-1:2){
-			  if (image(tempCoordinates(t,1),tempCoordinates(t,2)) == 1){
-				lineOfSight = 0; %cannot see the point
+		  currentIndices.clear();
+		  for (int i = currentI; i<min(currentI+(sectorToConsider-1),360); ++i){
+			currentIndices.add(i);
+		  }
+		  
+		  int sightIndice = 1;
+		  //IJ.log("Checking "+currentI+" currentIndices.size() "+currentIndices.size());
+		  for (int i = currentIndices.size()-1; i>0;--i){
+			ArrayList<Coordinate> tempCoordinates = getLine(new Coordinate(edgeii.get(indices[currentI]),edgejj.get(indices[currentI])),
+new Coordinate(edgeii.get(indices[currentIndices.get(i)]),edgejj.get(indices[currentIndices.get(i)])));
+			if (false && currentI == 0 && i == currentIndices.size()-1){
+				for (int t = 0;t<tempCoordinates.size();++t){
+					IJ.log("Line x "+tempCoordinates.get(t).ii+" y "+tempCoordinates.get(t).jj+" val "+image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)]);
+				}
+			}
+			int lineOfSight = 1;
+			for (int t = tempCoordinates.size()-2;t>0;--t){
+				
+			  if (image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)] == 1){
+				lineOfSight = 0; //cannot see the point
+				//IJ.log("Lost sight "+currentI+" i "+i+" size() "+tempCoordinates.size());
 				break;
 			  }
 			}
 			if (lineOfSight == 1){
-			  %Line found
+			  //Line found
+			  //.log("Skipping pixels "+currentI+" sightIndice "+i+" size() "+tempCoordinates.size());
 			  sightIndice = i;
 			  break;    
 			}
 		  }
+		  //IJ.log("currentI "+currentI+" sightIndice "+sightIndice);
 		  currentI = currentI+sightIndice;
 		  if (currentI > 359){
-			%Break the loop here
-			currentI = 1;
-			boundaryIndices = [boundaryIndices, currentI];
-			plot(boundary(indices(boundaryIndices(end)),2),boundary(indices(boundaryIndices(end)),1),'ro');
+			//Break the loop here
+			//boundaryIndices.add(0);	//Connect the ends
+			//IJ.log("Break loop "+boundaryIndices.size());
 			break;
 		  }
-		  boundaryIndices = [boundaryIndices, currentI];
+		  boundaryIndices.add(currentI);
 		  
-		 }
+		}
 		
 		
+				
+				
+		
+		//Create the boundary
+		ArrayList<Integer> returnii = new ArrayList<Integer>();
+		ArrayList<Integer> returnjj = new ArrayList<Integer>();
+		for (int i =1;i<boundaryIndices.size();++i){
+			ArrayList<Coordinate> tempCoordinates = getLine(new Coordinate(edgeii.get(indices[boundaryIndices.get(i-1)]),edgejj.get(indices[boundaryIndices.get(i-1)])),new Coordinate(edgeii.get(indices[boundaryIndices.get(i)]),edgejj.get(indices[boundaryIndices.get(i)])));
+			for (int j =1;j<tempCoordinates.size();++j){
+				returnii.add((int) tempCoordinates.get(j).ii);
+				returnjj.add((int) tempCoordinates.get(j).jj);
+			}
+		}
+
+		//Add the final missing bit
+		ArrayList<Coordinate> tempCoordinates = getLine(new Coordinate(edgeii.get(indices[boundaryIndices.get(boundaryIndices.size()-1)]),edgejj.get(indices[boundaryIndices.get(boundaryIndices.size()-1)])),new Coordinate(edgeii.get(indices[boundaryIndices.get(0)]),edgejj.get(indices[boundaryIndices.get(0)])));
+			for (int j =1;j<tempCoordinates.size();++j){
+				returnii.add((int) tempCoordinates.get(j).ii);
+				returnjj.add((int) tempCoordinates.get(j).jj);
+			}
+		
+		//addTrace(muscleImage2,returnii,returnjj);
+		
+		Vector<Object> returnV = new Vector<Object>();
+		returnV.add(returnii);
+		returnV.add(returnjj);
+		return returnV;
 	}
 	
 	//Helper function to get seed points for livewire
@@ -493,6 +565,9 @@ public class SelectSoftROI extends RoiSelector{
 	}
 	
 	
+	int min(int a,int b){
+		return a <= b ? a:b;
+	}
 	
 	double max(double a,double b){
 		return a >= b ? a:b;
