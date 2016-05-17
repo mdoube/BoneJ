@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectSoftROI extends RoiSelector{
+	int radialDivisions = 360;
 	//ImageJ constructor
 	public SelectSoftROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi) throws ExecutionException{
 		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
@@ -146,6 +147,7 @@ public class SelectSoftROI extends RoiSelector{
 					3) rotate livewire init pixels around a few times to get the segmentation to go through subcut/intramuscular fat
 				
 				*/
+				/*
 				ArrayList<Double> ii = new ArrayList<Double>();
 				ArrayList<Double> jj = new ArrayList<Double>();
 				double[] softCentre = new double[2];
@@ -161,15 +163,38 @@ public class SelectSoftROI extends RoiSelector{
 				}
 				softCentre[0]/=(double)ii.size();
 				softCentre[1]/=(double)jj.size();
+				*/
+				
+				//Start soft tissues from bone centre
+				/*create temp boneResult to wipe out bone and marrow*/
+				Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
+				byte[] boneResult	= (byte[]) masks2.get(1);
+				ArrayList<Double> ii = new ArrayList<Double>();
+				ArrayList<Double> jj = new ArrayList<Double>();
+				double[] softCentre = new double[2];
+				for (int i = 0;i<width;++i){
+					for (int j = 0; j<height;++j){
+						if (boneResult[i+j*width] > 0){
+							ii.add((double) i);
+							jj.add((double) j);						
+							softCentre[0]+=(double) i;
+							softCentre[1]+=(double) j;
+						}
+					}
+				}
+				softCentre[0]/=(double)ii.size();
+				softCentre[1]/=(double)jj.size();
+				
+				
 				double maxR = Math.sqrt(Math.pow(max(Math.abs(softCentre[0]-width),softCentre[0]),2d)+Math.pow(max(Math.abs(softCentre[1]-height),softCentre[1]),2d));
-				double[] rs = new double[360];
+				double[] rs = new double[radialDivisions];
 				double r,t;
-				double[] theta = new double[360];
-				int[][] edgeCoords = new int[360][2];
+				double[] theta = new double[radialDivisions];
+				int[][] edgeCoords = new int[radialDivisions][2];
 				//Get the extremes of muscle area with 1 deg increments in polar coordinates
-				for (int i = 0;i<360;++i){
+				for (int i = 0;i<radialDivisions;++i){
 					r = maxR;
-					t = ((double)i)/180d*Math.PI;
+					t = ((double)i)/((double)radialDivisions)*2d*Math.PI;
 					while ( Math.round(r*Math.cos(t)+softCentre[0]) < 0 || Math.round(r*Math.sin(t)+softCentre[1]) < 0 ||
 							Math.round(r*Math.cos(t)+softCentre[0]) >= width || Math.round(r*Math.sin(t)+softCentre[1]) >= height){
 						r-=0.1;
@@ -200,7 +225,7 @@ public class SelectSoftROI extends RoiSelector{
 				double lwSteps = 6;
 				
 				//Create list of seed coordinates
-				for (int i = 0;i<360;++i){
+				for (int i = 0;i<radialDivisions;++i){
 					edgeii.add(edgeCoords[i][0]);
 					edgejj.add(edgeCoords[i][1]);
 				}
@@ -300,9 +325,6 @@ public class SelectSoftROI extends RoiSelector{
 					if (tempMuscleSieve[i] == 1){subCutaneousFat[i] = 0;}
 				}
 				
-				/*create temp boneResult to wipe out bone and marrow*/
-				Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
-				byte[] boneResult	= (byte[]) masks2.get(1);
 				for (int i = 0;i<softSieve.length;++i){
 					if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
 						softSieve[i] =2;	//Fat
@@ -398,7 +420,7 @@ public class SelectSoftROI extends RoiSelector{
 	
 	public Vector<Object> getLassoEdge(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre, byte[] image){
 		//IJ.log("Lasso");
-		int sectorToConsider = 50;
+		int sectorToConsider = (int) (50d/360d*((double)radialDivisions));
 		/*
 		//Visualise the segmentation result
 		ImagePlus muscleImage2 = NewImage.createByteImage("muscleImage",width,height,1, NewImage.FILL_BLACK);
@@ -428,9 +450,9 @@ public class SelectSoftROI extends RoiSelector{
 		Collections.sort(radialEdge);
 		int maxIndex = radialEdge.get(radialEdge.size()-1).index;
 		//IJ.log("maxIndex "+maxIndex);
-		int[] indices = new int[360];
+		int[] indices = new int[radialDivisions];
 		int count = 0;
-		for (int i = maxIndex;i<360;++i){
+		for (int i = maxIndex;i<radialDivisions;++i){
 			indices[count] = i;
 			++count;
 		}
@@ -446,12 +468,12 @@ public class SelectSoftROI extends RoiSelector{
 		//From the current point by checking if a line between the points has any roi
 		//points in it
 		boundaryIndices.add(0);
-		while (currentI < 359){
+		while (currentI < (radialDivisions-1)){
 			//IJ.log("Start of loop "+currentI);
 		  //Go through all point pairs from the furthest, select the first, which
 		  //can be seen. Check the next 179 points
 		  currentIndices.clear();
-		  for (int i = currentI; i<min(currentI+(sectorToConsider-1),360); ++i){
+		  for (int i = currentI; i<min(currentI+(sectorToConsider-1),radialDivisions); ++i){
 			currentIndices.add(i);
 		  }
 		  
@@ -465,25 +487,37 @@ new Coordinate(edgeii.get(indices[currentIndices.get(i)]),edgejj.get(indices[cur
 					IJ.log("Line x "+tempCoordinates.get(t).ii+" y "+tempCoordinates.get(t).jj+" val "+image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)]);
 				}
 			}
-			int lineOfSight = 1;
-			for (int t = tempCoordinates.size()-2;t>0;--t){
-				
-			  if (image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)] == 1){
-				lineOfSight = 0; //cannot see the point
-				//IJ.log("Lost sight "+currentI+" i "+i+" size() "+tempCoordinates.size());
-				break;
-			  }
-			}
+			int lineOfSight = checkPath(image,tempCoordinates);	//1 = path unblocked, 0 = path blocked
 			if (lineOfSight == 1){
-			  //Line found
-			  //.log("Skipping pixels "+currentI+" sightIndice "+i+" size() "+tempCoordinates.size());
-			  sightIndice = i;
-			  break;    
+				//Line found
+				//sightIndice = i;
+				//break;
+				int extraStep = 0;
+				if (i == currentIndices.size()-1 && i+currentI+extraStep < (radialDivisions-1)){
+					//Refine search if this was the furthest checked distance
+					IJ.log("The furthest checked did not have a block");
+					/*
+					int extraStep = 0;
+					while (i+currentI+extraStep < 359 && checkPath(image,tempCoordinates) == 1){
+						++extraStep;
+						tempCoordinates = getLine(new Coordinate(edgeii.get(indices[currentI]),edgejj.get(indices[currentI])),
+new Coordinate(edgeii.get(indices[currentIndices.get(i)+extraStep]),edgejj.get(indices[currentIndices.get(i)+extraStep])));
+					}
+					*/
+					//sightIndice = i+extraStep-1;	//The while goes one step too long
+					sightIndice = i;
+					break;
+				}else{
+					//IJ.log("Skipping pixels "+currentI+" sightIndice "+i+" size() "+tempCoordinates.size());
+					sightIndice = i;
+					break;
+				}
+				
 			}
 		  }
 		  //IJ.log("currentI "+currentI+" sightIndice "+sightIndice);
 		  currentI = currentI+sightIndice;
-		  if (currentI > 359){
+		  if (currentI > (radialDivisions-1)){
 			//Break the loop here
 			//boundaryIndices.add(0);	//Connect the ends
 			//IJ.log("Break loop "+boundaryIndices.size());
@@ -521,6 +555,16 @@ new Coordinate(edgeii.get(indices[currentIndices.get(i)]),edgejj.get(indices[cur
 		returnV.add(returnii);
 		returnV.add(returnjj);
 		return returnV;
+	}
+	
+	//Helper function to check whether a path is blocked
+	public byte checkPath(byte[] image, ArrayList<Coordinate> pathCoordinates){
+		for (int t = pathCoordinates.size()-2;t>0;--t){
+		  if (image[(int) (pathCoordinates.get(t).ii+pathCoordinates.get(t).jj*width)] == 1){
+			return (byte)  0; //cannot see the point
+		  }
+		}
+		return (byte) 1;	//Can get through the path
 	}
 	
 	//Helper function to get seed points for livewire
