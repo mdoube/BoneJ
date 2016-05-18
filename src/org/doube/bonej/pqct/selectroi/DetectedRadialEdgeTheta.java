@@ -21,11 +21,18 @@
 package org.doube.bonej.pqct.selectroi;
 import java.util.*;	//Vector, Collections
 
-public class DetectedRadialEdgeTheta extends DetectedRadialEdge{
+public class DetectedRadialEdgeTheta implements Comparable<DetectedRadialEdgeTheta>{
+	public int ii;		//indexes for x-coordinates
+	public int jj;	//indexes for y-coordinates
+	public double theta;
+	public double radius;
 	public int index;
 
 	public DetectedRadialEdgeTheta(int ii,int jj, double theta, double radius, int index){
-		super(ii,jj,theta,radius);
+		this.ii = ii;
+		this.jj = jj;
+		this.theta = theta;
+		this.radius = radius;
 		this.index = index;
 	}
 	

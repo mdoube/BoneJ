@@ -430,8 +430,8 @@ public class SelectSoftROI extends RoiSelector{
 		}
 		muscleImage2.setDisplayRange(0,10);
 		muscleImage2.show();
-		*/
 		//addTrace(muscleImage2,edgeii,edgejj);
+		*/
 		
 		
 		//Pop edge into DetectedRadialEdgeTheta, sort by incrementing radius
@@ -449,7 +449,7 @@ public class SelectSoftROI extends RoiSelector{
 		//Get maximal radius, and it's location
 		Collections.sort(radialEdge);
 		int maxIndex = radialEdge.get(radialEdge.size()-1).index;
-		//IJ.log("maxIndex "+maxIndex);
+		//IJ.log("maxIndex "+maxIndex+" r "+(radialEdge.get(radialEdge.size()-1).radius/2));
 		int[] indices = new int[radialDivisions];
 		int count = 0;
 		for (int i = maxIndex;i<radialDivisions;++i){
@@ -482,37 +482,19 @@ public class SelectSoftROI extends RoiSelector{
 		  for (int i = currentIndices.size()-1; i>0;--i){
 			ArrayList<Coordinate> tempCoordinates = getLine(new Coordinate(edgeii.get(indices[currentI]),edgejj.get(indices[currentI])),
 new Coordinate(edgeii.get(indices[currentIndices.get(i)]),edgejj.get(indices[currentIndices.get(i)])));
-			if (false && currentI == 0 && i == currentIndices.size()-1){
+			//IJ.log("Line x "+tempCoordinates.get(t).ii+" y "+tempCoordinates.get(t).jj+" val "+image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)]);
+			/*
+			if (currentI >330){
 				for (int t = 0;t<tempCoordinates.size();++t){
 					IJ.log("Line x "+tempCoordinates.get(t).ii+" y "+tempCoordinates.get(t).jj+" val "+image[(int) (tempCoordinates.get(t).ii+tempCoordinates.get(t).jj*width)]);
 				}
 			}
+			*/
 			int lineOfSight = checkPath(image,tempCoordinates);	//1 = path unblocked, 0 = path blocked
 			if (lineOfSight == 1){
 				//Line found
-				//sightIndice = i;
-				//break;
-				int extraStep = 0;
-				if (i == currentIndices.size()-1 && i+currentI+extraStep < (radialDivisions-1)){
-					//Refine search if this was the furthest checked distance
-					IJ.log("The furthest checked did not have a block");
-					/*
-					int extraStep = 0;
-					while (i+currentI+extraStep < 359 && checkPath(image,tempCoordinates) == 1){
-						++extraStep;
-						tempCoordinates = getLine(new Coordinate(edgeii.get(indices[currentI]),edgejj.get(indices[currentI])),
-new Coordinate(edgeii.get(indices[currentIndices.get(i)+extraStep]),edgejj.get(indices[currentIndices.get(i)+extraStep])));
-					}
-					*/
-					//sightIndice = i+extraStep-1;	//The while goes one step too long
-					sightIndice = i;
-					break;
-				}else{
-					//IJ.log("Skipping pixels "+currentI+" sightIndice "+i+" size() "+tempCoordinates.size());
-					sightIndice = i;
-					break;
-				}
-				
+				sightIndice = i;
+				break;
 			}
 		  }
 		  //IJ.log("currentI "+currentI+" sightIndice "+sightIndice);
@@ -527,8 +509,12 @@ new Coordinate(edgeii.get(indices[currentIndices.get(i)+extraStep]),edgejj.get(i
 		  
 		}
 		
-		
-				
+		//Debugging
+		/*
+		for (int i =0;i<boundaryIndices.size();++i){
+			IJ.log("Boundary coordinates i "+i+" x "+(edgeii.get(indices[boundaryIndices.get(i)])/2)+" y "+(edgejj.get(indices[boundaryIndices.get(i)])/2));
+		}
+		*/	
 				
 		
 		//Create the boundary
@@ -559,9 +545,13 @@ new Coordinate(edgeii.get(indices[currentIndices.get(i)+extraStep]),edgejj.get(i
 	
 	//Helper function to check whether a path is blocked
 	public byte checkPath(byte[] image, ArrayList<Coordinate> pathCoordinates){
+		int blocked = 0;
 		for (int t = pathCoordinates.size()-2;t>0;--t){
 		  if (image[(int) (pathCoordinates.get(t).ii+pathCoordinates.get(t).jj*width)] == 1){
-			return (byte)  0; //cannot see the point
+			++blocked;
+			if (blocked > 3){
+				return (byte)  0; //cannot see the point
+			}
 		  }
 		}
 		return (byte) 1;	//Can get through the path
