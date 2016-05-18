@@ -147,34 +147,16 @@ public class SelectSoftROI extends RoiSelector{
 					3) rotate livewire init pixels around a few times to get the segmentation to go through subcut/intramuscular fat
 				
 				*/
-				/*
-				ArrayList<Double> ii = new ArrayList<Double>();
-				ArrayList<Double> jj = new ArrayList<Double>();
-				double[] softCentre = new double[2];
-				for (int i = 0;i<width;++i){
-					for (int j = 0; j<height;++j){
-						if (muscleSieve[i+j*width] > 0){
-							ii.add((double) i);
-							jj.add((double) j);						
-							softCentre[0]+=(double) i;
-							softCentre[1]+=(double) j;
-						}
-					}
-				}
-				softCentre[0]/=(double)ii.size();
-				softCentre[1]/=(double)jj.size();
-				*/
-				
-				//Start soft tissues from bone centre
-				/*create temp boneResult to wipe out bone and marrow*/
 				Vector<Object> masks2 = getSieve(softScaledImage,softThreshold,details.roiChoiceSt,details.guessStacked,details.stacked,false,false);
 				byte[] boneResult	= (byte[]) masks2.get(1);
 				ArrayList<Double> ii = new ArrayList<Double>();
 				ArrayList<Double> jj = new ArrayList<Double>();
 				double[] softCentre = new double[2];
+				
 				for (int i = 0;i<width;++i){
 					for (int j = 0; j<height;++j){
 						if (boneResult[i+j*width] > 0){
+						//if (muscleSieve[i+j*width] > 0){
 							ii.add((double) i);
 							jj.add((double) j);						
 							softCentre[0]+=(double) i;
@@ -182,6 +164,7 @@ public class SelectSoftROI extends RoiSelector{
 						}
 					}
 				}
+				
 				softCentre[0]/=(double)ii.size();
 				softCentre[1]/=(double)jj.size();
 				
@@ -549,7 +532,7 @@ new Coordinate(edgeii.get(indices[currentIndices.get(i)]),edgejj.get(indices[cur
 		for (int t = pathCoordinates.size()-2;t>0;--t){
 		  if (image[(int) (pathCoordinates.get(t).ii+pathCoordinates.get(t).jj*width)] == 1){
 			++blocked;
-			if (blocked > 3){
+			if (blocked > 2){
 				return (byte)  0; //cannot see the point
 			}
 		  }
