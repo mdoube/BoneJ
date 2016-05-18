@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutionException;
 @SuppressWarnings(value ={"serial","unchecked"}) //Unchecked for obtaining Vector<Object> as a returnvalue
 
 public class SelectSoftROI extends RoiSelector{
-	int radialDivisions = 360;
+	int radialDivisions = 720;
 	//ImageJ constructor
 	public SelectSoftROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi) throws ExecutionException{
 		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
@@ -420,7 +420,7 @@ public class SelectSoftROI extends RoiSelector{
 	
 	public Vector<Object> getLassoEdge(ArrayList<Integer> edgeii, ArrayList<Integer> edgejj, double[] softCentre, byte[] image){
 		//IJ.log("Lasso");
-		int sectorToConsider = (int) (50d/360d*((double)radialDivisions));
+		int sectorToConsider = (int) (details.edgeDivisions/360d*((double)radialDivisions));
 		/*
 		//Visualise the segmentation result
 		ImagePlus muscleImage2 = NewImage.createByteImage("muscleImage",width,height,1, NewImage.FILL_BLACK);

@@ -74,11 +74,12 @@ public class SoftTissueAnalysis{
 				IntraMuFatD	+=roi.softScaledImage[i];
 				TotalMuA	+=1;
 				TotalMuD	+=roi.softScaledImage[i];
-				weightedFatArea += roi.softScaledImage[i]+1000.0;
+				//weightedFatArea += roi.softScaledImage[i]+1000.0;
 			}
 			if (roi.softSieve[i] ==5){ //subCutFat
 				SubCutFatA	+=1;
 				SubCutFatD	+=roi.softScaledImage[i];
+				//weightedFatArea += roi.softScaledImage[i]+1000.0;
 			}
 		}
 		LimbD/=LimbA;
