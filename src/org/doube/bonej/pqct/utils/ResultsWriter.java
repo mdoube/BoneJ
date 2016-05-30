@@ -58,7 +58,7 @@ public class ResultsWriter{
 		}
 		
 		if(imageAndAnalysisDetails.stOn){
-			String[] coHeadings = {"MuD [mg/cm3]","MuA [cm2]","LeanMuD [mg/cm3]","LeanMuA [cm2]","IntraFatD [mg/cm3]","IntraFatA [cm2]","FatD [mg/cm3]","FatA [cm2]","SubCutFatDMedian [mg/cm3]","SubCutFatD [mg/cm3]","SubCutFatA [cm2]","LimbD [mg/cm3]","LimbA [cm2]","Density weighted fat percentage [%]"};
+			String[] coHeadings = {"MuD [mg/cm3]","MuA [cm2]","LeanMuD [mg/cm3]","LeanMuA [cm2]","IntraFatD [mg/cm3]","IntraFatA [cm2]","FatD [mg/cm3]","FatA [cm2]","SubCutFatDMedian [mg/cm3]","SubCutFatD [mg/cm3]","SubCutFatA [cm2]","MedD [mg/cm3]","MedA [cm2]","BoneD [mg/cm3]","BoneA [cm2]","PeeledD [mg/cm3]","PeeledA [cm2]","LimbD [mg/cm3]","LimbA [cm2]","Density weighted fat percentage [%]"};
 			for (int i = 0;i<coHeadings.length;++i){
 				headings+=coHeadings[i]+"\t";
 			}
@@ -186,6 +186,14 @@ public class ResultsWriter{
 		results+=softTissueAnalysis.SubCutFatDMedian+"\t";
 		results+=softTissueAnalysis.SubCutFatD+"\t";
 		results+=softTissueAnalysis.SubCutFatA+"\t";
+		
+		results+=softTissueAnalysis.MeD+"\t";
+		results+=softTissueAnalysis.MeA+"\t";
+		results+=softTissueAnalysis.BoneD+"\t";
+		results+=softTissueAnalysis.BoneA+"\t";
+		results+=softTissueAnalysis.PeeledD+"\t";
+		results+=softTissueAnalysis.PeeledA+"\t";
+		
 		results+=softTissueAnalysis.LimbD+"\t";
 		results+=softTissueAnalysis.LimbA+"\t";
 		results+=softTissueAnalysis.FatPercentage+"\t";

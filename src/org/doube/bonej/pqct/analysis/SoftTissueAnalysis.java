@@ -37,6 +37,12 @@ public class SoftTissueAnalysis{
 	public double SubCutFatDMedian;
 	public double LimbD;
 	public double FatPercentage;
+	public double MeA;
+	public double MeD;
+	public double BoneA;
+	public double BoneD;
+	public double PeeledA;
+	public double PeeledD;
 	public SoftTissueAnalysis(SelectSoftROI roi){
 		MuA			=0;
 		FatA		=0;
@@ -50,6 +56,12 @@ public class SoftTissueAnalysis{
 		TotalMuD	=0;
 		SubCutFatA	=0;
 		SubCutFatD	=0;
+		MeA			=0;
+		MeD			=0;
+		BoneA		=0;
+		BoneD		=0;
+		PeeledA		=0;
+		PeeledD		=0;
 		double weightedFatArea = 0;
 		double weightedLimbArea = 0;
 		for (int i =0;i<roi.width*roi.height;i++){
@@ -81,11 +93,32 @@ public class SoftTissueAnalysis{
 				SubCutFatD	+=roi.softScaledImage[i];
 				//weightedFatArea += roi.softScaledImage[i]+1000.0;
 			}
+			if (roi.softSieve[i] ==6){ //Bone area
+				BoneA	+=1;
+				BoneD	+=roi.softScaledImage[i];
+			}
+			if (roi.softSieve[i] ==7){ //MedFat
+				MeA	+=1;
+				MeD	+=roi.softScaledImage[i];
+			}
+			if (roi.softSieve[i] ==8){ //PeeledA
+				PeeledA	+=1;
+				PeeledD	+=roi.softScaledImage[i];
+			}
+			
 		}
 		LimbD/=LimbA;
 		LimbA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
 		FatD/=FatA;
 		FatA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
+		
+		MeD/=MeA;
+		MeA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
+		BoneD/=BoneA;
+		BoneA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
+		PeeledD/=PeeledA;
+		PeeledA*=roi.pixelSpacing*roi.pixelSpacing/100.0;
+		
 		//Added SubCutFatDMedian 2016/01/08
 		double[] subCFatPixels = new double[(int) SubCutFatA];
 		int cnt =0;

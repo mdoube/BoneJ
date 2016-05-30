@@ -312,10 +312,10 @@ public class SelectSoftROI extends RoiSelector{
 					if (softSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < fatThreshold){
 						softSieve[i] =2;	//Fat
 					}
-					if (muscleSieve[i] ==1 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
+					if (muscleSieve[i] ==1 && boneResult[i] ==0 && softScaledImage[i] >= muscleThreshold && softScaledImage[i] < softThreshold){
 						softSieve[i] = 3;	//Muscle
 					}
-					if (muscleSieve[i] ==1 && softScaledImage[i] >= airThreshold && softScaledImage[i] < muscleThreshold){
+					if (muscleSieve[i] ==1 && boneResult[i] ==0 && softScaledImage[i] >= airThreshold && softScaledImage[i] < muscleThreshold){
 						softSieve[i] = 4;	//Intra/Intermuscular fat
 					}
 					if (subCutaneousFat[i] ==1 ){
@@ -323,6 +323,12 @@ public class SelectSoftROI extends RoiSelector{
 					}
 					if (boneResult[i] ==1 ){
 						softSieve[i] = 6;	//Bone & marrow
+					}
+					if (boneResult[i] ==1 && softScaledImage[i] < fatThreshold){
+						softSieve[i] = 7;	//Marrow fat
+					}
+					if (softSieve[i] ==1 && subCutaneousFat[i] ==0 && tempMuscleSieve[i] ==0){
+						softSieve[i] = 8;	//Marrow fat
 					}
 				}
 				
