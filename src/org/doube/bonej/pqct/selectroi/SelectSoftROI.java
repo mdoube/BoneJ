@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutionException;
 
 public class SelectSoftROI extends RoiSelector{
 	int radialDivisions = 720;
+	public byte[] eroded = null;
 	//ImageJ constructor
 	public SelectSoftROI(ScaledImageData dataIn,ImageAndAnalysisDetails detailsIn, ImagePlus imp,double boneThreshold,boolean setRoi) throws ExecutionException{
 		super(dataIn,detailsIn, imp,boneThreshold,setRoi);
@@ -301,6 +302,7 @@ public class SelectSoftROI extends RoiSelector{
 				
 				//Wipe muscle area +3 layer of pixels away from subcut.
 				byte[] tempMuscleSieve = Arrays.copyOf(muscleSieve,muscleSieve.length);
+				eroded = new byte[softSieve.length];
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
 				//dilate(tempMuscleSieve,(byte)1,(byte)0,(byte)2);
@@ -327,8 +329,8 @@ public class SelectSoftROI extends RoiSelector{
 					if (boneResult[i] ==1 && softScaledImage[i] < fatThreshold){
 						softSieve[i] = 7;	//Marrow fat
 					}
-					if (softSieve[i] ==1 && subCutaneousFat[i] ==0 && tempMuscleSieve[i] ==0){
-						softSieve[i] = 8;	//Marrow fat
+					if (softSieve[i] > 0 && subCutaneousFat[i] ==0 && tempMuscleSieve[i] ==0){
+						eroded[i] = 1;	//Skin eroded pixels
 					}
 				}
 				

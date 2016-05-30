@@ -101,7 +101,7 @@ public class SoftTissueAnalysis{
 				MeA	+=1;
 				MeD	+=roi.softScaledImage[i];
 			}
-			if (roi.softSieve[i] ==8){ //PeeledA
+			if (roi.eroded[i] ==1){ //PeeledA
 				PeeledA	+=1;
 				PeeledD	+=roi.softScaledImage[i];
 			}
