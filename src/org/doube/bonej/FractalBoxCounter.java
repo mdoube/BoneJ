@@ -222,6 +222,14 @@ public class FractalBoxCounter implements PlugIn {
 				IJ.log(imp.getTitle() + ": Dimension estimate: " + IJ.d2s(p[1], 4) + ": R²: " + RSq + ": Settings: "
 						+ maxBox + ":" + minBox + ":" + divBox + ":" + numOffsets);
 			}
+			
+			if (verboseOutput) {
+				IJ.log("Box Size    Box Count");
+				for (int i = 0 ; i < boxSizes.length; i++){
+					IJ.log(IJ.d2s(xList.get(i), 0)+"            "+IJ.d2s(yList.get(i), 0));
+				}
+			}
+			
 
 			final ResultInserter ri = ResultInserter.getInstance();
 			ri.setResultInRow(imp, "Fractal Dimension", p[1]);
