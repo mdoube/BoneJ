@@ -541,12 +541,15 @@ public class Moments implements PlugIn, DialogListener {
 				}
 			}
 			final ImageProcessor axisIP = targetStack.getProcessor(zCent);
+			IJ.log("Drawing axes on slice "+zCent);
 			axisIP.setColor(Integer.MAX_VALUE);
 			// x axis
 			axisIP.drawLine(0, yCent, wT, yCent);
+			IJ.log("Drawing x axis from (0, "+yCent+") to ("+wT+", "+yCent+")");
 
 			// y axis
 			axisIP.drawLine(xCent, 0, xCent, hT);
+			IJ.log("Drawing y axis from ("+xCent+", 0) to ("+xCent+", "+hT+")");
 		}
 		final ImagePlus impTarget = new ImagePlus("Aligned_" + imp.getTitle(), targetStack);
 		impTarget.setCalibration(imp.getCalibration());
