@@ -36,6 +36,8 @@ import ij.io.*;
 
 public class Export_Header implements PlugIn {
 	String imageInfo;
+	String site;
+	double percent;
 	public void run(String arg) {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		if (imp == null)
@@ -57,7 +59,29 @@ public class Export_Header implements PlugIn {
 				imageInfo+="File Name:"+imageName+"\n";
 			}
 		}
-
+		
+		//Try to get CT file additional header info
+		String filePath = new String("");
+		if (getInfoProperty(imageInfo,"File Path")!= null){
+			filePath = getInfoProperty(imageInfo,"File Path");
+		}
+		String cName = "C"+imageName.substring(1,imageName.length());
+		//IJ.log(imageInfo);
+		
+		//IJ.log(filePath+"\\"+cName);
+		try{
+			
+			CTHeaderReader ct = new CTHeaderReader(filePath+cName);
+			ct.read();
+			//IJ.log(ct.site+" "+ct.percent);
+			site = ct.site;
+			percent = ct.percent;
+		}catch(Exception err){
+			IJ.log("CT header "+err.toString());
+			site = new String("Unknown");
+			percent = Double.NaN;
+		}
+		
 		
 		TextPanel textPanel = IJ.getTextPanel();
 		if (textPanel == null) {textPanel = new TextPanel();}
@@ -72,7 +96,7 @@ public class Export_Header implements PlugIn {
 
 	
 	void writeHeader(TextPanel textPanel){
-		String[] propertyNames = {"File Name","File Path","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length"};
+		String[] propertyNames = {"File Name","File Path","Patient's Name","Patient ID","Patient's Birth Date","Acquisition Date","Pixel Spacing","Object Length","Measurement Mask","Percent Length"};
 		String headings = "";
 		for (int i = 0;i<propertyNames.length;++i){
 			headings+=propertyNames[i]+"\t";
@@ -95,6 +119,8 @@ public class Export_Header implements PlugIn {
 			for (int i = 1;i<propertyNames.length;++i){
 				results+=getInfoProperty(imageInfo,propertyNames[i])+"\t";
 			}
+			results+=site+"\t";
+			results+=percent+"\t";
 		}
 		return results;
 	}
@@ -108,12 +134,16 @@ public class Export_Header implements PlugIn {
 			if (currentToken.indexOf(propertyToGet) != -1){break;}
 		}
 		if (currentToken.indexOf(propertyToGet) != -1){
+			String[] returnValue = currentToken.split(":",2);
+			/*
 			StringTokenizer st2 = new StringTokenizer(currentToken,":");
 			String token2 = null;
 			while (st2.hasMoreTokens()){
 				token2 = st2.nextToken();
 			}
 			return token2.trim();
+			*/
+			return returnValue[1].trim();
 		}
 		return null;
 	}
