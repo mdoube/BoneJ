@@ -1,25 +1,5 @@
 package org.doube.bonej;
 
-import java.awt.AWTEvent;
-import java.awt.Checkbox;
-import java.awt.Color;
-import java.awt.Rectangle;
-import java.awt.TextField;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
-
-import javax.vecmath.Color3f;
-import javax.vecmath.Point3f;
-
-import org.doube.geometry.Orienteer;
-import org.doube.util.DialogModifier;
-import org.doube.util.ImageCheck;
-import org.doube.util.ThresholdGuesser;
-import org.doube.util.UsageReporter;
-
-import customnode.CustomPointMesh;
-
 /**
  * SliceGeometry plugin for ImageJ
  * Copyright 2009 2010 2015 Michael Doube
@@ -56,6 +36,26 @@ import ij.process.ImageProcessor;
 import ij.process.StackConverter;
 import ij3d.Content;
 import ij3d.Image3DUniverse;
+
+import java.awt.AWTEvent;
+import java.awt.Checkbox;
+import java.awt.Color;
+import java.awt.Rectangle;
+import java.awt.TextField;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
+import javax.vecmath.Color3f;
+import javax.vecmath.Point3f;
+
+import org.doube.geometry.Orienteer;
+import org.doube.util.DialogModifier;
+import org.doube.util.ImageCheck;
+import org.doube.util.ThresholdGuesser;
+import org.doube.util.UsageReporter;
+
+import customnode.CustomPointMesh;
 
 /**
  * <p>
@@ -184,6 +184,9 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private boolean clearResults;
 	/** Use the masked version of thickness, which trims the 1px overhang */
 	private boolean doMask;
+	private double background;
+	private double foreground;
+	private boolean doPartialVolume;
 
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
@@ -237,9 +240,14 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
+		gd.addCheckbox("Partial_volume_compensation", false);
+		gd.addNumericField("Background", min, 1, 6, pixUnits + " ");
+		gd.addNumericField("Foreground", max, 1, 6, pixUnits + " ");
 		gd.addHelp("http://bonej.org/slice");
 		gd.addDialogListener(this);
 		gd.showDialog();
+		if (gd.wasCanceled())
+			return;
 		final String bone = gd.getNextChoice();
 		boneID = BoneList.guessBone(bone);
 		this.doThickness2D = gd.getNextBoolean();
@@ -265,17 +273,21 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		max = gd.getNextNumber();
 		this.m = gd.getNextNumber();
 		this.c = gd.getNextNumber();
+		this.doPartialVolume = gd.getNextBoolean();
+		this.background = gd.getNextNumber();
+		this.foreground = gd.getNextNumber();
+	
 		if (isHUCalibrated) {
 			min = cal.getRawValue(min);
 			max = cal.getRawValue(max);
+			this.background = cal.getRawValue(this.background);
+			this.foreground = cal.getRawValue(this.foreground);
 
 			// convert HU->density user input into raw->density coefficients
 			// for use in later calculations
 			this.c = this.m * cal.getCoefficients()[0] + this.c;
 			this.m = this.m * cal.getCoefficients()[1];
 		}
-		if (gd.wasCanceled())
-			return;
 
 		if (calculateCentroids(imp, min, max) == 0) {
 			IJ.error("No pixels available to calculate.\n" + "Please check the threshold and ROI.");
@@ -560,6 +572,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			double sumX = 0;
 			double sumY = 0;
 			int count = 0;
+			double sumAreaFractions = 0;
 			double sumD = 0;
 			double wSumX = 0;
 			double wSumY = 0;
@@ -569,8 +582,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 					final double pixel = ip.get(x, y);
 					if (pixel >= min && pixel <= max) {
 						count++;
-						sumX += x;
-						sumY += y;
+						final double areaFraction = doPartialVolume ? filledFraction(
+								pixel) : 1;
+						sumAreaFractions += areaFraction;
+						sumX += areaFraction * x;
+						sumY += areaFraction * y;
 						final double wP = pixel * this.m + this.c;
 						sumD += wP;
 						wSumX += x * wP;
@@ -579,10 +595,11 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				}
 			}
 			this.cslice[s] = count;
-			this.cortArea[s] = count * pixelArea;
 			if (count > 0) {
-				this.sliceCentroids[0][s] = sumX * this.vW / count;
-				this.sliceCentroids[1][s] = sumY * this.vH / count;
+				// if !doPatialVolume then sumAreaFractions = count
+				this.sliceCentroids[0][s] = sumX * this.vW / sumAreaFractions;
+				this.sliceCentroids[1][s] = sumY * this.vH / sumAreaFractions;
+				this.cortArea[s] = sumAreaFractions * pixelArea;
 				this.integratedDensity[s] = sumD;
 				this.meanDensity[s] = sumD / count;
 				this.weightedCentroids[0][s] = wSumX * this.vW / sumD;
@@ -630,17 +647,24 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			final int roiYEnd = r.y + r.height;
 			if (!this.emptySlices[s]) {
 				final ImageProcessor ip = stack.getProcessor(s);
+				double sumAreaFractions = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
 							final double xVw = x * vW;
 							final double yVh = y * vH;
-							sxs += xVw;
-							sys += yVh;
-							sxxs += xVw * xVw;
-							syys += yVh * yVh;
-							sxys += xVw * yVh;
+							final double areaFraction = doPartialVolume ? filledFraction(
+									pixel)
+									: 1;
+							sumAreaFractions += areaFraction;
+							// sum of distances from axis
+							sxs += xVw * areaFraction;
+							sys += yVh * areaFraction;
+							// sum of squares of distances from axis
+							sxxs += xVw * xVw * areaFraction;
+							syys += yVh * yVh * areaFraction;
+							sxys += xVw * yVh * areaFraction;
 						}
 					}
 				}
@@ -649,10 +673,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				// this.Sxx[s] = sxxs;
 				// this.Syy[s] = syys;
 				// this.Sxy[s] = sxys;
-				final double Myys = sxxs - (sxs * sxs / this.cslice[s]) + this.cslice[s] * vW * vW / 12;
+				// mean should be OK as already corrected for partial pixel area
+				double Myys = sxxs - (sxs * sxs / sumAreaFractions)
+				// here need to adjust for area fraction of each pixel
+				// sumAreaFractions = cslice[s] if !doPartialVolume, see above
+						+ sumAreaFractions * vW * vW / 12;
 				// this.cslice[]/12 is for each pixel's own moment
-				final double Mxxs = syys - (sys * sys / this.cslice[s]) + this.cslice[s] * vH * vH / 12;
-				final double Mxys = sxys - (sxs * sys / this.cslice[s]) + this.cslice[s] * vH * vW / 12;
+				double Mxxs = syys - (sys * sys / sumAreaFractions)
+						+ sumAreaFractions * vH * vH / 12;
+				double Mxys = sxys - (sxs * sys / sumAreaFractions)
+						+ sumAreaFractions * vH * vW / 12;
 				if (Mxys == 0)
 					this.theta[s] = 0;
 				else {
@@ -734,24 +764,35 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				final double xC = this.sliceCentroids[0][s];
 				final double yC = this.sliceCentroids[1][s];
 				final double cS = this.cslice[s];
+				double sumAreaFractions = 0;
 				for (int y = r.y; y < roiYEnd; y++) {
 					final double yYc = y * vH - yC;
 					for (int x = r.x; x < roiXEnd; x++) {
 						final double pixel = ip.get(x, y);
 						if (pixel >= min && pixel <= max) {
+							final double areaFraction = doPartialVolume ? filledFraction(
+									pixel)
+									: 1;
+							sumAreaFractions += areaFraction;
 							final double xXc = x * vW - xC;
 							final double xCosTheta = x * vW * cosTheta;
 							final double yCosTheta = y * vH * cosTheta;
 							final double xSinTheta = x * vW * sinTheta;
 							final double ySinTheta = y * vH * sinTheta;
-							sxs += xCosTheta + ySinTheta;
-							sys += yCosTheta - xSinTheta;
-							sxxs += (xCosTheta + ySinTheta) * (xCosTheta + ySinTheta);
-							syys += (yCosTheta - xSinTheta) * (yCosTheta - xSinTheta);
-							sxys += (yCosTheta - xSinTheta) * (xCosTheta + ySinTheta);
-							maxRadMinS = Math.max(maxRadMinS, Math.abs(xXc * cosTheta + yYc * sinTheta));
-							maxRadMaxS = Math.max(maxRadMaxS, Math.abs(yYc * cosTheta - xXc * sinTheta));
-							maxRadCentreS = Math.max(maxRadCentreS, Math.sqrt(xXc * xXc + yYc * yYc));
+							sxs += areaFraction * (xCosTheta + ySinTheta);
+							sys += areaFraction * (yCosTheta - xSinTheta);
+							sxxs += areaFraction
+									* ((xCosTheta + ySinTheta) * (xCosTheta + ySinTheta));
+							syys += areaFraction
+									* ((yCosTheta - xSinTheta) * (yCosTheta - xSinTheta));
+							sxys += areaFraction
+									* ((yCosTheta - xSinTheta) * (xCosTheta + ySinTheta));
+							maxRadMinS = Math.max(maxRadMinS,
+									Math.abs(xXc * cosTheta + yYc * sinTheta));
+							maxRadMaxS = Math.max(maxRadMaxS,
+									Math.abs(yYc * cosTheta - xXc * sinTheta));
+							maxRadCentreS = Math.max(maxRadCentreS,
+									Math.sqrt(xXc * xXc + yYc * yYc));
 						}
 					}
 				}
@@ -763,10 +804,15 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				maxRad2[s] = maxRadMinS;
 				maxRad1[s] = maxRadMaxS;
 				maxRadC[s] = maxRadCentreS;
-				final double pixelMoments = cS * vW * vH * (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
-				I1[s] = vW * vH * (sxxs - (sxs * sxs / cS) + pixelMoments);
-				I2[s] = vW * vH * (syys - (sys * sys / cS) + pixelMoments);
-				Ip[s] = sxys - (sys * sxs / cS) + pixelMoments;
+				final double pixelMoments = sumAreaFractions * vW * vH
+						* (cosTheta * cosTheta + sinTheta * sinTheta) / 12;
+				I1[s] = vW
+						* vH
+						* (sxxs - (sxs * sxs / sumAreaFractions) + pixelMoments);
+				I2[s] = vW
+						* vH
+						* (syys - (sys * sys / sumAreaFractions) + pixelMoments);
+				Ip[s] = sxys - (sys * sxs / sumAreaFractions) + pixelMoments;
 				r1[s] = Math.sqrt(I2[s] / (cS * vW * vH * vW * vH));
 				r2[s] = Math.sqrt(I1[s] / (cS * vW * vH * vW * vH));
 				Z1[s] = I1[s] / maxRad2[s];
@@ -986,6 +1032,29 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return binaryImp;
 	}
 
+	/**
+	 * Calculate the proportion of a pixel that contains foreground, assuming a
+	 * two-phase image (foreground and background) and linear relationship
+	 * between pixel value and physical density. If the pixel value is greater
+	 * than the foreground value, this method will return 1, and if lower than
+	 * the background value, returns 0.
+	 * 
+	 * @param pixel
+	 *            the input pixel value
+	 * @param background
+	 *            pixel value representing background
+	 * @param foreground
+	 *            pixel value representing foreground
+	 * @return fraction of pixel 'size' occupied by foreground
+	 */
+	private double filledFraction(double pixel) {
+		if (pixel > this.foreground)
+			return 1;
+		if (pixel < this.background)
+			return 0;
+		return (pixel - this.background) / (this.foreground - this.background);
+	}
+
 	private void roiMeasurements(final ImagePlus imp, final double min, final double max) {
 		final Roi initialRoi = imp.getRoi();
 		final int xMin = imp.getImageStack().getRoi().x;
@@ -1046,17 +1115,25 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		final boolean isHUCalibrated = calibration.getState();
 		final TextField minT = (TextField) nFields.get(0);
 		final TextField maxT = (TextField) nFields.get(1);
+		TextField minP = (TextField) nFields.get(4);
+		TextField maxP = (TextField) nFields.get(5);
 
 		final double min = Double.parseDouble(minT.getText());
 		final double max = Double.parseDouble(maxT.getText());
+		double pMin = Double.parseDouble(minP.getText());
+		double pMax = Double.parseDouble(maxP.getText());
 		if (isHUCalibrated && !fieldUpdated) {
 			minT.setText("" + cal.getCValue(min));
 			maxT.setText("" + cal.getCValue(max));
+			minP.setText("" + cal.getCValue(pMin));
+			maxP.setText("" + cal.getCValue(pMax));
 			fieldUpdated = true;
 		}
 		if (!isHUCalibrated && fieldUpdated) {
 			minT.setText("" + cal.getRawValue(min));
 			maxT.setText("" + cal.getRawValue(max));
+			minP.setText("" + cal.getRawValue(pMin));
+			maxP.setText("" + cal.getRawValue(pMax));
 			fieldUpdated = false;
 		}
 		if (isHUCalibrated)
@@ -1070,6 +1147,16 @@ public class SliceGeometry implements PlugIn, DialogListener {
 			oriented.setEnabled(false);
 		} else
 			oriented.setEnabled(true);
+
+		Checkbox partialBox = (Checkbox) checkboxes.get(11);
+		boolean doVolumeCompensation = partialBox.getState();
+		if (doVolumeCompensation) {
+			minP.setEnabled(true);
+			maxP.setEnabled(true);
+		} else {
+			minP.setEnabled(false);
+			maxP.setEnabled(false);
+		}
 
 		DialogModifier.registerMacroValues(gd, gd.getComponents());
 		return true;
