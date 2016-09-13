@@ -20,12 +20,12 @@ public class Help implements PlugIn {
 	/**
 	 * branch
 	 */
-	public static final String branch = "-testing";
+	public static final String branch = "";
 
 	/**
 	 * BoneJ version
 	 */
-	public static final String bonejVersion = "1.4.1" + branch;
+	public static final String bonejVersion = "1.4.2" + branch;
 
 	public void run(final String arg) {
 		if (arg.equals("about")) {
