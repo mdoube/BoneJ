@@ -188,6 +188,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	private double foreground;
 	private boolean doPartialVolume;
 
+	@Override
 	public void run(final String arg) {
 		if (!ImageCheck.checkEnvironment())
 			return;
@@ -428,7 +429,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 *            Original image
 	 */
 	private void show3DAxes(final ImagePlus imp) {
-		final Calibration cal = imp.getCalibration();
+		final Calibration cal1 = imp.getCalibration();
 		// copy the data from inside the ROI and convert it to 8-bit
 		final Duplicator d = new Duplicator();
 		final ImagePlus roiImp = d.run(imp, 1, imp.getImageStackSize());
@@ -441,8 +442,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		double rY = 0;
 		if (imp.getRoi() != null) {
 			final Rectangle roi = imp.getRoi().getBounds();
-			rX = roi.getX() * cal.pixelWidth;
-			rY = roi.getY() * cal.pixelHeight;
+			rX = roi.getX() * cal1.pixelWidth;
+			rY = roi.getY() * cal1.pixelHeight;
 		}
 
 		// list of centroids
@@ -456,7 +457,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 			final double cX = sliceCentroids[0][s] - rX;
 			final double cY = sliceCentroids[1][s] - rY;
-			final double cZ = (s - 0.5) * cal.pixelDepth;
+			final double cZ = (s - 0.5) * cal1.pixelDepth;
 
 			final Point3f cent = new Point3f();
 			cent.x = (float) cX;
@@ -466,8 +467,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 
 			// add the axes to the list
 			final double th = this.theta[s];
-			final double rMin = this.R1[s] * cal.pixelWidth;
-			final double rMax = this.R2[s] * cal.pixelWidth;
+			final double rMin = this.R1[s] * cal1.pixelWidth;
+			final double rMax = this.R2[s] * cal1.pixelWidth;
 			final double thPi = th + Math.PI / 2;
 
 			final Point3f start1 = new Point3f();
@@ -534,8 +535,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		// show the stack
 		try {
 			new StackConverter(roiImp).convertToGray8();
-			final Content c = univ.addVoltex(roiImp);
-			c.setLocked(true);
+			final Content content = univ.addVoltex(roiImp);
+			content.setLocked(true);
 		} catch (final NullPointerException npe) {
 			IJ.log("3D Viewer was closed before rendering completed.");
 			return;
@@ -966,8 +967,8 @@ public class SliceGeometry implements PlugIn, DialogListener {
 				final Rectangle r = ip.getRoi();
 				// binarise
 				final ImagePlus binaryImp = convertToBinary(sliceImp, min, max);
-				final Calibration cal = impT.getCalibration();
-				binaryImp.setCalibration(cal);
+				final Calibration cal1 = impT.getCalibration();
+				binaryImp.setCalibration(cal1);
 				// calculate thickness
 				final Thickness th = new Thickness();
 				final ImagePlus thickImp = th.getLocalThickness(binaryImp, false, doMask);
@@ -1041,10 +1042,6 @@ public class SliceGeometry implements PlugIn, DialogListener {
 	 * 
 	 * @param pixel
 	 *            the input pixel value
-	 * @param background
-	 *            pixel value representing background
-	 * @param foreground
-	 *            pixel value representing foreground
 	 * @return fraction of pixel 'size' occupied by foreground
 	 */
 	private double filledFraction(double pixel) {
@@ -1106,6 +1103,7 @@ public class SliceGeometry implements PlugIn, DialogListener {
 		return;
 	}
 
+	@Override
 	public boolean dialogItemChanged(final GenericDialog gd, final AWTEvent e) {
 		if (!DialogModifier.allNumbersValid(gd.getNumericFields()))
 			return false;
