@@ -95,18 +95,18 @@ public class Trig {
 	public static double angle3D(double x0, double y0, double z0, double x1, double y1, double z1, final double xv,
 			final double yv, final double zv) {
 
-		x0 -= xv;
-		y0 -= yv;
-		z0 -= zv;
-		x1 -= xv;
-		y1 -= yv;
-		z1 -= zv;
+		double xa = x0 - xv;
+		double ya = y0 - yv;
+		double za = z0 - zv;
+		double xb = x1 - xv;
+		double yb = y1 - yv;
+		double zb = z1 - zv;
 
-		final double dot = x0 * x1 + y0 * y1 + z0 * z1;
-		final double d0 = distance3D(x0, y0, z0);
-		final double d1 = distance3D(x1, y1, z1);
+		final double dot = xa * xb + ya * yb + za * zb;
+		final double da = distance3D(xa, ya, za);
+		final double db = distance3D(xb, yb, zb);
 
-		double cosTheta = dot / (d0 * d1);
+		double cosTheta = dot / (da * db);
 
 		if (Double.compare(cosTheta, -1.0) < 0) {
 			cosTheta = -1.0;
