@@ -117,8 +117,8 @@ public class Connectivity implements PlugIn {
 
 		final double connDensity = getConnDensity(imp, connectivity);
 
-		if (connectivity < 0 && !Interpreter.isBatchMode()) {
-			IJ.error("Caution", "Connectivity is negative.\n\n" + "This usually happens if there are multiple\n"
+		if (connectivity < 0 && !IJ.isMacro()) {
+			IJ.showMessage("Caution", "Connectivity is negative.\n\n" + "This usually happens if there are multiple\n"
 					+ "particles or enclosed cavities.\n\n" + "Try running Purify prior to Connectivity.");
 		}
 
