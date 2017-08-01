@@ -170,20 +170,22 @@ public class FitEllipsoid {
 			throw new IllegalArgumentException("Too few points; need at least 9 to calculate a unique ellipsoid");
 		}
 
-		final double[][] d = new double[nPoints][9];
+		final double[][] d = new double[nPoints][];
 		for (int i = 0; i < nPoints; i++) {
 			final double x = points[i][0];
 			final double y = points[i][1];
 			final double z = points[i][2];
-			d[i][0] = x * x;
-			d[i][1] = y * y;
-			d[i][2] = z * z;
-			d[i][3] = 2 * x * y;
-			d[i][4] = 2 * x * z;
-			d[i][5] = 2 * y * z;
-			d[i][6] = 2 * x;
-			d[i][7] = 2 * y;
-			d[i][8] = 2 * z;
+			final double[] p = new double[9];
+			p[0] = x * x;
+			p[1] = y * y;
+			p[2] = z * z;
+			p[3] = 2 * x * y;
+			p[4] = 2 * x * z;
+			p[5] = 2 * y * z;
+			p[6] = 2 * x;
+			p[7] = 2 * y;
+			p[8] = 2 * z;
+			d[i] = p;
 		}
 
 		// do the fitting
