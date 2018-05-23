@@ -1852,6 +1852,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 				}
 			}
 		}
+			break;
 		case BACK: {
 			for (int b = 1; b < nBlobs; b++) {
 				IJ.showStatus("Joining substructures...");
