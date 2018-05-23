@@ -511,21 +511,51 @@ public class Anisotropy implements PlugIn, DialogListener {
 				|| cZ > depth * vD - radius)
 			throw new IllegalArgumentException("Centroid < radius from sides");
 
-		//cache the pixels 
+		// create a work array containing pixels +- 1 radius from centroid
+		final int w = (int) Math.round(radius / vW);
+		final int h = (int) Math.round(radius / vH);
+		final int d = (int) Math.round(radius / vD);
+		final byte[] workArray = new byte[(2 * w + 1) * (2 * h + 1) * (2 * d + 1)];
+
+		final int startCol = (int) Math.round(cX / vW) - w;
+		final int endCol = (int) Math.round(cX / vW) + w;
+		final int startRow = (int) Math.round(cY / vH) - h;
+		final int endRow = (int) Math.round(cY / vH) + h;
+		final int startSlice = (int) Math.round(cZ / vD) - d;
+		final int endSlice = (int) Math.round(cZ / vD) + d;
+
 		final ImageStack stack = imp.getImageStack();
-		final ImageProcessor[] pixels = new ImageProcessor[depth + 1];
-		for (int z = 1; z <= depth; z++) {
-			pixels[z] = stack.getProcessor(z);
+		// fill the work array
+		int i = 0;
+		for (int s = startSlice; s <= endSlice; s++) {
+			final byte[] slicePixels = (byte[]) stack.getPixels(s + 1);
+			for (int r = startRow; r <= endRow; r++) {
+				final int index = width * r;
+				for (int c = startCol; c <= endCol; c++) {
+					workArray[i] = slicePixels[index + c];
+					i++;
+				}
+			}
 		}
-		
+
+		// centroid position in workArray is at (w+1, h+1, d+1), subtract one
+		// for starting at 0.
+		final int a = (2 * w + 1);
+		final int b = a * (2 * h + 1);
+
+		final int wVz = b * d;
+		final int wVy = a * h;
+		final int wVx = w;
+		final int centroidIndex = wVz + wVy + wVx;
+
 		// store an intercept count for each vector
 		final double[] interceptCounts = new double[nVectors];
-		
-		//calculate how many increments fit inside sphere's diameter
-		final int nIncrements = (int)((2 * radius)/vectorSampling);
-		
+
 		// loop through all vectors
 		// start multithreading here - each thread samples a set of vectors
+		final double radVw = -radius / vW;
+		final double radVh = -radius / vH;
+		final double radVd = -radius / vD;
 
 		// new multithread pattern
 		final AtomicInteger ai = new AtomicInteger(0);
@@ -535,42 +565,36 @@ public class Anisotropy implements PlugIn, DialogListener {
 				public void run() {
 					for (int v = ai.getAndIncrement(); v < nVectors; v = ai.getAndIncrement()) {
 						double nIntercepts = 0;
-						
-						//get the current unit vector
 						final double vX = vectorList[v][0];
 						final double vY = vectorList[v][1];
 						final double vZ = vectorList[v][2];
 
-						//calculate the x, y and z increments
-						// in pixel units (uncalibrated)
-						final double xInc = vX * vectorSampling / vW;
-						final double yInc = vY * vectorSampling / vH;
-						final double zInc = vZ * vectorSampling / vD;
-						
-						//calculate the starting position
-						//in pixel units (uncalibrated)
-						double x = (cX - radius * vX) / vW;
-						double y = (cY - radius * vY) / vH;
-						double z = (cZ - radius * vZ) / vD;
-						
-						//initialise the boundary detectors
+						// start at negative end of vector
+						final int xS = (int) Math.round(radVw * vX);
+						final int yS = (int) Math.round(radVh * vY);
+						final int zS = (int) Math.round(radVd * vZ);
+
+						final int startIndex = centroidIndex + b * zS + a * yS + xS;
 						boolean lastPos, thisPos;
-						
- 						if (pixels[(int)(z)].get((int)(x), (int)(y)) == 0) {
+						if (workArray[startIndex] == 0) {
 							lastPos = true;
 						} else {
 							lastPos = false;
 						}
-												
-						for (int i = 0; i < nIncrements; i++) {
-							//increment in x, y, and z (continuous, uncalibrated space)
-							x += xInc;
-							y += yInc;
-							z += zInc;
-												
+
+						final double vXvW = vX / vW;
+						final double vYvH = vY / vH;
+						final double vZvD = vZ / vD;
+
+						for (double pos = -radius; pos <= radius; pos += vectorSampling) {
+							// find the index of the voxel that the sample falls
+							// within offset from centroid
+							final int x = (int) Math.round(pos * vXvW);
+							final int y = (int) Math.round(pos * vYvH);
+							final int z = (int) Math.round(pos * vZvD);
+							final int testIndex = centroidIndex + b * z + a * y + x;
 							// determine if the voxel is thresholded or not
-							// bring into discrete space by flooring with cast to int
-							if (pixels[(int)z].get((int)x, (int)y) == 0) {
+							if (workArray[testIndex] == 0) {
 								thisPos = true;
 							} else {
 								thisPos = false;
