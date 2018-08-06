@@ -90,10 +90,15 @@ public class Moments implements PlugIn, DialogListener {
 		gd.addCheckbox("HU Calibrated", ImageCheck.huCalibrated(imp));
 		gd.addNumericField("Bone_Min:", min, 1, 6, pixUnits + " ");
 		gd.addNumericField("Bone_Max:", max, 1, 6, pixUnits + " ");
-		gd.addMessage("Only pixels >= bone min\n" + "and <= bone max are used.");
+		gd.addMessage("Only pixels >= bone min\n" + "and <= bone max are used.");		
 		gd.addMessage("Density calibration coefficients");
 		gd.addNumericField("Slope", 0, 4, 6, "g.cm^-3 / " + pixUnits + " ");
 		gd.addNumericField("Y_Intercept", 1.8, 4, 6, "g.cm^-3");
+		
+		if (cal.getUnits().contains("pixels"))
+			gd.addMessage("Spatial dimensions uncalibrated.\n"
+					+ "Assuming 1 mm pixel spacing.");
+		
 		gd.addCheckbox("Align result", true);
 		gd.addCheckbox("Show axes (2D)", false);
 		gd.addCheckbox("Show axes (3D)", true);
@@ -191,8 +196,8 @@ public class Moments implements PlugIn, DialogListener {
 	}/* end voxelDensity */
 
 	/**
-	 * Get a scale factor because density is in g / cm³ but our units are mm so
-	 * density is 1000* too high
+	 * Get a scale factor because density is in g / cm³ but our units are mm,
+	 * microns or pixels so density is wrong leading to wrong mass and moments
 	 *
 	 * @param imp
 	 * @return
@@ -200,8 +205,10 @@ public class Moments implements PlugIn, DialogListener {
 	private double getDensityFactor(final ImagePlus imp) {
 		final String units = imp.getCalibration().getUnits();
 		double factor = 1;
-		if (units.contains("mm")) {
+		if (units.contains("mm") || units.contains("pixels")) {
 			factor = 1000;
+		} else if (units.contains("micron") || units.contains("µm")) {
+			factor = 1E12;
 		} else {
 			factor = 1;
 		}
