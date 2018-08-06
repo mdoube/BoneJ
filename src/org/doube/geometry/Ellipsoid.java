@@ -602,7 +602,10 @@ public class Ellipsoid {
 	 * @return
 	 */
 	public Ellipsoid copy() {
-		final Ellipsoid copy = new Ellipsoid(this.ra, this.rb, this.rc, this.cx, this.cy, this.cz, this.ev.clone());
+		final double[][] evClone = new double[ev.length][];
+		for (int i = 0; i < ev.length; i++)
+			evClone[i] = ev[i].clone();
+		final Ellipsoid copy = new Ellipsoid(this.ra, this.rb, this.rc, this.cx, this.cy, this.cz, evClone);
 		return copy;
 	}
 
