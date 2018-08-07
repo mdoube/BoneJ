@@ -83,6 +83,7 @@ public class EllipsoidFitter implements PlugIn {
 		} catch (final RuntimeException re) {
 			IJ.showMessage(
 					"Can't fit ellipsoid to points.\n" + "Add more point ROI's to the ROI Manager and try again.");
+			imp.unlock();
 			return;
 		}
 
