@@ -48,7 +48,7 @@ public class EllipsoidFitter implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-		final ImageCheck ic = new ImageCheck();
+
 		if (!ImageCheck.isMultiSlice(imp)) {
 			IJ.error("Stack required");
 			return;

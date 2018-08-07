@@ -162,6 +162,8 @@ public class FitEllipsoid {
 	 *         axes, the 9 variables of the ellipsoid equation and the EVD
 	 * @throws IllegalArgumentException
 	 *             if number of coordinates is less than 9
+	 * @throws RuntimeException
+	 *             if fitted quadric function is not an ellipsoid
 	 */
 	public static Object[] yuryPetrov(final double[][] points) {
 
@@ -205,7 +207,12 @@ public class FitEllipsoid {
 		final int nEvals = diagonal.getRowDimension();
 		final double[] radii = new double[nEvals];
 		for (int i = 0; i < nEvals; i++) {
-			radii[i] = Math.sqrt(1 / diagonal.get(i, 0));
+			double eigenvalue = diagonal.get(i, 0);
+			// If any of the eigenvalues is negative, the quadric
+			// is not an ellipsoid
+			if (eigenvalue < 0)
+				throw new RuntimeException("Fitted quadric is not an ellipsoid");
+			radii[i] = Math.sqrt(1 / eigenvalue);
 		}
 		final double[] centre = (double[]) matrices[0];
 		final double[][] eigenVectors = (double[][]) matrices[2];
