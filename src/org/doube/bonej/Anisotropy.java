@@ -279,7 +279,12 @@ public class Anisotropy implements PlugIn, DialogListener {
 			}
 			// work out coordinates of vector cloud
 			coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
-			final Object[] result = harriganMann(coOrdinates);
+			Object[] result;
+			try {
+				result = harriganMann(coOrdinates);
+			} catch (RuntimeException re) {
+				continue;
+			}
 			anisotropy = ((double[]) result[0])[0];
 			anisotropyHistory.add(anisotropy);
 			E = (EigenvalueDecomposition) result[1];
@@ -338,7 +343,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 				meanInterceptLengths[v] = radius / interceptCounts[v];
 		}
 		final double[][] coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
-		final Object[] daResult = harriganMann(coOrdinates);
+		Object[] daResult = harriganMann(coOrdinates);
 		final Object[] result = { daResult[0], coOrdinates, daResult[1] };
 		return result;
 	}
@@ -739,11 +744,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 	private Object[] harriganMann(final double[][] coOrdinates) {
 		Object[] ellipsoid = new Object[6];
 		double da = 0;
-		try {
-			ellipsoid = FitEllipsoid.yuryPetrov(coOrdinates);
-		} catch (final RuntimeException re) {
-			da = Math.random();
-		}
+		ellipsoid = FitEllipsoid.yuryPetrov(coOrdinates);
 		final double[] coEf = (double[]) ellipsoid[3];
 		final double[][] tensor = { { coEf[0], coEf[3], coEf[4] }, { coEf[3], coEf[1], coEf[5] },
 				{ coEf[4], coEf[5], coEf[2] } };
