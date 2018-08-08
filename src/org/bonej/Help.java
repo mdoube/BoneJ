@@ -20,7 +20,7 @@ public class Help implements PlugIn {
 	/**
 	 * branch
 	 */
-	public static final String branch = "-testing";
+	public static final String branch = "";
 
 	/**
 	 * BoneJ version
