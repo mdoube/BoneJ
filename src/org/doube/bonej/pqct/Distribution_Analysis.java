@@ -92,6 +92,11 @@ public class Distribution_Analysis implements PlugIn {
 			if (cal.getCoefficients() != null) {
 				calibrationCoefficients = cal.getCoefficients();
 			}
+			else {
+				IJ.error("Image is uncalibrated, exiting.\n"
+						+ "This plugin is intended for use on Stratec pQCT images.");
+				return;
+			}
 		} else {
 			calibrationCoefficients = new double[2];
 			/* Read calibration from TYP file database */
