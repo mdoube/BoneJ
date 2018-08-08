@@ -55,7 +55,6 @@ import ij.macro.Interpreter;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
-import ij3d.Content;
 import ij3d.Image3DUniverse;
 
 /**
@@ -89,7 +88,6 @@ public class Anisotropy implements PlugIn, DialogListener {
 			IJ.noImage();
 			return;
 		}
-		final ImageCheck ic = new ImageCheck();
 		if (!ImageCheck.isBinary(imp)) {
 			IJ.error("8-bit binary (black and white only) image required.");
 			return;
@@ -343,7 +341,12 @@ public class Anisotropy implements PlugIn, DialogListener {
 				meanInterceptLengths[v] = radius / interceptCounts[v];
 		}
 		final double[][] coOrdinates = calculateCoordinates(meanInterceptLengths, vectorList);
-		Object[] daResult = harriganMann(coOrdinates);
+		Object[] daResult;
+		try {
+			daResult = harriganMann(coOrdinates);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Could not calculate fabric tensor from these points");
+		}
 		final Object[] result = { daResult[0], coOrdinates, daResult[1] };
 		return result;
 	}
