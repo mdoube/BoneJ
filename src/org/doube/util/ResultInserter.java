@@ -62,9 +62,9 @@ public class ResultInserter {
 	public void setResultInRow(final ImagePlus imp, final String colHeading, final double value) {
 		final String title = imp.getTitle();
 
-		// search for the first row that contains the image title
+		// search for the last row that contains the image title
 		// and contains no value for the heading
-		for (int row = 0; row < rt.getCounter(); row++) {
+		for (int row = rt.getCounter()-1; row >= 0; row--) {
 			if (rt.getLabel(row) == null) {
 				rt.setLabel(title, row);
 			}
