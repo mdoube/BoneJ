@@ -24,9 +24,6 @@ public class Ellipsoid {
 	 */
 	private double ra, rb, rc;
 
-	/** Volume of ellipsoid, calculated as 4 * PI * ra * rb * rc / 3 */
-	private double volume;
-
 	/**
 	 * Eigenvector matrix Size-based ordering is not performed. They are in the
 	 * same order as the eigenvalues.
@@ -72,7 +69,6 @@ public class Ellipsoid {
 		this.eh = new double[3][3];
 		setRotation((double[][]) ellipsoid[2]);
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
@@ -101,21 +97,15 @@ public class Ellipsoid {
 		this.eh = new double[3][3];
 		setRotation(eigenVectors);
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
 	 * Gets the volume of this ellipsoid, calculated as PI * a * b * c * 4 / 3
 	 *
-	 * @return
+	 * @return ellipsoid's volume
 	 */
 	public double getVolume() {
-		final double d = this.volume;
-		return d;
-	}
-
-	private void setVolume() {
-		volume = Math.PI * ra * rb * rc * 4 / 3;
+		return Math.PI * ra * rb * rc * 4 / 3;
 	}
 
 	/**
@@ -364,7 +354,6 @@ public class Ellipsoid {
 		this.rb = b;
 		this.rc = c;
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
