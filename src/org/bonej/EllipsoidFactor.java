@@ -877,11 +877,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ellipsoid.setRotation(rotation);
 
 		// shrink the ellipsoid slightly
-		ellipsoid.contract(0.1);
+		ellipsoid = shrinkToFit(ellipsoid, contactPoints, pixels, pW, pH, pD, w, h, d);
 
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
-
+		
 		// int maxContacts = contactPoints.size() + contactSensitivity;
 		while (contactPoints.size() < contactSensitivity) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
