@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3f;
 
+import org.doube.geometry.Ellipsoid;
 import org.doube.geometry.FitEllipsoid;
 import org.doube.jama.EigenvalueDecomposition;
 import org.doube.jama.Matrix;
@@ -51,6 +52,7 @@ import ij.gui.GenericDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
+import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import ij3d.Image3DUniverse;
 import marchingcubes.MCTriangulator;
@@ -166,8 +168,8 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		gd.addNumericField("Max Volume", Double.POSITIVE_INFINITY, 3, 7, units + "³");
 		gd.addNumericField("Surface_resampling", 2, 0);
 		final String[] headers2 = { "Graphical Results", " " };
-		final String[] labels2 = new String[8];
-		final boolean[] defaultValues2 = new boolean[8];
+		final String[] labels2 = new String[9];
+		final boolean[] defaultValues2 = new boolean[9];
 		labels2[0] = "Show_particle stack";
 		defaultValues2[0] = true;
 		labels2[1] = "Show_size stack";
@@ -184,7 +186,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		defaultValues2[6] = true;
 		labels2[7] = "Show_stack (3D)";
 		defaultValues2[7] = true;
-		gd.addCheckboxGroup(4, 2, labels2, defaultValues2, headers2);
+		labels2[8] = "Draw_ellipsoids";
+		defaultValues2[8] = false;
+		gd.addCheckboxGroup(5, 2, labels2, defaultValues2, headers2);
 		final String[] items = { "Gradient", "Split" };
 		gd.addChoice("Surface colours", items, items[0]);
 		gd.addNumericField("Split value", 0, 3, 7, units + "³");
@@ -224,6 +228,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		final boolean doAxesImage = gd.getNextBoolean();
 		final boolean doEllipsoidImage = gd.getNextBoolean();
 		final boolean do3DOriginal = gd.getNextBoolean();
+		final boolean doEllipsoidStack = gd.getNextBoolean();
 		final int origResampling = (int) Math.floor(gd.getNextNumber());
 		final String choice = gd.getNextChoice();
 		if (choice.equals(items2[0]))
@@ -249,7 +254,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 
 		// set up resources for analysis
 		ArrayList<List<Point3f>> surfacePoints = new ArrayList<List<Point3f>>();
-		if (doSurfaceArea || doSurfaceVolume || doSurfaceImage || doEllipsoids || doFeret) {
+		if (doSurfaceArea || doSurfaceVolume || doSurfaceImage || doEllipsoids || doFeret || doEllipsoidStack) {
 			surfacePoints = getSurfacePoints(imp, particleLabels, limits, resampling, nParticles);
 		}
 		EigenvalueDecomposition[] eigens = new EigenvalueDecomposition[nParticles];
@@ -291,7 +296,7 @@ public class ParticleCounter implements PlugIn, DialogListener {
 			}
 		}
 		Object[][] ellipsoids = new Object[nParticles][10];
-		if (doEllipsoids || doEllipsoidImage) {
+		if (doEllipsoids || doEllipsoidImage || doEllipsoidStack) {
 			ellipsoids = getEllipsoids(surfacePoints);
 		}
 
@@ -384,6 +389,9 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		if (doParticleSizeImage) {
 			displayParticleValues(imp, particleLabels, volumes, "volume").show();
 			IJ.run("Fire");
+		}
+		if (doEllipsoidStack) {
+			displayParticleEllipsoids(imp, ellipsoids, "Ellipsoids").show();
 		}
 
 		// show 3D renderings
@@ -1127,7 +1135,79 @@ public class ParticleCounter implements PlugIn, DialogListener {
 		impOut.getProcessor().setMinAndMax(0, max);
 		return impOut;
 	}
+	
+	/**
+	 * 
+	 * @param imp
+	 * @param ellipsoids
+	 * @param title
+	 * @return
+	 */
+	private ImagePlus displayParticleEllipsoids(final ImagePlus imp, final Object[][] ellipsoids,
+		final String title) {
+	final int w = imp.getWidth();
+	final int h = imp.getHeight();
+	final int d = imp.getImageStackSize();
+	
+	Calibration cal = imp.getCalibration();
+	final double pW = cal.pixelWidth;
+	final double pH = cal.pixelHeight;
+	final double pD = cal.pixelDepth;
+	
+	//set up a work array
+	final ByteProcessor[] bps = new ByteProcessor[d];
+	for (int z = 0; z < d; z++) {
+		bps[z] = new ByteProcessor(w, h);
+	}
+	
+	for (Object[] obj : ellipsoids) {
+		Ellipsoid ellipsoid;
+		try	{
+			ellipsoid = new Ellipsoid(obj);
+		} catch (Exception e) {
+			continue;
+		}
+		
+		//ellipsoid is in calibrated real-world units
+		final double[] box = ellipsoid.getAxisAlignedBoundingBox();
+		
+		//decalibrate to pixels
+		final int xMin = clamp((int) Math.floor(box[0] / pW), 0, w-1);
+		final int xMax = clamp((int) Math.floor(box[1] / pW), 0, w-1);
+		final int yMin = clamp((int) Math.floor(box[2] / pH), 0, h-1);
+		final int yMax = clamp((int) Math.floor(box[3] / pH), 0, h-1);
+		final int zMin = clamp((int) Math.floor(box[4] / pD), 0, d-1);
+		final int zMax = clamp((int) Math.floor(box[5] / pD), 0, d-1);
+		
+		//set the ellipsoid-contained pixels to foreground
+		for (int z = zMin; z <= zMax; z++) {
+			for (int y = yMin; y <= yMax; y++) {
+				for (int x = xMin; x <= xMax; x++ ) {
+					if (ellipsoid.contains(x * pW, y * pH, z * pD)){
+						bps[z].set(x, y, 255);
+					}
+				}
+			}
+		}		
+	}
+	
+	ImageStack stack = new ImageStack(w, h);
+	for (ByteProcessor bp : bps)
+		stack.addSlice(bp);
+	
+	final ImagePlus impOut = new ImagePlus(imp.getShortTitle() + "_" + title, stack);
+	impOut.setCalibration(cal);
+	return impOut;
+  }
 
+	private int clamp(int value, int min, int max) {
+		if (value < min)
+			return min;
+		if (value > max)
+			return max;
+		return value;
+	}
+	
 	/**
 	 * Get the centroids of all the particles in real units
 	 *
