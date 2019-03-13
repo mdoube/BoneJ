@@ -528,7 +528,7 @@ public class Ellipsoid {
 				{ a10 * b00 + a11 * b10 + a12 * b20, a10 * b01 + a11 * b11 + a12 * b21,
 						a10 * b02 + a11 * b12 + a12 * b22 },
 				{ a20 * b00 + a21 * b10 + a22 * b20, a20 * b01 + a21 * b11 + a22 * b21,
-						a20 * b02 + a21 * b12 + a22 * b22 }, };
+						a20 * b02 + a21 * b12 + a22 * b22 } };
 		return c;
 	}
 
