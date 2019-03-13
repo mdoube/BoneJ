@@ -29,9 +29,9 @@ public class EllipsoidTest {
 
 	@Test
 	public void testGetVolume() {
-		assertEquals(Math.PI * 4 / 3, unitSphere.getVolume(), 1E-9);
-		assertEquals(1 * 2 * 3 * Math.PI * 4 / 3, oneTwoThree.getVolume(), 1E-9);
-		assertEquals(3 * 5 * 17 * Math.PI * 4 / 3, threeFiveSeventeen.getVolume(), 1E-9);
+		assertEquals(Math.PI * 4.0 / 3.0, unitSphere.getVolume(), 1E-9);
+		assertEquals(1.0 * 2.0 * 3.0 * Math.PI * 4.0 / 3.0, oneTwoThree.getVolume(), 1E-9);
+		assertEquals(3.0 * 5.0 * 17.0 * Math.PI * 4.0 / 3.0, threeFiveSeventeen.getVolume(), 1E-9);
 	}
 
 	@Test
