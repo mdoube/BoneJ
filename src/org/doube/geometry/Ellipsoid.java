@@ -24,9 +24,6 @@ public class Ellipsoid {
 	 */
 	private double ra, rb, rc;
 
-	/** Volume of ellipsoid, calculated as 4 * PI * ra * rb * rc / 3 */
-	private double volume;
-
 	/**
 	 * Eigenvector matrix Size-based ordering is not performed. They are in the
 	 * same order as the eigenvalues.
@@ -39,8 +36,11 @@ public class Ellipsoid {
 	 */
 	private final double[][] ed;
 
-	/** 3x3 matrix describing shape of ellipsoid */
-	private double[][] eh;
+	/** 3x3 matrix describing shape of ellipsoid
+	 * Should be accessed only by getEllipsoidTensor()
+	 * and update3x3Matrix()
+	 */
+	private double[][] eh = null;
 
 	/** ID field for tracking this particular ellipsoid */
 	public int id;
@@ -69,10 +69,8 @@ public class Ellipsoid {
 
 		this.ev = new double[3][3];
 		this.ed = new double[3][3];
-		this.eh = new double[3][3];
 		setRotation((double[][]) ellipsoid[2]);
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
@@ -98,24 +96,17 @@ public class Ellipsoid {
 		this.cz = cz;
 		this.ev = new double[3][3];
 		this.ed = new double[3][3];
-		this.eh = new double[3][3];
 		setRotation(eigenVectors);
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
 	 * Gets the volume of this ellipsoid, calculated as PI * a * b * c * 4 / 3
 	 *
-	 * @return
+	 * @return ellipsoid's volume
 	 */
 	public double getVolume() {
-		final double d = this.volume;
-		return d;
-	}
-
-	private void setVolume() {
-		volume = Math.PI * ra * rb * rc * 4 / 3;
+		return Math.PI * ra * rb * rc * 4 / 3;
 	}
 
 	/**
@@ -168,7 +159,7 @@ public class Ellipsoid {
 		if (length <= radii[0])
 			return true;
 
-		final double[][] h = eh;
+		final double[][] h = getEllipsoidTensor();
 
 		final double dot0 = vx * h[0][0] + vy * h[1][0] + vz * h[2][0];
 		final double dot1 = vx * h[0][1] + vy * h[1][1] + vz * h[2][1];
@@ -364,7 +355,6 @@ public class Ellipsoid {
 		this.rb = b;
 		this.rc = c;
 		setEigenvalues();
-		setVolume();
 	}
 
 	/**
@@ -379,9 +369,21 @@ public class Ellipsoid {
 
 	/**
 	 * Needs to be run any time the eigenvalues or eigenvectors change
+	 * Sets the eh field to null so that it is not out of sync.
 	 */
 	private void update3x3Matrix() {
-		this.eh = times(times(ev, ed), transpose(ev));
+		this.eh = null;
+	}
+	
+	/**
+	 * Gets an up to date ellipsoid tensor (H)
+	 * @return 3×3 matrix containing H, the ellipsoid tensor
+	 */
+	private double[][] getEllipsoidTensor(){
+		if (this.eh == null) {
+		   this.eh = times(times(ev, ed), transpose(ev));
+		}
+		return this.eh;
 	}
 
 	/**
@@ -465,12 +467,13 @@ public class Ellipsoid {
 	 *      C_square_matrix.2C_and_column_vector
 	 */
 	public double[] getEquation() {
-		final double h2112 = eh[1][0] + eh[0][1];
-		final double h3113 = eh[2][0] + eh[0][2];
-		final double h3223 = eh[2][1] + eh[1][2];
-		final double h11 = eh[0][0];
-		final double h22 = eh[1][1];
-		final double h33 = eh[2][2];
+		final double[][] eH = getEllipsoidTensor();
+		final double h2112 = eH[1][0] + eH[0][1];
+		final double h3113 = eH[2][0] + eH[0][2];
+		final double h3223 = eH[2][1] + eH[1][2];
+		final double h11 = eH[0][0];
+		final double h22 = eH[1][1];
+		final double h33 = eH[2][2];
 		final double p = h11 * cx * cx + h22 * cy * cy + h33 * cz * cz + h2112 * cx * cy + h3113 * cx * cz
 				+ h3223 * cy * cz;
 		final double q = 1 - p;
@@ -525,7 +528,7 @@ public class Ellipsoid {
 				{ a10 * b00 + a11 * b10 + a12 * b20, a10 * b01 + a11 * b11 + a12 * b21,
 						a10 * b02 + a11 * b12 + a12 * b22 },
 				{ a20 * b00 + a21 * b10 + a22 * b20, a20 * b01 + a21 * b11 + a22 * b21,
-						a20 * b02 + a21 * b12 + a22 * b22 }, };
+						a20 * b02 + a21 * b12 + a22 * b22 } };
 		return c;
 	}
 

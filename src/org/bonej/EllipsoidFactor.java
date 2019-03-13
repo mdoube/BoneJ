@@ -764,6 +764,17 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			final double[][] unitVectors) {
 		final int nPoints = skeletonPoints.length;
 		final Ellipsoid[] ellipsoids = new Ellipsoid[nPoints];
+		
+		// cache slices into an array
+		final ImageStack stack = imp.getImageStack();
+		final int w = stack.getWidth();
+		final int h = stack.getHeight();
+		final int d = stack.getSize();
+		
+		final byte[][] pixels = new byte[d][w * h];
+		for (int i = 0; i < d; i++) {
+			pixels[i] = (byte[]) stack.getProcessor(i + 1).getPixels();
+		}
 
 		// make sure array contains null in the non-calculated elements
 		Arrays.fill(ellipsoids, null);
@@ -775,7 +786,7 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
 					for (int i = ai.getAndAdd(skipRatio); i < nPoints; i = ai.getAndAdd(skipRatio)) {
-						ellipsoids[i] = optimiseEllipsoid(imp, skeletonPoints[i], unitVectors, i);
+						ellipsoids[i] = optimiseEllipsoid(imp, pixels, skeletonPoints[i], unitVectors, i);
 						IJ.showProgress(counter.getAndAdd(skipRatio), nPoints);
 						IJ.showStatus("Optimising ellipsoids...");
 					}
@@ -803,8 +814,8 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 	 *         of vectors surrounding the seed point. If ellipsoid fitting
 	 *         fails, returns null
 	 */
-	private Ellipsoid optimiseEllipsoid(final ImagePlus imp, final int[] skeletonPoint, final double[][] unitVectors,
-			final int index) {
+	private Ellipsoid optimiseEllipsoid(final ImagePlus imp, byte[][] pixels, 
+		final int[] skeletonPoint, final double[][] unitVectors, final int index) {
 
 		final long start = System.currentTimeMillis();
 
@@ -814,20 +825,10 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		final double pD = cal.pixelDepth;
 
 		final ImageStack stack = imp.getImageStack();
-		// final int stackSize = stack.getSize();
+
 		final int w = stack.getWidth();
 		final int h = stack.getHeight();
 		final int d = stack.getSize();
-
-		// cache slices into an array
-		// ByteProcessor[] ips = new ByteProcessor[stackSize + 1];
-		final byte[][] pixels = new byte[d][w * h];
-		for (int i = 0; i < d; i++) {
-			// ips[i] = (ByteProcessor) stack.getProcessor(i);
-			pixels[i] = (byte[]) stack.getProcessor(i + 1).getPixels();
-		}
-
-		// final int d = ips.length - 1;
 
 		// centre point of vector field
 		final double px = skeletonPoint[0] * pW;
@@ -877,11 +878,11 @@ public class EllipsoidFactor implements PlugIn, Comparator<Ellipsoid> {
 		ellipsoid.setRotation(rotation);
 
 		// shrink the ellipsoid slightly
-		ellipsoid.contract(0.1);
+		ellipsoid = shrinkToFit(ellipsoid, contactPoints, pixels, pW, pH, pD, w, h, d);
 
 		// dilate other two axes until number of contact points increases
 		// by contactSensitivity number of contacts
-
+		
 		// int maxContacts = contactPoints.size() + contactSensitivity;
 		while (contactPoints.size() < contactSensitivity) {
 			ellipsoid.dilate(0, vectorIncrement, vectorIncrement);
