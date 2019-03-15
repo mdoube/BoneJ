@@ -238,10 +238,7 @@ public class RayTracer implements PlugIn {
 		final int y = p[1];
 		final int z = p[2];
 		
-		if (x < 0 || x >=w || y < 0 || y >=h || z < 0 || z >= d)
-			return true;
-		
-		return false;
+		return x < 0 || x >=w || y < 0 || y >=h || z < 0 || z >= d;
 	}
 
 
