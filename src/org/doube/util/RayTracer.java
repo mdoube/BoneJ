@@ -160,6 +160,12 @@ public class RayTracer implements PlugIn {
 				child2[2] += 0.5;
 				child3[2] -= 0.5;
 			}
+			//TODO edges need to be included, but have only 2 children each. Separate method?
+			//Edges have one 0 and two +- 1s. Or could make 4 children for each edge, wrapping
+			//over the edge. I.e. two children on the edge and one on each of the adjoining faces
+			//have to check all 12 edge identities separately, or is there a generic way?
+			//0 dimension tells which way to add 0.5 to go along the edge (+- 05 in normal direction)
+			//+- 1 dimensions tell which way to go along the face (in the opposite polarity by 0.5) 
 
 			calculateIntegerVector(child0, startPoint);
 			calculateIntegerVector(child1, startPoint);
