@@ -25,6 +25,10 @@ public class RayTracer implements PlugIn {
 		final int h = imp.getHeight();
 		final int d = imp.getStackSize();
 		
+		final int sX = startPoint[0];
+		final int sY = startPoint[1];
+		final int sZ = startPoint[2];
+		
 		ImageStack stack = imp.getImageStack();
 		
 		ByteProcessor[] pixels = new ByteProcessor[d]; 
@@ -36,7 +40,8 @@ public class RayTracer implements PlugIn {
 		int i = 0;
 		
 		//check whether the starting point is a collision point
-		if (isBackground(pixels, startPoint)) {
+		//might be problematic if starting from a surface point
+		if (isBackground(pixels, sX, sY, sZ)) {
 			return new int[][] {startPoint};
 		}
 		
@@ -54,9 +59,9 @@ public class RayTracer implements PlugIn {
 				for (int x = -1; x <= 1; x++) {
 					if (x == 0 && y == 0 && z == 0)
 						continue;
-					final int xc = startPoint[0] + x;
-					final int yc = startPoint[1] + y;
-					final int zc = startPoint[2] + z;
+					final int xc = sX + x;
+					final int yc = sY + y;
+					final int zc = sZ + z;
 					
 					//last three coordinates are the parent face/edge/corner for later incrementing purposes
 					//can determine which face (i.e. +- x, y, or z) or whether a face
@@ -261,43 +266,32 @@ public class RayTracer implements PlugIn {
 	 * @param collisionPoints
 	 */
 	private void checkRaysForCollisions(ByteProcessor[] pixels, HashSet<double[]> integerVectors,
-		HashSet<int[]> collisionPoints, int w, int h, int d)
+		HashSet<int[]> collisionPoints, final int w, final int h, final int d)
 	{
 		Iterator<double[]> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
 			double[] vector = iterator.next();
-			int[] point = pixelFromVector(vector);
-			if (isOutOfBounds(point, w, h, d)) {
+			//floor double values to snap to pixel grid
+			final int x = (int) Math.floor(vector[0]);
+			final int y = (int) Math.floor(vector[1]);
+			final int z = (int) Math.floor(vector[2]);
+
+			if (isOutOfBounds(x, y, z, w, h, d)) {
 				iterator.remove();
 				continue;
 			}
-			if (isBackground(pixels, point)) {
+			if (isBackground(pixels, x, y, z)) {
 				iterator.remove();
-				collisionPoints.add(point);
+				collisionPoints.add(new int[] {x, y, z});
 			}
 		}
 	}
 
 
-	private boolean isOutOfBounds(int[] p, int w, int h, int d) {
-		final int x = p[0];
-		final int y = p[1];
-		final int z = p[2];
+	private boolean isOutOfBounds(final int x, final int y, final int z, 
+		final int w, final int h, final int d) {
 		
-		return x < 0 || x >=w || y < 0 || y >=h || z < 0 || z >= d;
-	}
-
-
-	/**
-	 * Sample the pixel grid using the current coordinates of a vector
-	 * @param vector
-	 * @return pixel int location
-	 */
-	private int[] pixelFromVector(double[] vector) {
-		final int x = (int) Math.floor(vector[0]);
-		final int y = (int) Math.floor(vector[1]);
-		final int z = (int) Math.floor(vector[2]);
-		return new int[] {x, y, z};
+		return x < 0 || x >= w || y < 0 || y >= h || z < 0 || z >= d;
 	}
 
 
@@ -307,12 +301,14 @@ public class RayTracer implements PlugIn {
 	 * @param startPoint
 	 * @return true if the point is background
 	 */
-	private boolean isBackground(ByteProcessor[] pixels, int[] point) {
-		return pixels[point[2]].get(point[0], point[1]) == 0;
+	private boolean isBackground(ByteProcessor[] pixels,
+		final int x, final int y, final int z) {
+		
+		return pixels[z].get(x, y) == 0;
 	}
 
 
-	private static boolean isPowerOfTwo(int number) {
+	private static boolean isPowerOfTwo(final int number) {
     return number > 0 && ((number & (number - 1)) == 0);
   }
 }
