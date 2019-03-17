@@ -160,12 +160,33 @@ public class RayTracer implements PlugIn {
 				child2[2] += 0.5;
 				child3[2] -= 0.5;
 			}
-			//TODO edges need to be included, but have only 2 children each. Separate method?
-			//Edges have one 0 and two +- 1s. Or could make 4 children for each edge, wrapping
-			//over the edge. I.e. two children on the edge and one on each of the adjoining faces
-			//have to check all 12 edge identities separately, or is there a generic way?
-			//0 dimension tells which way to add 0.5 to go along the edge (+- 05 in normal direction)
-			//+- 1 dimensions tell which way to go along the face (in the opposite polarity by 0.5) 
+			//handle edges
+			else if (isEdge(vector)) {
+				if (vector[6] == 0) {
+					//spawn along the edge
+					child0[0] += 0.5;
+					child1[0] -= 0.5;
+					//spawn across faces
+					child2[1] -= vector[7] * 0.5;
+					child3[2] -= vector[8] * 0.5;
+				}
+				else if (vector[7] == 0) {
+				  //spawn along the edge
+					child0[1] += 0.5;
+					child1[1] -= 0.5;
+					//spawn across faces
+					child2[0] -= vector[6] * 0.5;
+					child3[2] -= vector[8] * 0.5;
+				}
+				else if (vector[8] == 0) {
+				  //spawn along the edge
+					child0[2] += 0.5;
+					child1[2] -= 0.5;
+					//spawn across faces
+					child2[0] -= vector[6] * 0.5;
+					child3[1] -= vector[7] * 0.5;
+				}
+			}
 
 			calculateIntegerVector(child0, startPoint);
 			calculateIntegerVector(child1, startPoint);
@@ -182,6 +203,25 @@ public class RayTracer implements PlugIn {
 		
 		return childVectors;
 	}
+
+	/**
+	 * Determine whether a vector is an edge
+	 * Edges have one 0 and two +-1
+	 * 
+	 * Check that there is exactly 1 zero
+	 *  
+	 * @param vector
+	 * @return
+	 */
+	private boolean isEdge(double[] vector) {
+		int sum = 0;
+		for (int i = 6; i < 9; i++)
+			if (vector[i] == 0)
+				sum++;
+		
+		return sum == 1;
+	}
+
 
 	private void calculateIntegerVector(double[] vector, int[] startPoint) {
 
@@ -210,7 +250,7 @@ public class RayTracer implements PlugIn {
 
 
 	/**
-	 * Check each integer vector
+	 * Check each integer vector.
 	 * 
 	 * If it collides, remove it from integerVectors and add the 
 	 * collision pixel int to collisionPoints.
