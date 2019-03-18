@@ -14,8 +14,24 @@ public class RayTracer implements PlugIn {
 
 	@Override
 	public void run(String arg) {
-		// TODO Auto-generated method stub
-		findCollisionPoints(IJ.getImage(), new int[]{0,0,0});
+
+		ImagePlus imp = IJ.getImage();
+		
+		final int w = imp.getWidth();
+		final int h = imp.getHeight();
+		final int d = imp.getStackSize();
+		
+		final int sX = (int)Math.round(w / 2.0);
+		final int sY = (int)Math.round(h / 2.0);
+		final int sZ = (int)Math.round(d / 2.0);
+		
+		int[][] collisionPoints = findCollisionPoints(imp, new int[]{sX,sY,sZ});
+		
+		IJ.log("Found "+collisionPoints.length+" collision points");
+		for (int[] point : collisionPoints) {
+			IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
+		}
+		
 	}
 	
 	
