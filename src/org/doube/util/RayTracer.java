@@ -36,7 +36,15 @@ public class RayTracer implements PlugIn {
 		IJ.log("Finished RayTracer");
 	}
 	
-	
+	/**
+	 * Given a start point, find the complete set of unique points
+	 * resulting from collisions between rays from the start point and
+	 * the image background
+	 *  
+	 * @param imp
+	 * @param startPoint in int{x, y, z} format
+	 * @return list of collision points 
+	 */
 	private int[][] findCollisionPoints(ImagePlus imp, int[] startPoint){
 		
 		final int w = imp.getWidth();
@@ -158,10 +166,10 @@ public class RayTracer implements PlugIn {
 	/**
 	 * Bisect between existing rays within the current i plane
 	 * 
-	 * Do not spawn from corners or edges, only from faces
+	 * Do not spawn from corners, only from faces and edges
 	 * 
 	 * @param parentVectors
-	 * @return 
+	 * @return Set of parent vectors and their child vectors
 	 */
 	@SuppressWarnings("unchecked")
 	private HashSet<ArrayList<Double>> spawn(HashSet<ArrayList<Double>> parentVectors, int[] startPoint) {
@@ -270,7 +278,7 @@ public class RayTracer implements PlugIn {
 	 * Check that there is exactly 1 zero
 	 *  
 	 * @param vector
-	 * @return
+	 * @return true if this pixel is on an edge ray
 	 */
 	private boolean isEdge(ArrayList<Double> vector) {
 		int sum = 0;
@@ -286,7 +294,7 @@ public class RayTracer implements PlugIn {
 	 * Corners have zero 0 and three +-1
  
 	 * @param vector
-	 * @return
+	 * @return true if this pixel is on a corner ray
 	 */
 	private boolean isCorner(ArrayList<Double> vector) {
 		int sum = 0;
@@ -297,6 +305,13 @@ public class RayTracer implements PlugIn {
 		return sum == 0;
 	}
 
+	/**
+	 * Calculate the vector that when added to the current location
+	 * results in sampling on the next integer pixel coordinate
+	 * 
+	 * @param vector
+	 * @param startPoint
+	 */
 	private void calculateIntegerVector(ArrayList<Double> vector, int[] startPoint) {
 		final Double zero = new Double(0);
 		double l = 0;
@@ -379,7 +394,17 @@ public class RayTracer implements PlugIn {
 		IJ.log("collisionPoints has size = "+collisionPoints.size());
 	}
 
-
+	/**
+	 * Check whether a coordinate (x, y, z) is outside the 
+	 * image stack
+	 * @param x
+	 * @param y
+	 * @param z
+	 * @param w
+	 * @param h
+	 * @param d
+	 * @return true if (x, y, z) is out of image bounds
+	 */
 	private boolean isOutOfBounds(final int x, final int y, final int z, 
 		final int w, final int h, final int d) {
 		
@@ -389,8 +414,10 @@ public class RayTracer implements PlugIn {
 
 	/**
 	 * Check whether the given point is background
-	 * @param pixels
-	 * @param startPoint
+	 * @param pixels image pixel data
+	 * @param x x-coordinate of the test point
+	 * @param y y-coordinate of the test point
+	 * @param z z-coordinate of the test point
 	 * @return true if the point is background
 	 */
 	private boolean isBackground(ByteProcessor[] pixels,
@@ -399,7 +426,11 @@ public class RayTracer implements PlugIn {
 		return pixels[z].get(x, y) == 0;
 	}
 
-
+	/**
+	 * Check whether an integer is a power of 2 (2<sup>n</sup>)
+	 * @param number
+	 * @return true if number is an integer power of 2 
+	 */
 	private static boolean isPowerOfTwo(final int number) {
     return number > 0 && ((number & (number - 1)) == 0);
   }
