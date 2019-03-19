@@ -402,7 +402,8 @@ public class RayTracer implements PlugIn {
 			if (isBackground(pixels, x, y, z)) {
 				iterator.remove();
 				collisionPoints.add(new ArrayList<Integer>(Arrays.asList(x, y, z)));
-				IJ.log("Added a collision point at ("+x+", "+y+", "+z+")");
+				if (IJ.debugMode)
+					IJ.log("Added a collision point at ("+x+", "+y+", "+z+")");
 			}
 		}
 		if (IJ.debugMode) {
