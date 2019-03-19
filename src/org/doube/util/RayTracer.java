@@ -1,5 +1,7 @@
 package org.doube.util;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -31,7 +33,7 @@ public class RayTracer implements PlugIn {
 		for (int[] point : collisionPoints) {
 			IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
 		}
-		
+		IJ.log("Finished RayTracer");
 	}
 	
 	
@@ -64,10 +66,10 @@ public class RayTracer implements PlugIn {
 		//stores the list of live sampling ray vectors and their current locations
 		//each with the three centre coordinates followed by the three vector elements
 		//and three elements giving the face identity
-		HashSet<double[]> integerVectors = new HashSet<double[]>();
+		HashSet<ArrayList<Double>> integerVectors = new HashSet<ArrayList<Double>>();
 		
 		//stores the list of collision points
-		HashSet<int[]> collisionPoints = new HashSet<int[]>();
+		HashSet<ArrayList<Integer>> collisionPoints = new HashSet<ArrayList<Integer>>();
 
 		//initial vectors
 		for (int z = -1; z <= 1; z++) {
@@ -75,13 +77,19 @@ public class RayTracer implements PlugIn {
 				for (int x = -1; x <= 1; x++) {
 					if (x == 0 && y == 0 && z == 0)
 						continue;
+
 					final int xc = sX + x;
 					final int yc = sY + y;
 					final int zc = sZ + z;
 					
+					IJ.log("Set initial ray at ("+xc+", "+yc+", "+zc+", "+x+", "+y+", "+z+", "+x+", "+y+", "+z+")");
+					
 					//last three coordinates are the parent face/edge/corner for later incrementing purposes
 					//can determine which face (i.e. +- x, y, or z) or whether a face
-					final double[] vector = new double[] {xc, yc, zc, x, y, z, x, y, z};
+					ArrayList<Double> vector = new ArrayList<Double>(Arrays.asList(
+						(double) xc, (double)yc, (double)zc, (double)x, (double)y,
+						(double)z, (double)x, (double)y, (double)z));
+					
 					integerVectors.add(vector);
 				}
 			}
@@ -91,17 +99,30 @@ public class RayTracer implements PlugIn {
 		
 		//loop until all the rays are killed by collisions
 		while (integerVectors.size() > 0) {
+			IJ.log("entering iteration number "+i);
+			
+			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
+			
 			if (isPowerOfTwo(i))
 	       integerVectors = spawn(integerVectors, startPoint);
-		  
-			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
 	    
 			i++;
 			
 			integerVectors = incrementVectors(integerVectors);
 		}
 		
-	  return collisionPoints.toArray(new int[collisionPoints.size()][3]);
+		final int nPoints = collisionPoints.size();
+		int[][] result = new int[nPoints][3];
+		
+		Iterator<ArrayList<Integer>> iterator = collisionPoints.iterator();
+		for (int j = 0; j < nPoints; j++) {
+			ArrayList<Integer> list = iterator.next();
+			for (int k = 0; k < 3; k++) {
+				result[j][k] = list.get(k);
+			}
+		}
+
+	  return result;
 	}
 	
 /**
@@ -110,18 +131,18 @@ public class RayTracer implements PlugIn {
  * @param integerVectors
  * @return updated list of vectors
  */
-	private HashSet<double[]> incrementVectors(HashSet<double[]> integerVectors) {
+	private HashSet<ArrayList<Double>> incrementVectors(HashSet<ArrayList<Double>> integerVectors) {
 		
-		HashSet<double[]> nextPosition = new HashSet<double[]>();
+		HashSet<ArrayList<Double>> nextPosition = new HashSet<ArrayList<Double>>();
 		
-		Iterator<double[]> iterator = integerVectors.iterator();
+		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
-			double[] vector = iterator.next();
+			ArrayList<Double> vector = iterator.next();
 			
 			//set current position to integer vector plus last position
-			vector[0] += vector[3];
-			vector[1] += vector[4];
-			vector[2] += vector[5];
+			vector.set(0, vector.get(0) + vector.get(3));
+			vector.set(1, vector.get(1) + vector.get(4));
+			vector.set(2, vector.get(2) + vector.get(5));
 			
 			nextPosition.add(vector);
 		}
@@ -137,75 +158,73 @@ public class RayTracer implements PlugIn {
 	 * @param parentVectors
 	 * @return 
 	 */
-	private HashSet<double[]> spawn(HashSet<double[]> parentVectors, int[] startPoint) {
+	private HashSet<ArrayList<Double>> spawn(HashSet<ArrayList<Double>> parentVectors, int[] startPoint) {
 		
-		HashSet<double[]> childVectors = new HashSet<double[]>();
+		IJ.log("Spawning");
+		IJ.log("parentVectors has size = "+parentVectors.size());
 		
-		Iterator<double[]> iterator = parentVectors.iterator();
+		HashSet<ArrayList<Double>> childVectors = new HashSet<ArrayList<Double>>();
+		
+		Iterator<ArrayList<Double>> iterator = parentVectors.iterator();
 		while (iterator.hasNext()) {
-			double[] vector = iterator.next();
+			ArrayList<Double> vector = iterator.next();
+			final Double zero = new Double(0);
 			
 			//trim any imprecision to set ray to pixel grid
-			vector[0] = Math.round(vector[0]);
-			vector[1] = Math.round(vector[1]);
-			vector[2] = Math.round(vector[2]);
+			vector.set(0, (double) Math.round(vector.get(0)));
+			vector.set(1, (double) Math.round(vector.get(1)));
+			vector.set(2, (double) Math.round(vector.get(2)));
 			childVectors.add(vector);
 			
 			//create 4 child vectors as clones of the parent
-			double[] child0 = vector.clone();
-			double[] child1 = vector.clone();
-			double[] child2 = vector.clone();
-			double[] child3 = vector.clone();
+			ArrayList<Double> child0 = (ArrayList<Double>) vector.clone();
+			ArrayList<Double> child1 = (ArrayList<Double>) vector.clone();
+			ArrayList<Double> child2 = (ArrayList<Double>) vector.clone();
+			ArrayList<Double> child3 = (ArrayList<Double>) vector.clone();
 			
 			//get the directions to +- 0.5
 			//if statement includes only faces
 			//edges and corners are excluded
 			//+- 0.5 in x & y
-			if (vector[6] == 0 && vector[7] == 0) {
-				child0[0] += 0.5;
-				child1[0] -= 0.5;
-				child2[1] += 0.5;
-				child3[1] -= 0.5;
+			if (vector.get(6).equals(zero) && vector.get(7).equals(zero)) {
+				child0.set(0, child0.get(0) + 0.5);
+				child1.set(0, child1.get(0) - 0.5);
+				child2.set(1, child2.get(1) + 0.5);
+				child3.set(1, child3.get(1) - 0.5);
 			}
 			//+- 0.5 in x & z
-			else if (vector[6] == 0 && vector[8] == 0) {
-				child0[0] += 0.5;
-				child1[0] -= 0.5;
-				child2[2] += 0.5;
-				child3[2] -= 0.5;
+			else if (vector.get(6).equals(zero) && vector.get(8).equals(zero)) {
+				child0.set(0, child0.get(0) + 0.5);
+				child1.set(0, child1.get(0) - 0.5);
+				child2.set(2, child2.get(2) + 0.5);
+				child3.set(2, child3.get(2) - 0.5);
 			}
 			//+- 0.5 in y and z
-			else if (vector[7] == 0 && vector[8] == 0) {
-				child0[1] += 0.5;
-				child1[1] -= 0.5;
-				child2[2] += 0.5;
-				child3[2] -= 0.5;
+			else if (vector.get(7).equals(zero) && vector.get(8).equals(zero)) {
+				child0.set(1, child0.get(1) + 0.5);
+				child1.set(1, child1.get(1) - 0.5);
+				child2.set(2, child2.get(2) + 0.5);
+				child3.set(2, child3.get(3) - 0.5);
 			}
 			//handle edges
 			else if (isEdge(vector)) {
-				if (vector[6] == 0) {
-					//spawn along the edge
-					child0[0] += 0.5;
-					child1[0] -= 0.5;
-					//spawn across faces
-					child2[1] -= vector[7] * 0.5;
-					child3[2] -= vector[8] * 0.5;
+				if (vector.get(6).equals(zero)) {
+					child0.set(0, child0.get(0) + 0.5);
+					child1.set(0, child1.get(0) - 0.5);
+					child2.set(1, child2.get(1) - vector.get(7) * 0.5);
+					child3.set(2, child3.get(2) - vector.get(8) * 0.5);					
 				}
-				else if (vector[7] == 0) {
-				  //spawn along the edge
-					child0[1] += 0.5;
-					child1[1] -= 0.5;
-					//spawn across faces
-					child2[0] -= vector[6] * 0.5;
-					child3[2] -= vector[8] * 0.5;
+				else if (vector.get(7).equals(zero)) {
+					child0.set(1, child0.get(1) + 0.5);
+					child1.set(1, child1.get(1) - 0.5);
+					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
+					child3.set(2, child3.get(2) - vector.get(8) * 0.5);
 				}
-				else if (vector[8] == 0) {
-				  //spawn along the edge
-					child0[2] += 0.5;
-					child1[2] -= 0.5;
-					//spawn across faces
-					child2[0] -= vector[6] * 0.5;
-					child3[1] -= vector[7] * 0.5;
+				else if (vector.get(8).equals(zero)) {
+					child0.set(2, child0.get(2) + 0.5);
+					child1.set(2, child1.get(2) - 0.5);
+					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
+					child3.set(1, child3.get(1) - vector.get(7) * 0.5);
 				}
 			}
 
@@ -222,6 +241,7 @@ public class RayTracer implements PlugIn {
 			
 		}
 		
+		IJ.log("childVectors has size = "+childVectors.size());
 		return childVectors;
 	}
 
@@ -234,39 +254,39 @@ public class RayTracer implements PlugIn {
 	 * @param vector
 	 * @return
 	 */
-	private boolean isEdge(double[] vector) {
+	private boolean isEdge(ArrayList<Double> vector) {
 		int sum = 0;
 		for (int i = 6; i < 9; i++)
-			if (vector[i] == 0)
+			if (Double.compare(vector.get(i), 0) == 0)
 				sum++;
 		
 		return sum == 1;
 	}
 
 
-	private void calculateIntegerVector(double[] vector, int[] startPoint) {
-
+	private void calculateIntegerVector(ArrayList<Double> vector, int[] startPoint) {
+		final Double zero = new Double(0);
 		double l = 0;
 		//in x & y plane, normal is z
-		if (vector[6] == 0 && vector[7] == 0) {
-			l = vector[2];
+		if (vector.get(6).equals(zero) && vector.get(7).equals(zero)) {
+			l = vector.get(2);
 		}
 		//in x & z plane, normal is y
-		else if (vector[6] == 0 && vector[8] == 0) {
-			l = vector[1];
+		else if (vector.get(6).equals(zero) && vector.get(8).equals(zero)) {
+			l = vector.get(1);
 		}
 		//in y and z plane, normal is x
-		else if (vector[7] == 0 && vector[8] == 0) {
-			l = vector[0];
+		else if (vector.get(7).equals(zero) && vector.get(8).equals(zero)) {
+			l = vector.get(0);
 		}
 		//x component
-		vector[3] = (vector[0] - startPoint[0])/l;
+		vector.set(3, (vector.get(0) - startPoint[0])/l);
 		
 		//y component
-		vector[4] = (vector[1] - startPoint[1])/l;
+		vector.set(4, (vector.get(1) - startPoint[1])/l);
 		
 		//z component
-		vector[5] = (vector[2] - startPoint[2])/l;
+		vector.set(5, (vector.get(2) - startPoint[2])/l);
 	}
 
 
@@ -281,16 +301,19 @@ public class RayTracer implements PlugIn {
 	 * @param integerVectors
 	 * @param collisionPoints
 	 */
-	private void checkRaysForCollisions(ByteProcessor[] pixels, HashSet<double[]> integerVectors,
-		HashSet<int[]> collisionPoints, final int w, final int h, final int d)
+	private void checkRaysForCollisions(ByteProcessor[] pixels, HashSet<ArrayList<Double>> integerVectors,
+		HashSet<ArrayList<Integer>> collisionPoints, final int w, final int h, final int d)
 	{
-		Iterator<double[]> iterator = integerVectors.iterator();
+		IJ.log("Checking rays for collisions");
+		IJ.log("integerVectors has size = "+integerVectors.size());
+		IJ.log("collisionPoints has size = "+collisionPoints.size());
+		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
-			double[] vector = iterator.next();
+			ArrayList<Double> vector = iterator.next();
 			//floor double values to snap to pixel grid
-			final int x = (int) Math.floor(vector[0]);
-			final int y = (int) Math.floor(vector[1]);
-			final int z = (int) Math.floor(vector[2]);
+			final int x = (int) Math.floor(vector.get(0));
+			final int y = (int) Math.floor(vector.get(1));
+			final int z = (int) Math.floor(vector.get(2));
 
 			if (isOutOfBounds(x, y, z, w, h, d)) {
 				iterator.remove();
@@ -298,9 +321,13 @@ public class RayTracer implements PlugIn {
 			}
 			if (isBackground(pixels, x, y, z)) {
 				iterator.remove();
-				collisionPoints.add(new int[] {x, y, z});
+				collisionPoints.add(new ArrayList<Integer>(Arrays.asList(x, y, z)));
+				IJ.log("Added a collision point at ("+x+", "+y+", "+z+")");
 			}
 		}
+		IJ.log("Finished checking rays for collisions");
+		IJ.log("integerVectors has size = "+integerVectors.size());
+		IJ.log("collisionPoints has size = "+collisionPoints.size());
 	}
 
 
