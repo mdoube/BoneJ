@@ -35,7 +35,7 @@ public class RayTracer implements PlugIn {
 		for (int[] point : collisionPoints) {
 			IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
 		}
-		IJ.log("Finished RayTracer in "+(endTime - startTime)/1000.0+" ms");
+		IJ.log("Finished RayTracer in "+(endTime - startTime)/1000000.0+" ms");
 	}
 	
 	/**
