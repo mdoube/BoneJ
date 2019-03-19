@@ -418,10 +418,10 @@ public class RayTracer implements PlugIn {
 		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
-			//floor double values to snap to pixel grid
-			final int x = (int) Math.floor(vector.get(0));
-			final int y = (int) Math.floor(vector.get(1));
-			final int z = (int) Math.floor(vector.get(2));
+			//round double values to snap to pixel grid
+			final int x = (int) Math.round(vector.get(0));
+			final int y = (int) Math.round(vector.get(1));
+			final int z = (int) Math.round(vector.get(2));
 
 			if (isOutOfBounds(x, y, z, w, h, d)) {
 				iterator.remove();
