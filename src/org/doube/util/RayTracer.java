@@ -32,10 +32,28 @@ public class RayTracer implements PlugIn {
 		final long endTime = System.nanoTime();
 		
 		IJ.log("Found "+collisionPoints.length+" collision points");
-		for (int[] point : collisionPoints) {
-			IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
+		if (IJ.debugMode) {
+		 for (int[] point : collisionPoints) {
+		  	IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
+		 }
 		}
 		IJ.log("Finished RayTracer in "+(endTime - startTime)/1000000.0+" ms");
+		
+		ByteProcessor[] bytes = new ByteProcessor[d];
+		ImageStack stack = new ImageStack(w, h, d);
+		
+		for (int i = 0; i < d; i++)
+			bytes[i] = new ByteProcessor(w, h);
+		
+		for (int[] point : collisionPoints)
+			bytes[point[2]].set(point[0], point[1], 255);
+		
+		for (int i = 0; i < d; i++)
+			stack.setProcessor(bytes[i], i+1);
+
+		ImagePlus impOut = new ImagePlus(imp.getTitle()+"_Collision_Points", stack);
+		impOut.show();
+		
 	}
 	
 	/**
@@ -133,7 +151,8 @@ public class RayTracer implements PlugIn {
 				result[j][k] = list.get(k);
 			}
 		}
-
+		
+		IJ.log("Finished finding collision points after "+i+" iterations");
 	  return result;
 	}
 	
