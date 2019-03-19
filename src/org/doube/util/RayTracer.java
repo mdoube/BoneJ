@@ -138,11 +138,16 @@ public class RayTracer implements PlugIn {
 		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
-			
+			String from = vector.toString();
+					
 			//set current position to integer vector plus last position
 			vector.set(0, vector.get(0) + vector.get(3));
 			vector.set(1, vector.get(1) + vector.get(4));
 			vector.set(2, vector.get(2) + vector.get(5));
+			
+			String to = vector.toString();
+			
+			IJ.log("Vector incremented from "+from+" to "+ to);
 			
 			nextPosition.add(vector);
 		}
@@ -158,6 +163,7 @@ public class RayTracer implements PlugIn {
 	 * @param parentVectors
 	 * @return 
 	 */
+	@SuppressWarnings("unchecked")
 	private HashSet<ArrayList<Double>> spawn(HashSet<ArrayList<Double>> parentVectors, int[] startPoint) {
 		
 		IJ.log("Spawning");
@@ -168,13 +174,19 @@ public class RayTracer implements PlugIn {
 		Iterator<ArrayList<Double>> iterator = parentVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
+			
+			if (isCorner(vector))
+				continue;
+			
 			final Double zero = new Double(0);
+			IJ.log("Parent vector is "+vector.toString());
 			
 			//trim any imprecision to set ray to pixel grid
 			vector.set(0, (double) Math.round(vector.get(0)));
 			vector.set(1, (double) Math.round(vector.get(1)));
 			vector.set(2, (double) Math.round(vector.get(2)));
 			childVectors.add(vector);
+			IJ.log("Rounded vector is "+vector.toString());
 			
 			//create 4 child vectors as clones of the parent
 			ArrayList<Double> child0 = (ArrayList<Double>) vector.clone();
@@ -204,10 +216,11 @@ public class RayTracer implements PlugIn {
 				child0.set(1, child0.get(1) + 0.5);
 				child1.set(1, child1.get(1) - 0.5);
 				child2.set(2, child2.get(2) + 0.5);
-				child3.set(2, child3.get(3) - 0.5);
+				child3.set(2, child3.get(2) - 0.5);
 			}
 			//handle edges
 			else if (isEdge(vector)) {
+				IJ.log("Is edge");
 				if (vector.get(6).equals(zero)) {
 					child0.set(0, child0.get(0) + 0.5);
 					child1.set(0, child1.get(0) - 0.5);
@@ -239,11 +252,16 @@ public class RayTracer implements PlugIn {
 			childVectors.add(child2);
 			childVectors.add(child3);
 			
+			IJ.log("   |----- child0 vector is "+child0.toString());
+			IJ.log("   |----- child1 vector is "+child1.toString());
+			IJ.log("   |----- child2 vector is "+child2.toString());
+			IJ.log("   |----- child3 vector is "+child3.toString());
 		}
 		
 		IJ.log("childVectors has size = "+childVectors.size());
 		return childVectors;
 	}
+
 
 	/**
 	 * Determine whether a vector is an edge
@@ -263,22 +281,53 @@ public class RayTracer implements PlugIn {
 		return sum == 1;
 	}
 
+	/**
+	 * Determine whether a vector is a corner
+	 * Corners have zero 0 and three +-1
+ 
+	 * @param vector
+	 * @return
+	 */
+	private boolean isCorner(ArrayList<Double> vector) {
+		int sum = 0;
+		for (int i = 6; i < 9; i++)
+			if (Double.compare(vector.get(i), 0) == 0)
+				sum++;
+		
+		return sum == 0;
+	}
 
 	private void calculateIntegerVector(ArrayList<Double> vector, int[] startPoint) {
 		final Double zero = new Double(0);
 		double l = 0;
 		//in x & y plane, normal is z
 		if (vector.get(6).equals(zero) && vector.get(7).equals(zero)) {
-			l = vector.get(2);
+			l = vector.get(2) - startPoint[2];
 		}
 		//in x & z plane, normal is y
 		else if (vector.get(6).equals(zero) && vector.get(8).equals(zero)) {
-			l = vector.get(1);
+			l = vector.get(1) - startPoint[1];
 		}
 		//in y and z plane, normal is x
 		else if (vector.get(7).equals(zero) && vector.get(8).equals(zero)) {
-			l = vector.get(0);
+			l = vector.get(0) - startPoint[0];
 		}
+		//handle edges
+		else if (isEdge(vector)) {
+			//edge is parallel to x
+			if (vector.get(6).equals(zero)) {
+				l = vector.get(2) - startPoint[2];
+			}
+			//edge is parallel to y
+			else if (vector.get(7).equals(zero)) {
+				l = vector.get(0) - startPoint[0];
+			}
+			//edge is parallel to z
+			else if (vector.get(8).equals(zero)) {
+				l = vector.get(0) - startPoint[0];
+			}
+		}
+		l = Math.abs(l);
 		//x component
 		vector.set(3, (vector.get(0) - startPoint[0])/l);
 		
