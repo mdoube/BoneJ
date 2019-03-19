@@ -27,13 +27,15 @@ public class RayTracer implements PlugIn {
 		final int sY = (int)Math.round(h / 2.0);
 		final int sZ = (int)Math.round(d / 2.0);
 		
+		final long startTime = System.nanoTime();
 		int[][] collisionPoints = findCollisionPoints(imp, new int[]{sX,sY,sZ});
+		final long endTime = System.nanoTime();
 		
 		IJ.log("Found "+collisionPoints.length+" collision points");
 		for (int[] point : collisionPoints) {
 			IJ.log("Collision point found at ("+point[0]+", "+point[1]+", "+point[2]+")");
 		}
-		IJ.log("Finished RayTracer");
+		IJ.log("Finished RayTracer in "+(endTime - startTime)/1000.0+" ms");
 	}
 	
 	/**
@@ -90,7 +92,8 @@ public class RayTracer implements PlugIn {
 					final int yc = sY + y;
 					final int zc = sZ + z;
 					
-					IJ.log("Set initial ray at ("+xc+", "+yc+", "+zc+", "+x+", "+y+", "+z+", "+x+", "+y+", "+z+")");
+					if (IJ.debugMode)
+						IJ.log("Set initial ray at ("+xc+", "+yc+", "+zc+", "+x+", "+y+", "+z+", "+x+", "+y+", "+z+")");
 					
 					//last three coordinates are the parent face/edge/corner for later incrementing purposes
 					//can determine which face (i.e. +- x, y, or z) or whether a face
@@ -107,7 +110,8 @@ public class RayTracer implements PlugIn {
 		
 		//loop until all the rays are killed by collisions
 		while (integerVectors.size() > 0) {
-			IJ.log("entering iteration number "+i);
+			if (IJ.debugMode)
+				IJ.log("entering iteration number "+i);
 			
 			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
 			
@@ -154,8 +158,8 @@ public class RayTracer implements PlugIn {
 			vector.set(2, vector.get(2) + vector.get(5));
 			
 			String to = vector.toString();
-			
-			IJ.log("Vector incremented from "+from+" to "+ to);
+			if (IJ.debugMode)
+			 IJ.log("Vector incremented from "+from+" to "+ to);
 			
 			nextPosition.add(vector);
 		}
@@ -174,9 +178,11 @@ public class RayTracer implements PlugIn {
 	@SuppressWarnings("unchecked")
 	private HashSet<ArrayList<Double>> spawn(HashSet<ArrayList<Double>> parentVectors, int[] startPoint) {
 		
-		IJ.log("Spawning");
-		IJ.log("parentVectors has size = "+parentVectors.size());
-		
+		if (IJ.debugMode) {
+			IJ.log("Spawning");
+			IJ.log("parentVectors has size = "+parentVectors.size());
+		}
+			
 		HashSet<ArrayList<Double>> childVectors = new HashSet<ArrayList<Double>>();
 		
 		Iterator<ArrayList<Double>> iterator = parentVectors.iterator();
@@ -187,14 +193,18 @@ public class RayTracer implements PlugIn {
 				continue;
 			
 			final Double zero = new Double(0);
-			IJ.log("Parent vector is "+vector.toString());
 			
+			if (IJ.debugMode) {
+				IJ.log("Parent vector is "+vector.toString());
+			}
 			//trim any imprecision to set ray to pixel grid
 			vector.set(0, (double) Math.round(vector.get(0)));
 			vector.set(1, (double) Math.round(vector.get(1)));
 			vector.set(2, (double) Math.round(vector.get(2)));
 			childVectors.add(vector);
-			IJ.log("Rounded vector is "+vector.toString());
+			
+			if (IJ.debugMode)
+				IJ.log("Rounded vector is "+vector.toString());
 			
 			//create 4 child vectors as clones of the parent
 			ArrayList<Double> child0 = (ArrayList<Double>) vector.clone();
@@ -228,7 +238,8 @@ public class RayTracer implements PlugIn {
 			}
 			//handle edges
 			else if (isEdge(vector)) {
-				IJ.log("Is edge");
+				if (IJ.debugMode)
+					IJ.log("Is edge");
 				if (vector.get(6).equals(zero)) {
 					child0.set(0, child0.get(0) + 0.5);
 					child1.set(0, child1.get(0) - 0.5);
@@ -260,13 +271,16 @@ public class RayTracer implements PlugIn {
 			childVectors.add(child2);
 			childVectors.add(child3);
 			
-			IJ.log("   |----- child0 vector is "+child0.toString());
-			IJ.log("   |----- child1 vector is "+child1.toString());
-			IJ.log("   |----- child2 vector is "+child2.toString());
-			IJ.log("   |----- child3 vector is "+child3.toString());
+			if (IJ.debugMode) {
+				IJ.log("   |----- child0 vector is "+child0.toString());
+				IJ.log("   |----- child1 vector is "+child1.toString());
+				IJ.log("   |----- child2 vector is "+child2.toString());
+				IJ.log("   |----- child3 vector is "+child3.toString());
+			}
 		}
 		
-		IJ.log("childVectors has size = "+childVectors.size());
+		if (IJ.debugMode)
+			IJ.log("childVectors has size = "+childVectors.size());
 		return childVectors;
 	}
 
@@ -368,9 +382,11 @@ public class RayTracer implements PlugIn {
 	private void checkRaysForCollisions(ByteProcessor[] pixels, HashSet<ArrayList<Double>> integerVectors,
 		HashSet<ArrayList<Integer>> collisionPoints, final int w, final int h, final int d)
 	{
-		IJ.log("Checking rays for collisions");
-		IJ.log("integerVectors has size = "+integerVectors.size());
-		IJ.log("collisionPoints has size = "+collisionPoints.size());
+		if (IJ.debugMode) {
+		 IJ.log("Checking rays for collisions");
+		 IJ.log("integerVectors has size = "+integerVectors.size());
+		 IJ.log("collisionPoints has size = "+collisionPoints.size());
+		}
 		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
@@ -389,9 +405,11 @@ public class RayTracer implements PlugIn {
 				IJ.log("Added a collision point at ("+x+", "+y+", "+z+")");
 			}
 		}
-		IJ.log("Finished checking rays for collisions");
-		IJ.log("integerVectors has size = "+integerVectors.size());
-		IJ.log("collisionPoints has size = "+collisionPoints.size());
+		if (IJ.debugMode) {
+			IJ.log("Finished checking rays for collisions");
+			IJ.log("integerVectors has size = "+integerVectors.size());
+			IJ.log("collisionPoints has size = "+collisionPoints.size());
+		}
 	}
 
 	/**
