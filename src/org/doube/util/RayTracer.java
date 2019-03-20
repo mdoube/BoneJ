@@ -131,14 +131,14 @@ public class RayTracer implements PlugIn {
 			if (IJ.debugMode)
 				IJ.log("entering iteration number "+i);
 			
-			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
-			
 			if (isPowerOfTwo(i))
 	       integerVectors = spawn(integerVectors, startPoint);
-	    
-			i++;
 			
+			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
+	    
 			integerVectors = incrementVectors(integerVectors);
+			
+			i++;
 		}
 		
 		final int nPoints = collisionPoints.size();
@@ -164,23 +164,36 @@ public class RayTracer implements PlugIn {
  */
 	private HashSet<ArrayList<Double>> incrementVectors(HashSet<ArrayList<Double>> integerVectors) {
 		
-		HashSet<ArrayList<Double>> nextPosition = new HashSet<ArrayList<Double>>();
-		
+		HashSet<ArrayList<Double>> nextPosition = new HashSet<ArrayList<Double>>(integerVectors.size());
+		ArrayList<Double> vector = new ArrayList<Double>(9);
+				
 		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
-			ArrayList<Double> vector = iterator.next();
-			String from = vector.toString();
-					
+			vector = iterator.next();
+			
+			//current location
+			final Double x = vector.get(0);
+			final Double y = vector.get(1);
+			final Double z = vector.get(2);
+			//vector
+			final Double dx = vector.get(3);
+			final Double dy = vector.get(4);
+			final Double dz = vector.get(5);
+			//type (face, edge, corner)
+			final Double px = vector.get(6);
+			final Double py = vector.get(7);
+			final Double pz = vector.get(8);
+
 			//set current position to integer vector plus last position
-			vector.set(0, vector.get(0) + vector.get(3));
-			vector.set(1, vector.get(1) + vector.get(4));
-			vector.set(2, vector.get(2) + vector.get(5));
-			
-			String to = vector.toString();
+			final ArrayList<Double> shiftedVector = new ArrayList<Double>(
+					Arrays.asList( x + dx, y + dy, z + dz, dx, dy, dz, px, py, pz )
+						);
+				
 			if (IJ.debugMode)
-			 IJ.log("Vector incremented from "+from+" to "+ to);
+			 IJ.log("Vector incremented from "+vector.toString()+
+				 " to "+shiftedVector.toString());
 			
-			nextPosition.add(vector);
+			nextPosition.add(shiftedVector);
 		}
 
 		return nextPosition;
