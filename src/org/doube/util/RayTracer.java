@@ -210,15 +210,11 @@ public class RayTracer implements PlugIn {
 		}
 			
 		HashSet<ArrayList<Double>> childVectors = new HashSet<ArrayList<Double>>();
+		final Double zero = new Double(0);
 		
 		Iterator<ArrayList<Double>> iterator = parentVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
-			
-			if (isCorner(vector))
-				continue;
-			
-			final Double zero = new Double(0);
 			
 			if (IJ.debugMode) {
 				IJ.log("Parent vector is "+vector.toString());
@@ -274,25 +270,27 @@ public class RayTracer implements PlugIn {
 					child2.set(1, child2.get(1) - vector.get(7) * 0.5);
 					child3.set(2, child3.get(2) - vector.get(8) * 0.5);
 					//set vector type to face
-					child2.set(7, 0.0);
-					child3.set(8, 0.0);
+					child2.set(7, zero);
+					child3.set(8, zero);
 				}
 				else if (vector.get(7).equals(zero)) {
 					child0.set(1, child0.get(1) + 0.5);
 					child1.set(1, child1.get(1) - 0.5);
 					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
 					child3.set(2, child3.get(2) - vector.get(8) * 0.5);
-					child2.set(6, 0.0);
-					child3.set(8, 0.0);
+					child2.set(6, zero);
+					child3.set(8, zero);
 				}
 				else if (vector.get(8).equals(zero)) {
 					child0.set(2, child0.get(2) + 0.5);
 					child1.set(2, child1.get(2) - 0.5);
 					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
 					child3.set(1, child3.get(1) - vector.get(7) * 0.5);
-					child2.set(6, 0.0);
-					child3.set(7, 0.0);
+					child2.set(6, zero);
+					child3.set(7, zero);
 				}
+				else if (isCorner(vector))
+					continue;
 			}
 
 			calculateIntegerVector(child0, startPoint);
