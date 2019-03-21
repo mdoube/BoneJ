@@ -134,7 +134,7 @@ public class RayTracer implements PlugIn {
 			if (isPowerOfTwo(i))
 	       integerVectors = spawn(integerVectors, startPoint);
 			
-			checkRaysForCollisions(pixels, integerVectors, collisionPoints, w, h, d);
+			checkRaysForCollisions(pixels, startPoint, integerVectors, collisionPoints, w, h, d);
 	    
 			integerVectors = incrementVectors(integerVectors);
 			
@@ -319,6 +319,22 @@ public class RayTracer implements PlugIn {
 
 
 	/**
+	 * Determine whether a vector is a face. 
+	 * Faces have two 0 and one +-1 
+	 * 
+	 * @param vector
+	 * @return true if this vector is a face ray
+	 */
+	private boolean isFace(ArrayList<Double> vector) {
+		int sum = 0;
+		for (int i = 6; i < 9; i++)
+			if (Double.compare(vector.get(i), 0) == 0)
+				sum++;
+		
+		return sum == 2;
+	}
+	
+	/**
 	 * Determine whether a vector is an edge
 	 * Edges have one 0 and two +-1
 	 * 
@@ -412,14 +428,16 @@ public class RayTracer implements PlugIn {
 	 * @param integerVectors
 	 * @param collisionPoints
 	 */
-	private void checkRaysForCollisions(ByteProcessor[] pixels, HashSet<ArrayList<Double>> integerVectors,
-		HashSet<ArrayList<Integer>> collisionPoints, final int w, final int h, final int d)
+	private void checkRaysForCollisions(ByteProcessor[] pixels, int[] startPoint, 
+		HashSet<ArrayList<Double>> integerVectors, HashSet<ArrayList<Integer>> collisionPoints,
+		final int w, final int h, final int d)
 	{
 		if (IJ.debugMode) {
 		 IJ.log("Checking rays for collisions");
 		 IJ.log("integerVectors has size = "+integerVectors.size());
 		 IJ.log("collisionPoints has size = "+collisionPoints.size());
 		}
+		HashSet<ArrayList<Double>> rebornVectors = new HashSet<ArrayList<Double>>();
 		Iterator<ArrayList<Double>> iterator = integerVectors.iterator();
 		while (iterator.hasNext()) {
 			ArrayList<Double> vector = iterator.next();
@@ -434,11 +452,31 @@ public class RayTracer implements PlugIn {
 			}
 			if (isBackground(pixels, x, y, z)) {
 				iterator.remove();
+				//TODO spawn once, keeping only children that are not background?
+				//this will increase density around collision planes perpendicular to 
+				//the sampling plane
+				if (isFace(vector)) {
+					for (int i = 0; i < 3; i++) {
+						if (Double.compare(vector.get(i + 6), 0) == 0) {
+							vector.set(i, vector.get(i) - vector.get(i + 3));
+						}
+					}
+					final int xc = (int) Math.round(vector.get(0));
+					final int yc = (int) Math.round(vector.get(1));
+					final int zc = (int) Math.round(vector.get(2));
+					if (!isBackground(pixels, xc, yc, zc)) {
+						calculateIntegerVector(vector, startPoint);
+						rebornVectors.add(vector);
+					} else
+						collisionPoints.add(new ArrayList<Integer>(Arrays.asList(xc, yc, zc)));
+				}
 				collisionPoints.add(new ArrayList<Integer>(Arrays.asList(x, y, z)));
 				if (IJ.debugMode)
 					IJ.log("Added a collision point at ("+x+", "+y+", "+z+")");
 			}
 		}
+		integerVectors.addAll(rebornVectors);
+		
 		if (IJ.debugMode) {
 			IJ.log("Finished checking rays for collisions");
 			IJ.log("integerVectors has size = "+integerVectors.size());
