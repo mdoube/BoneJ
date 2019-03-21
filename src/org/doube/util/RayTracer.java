@@ -94,10 +94,10 @@ public class RayTracer implements PlugIn {
 		//stores the list of live sampling ray vectors and their current locations
 		//each with the three centre coordinates followed by the three vector elements
 		//and three elements giving the face identity
-		HashSet<ArrayList<Double>> integerVectors = new HashSet<ArrayList<Double>>();
+		HashSet<ArrayList<Double>> integerVectors = new HashSet<ArrayList<Double>>(10000);
 		
 		//stores the list of collision points
-		HashSet<ArrayList<Integer>> collisionPoints = new HashSet<ArrayList<Integer>>();
+		HashSet<ArrayList<Integer>> collisionPoints = new HashSet<ArrayList<Integer>>(10000);
 
 		//initial vectors
 		for (int z = -1; z <= 1; z++) {
@@ -279,8 +279,6 @@ public class RayTracer implements PlugIn {
 					//set vector type to face
 					child2.set(7, zero);
 					child3.set(8, zero);
-					child4.set(7, zero);
-					child5.set(8, zero);
 				}
 				else if (vector.get(7).equals(zero)) {
 					child0.set(1, child0.get(1) + 0.5);
@@ -291,8 +289,6 @@ public class RayTracer implements PlugIn {
 					child5.set(2, child5.get(2) + vector.get(8) * 0.5);					
 					child2.set(6, zero);
 					child3.set(8, zero);
-					child4.set(6, zero);
-					child5.set(8, zero);
 				}
 				else if (vector.get(8).equals(zero)) {
 					child0.set(2, child0.get(2) + 0.5);
@@ -303,8 +299,6 @@ public class RayTracer implements PlugIn {
 					child5.set(1, child5.get(1) + vector.get(7) * 0.5);					
 					child2.set(6, zero);
 					child3.set(7, zero);
-					child4.set(6, zero);
-					child5.set(7, zero);
 				}
 				else if (isCorner(vector))
 					continue;
