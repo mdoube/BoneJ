@@ -262,6 +262,10 @@ public class RayTracer implements PlugIn {
 			else if (isEdge(vector)) {
 				if (IJ.debugMode)
 					IJ.log("Is edge");
+				
+				ArrayList<Double> child4 = (ArrayList<Double>) vector.clone();
+				ArrayList<Double> child5 = (ArrayList<Double>) vector.clone();
+				
 				if (vector.get(6).equals(zero)) {
 					//spawn along edge
 					child0.set(0, child0.get(0) + 0.5);
@@ -269,28 +273,46 @@ public class RayTracer implements PlugIn {
 					//spawn onto face
 					child2.set(1, child2.get(1) - vector.get(7) * 0.5);
 					child3.set(2, child3.get(2) - vector.get(8) * 0.5);
+					//spawn off sample cube, in face plane
+					child4.set(1, child4.get(1) + vector.get(7) * 0.5);
+					child5.set(2, child5.get(2) + vector.get(8) * 0.5);					
 					//set vector type to face
 					child2.set(7, zero);
 					child3.set(8, zero);
+					child4.set(7, zero);
+					child5.set(8, zero);
 				}
 				else if (vector.get(7).equals(zero)) {
 					child0.set(1, child0.get(1) + 0.5);
 					child1.set(1, child1.get(1) - 0.5);
 					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
 					child3.set(2, child3.get(2) - vector.get(8) * 0.5);
+					child4.set(0, child4.get(0) + vector.get(6) * 0.5);
+					child5.set(2, child5.get(2) + vector.get(8) * 0.5);					
 					child2.set(6, zero);
 					child3.set(8, zero);
+					child4.set(6, zero);
+					child5.set(8, zero);
 				}
 				else if (vector.get(8).equals(zero)) {
 					child0.set(2, child0.get(2) + 0.5);
 					child1.set(2, child1.get(2) - 0.5);
 					child2.set(0, child2.get(0) - vector.get(6) * 0.5);
 					child3.set(1, child3.get(1) - vector.get(7) * 0.5);
+					child4.set(0, child4.get(0) + vector.get(6) * 0.5);
+					child5.set(1, child5.get(1) + vector.get(7) * 0.5);					
 					child2.set(6, zero);
 					child3.set(7, zero);
+					child4.set(6, zero);
+					child5.set(7, zero);
 				}
 				else if (isCorner(vector))
 					continue;
+				
+				calculateIntegerVector(child4, startPoint);
+				calculateIntegerVector(child5, startPoint);
+				childVectors.add(child4);
+				childVectors.add(child5);
 			}
 
 			calculateIntegerVector(child0, startPoint);
