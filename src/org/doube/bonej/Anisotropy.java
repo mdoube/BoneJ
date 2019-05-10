@@ -265,7 +265,7 @@ public class Anisotropy implements PlugIn, DialogListener {
 
 			// work out the current mean intercept length
 			final double[] meanInterceptLengths = new double[nVectors];
-			final double probeLength = radius * s;
+			final double probeLength = 2 * radius * s;
 			for (int v = 0; v < nVectors; v++) {
 				if (sumInterceptCounts[v] == 0)
 					meanInterceptLengths[v] = probeLength;
